@@ -8,8 +8,12 @@ import React, {
 import { sdk } from "@farcaster/miniapp-sdk";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 
+interface GlobalContextProps {
+  user: any;
+}
+
 // Create a context with a default value matching the expected structure
-const GlobalContext = createContext<{ user: any | null } | null>(null);
+const GlobalContext = createContext<GlobalContextProps | null>(null);
 
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { context } = useMiniKit();
@@ -43,8 +47,14 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   }, [context]);
 
   return (
-    <GlobalContext.Provider value={{ user }}>{children}</GlobalContext.Provider>
+    <GlobalContext.Provider value={{user}}>{children}</GlobalContext.Provider>
   );
 };
 
-export const useGlobalContext = () => useContext(GlobalContext);
+export function useGlobalContext() {
+  const context = useContext(GlobalContext);
+  if (!context) {
+    throw new Error("useGlobalContext must be used within a GlobalProvider");
+  }
+  return context;
+}

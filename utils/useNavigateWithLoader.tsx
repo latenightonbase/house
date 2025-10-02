@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import NProgress from 'nprogress';
-import { useEffect } from 'react';
+import { useEffect, ReactNode } from 'react';
 
 // Hook to navigate with loading indicator
 export function useNavigateWithLoader() {
@@ -18,6 +18,22 @@ export function useNavigateWithLoader() {
       NProgress.done();
     }, 500); // Adjust timing as needed
   };
+}
+
+// Provider component to configure NProgress globally
+export function NProgressProvider({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    // Configure NProgress with your green theme
+    NProgress.configure({ 
+      showSpinner: false,
+      minimum: 0.1,
+      easing: 'ease',
+      speed: 300,
+      trickleSpeed: 200
+    });
+  }, []);
+
+  return <>{children}</>;
 }
 
 // Hook to set up NProgress for all navigation events

@@ -38,7 +38,7 @@ export const WalletConnect = () => {
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="bg-bill-pink text-center px-4 py-2 rounded text-lg font-bold text-white hover:bg-orange-600"
+                    className=" text-center w-full rounded text-lg font-bold text-white "
                   >
                     CONNECT
                   </button>
@@ -49,7 +49,7 @@ export const WalletConnect = () => {
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="bg-bill-pink text-center px-4 py-2 rounded text-lg font-bold text-white hover:bg-orange-800"
+                    className="bg-red-500 text-center w-full rounded text-lg font-bold text-white hover:bg-red-400"
                   >
                     Wrong network
                   </button>
@@ -60,7 +60,7 @@ export const WalletConnect = () => {
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="bg-bill-pink flex items-center gap-2 text-center px-4 py-2 rounded text-md font-bold text-white hover:bg-pink-700"
+                    className=" flex items-center gap-2 text-center w-full rounded text-md font-bold text-white"
                   >
                     <MdWallet/>
                     {account.displayName.toUpperCase()}
