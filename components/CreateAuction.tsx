@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Input from "./UI/Input"
 import CurrencySearch from "./UI/CurrencySearch"
+import DateTimePicker from "./UI/DateTimePicker"
 
 interface CurrencyOption {
   name: string
@@ -17,13 +18,14 @@ export default function CreateAuction(){
     const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
     const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption | null>(null)
     const [endTime, setEndTime] = useState<Date | null>(null)
+    const [minBidAmount, setMinBidAmount] = useState('')
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
-        if (!auctionTitle || !selectedCurrency || !endTime) {
-            alert('Please fill in all required fields')
+        if (!auctionTitle || !selectedCurrency || !endTime || !minBidAmount || parseFloat(minBidAmount) <= 0) {
+            alert('Please fill in all required fields with valid values')
             return
         }
 
@@ -33,7 +35,8 @@ export default function CreateAuction(){
             console.log({
                 auctionTitle,
                 currency: selectedCurrency,
-                endTime: endTime.toISOString()
+                endTime: endTime.toISOString(),
+                minBidAmount: parseFloat(minBidAmount)
             })
             
             // Simulate API call
@@ -45,6 +48,7 @@ export default function CreateAuction(){
             setAuctionTitle('')
             setSelectedCurrency(null)
             setEndTime(null)
+            setMinBidAmount('')
         } catch (error) {
             console.error('Error creating auction:', error)
             alert('Failed to create auction. Please try again.')
@@ -62,12 +66,12 @@ export default function CreateAuction(){
         setSelectedCurrency(null) // Reset selection when changing modes
     }
 
-    const isFormValid = auctionTitle.trim() && selectedCurrency && endTime
+    const isFormValid = auctionTitle.trim() && selectedCurrency && endTime && minBidAmount.trim() && parseFloat(minBidAmount) > 0
 
     return(
         <div className="max-w-2xl mx-auto">
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                 {/* Auction Title */}
                 <Input
                     label="Auction Title"
@@ -142,8 +146,25 @@ export default function CreateAuction(){
                     </div>
                 )}
 
+                {/* Minimum Bid Amount */}
+                <Input
+                    label="Minimum Bid Amount"
+                    value={minBidAmount}
+                    onChange={setMinBidAmount}
+                    placeholder="Enter the minimum bid amount"
+                    type="number"
+                    required
+                />
+
                 {/* End Time Picker */}
-                
+                <DateTimePicker
+                    label="Auction End Time"
+                    value={endTime}
+                    onChange={setEndTime}
+                    placeholder=""
+                    required
+                    minDate={new Date()} // Prevent selecting past dates
+                />
 
                 {/* Time Remaining Display */}
                 {endTime && (

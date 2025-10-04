@@ -49,7 +49,14 @@ export default function Input({
   }
 
   return (
-    <div className={twMerge('relative', className)}>
+    <div className={twMerge('relative text-white flex flex-col-reverse gap-2', className)}>
+      {/* Error Message */}
+      {showError && (
+        <p className="text-red-500 text-sm -mt-2">
+          {label} is required
+        </p>
+      )}
+      
       {/* Input Field */}
       <input
         id={inputId}
@@ -62,7 +69,7 @@ export default function Input({
         disabled={disabled}
         required={required}
         className={twMerge(
-          'w-full px-4 py-3 rounded-lg border-2 bg-transparent transition-all duration-200 placeholder:text-transparent text-foreground',
+          'w-full px-4 py-3 rounded-lg border-2 bg-transparent transition-all duration-200 text-foreground peer',
           disabled && 'border-disabled cursor-not-allowed opacity-60',
           !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
           !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
@@ -75,23 +82,16 @@ export default function Input({
       <label
         htmlFor={inputId}
         className={twMerge(
-          'absolute left-4 transition-all duration-200 pointer-events-none select-none',
+          'block text-sm font-medium peer-focus:text-primary ',
           disabled && 'text-disabled',
-          !disabled && (isFocused || hasValue) && showError && 'text-red-500 -top-2 text-sm bg-background px-1',
-          !disabled && (isFocused || hasValue) && !showError && 'text-primary -top-2 text-sm bg-background px-1',
-          !disabled && !(isFocused || hasValue) && 'text-gray-500 top-3 text-base'
+          showError && 'text-red-500',
+          !showError && 'text-gray-500'
         )}
       >
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      {/* Error Message */}
-      {showError && (
-        <p className="text-red-500 text-sm mt-1 ml-1">
-          {label} is required
-        </p>
-      )}
     </div>
   )
 }
