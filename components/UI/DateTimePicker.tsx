@@ -294,103 +294,115 @@ export default function DateTimePicker({
       </div>
       
       {/* Date Picker Dropdown */}
-      {isDatePickerOpen && (
-        <div ref={datePickerRef} className="absolute top-full left-0 mt-2 bg-black border-2 border-primary/30 rounded-lg shadow-lg z-50 p-4 min-w-[300px]">
-          {/* Calendar Header */}
-          <div className="flex items-center justify-between mb-4">
-            <button
-              type="button"
-              onClick={() => handleMonthChange('prev')}
-              className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h3 className="font-semibold text-lg text-white">
-              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h3>
-            <button
-              type="button"
-              onClick={() => handleMonthChange('next')}
-              className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+        <div
+          ref={datePickerRef}
+          className={`fixed top-0 left-0 w-full h-screen bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-2 transition-all duration-200 ${isDatePickerOpen ? "" : "opacity-0 pointer-events-none"} `}
+          onClick={(e) => {
+            if (e.target === datePickerRef.current) {
+              setIsDatePickerOpen(false);
+            }
+          }}
+        >
+          <div
+            className="bg-black border-2 border-primary/30 rounded-lg shadow-lg p-4 min-w-[300px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Calendar Header */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                type="button"
+                onClick={() => handleMonthChange('prev')}
+                className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h3 className="font-semibold text-lg text-white">
+                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h3>
+              <button
+                type="button"
+                onClick={() => handleMonthChange('next')}
+                className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
 
-          {/* Day Headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="p-2 text-center text-sm font-medium text-gray-400">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar Days */}
-          <div className="grid grid-cols-7 gap-1 mb-4">
-            {renderCalendarDays()}
-          </div>
-
-          {/* Time Selection */}
-          <div className="border-t border-gray-700 pt-4">
-            <div className="mb-3">
-              <span className="text-sm font-medium text-white mb-2 block">Time:</span>
-              <div className="flex items-center gap-2">
-                {/* Hour Dropdown */}
-                <div className="relative">
-                  <select
-                    value={selectedDate ? (selectedDate.getHours() === 0 ? 12 : selectedDate.getHours() > 12 ? selectedDate.getHours() - 12 : selectedDate.getHours()) : 12}
-                    onChange={(e) => handleTimeSelect('hour', parseInt(e.target.value))}
-                    className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
-                  >
-                    {hourOptions.map(hour => (
-                      <option key={hour} value={hour} className="bg-gray-800 text-white">
-                        {hour}
-                      </option>
-                    ))}
-                  </select>
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="p-2 text-center text-sm font-medium text-gray-400">
+                  {day}
                 </div>
-                
-                <span className="text-gray-400 font-medium">:</span>
-                
-                {/* Minute Dropdown */}
-                <div className="relative">
-                  <select
-                    value={selectedDate ? selectedDate.getMinutes() : 0}
-                    onChange={(e) => handleTimeSelect('minute', parseInt(e.target.value))}
-                    className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
-                  >
-                    {minuteOptions.map(minute => (
-                      <option key={minute} value={minute} className="bg-gray-800 text-white">
-                        {minute.toString().padStart(2, '0')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                {/* AM/PM Dropdown */}
-                <div className="relative">
-                  <select
-                    value={selectedDate ? (selectedDate.getHours() >= 12 ? 'PM' : 'AM') : 'AM'}
-                    onChange={(e) => handleTimeSelect('period', e.target.value)}
-                    className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
-                  >
-                    {periodOptions.map(period => (
-                      <option key={period} value={period} className="bg-gray-800 text-white">
-                        {period}
-                      </option>
-                    ))}
-                  </select>
+              ))}
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {renderCalendarDays()}
+            </div>
+
+            {/* Time Selection */}
+            <div className="border-t border-gray-700 pt-4">
+              <div className="mb-3">
+                <span className="text-sm font-medium text-white mb-2 block">Time:</span>
+                <div className="flex items-center gap-2">
+                  {/* Hour Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedDate ? (selectedDate.getHours() === 0 ? 12 : selectedDate.getHours() > 12 ? selectedDate.getHours() - 12 : selectedDate.getHours()) : 12}
+                      onChange={(e) => handleTimeSelect('hour', parseInt(e.target.value))}
+                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                    >
+                      {hourOptions.map(hour => (
+                        <option key={hour} value={hour} className="bg-gray-800 text-white">
+                          {hour}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <span className="text-gray-400 font-medium">:</span>
+                  
+                  {/* Minute Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedDate ? selectedDate.getMinutes() : 0}
+                      onChange={(e) => handleTimeSelect('minute', parseInt(e.target.value))}
+                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                    >
+                      {minuteOptions.map(minute => (
+                        <option key={minute} value={minute} className="bg-gray-800 text-white">
+                          {minute.toString().padStart(2, '0')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* AM/PM Dropdown */}
+                  <div className="relative">
+                    <select
+                      value={selectedDate ? (selectedDate.getHours() >= 12 ? 'PM' : 'AM') : 'AM'}
+                      onChange={(e) => handleTimeSelect('period', e.target.value)}
+                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                    >
+                      {periodOptions.map(period => (
+                        <option key={period} value={period} className="bg-gray-800 text-white">
+                          {period}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      )}
+
 
       {/* Error Message */}
       {showError && (

@@ -5,6 +5,7 @@ import { readContract } from '@wagmi/core'
 import { config } from '@/utils/rainbow'
 import { erc20Abi } from '@/utils/contracts/abis/erc20Abi'
 import Input from "../UI/Input"
+import { twMerge } from 'tailwind-merge'
 
 interface CurrencyOption {
   name: string
@@ -123,7 +124,12 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
       )}
 
       {contractTokenInfo && !contractError && (
-        <div className="mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20">
+        <div
+          className={twMerge(
+            "mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20",
+            selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? "border-green-500" : "opacity-70"
+          )}
+        >
           <div className="flex justify-between items-center">
             <div>
               <div className="font-semibold text-primary">{contractTokenInfo.symbol}</div>
@@ -134,7 +140,7 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
               onClick={() => handleTokenSelect(contractTokenInfo)}
               className="px-3 py-1 bg-primary text-white rounded text-sm hover:bg-primary/90 transition-colors"
             >
-              Select
+              {selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? 'Selected' : 'Select'}
             </button>
           </div>
         </div>

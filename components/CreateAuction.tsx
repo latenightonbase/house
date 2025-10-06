@@ -24,7 +24,7 @@ export default function CreateAuction(){
     // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
     const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption | null>(null)
     const [endTime, setEndTime] = useState<Date | null>(null)
-    const [minBidAmount, setMinBidAmount] = useState('')
+    const [minBidAmount, setMinBidAmount] = useState('0') // Made the minimum bid amount optional and default to 0
     const [isLoading, setIsLoading] = useState(false)
 
     // Helper function to calculate duration in hours
@@ -39,7 +39,7 @@ export default function CreateAuction(){
         e.preventDefault()
         
         // Validation
-        if (!auctionTitle || !selectedCurrency || !endTime || !minBidAmount || parseFloat(minBidAmount) <= 0) {
+        if (!auctionTitle || !selectedCurrency || !endTime) {
             alert('Please fill in all required fields with valid values')
             return
         }
@@ -59,7 +59,7 @@ export default function CreateAuction(){
         setIsLoading(true)
         try {
             const durationHours = calculateDurationHours(endTime)
-            const minBidAmountWei = parseFloat(minBidAmount) * Math.pow(10, 18) // Convert to wei (assuming 18 decimals)
+            const minBidAmountWei = parseFloat(minBidAmount || '0') * Math.pow(10, 18) // Convert to wei (assuming 18 decimals)
 
             console.log('Creating auction with params:', {
                 token: selectedCurrency.contractAddress,
@@ -88,7 +88,7 @@ export default function CreateAuction(){
             setAuctionTitle('')
             setSelectedCurrency(null)
             setEndTime(null)
-            setMinBidAmount('')
+            setMinBidAmount('0')
         } catch (error: any) {
             console.error('Error creating auction:', error)
             
@@ -135,7 +135,7 @@ export default function CreateAuction(){
                     label="Auction Title"
                     value={auctionTitle}
                     onChange={setAuctionTitle}
-                    placeholder="Enter a descriptive title for your auction"
+                    placeholder="Enter a title for your auction"
                     required
                 />
 
@@ -182,17 +182,16 @@ export default function CreateAuction(){
 
                 {/* Minimum Bid Amount */}
                 <Input
-                    label="Minimum Bid Amount"
+                    label="Minimum Bid Amount (Optional)"
                     value={minBidAmount}
                     onChange={setMinBidAmount}
-                    placeholder="Enter the minimum bid amount"
+                    placeholder="Enter the minimum bid amount (default: 0)"
                     type="number"
-                    required
                 />
 
                 {/* End Time Picker */}
                 <DateTimePicker
-                    label="Auction End Time"
+                    label="Auction End Time (Local Time)"
                     value={endTime}
                     onChange={setEndTime}
                     placeholder=""
