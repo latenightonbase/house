@@ -69,11 +69,11 @@ export default function Input({
         disabled={disabled}
         required={required}
         className={twMerge(
-          'w-full px-4 py-3 rounded-lg border-2 bg-transparent transition-all duration-200 text-foreground peer',
+          'w-full px-4 py-3 rounded-lg border-[1px] bg-transparent transition-all outline-0 duration-200 text-foreground peer',
           disabled && 'border-disabled cursor-not-allowed opacity-60',
           !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
           !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
-          !disabled && !(isFocused || hasValue) && 'border-gray-300 hover:border-gray-400',
+          !disabled && !(isFocused || hasValue) && 'border-white/30 ',
           isFocused && 'outline-1 outline-offset-1'
         )}
       />

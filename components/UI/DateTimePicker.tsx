@@ -261,7 +261,7 @@ export default function DateTimePicker({
           required={required}
           readOnly
           className={twMerge(
-            'w-full px-4 py-3 pr-12 rounded-lg border-2 bg-transparent transition-all duration-200 cursor-pointer text-foreground',
+            'w-full px-4 py-3 pr-12 rounded-lg border-[1px] bg-transparent transition-all duration-200 cursor-pointer text-foreground',
             disabled && 'border-disabled cursor-not-allowed opacity-60',
             !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
             !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
@@ -304,7 +304,7 @@ export default function DateTimePicker({
           }}
         >
           <div
-            className="bg-black border-2 border-primary/30 rounded-lg shadow-lg p-4 min-w-[300px]"
+            className="bg-black border-[1px] border-primary/30 rounded-lg shadow-lg p-4 min-w-[300px]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Calendar Header */}
