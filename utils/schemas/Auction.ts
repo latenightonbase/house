@@ -1,0 +1,192 @@
+import mongoose, { Schema, Document, Types } from 'mongoose';
+
+// Interface for a bidder object
+export interface IBidder {
+  user: Types.ObjectId;
+  bidAmount: number;
+  bidTimestamp: Date;
+}
+
+// Interface for the Auction document
+export interface IAuction extends Document {
+  auctionName: string;
+  endDate: Date;
+  bidders: IBidder[];
+  currency: string;
+  startDate: Date;
+  hostedBy: Types.ObjectId;
+  winningBid?: Types.ObjectId;
+  minimumBid: number;
+  reservePrice?: number;
+  hostFeePercentage: number;
+  totalRevenue?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Sub-schema for bidders
+const BidderSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  bidAmount: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  bidTimestamp: {
+    type: Date,
+    required: true,
+    default: Date.now,
+  },
+}, { _id: false }); // _id: false to prevent automatic _id generation for subdocuments
+
+// Mongoose schema for Auction
+const AuctionSchema: Schema = new Schema(
+  {
+    auctionName: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function(this: IAuction, value: Date) {
+          return value > this.startDate;
+        },
+        message: 'End date must be after start date',
+      },
+    },
+    bidders: {
+      type: [BidderSchema],
+      default: [],
+    },
+    currency: {
+      type: String,
+      required: true,
+      trim: true,
+      uppercase: true,
+      enum: ['USD', 'EUR', 'ETH', 'BTC', 'USDC', 'USDT'], // Add more currencies as needed
+    },
+    startDate: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function(value: Date) {
+          return value >= new Date();
+        },
+        message: 'Start date cannot be in the past',
+      },
+    },
+    hostedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    winningBid: {
+      type: Schema.Types.ObjectId,
+      ref: 'WinningBid',
+      default: null,
+    },
+    minimumBid: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    reservePrice: {
+      type: Number,
+      min: 0,
+      validate: {
+        validator: function(this: IAuction, value: number) {
+          return !value || value >= this.minimumBid;
+        },
+        message: 'Reserve price must be greater than or equal to minimum bid',
+      },
+    },
+    hostFeePercentage: {
+      type: Number,
+      required: true,
+      default: 2.5, // 2.5% default fee
+      min: 0,
+      max: 100,
+    },
+    totalRevenue: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+  },
+  {
+    timestamps: true, // Automatically adds createdAt and updatedAt fields
+  }
+);
+
+// Create indexes for better query performance
+AuctionSchema.index({ hostedBy: 1 });
+AuctionSchema.index({ endDate: 1 });
+AuctionSchema.index({ startDate: 1 });
+AuctionSchema.index({ currency: 1 });
+AuctionSchema.index({ 'bidders.user': 1 });
+AuctionSchema.index({ winningBid: 1 });
+AuctionSchema.index({ minimumBid: 1 });
+AuctionSchema.index({ totalRevenue: 1 });
+
+// Add a compound index for active auctions
+AuctionSchema.index({ startDate: 1, endDate: 1 });
+
+// Compound index for host revenue queries
+AuctionSchema.index({ hostedBy: 1, totalRevenue: 1 });
+
+// Compound index for currency popularity queries
+AuctionSchema.index({ currency: 1, endDate: 1 });
+
+// Virtual to check if auction is active
+AuctionSchema.virtual('isActive').get(function(this: IAuction) {
+  const now = new Date();
+  return now >= this.startDate && now <= this.endDate;
+});
+
+// Virtual to get the highest bid
+AuctionSchema.virtual('highestBid').get(function(this: IAuction) {
+  if (this.bidders.length === 0) return 0;
+  return Math.max(...this.bidders.map(bidder => bidder.bidAmount));
+});
+
+// Virtual to get the highest bidder
+AuctionSchema.virtual('highestBidder').get(function(this: IAuction) {
+  if (this.bidders.length === 0) return null;
+  const highestBid = Math.max(...this.bidders.map(bidder => bidder.bidAmount));
+  return this.bidders.find(bidder => bidder.bidAmount === highestBid);
+});
+
+// Virtual to get unique participants count
+AuctionSchema.virtual('participantCount').get(function(this: IAuction) {
+  const uniqueUsers = new Set(this.bidders.map(bidder => bidder.user.toString()));
+  return uniqueUsers.size;
+});
+
+// Virtual to get host revenue (fee from winning bid)
+AuctionSchema.virtual('hostRevenue').get(function(this: IAuction) {
+  if (!this.totalRevenue) return 0;
+  return (this.totalRevenue * this.hostFeePercentage) / 100;
+});
+
+// Virtual to check if reserve price was met
+AuctionSchema.virtual('reservePriceMet').get(function(this: IAuction) {
+  if (!this.reservePrice) return true;
+  if (this.bidders.length === 0) return false;
+  const highestBid = Math.max(...this.bidders.map(bidder => bidder.bidAmount));
+  return highestBid >= this.reservePrice;
+});
+
+// Ensure virtual fields are serialized
+AuctionSchema.set('toJSON', { virtuals: true });
+AuctionSchema.set('toObject', { virtuals: true });
+
+// Export the model
+export default mongoose.models.Auction || mongoose.model<IAuction>('Auction', AuctionSchema);

@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from "react"
+import { readContract } from '@wagmi/core'
+import { config } from '@/utils/rainbow'
+import { erc20Abi } from '@/utils/contracts/abis/erc20Abi'
 import Input from "../UI/Input"
 
 interface CurrencyOption {
@@ -15,12 +18,11 @@ interface CurrencySearchProps {
 }
 
 export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencySearchProps) {
-  const [contractAddress, setContractAddress] = useState('')
+  const [contractAddress, setContractAddress] = useState('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913')
   const [isLoading, setIsLoading] = useState(false)
   const [contractTokenInfo, setContractTokenInfo] = useState<CurrencyOption | null>(null)
   const [contractError, setContractError] = useState('')
 
-  // Resolve token info from contract address
   const resolveTokenFromContract = async (address: string) => {
     if (!address) {
       setContractError('')
@@ -37,17 +39,49 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
     setIsLoading(true)
     setContractError('')
     try {
-      // TODO: Replace with actual contract call using wagmi/viem
-      // For now, simulate the response
-      const mockTokenInfo: CurrencyOption = {
-        name: "Mock Token",
-        symbol: "MOCK",
+      // Fetch token name and symbol from the contract
+      const [name, symbol] = await Promise.all([
+        readContract(config, {
+          address: address as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'name',
+        }),
+        readContract(config, {
+          address: address as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'symbol',
+        })
+      ])
+
+      // Validate that we got valid responses
+      if (!name || !symbol) {
+        throw new Error('Invalid token contract - missing name or symbol')
+      }
+
+      const tokenInfo: CurrencyOption = {
+        name: name as string,
+        symbol: symbol as string,
         contractAddress: address
       }
-      setContractTokenInfo(mockTokenInfo)
-    } catch (error) {
+      
+      setContractTokenInfo(tokenInfo)
+    } catch (error: any) {
       console.error('Error resolving contract:', error)
-      setContractError('Failed to resolve token information')
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to resolve token information.'
+      
+      if (error?.message?.includes('execution reverted')) {
+        errorMessage = 'Contract execution failed. This might not be a valid ERC20 token.'
+      } else if (error?.message?.includes('call')) {
+        errorMessage = 'Unable to call contract. Please check the address and try again.'
+      } else if (error?.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else {
+        errorMessage = 'Failed to resolve token information. Please verify this is a valid ERC20 contract address.'
+      }
+      
+      setContractError(errorMessage)
       setContractTokenInfo(null)
     } finally {
       setIsLoading(false)
@@ -58,10 +92,18 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
     onSelect(token)
   }
 
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      resolveTokenFromContract(contractAddress)
+    }, 500) // Debounce the API call
+
+    return () => clearTimeout(timeoutId)
+  }, [contractAddress])
+
   return (
     <div>
       <Input
-        label="Contract Address"
+        label="Token to use (Default: USDC)"
         value={contractAddress}
         onChange={setContractAddress}
         placeholder="0x..."

@@ -62,6 +62,19 @@ export const auctionAbi = [
 		"type": "event"
 	},
 	{
+		"inputs": [],
+		"name": "auctionCounter",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "uint256",
@@ -118,71 +131,6 @@ export const auctionAbi = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_auctionId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "fid",
-				"type": "string"
-			}
-		],
-		"name": "placeBid",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_token",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "_tokenName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "durationHours",
-				"type": "uint256"
-			}
-		],
-		"name": "startAuction",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "auctionCounter",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [],
 		"name": "getActiveAuctions",
 		"outputs": [
@@ -222,6 +170,11 @@ export const auctionAbi = [
 						"internalType": "address",
 						"name": "highestBidder",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct AuctionMeta[]",
@@ -278,6 +231,11 @@ export const auctionAbi = [
 						"internalType": "address",
 						"name": "highestBidder",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct AuctionMeta[]",
@@ -334,6 +292,11 @@ export const auctionAbi = [
 						"internalType": "address",
 						"name": "highestBidder",
 						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
 					}
 				],
 				"internalType": "struct AuctionMeta",
@@ -378,6 +341,63 @@ export const auctionAbi = [
 			}
 		],
 		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_auctionId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "fid",
+				"type": "string"
+			}
+		],
+		"name": "placeBid",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_tokenName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "durationHours",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_minBidAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "startAuction",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
 		"type": "function"
 	}
 ]

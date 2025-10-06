@@ -1,6 +1,11 @@
 'use client'
 
 import { useState } from "react"
+import { writeContract } from '@wagmi/core'
+import { useAccount } from 'wagmi'
+import { config } from '@/utils/rainbow'
+import { auctionAbi } from '@/utils/contracts/abis/auctionAbi'
+
 import Input from "./UI/Input"
 import CurrencySearch from "./UI/CurrencySearch"
 import DateTimePicker from "./UI/DateTimePicker"
@@ -14,44 +19,97 @@ interface CurrencyOption {
 type CurrencySelectionMode = 'search' | 'contract'
 
 export default function CreateAuction(){
+    const { address, isConnected } = useAccount()
     const [auctionTitle, setAuctionTitle] = useState('')
-    const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
+    // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
     const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption | null>(null)
     const [endTime, setEndTime] = useState<Date | null>(null)
     const [minBidAmount, setMinBidAmount] = useState('')
     const [isLoading, setIsLoading] = useState(false)
 
+    // Helper function to calculate duration in hours
+    const calculateDurationHours = (endDate: Date): number => {
+        const now = new Date()
+        const diffMs = endDate.getTime() - now.getTime()
+        const diffHours = Math.ceil(diffMs / (1000 * 60 * 60)) // Round up to ensure auction doesn't end early
+        return Math.max(1, diffHours) // Minimum 1 hour
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         
+        // Validation
         if (!auctionTitle || !selectedCurrency || !endTime || !minBidAmount || parseFloat(minBidAmount) <= 0) {
             alert('Please fill in all required fields with valid values')
             return
         }
 
+        if (!isConnected || !address) {
+            alert('Please connect your wallet to create an auction')
+            return
+        }
+
+        // Ensure auction ends in the future
+        const now = new Date()
+        if (endTime <= now) {
+            alert('Auction end time must be in the future')
+            return
+        }
+
         setIsLoading(true)
         try {
-            // TODO: Implement actual auction creation logic
-            console.log({
-                auctionTitle,
-                currency: selectedCurrency,
-                endTime: endTime.toISOString(),
-                minBidAmount: parseFloat(minBidAmount)
+            const durationHours = calculateDurationHours(endTime)
+            const minBidAmountWei = parseFloat(minBidAmount) * Math.pow(10, 18) // Convert to wei (assuming 18 decimals)
+
+            console.log('Creating auction with params:', {
+                token: selectedCurrency.contractAddress,
+                tokenName: auctionTitle,
+                durationHours,
+                minBidAmount: minBidAmountWei.toString()
             })
-            
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            
-            alert('Auction created successfully!')
+
+            // Call the smart contract
+            const txHash = await writeContract(config, {
+                address: contractAdds.auctions as `0x${string}`,
+                abi: auctionAbi,
+                functionName: 'startAuction',
+                args: [
+                    selectedCurrency.contractAddress as `0x${string}`,
+                    auctionTitle,
+                    BigInt(durationHours),
+                    BigInt(Math.floor(minBidAmountWei))
+                ]
+            })
+
+            console.log('Transaction hash:', txHash)
+            alert('Auction created successfully! Transaction: ' + txHash)
             
             // Reset form
             setAuctionTitle('')
             setSelectedCurrency(null)
             setEndTime(null)
             setMinBidAmount('')
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error creating auction:', error)
-            alert('Failed to create auction. Please try again.')
+            
+            // Handle different types of errors
+            let errorMessage = 'Failed to create auction. Please try again.'
+            
+            if (error?.message?.includes('user rejected')) {
+                errorMessage = 'Transaction was cancelled by user.'
+            } else if (error?.message?.includes('insufficient funds')) {
+                errorMessage = 'Insufficient funds to complete the transaction.'
+            } else if (error?.message?.includes('Max 3 active auctions')) {
+                errorMessage = 'You can only have 3 active auctions at a time.'
+            } else if (error?.message?.includes('Minimum bid must be greater than 0')) {
+                errorMessage = 'Minimum bid amount must be greater than 0.'
+            } else if (error?.shortMessage) {
+                errorMessage = error.shortMessage
+            } else if (error?.message) {
+                errorMessage = error.message
+            }
+            
+            alert(errorMessage)
         } finally {
             setIsLoading(false)
         }
@@ -62,11 +120,11 @@ export default function CreateAuction(){
     }
 
     const handleCurrencyModeChange = (mode: CurrencySelectionMode) => {
-        setCurrencyMode(mode)
+        // setCurrencyMode(mode)
         setSelectedCurrency(null) // Reset selection when changing modes
     }
 
-    const isFormValid = auctionTitle.trim() && selectedCurrency && endTime && minBidAmount.trim() && parseFloat(minBidAmount) > 0
+    const isFormValid = isConnected && auctionTitle.trim() && selectedCurrency && endTime && minBidAmount.trim() && parseFloat(minBidAmount) > 0
 
     return(
         <div className="max-w-2xl mx-auto">
@@ -121,30 +179,6 @@ export default function CreateAuction(){
                     selectedCurrency={selectedCurrency}
                 />
 
-                {/* Selected Currency Display */}
-                {selectedCurrency && (
-                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h3 className="font-semibold text-primary text-lg">Selected Currency</h3>
-                                <p className="text-foreground font-medium">{selectedCurrency.symbol} - {selectedCurrency.name}</p>
-                                <p className="text-sm text-gray-600 font-mono mt-1">
-                                    {selectedCurrency.contractAddress}
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedCurrency(null)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors"
-                                title="Remove selection"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                )}
 
                 {/* Minimum Bid Amount */}
                 <Input
@@ -202,13 +236,20 @@ export default function CreateAuction(){
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             Creating Auction...
                         </div>
+                    ) : !isConnected ? (
+                        'Connect Wallet to Create Auction'
                     ) : (
                         'Create Auction'
                     )}
                 </button>
 
                 {/* Form Validation Helper */}
-                {!isFormValid && (
+                {!isConnected && (
+                    <div className="text-sm text-red-500 text-center">
+                        Please connect your wallet to create an auction
+                    </div>
+                )}
+                {isConnected && !isFormValid && (
                     <div className="text-sm text-gray-500 text-center">
                         Please fill in all required fields to create your auction
                     </div>
