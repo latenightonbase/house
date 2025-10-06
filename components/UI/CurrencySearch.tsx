@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { readContract } from '@wagmi/core'
-import { config } from '@/utils/rainbow'
-import { erc20Abi } from '@/utils/contracts/abis/erc20Abi'
+import { readContractSetup } from '@/utils/contractSetup';
+import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
 import Input from "../UI/Input"
 import { twMerge } from 'tailwind-merge'
 
@@ -41,18 +40,15 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
     setContractError('')
     try {
       // Fetch token name and symbol from the contract
+      const contract = await readContractSetup(address, erc20Abi);
+      if (!contract) {
+        throw new Error('Failed to initialize contract. Please check the address and ABI.');
+      }
+
       const [name, symbol] = await Promise.all([
-        readContract(config, {
-          address: address as `0x${string}`,
-          abi: erc20Abi,
-          functionName: 'name',
-        }),
-        readContract(config, {
-          address: address as `0x${string}`,
-          abi: erc20Abi,
-          functionName: 'symbol',
-        })
-      ])
+        await contract.name(),
+        await contract.symbol()
+      ]);
 
       // Validate that we got valid responses
       if (!name || !symbol) {
@@ -66,6 +62,10 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
       }
       
       setContractTokenInfo(tokenInfo)
+
+      if (tokenInfo) {
+        onSelect(tokenInfo); // Automatically select the token once resolved
+      }
     } catch (error: any) {
       console.error('Error resolving contract:', error)
       
@@ -87,10 +87,6 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleTokenSelect = (token: CurrencyOption) => {
-    onSelect(token)
   }
 
   useEffect(() => {
@@ -135,13 +131,6 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
               <div className="font-semibold text-primary">{contractTokenInfo.symbol}</div>
               <div className="text-sm text-foreground">{contractTokenInfo.name}</div>
             </div>
-            <button
-              type="button"
-              onClick={() => handleTokenSelect(contractTokenInfo)}
-              className="px-3 py-1 bg-primary text-white rounded text-sm hover:bg-primary/90 transition-colors"
-            >
-              {selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? 'Selected' : 'Select'}
-            </button>
           </div>
         </div>
       )}

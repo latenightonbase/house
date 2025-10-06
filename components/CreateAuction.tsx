@@ -9,6 +9,7 @@ import { auctionAbi } from '@/utils/contracts/abis/auctionAbi'
 import Input from "./UI/Input"
 import CurrencySearch from "./UI/CurrencySearch"
 import DateTimePicker from "./UI/DateTimePicker"
+import { writeContractSetup } from "@/utils/contractSetup"
 
 interface CurrencyOption {
   name: string
@@ -68,21 +69,42 @@ export default function CreateAuction(){
                 minBidAmount: minBidAmountWei.toString()
             })
 
+            const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
+
             // Call the smart contract
-            const txHash = await writeContract(config, {
-                address: contractAdds.auctions as `0x${string}`,
-                abi: auctionAbi,
-                functionName: 'startAuction',
-                args: [
+            const txHash = await contract?.startAuction(
                     selectedCurrency.contractAddress as `0x${string}`,
                     auctionTitle,
                     BigInt(durationHours),
                     BigInt(Math.floor(minBidAmountWei))
-                ]
-            })
+            )
+
+            await txHash?.wait()
 
             console.log('Transaction hash:', txHash)
-            alert('Auction created successfully! Transaction: ' + txHash)
+
+            // Call the API to save auction details in the database
+            const response = await fetch('/api/auctions/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    auctionName: auctionTitle,
+                    blockchainAuctionId: txHash.blockchainAuctionId,
+                    tokenAddress: selectedCurrency.contractAddress,
+                    endDate: endTime,
+                    startDate: now,
+                    hostedBy: address,
+                    minimumBid: parseFloat(minBidAmount),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save auction details in the database');
+            }
+
+            //start here
             
             // Reset form
             setAuctionTitle('')
@@ -226,7 +248,7 @@ export default function CreateAuction(){
 
                 {/* Submit Button */}
                 <button
-                    type="submit"
+                    type="submit" // This ensures the form submission triggers handleSubmit
                     disabled={!isFormValid || isLoading}
                     className="w-full py-4 px-6 bg-primary text-white rounded-lg font-semibold text-lg transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500 shadow-lg hover:shadow-xl"
                 >

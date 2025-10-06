@@ -22,6 +22,7 @@ export interface IAuction extends Document {
   totalRevenue?: number;
   createdAt: Date;
   updatedAt: Date;
+  tokenAddress: string;
 }
 
 // Sub-schema for bidders
@@ -119,6 +120,16 @@ const AuctionSchema: Schema = new Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    blockchainAuctionId: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+    tokenAddress: {
+      type: String,
+      required: true,
+      trim: true,
     },
   },
   {
