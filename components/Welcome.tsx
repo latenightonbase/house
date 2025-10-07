@@ -1,4 +1,5 @@
-import { useGlobalContext } from "@/utils/globalContext";
+
+import { useGlobalContext } from "@/utils/providers/globalContext";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import { FaPlus } from "react-icons/fa";
 

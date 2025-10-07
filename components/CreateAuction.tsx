@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { writeContract } from '@wagmi/core'
 import { useAccount } from 'wagmi'
-import { config } from '@/utils/rainbow'
+import { config } from '@/utils/providers/rainbow'
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi'
 
 import Input from "./UI/Input"

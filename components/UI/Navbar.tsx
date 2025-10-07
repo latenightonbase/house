@@ -1,6 +1,6 @@
 'use client'
 
-import { useGlobalContext } from "@/utils/globalContext"
+import { useGlobalContext } from "@/utils/providers/globalContext"
 import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
