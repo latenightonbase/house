@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '../../../../utils/schemas/User';
-import { connectToDB } from '@/utils/db';
+import connectToDB from '@/utils/db';
 
 export async function POST(req: NextRequest) {
 	try {
