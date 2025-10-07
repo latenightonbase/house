@@ -53,6 +53,19 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     login();
   }, [ready, authenticated, privyUser, initLoginToMiniApp, loginToMiniApp]);
 
+   useEffect(() => {
+    (async () => {
+      // Only proceed if we have context user but haven't authenticated yet
+      // if (context?.user && !user) {
+      //   await handleLocalUser();
+      // }
+
+      if (process.env.NEXT_PUBLIC_ENV !== "DEV") {
+        sdk.actions.ready();
+      }
+    })();
+  }, []);
+
   return (
     <GlobalContext.Provider value={{
       user,
