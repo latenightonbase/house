@@ -5,7 +5,7 @@ import { writeContract } from '@wagmi/core'
 import { useAccount } from 'wagmi'
 import { config } from '@/utils/providers/rainbow'
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi'
-
+import {contractAdds} from '@/utils/contracts/contractAdds'
 import Input from "./UI/Input"
 import CurrencySearch from "./UI/CurrencySearch"
 import DateTimePicker from "./UI/DateTimePicker"
