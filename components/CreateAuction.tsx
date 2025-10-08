@@ -10,6 +10,7 @@ import Input from "./UI/Input"
 import CurrencySearch from "./UI/CurrencySearch"
 import DateTimePicker from "./UI/DateTimePicker"
 import { writeContractSetup } from "@/utils/contractSetup"
+import { useSession } from "next-auth/react"
 
 interface CurrencyOption {
   name: string
@@ -27,6 +28,7 @@ export default function CreateAuction(){
     const [endTime, setEndTime] = useState<Date | null>(null)
     const [minBidAmount, setMinBidAmount] = useState('0') // Made the minimum bid amount optional and default to 0
     const [isLoading, setIsLoading] = useState(false)
+    const {data:session} = useSession()
 
     // Helper function to calculate duration in hours
     const calculateDurationHours = (endDate: Date): number => {
@@ -146,7 +148,7 @@ export default function CreateAuction(){
         setSelectedCurrency(null) // Reset selection when changing modes
     }
 
-    const isFormValid = isConnected && auctionTitle.trim() && selectedCurrency && endTime && minBidAmount.trim() && parseFloat(minBidAmount) > 0
+    const isFormValid = session?.user && auctionTitle.trim() && selectedCurrency && endTime && minBidAmount.trim()
 
     return(
         <div className="max-w-2xl mx-auto">
@@ -258,7 +260,7 @@ export default function CreateAuction(){
                             Creating Auction...
                         </div>
                     ) : !isConnected ? (
-                        'Connect Wallet to Create Auction'
+                        'Login to Create'
                     ) : (
                         'Create Auction'
                     )}
