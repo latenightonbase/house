@@ -214,7 +214,7 @@ export default function DateTimePicker({
           className={twMerge(
             'p-2 text-sm rounded-lg transition-all text-white hover:bg-gray-800',
             isSelected && 'bg-primary text-black hover:bg-primary/90',
-            isToday && !isSelected && 'bg-gray-700 text-primary font-semibold',
+            isToday && !isSelected && 'bg-white/10 text-primary font-semibold',
             isDisabled && 'text-gray-600 cursor-not-allowed hover:bg-transparent',
             !isSelected && !isToday && !isDisabled && 'hover:bg-gray-800'
           )}
@@ -356,10 +356,10 @@ export default function DateTimePicker({
                     <select
                       value={selectedDate ? (selectedDate.getHours() === 0 ? 12 : selectedDate.getHours() > 12 ? selectedDate.getHours() - 12 : selectedDate.getHours()) : 12}
                       onChange={(e) => handleTimeSelect('hour', parseInt(e.target.value))}
-                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                      className="px-3 py-2 border border-caption rounded-lg hover:border-primary transition-colors text-sm w-[60px] bg-white/10 text-white"
                     >
                       {hourOptions.map(hour => (
-                        <option key={hour} value={hour} className="bg-gray-800 text-white">
+                        <option key={hour} value={hour} className="bg-black w-1/2 text-white">
                           {hour}
                         </option>
                       ))}
@@ -373,10 +373,10 @@ export default function DateTimePicker({
                     <select
                       value={selectedDate ? selectedDate.getMinutes() : 0}
                       onChange={(e) => handleTimeSelect('minute', parseInt(e.target.value))}
-                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                      className="px-3 py-2 border border-caption rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-white/10 text-white"
                     >
                       {minuteOptions.map(minute => (
-                        <option key={minute} value={minute} className="bg-gray-800 text-white">
+                        <option key={minute} value={minute} className="bg-black text-white">
                           {minute.toString().padStart(2, '0')}
                         </option>
                       ))}
@@ -388,10 +388,10 @@ export default function DateTimePicker({
                     <select
                       value={selectedDate ? (selectedDate.getHours() >= 12 ? 'PM' : 'AM') : 'AM'}
                       onChange={(e) => handleTimeSelect('period', e.target.value)}
-                      className="px-3 py-2 border border-gray-600 rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-gray-800 text-white"
+                      className="px-3 py-2 border border-caption rounded-lg hover:border-primary transition-colors text-sm min-w-[60px] bg-white/10 text-white"
                     >
                       {periodOptions.map(period => (
-                        <option key={period} value={period} className="bg-gray-800 text-white">
+                        <option key={period} value={period} className="bg-black text-white">
                           {period}
                         </option>
                       ))}

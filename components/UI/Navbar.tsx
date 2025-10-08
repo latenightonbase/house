@@ -46,12 +46,12 @@ export default function Navbar(){
 
                 {/* Mobile Dropdown Menu */}
                 {user && (
-                    <ul className={`absolute w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200  bg-black rounded-b-lg shadow-lg overflow-hidden z-50`}>
-                        <li className="border-b border-primary/20 block px-4 py-3">
+                    <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/10 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
+                        <li className="border-b border-primary/50 block px-4 py-3">
                             <a 
                             href="/create"
                             onClick={handleCreateAuctionClick}
-                            className=" text-primary transition-colors cursor-pointer"
+                            className=" text-white font-semibold transition-colors cursor-pointer w-full"
                         >
                             Create Auction
                         </a>

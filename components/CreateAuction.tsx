@@ -11,6 +11,7 @@ import CurrencySearch from "./UI/CurrencySearch"
 import DateTimePicker from "./UI/DateTimePicker"
 import { writeContractSetup } from "@/utils/contractSetup"
 import { useSession } from "next-auth/react"
+import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 
 interface CurrencyOption {
   name: string
@@ -29,6 +30,8 @@ export default function CreateAuction(){
     const [minBidAmount, setMinBidAmount] = useState('0') // Made the minimum bid amount optional and default to 0
     const [isLoading, setIsLoading] = useState(false)
     const {data:session} = useSession()
+
+    const navigate = useNavigateWithLoader()
 
     // Helper function to calculate duration in hours
     const calculateDurationHours = (endDate: Date): number => {
@@ -109,11 +112,7 @@ export default function CreateAuction(){
 
             //start here
             
-            // Reset form
-            setAuctionTitle('')
-            setSelectedCurrency(null)
-            setEndTime(null)
-            setMinBidAmount('0')
+           navigate("/")
         } catch (error: any) {
             console.error('Error creating auction:', error)
             

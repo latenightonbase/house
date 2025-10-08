@@ -72,7 +72,6 @@ const AuctionSchema: Schema = new Schema(
       required: true,
       trim: true,
       uppercase: true,
-      enum: ['USD', 'EUR', 'ETH', 'BTC', 'USDC', 'USDT'], // Add more currencies as needed
     },
     startDate: {
       type: Date,
