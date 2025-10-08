@@ -168,7 +168,7 @@ const LandingAuctions: React.FC = () => {
                   <span className="font-semibold text-lg text-primary">
                     {auction.highestBid > 0
                       ? formatBidAmount(auction.highestBid, auction.currency)
-                      : `Starting at ${formatBidAmount(
+                      : `Min: ${formatBidAmount(
                           auction.minimumBid,
                           auction.currency
                         )}`}
