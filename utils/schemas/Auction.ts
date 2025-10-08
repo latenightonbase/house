@@ -76,13 +76,7 @@ const AuctionSchema: Schema = new Schema(
     },
     startDate: {
       type: Date,
-      required: true,
-      validate: {
-        validator: function(value: Date) {
-          return value >= new Date();
-        },
-        message: 'Start date cannot be in the past',
-      },
+      default: Date.now,
     },
     hostedBy: {
       type: Schema.Types.ObjectId,
@@ -122,7 +116,7 @@ const AuctionSchema: Schema = new Schema(
       min: 0,
     },
     blockchainAuctionId: {
-      type: Number,
+      type: String,
       required: true,
       unique: true,
     },

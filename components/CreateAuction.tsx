@@ -86,16 +86,17 @@ export default function CreateAuction(){
             console.log('Transaction hash:', txHash)
 
             // Call the API to save auction details in the database
-            const response = await fetch('/api/auctions/create', {
+            const response = await fetch('/api/protected/auctions/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     auctionName: auctionTitle,
-                    blockchainAuctionId: txHash.blockchainAuctionId,
+                    blockchainAuctionId: txHash.hash,
                     tokenAddress: selectedCurrency.contractAddress,
                     endDate: endTime,
+                    currency: selectedCurrency.symbol,
                     startDate: now,
                     hostedBy: address,
                     minimumBid: parseFloat(minBidAmount),

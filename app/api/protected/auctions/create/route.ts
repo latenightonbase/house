@@ -1,0 +1,49 @@
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/utils/db';
+import Auction from '@/utils/schemas/Auction';
+import User from '@/utils/schemas/User';
+import { getServerSession } from 'next-auth';
+
+export async function POST(req: NextRequest) {
+
+    const session = await getServerSession();
+
+    if (!session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  try {
+    const body = await req.json();
+    const { auctionName, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency } = body;
+
+    if (!auctionName || !tokenAddress || !endDate || !startDate || !hostedBy || !minimumBid) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    await dbConnect();
+
+    const user = await User.findOne({ wallet: hostedBy });
+    if (!user) {
+      return NextResponse.json({ error: 'Hosting user not found' }, { status: 404 });
+    }
+
+    const newAuction = new Auction({
+      auctionName,
+      currency,
+      tokenAddress,
+      blockchainAuctionId,
+      endDate,
+      hostedBy: user._id,
+      minimumBid,
+    });
+
+    await newAuction.save();
+
+    return NextResponse.json(
+      { message: 'Auction created successfully', auction: newAuction },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
