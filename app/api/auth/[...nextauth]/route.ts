@@ -6,7 +6,6 @@ import { revalidatePath } from "next/cache";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
 
-import { ethers } from "ethers";
 import CredentialsProvider from 'next-auth/providers/credentials'
 import User from "@/utils/schemas/User";
 import { walletAuthProvider } from "../../walletAuthProvider/credsProvider";

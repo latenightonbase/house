@@ -19,6 +19,7 @@ const UserSchema: Schema = new Schema(
       type: String,
       trim: true,
       default: null,
+      
     },
     fid: {
       type: String,
