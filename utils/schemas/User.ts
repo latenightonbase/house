@@ -50,9 +50,6 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-// Create indexes for better query performance
-UserSchema.index({ token: 1 });
-UserSchema.index({ fid: 1 });
 UserSchema.index({ wallet: 1 });
 
 // Export the model
