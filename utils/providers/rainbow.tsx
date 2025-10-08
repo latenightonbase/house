@@ -12,6 +12,7 @@ import { ReactNode } from "react";
 import {
   GetSiweMessageOptions,
 } from '@rainbow-me/rainbowkit-siwe-next-auth';
+import { GlobalProvider } from './globalContext';
 
 const getSiweMessageOptions: GetSiweMessageOptions = () => ({
   statement: "Sign in to Auction House",
@@ -29,11 +30,17 @@ export const config = getDefaultConfig({
 const Rainbow = ({ children }: { children: ReactNode }) => {
   return (
     <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitSiweNextAuthProvider getSiweMessageOptions={getSiweMessageOptions}>
-          <RainbowKitProvider>{children}</RainbowKitProvider>
-        </RainbowKitSiweNextAuthProvider>
-      </QueryClientProvider>
+      <SessionProvider refetchInterval={0}>
+        <GlobalProvider>
+
+        
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitSiweNextAuthProvider getSiweMessageOptions={getSiweMessageOptions}>
+            <RainbowKitProvider>{children}</RainbowKitProvider>
+          </RainbowKitSiweNextAuthProvider>
+        </QueryClientProvider>
+        </GlobalProvider>
+      </SessionProvider>
     </WagmiProvider>
   );
 };

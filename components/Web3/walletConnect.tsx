@@ -69,7 +69,7 @@ export const WalletConnect = () => {
                 );
               }
 
-              if(user?.pfp_url !== "" && user?.username !== "")
+              if(user && user?.pfp_url !== "" && user?.username !== "")
               return (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button

@@ -23,11 +23,9 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      <SessionProvider>
-        <GlobalProvider>
+      
           <Rainbow>{children}</Rainbow>
-        </GlobalProvider>
-      </SessionProvider>
+        
     </MiniKitProvider>
     // </MiniAppProvider>
   );
