@@ -5,7 +5,7 @@ import { ReactNode } from "react";
 import { base } from "wagmi/chains";
 import Rainbow from "./rainbow";
 import { GlobalProvider } from "./globalContext";
-import PrivyWrapper from "./PrivyProvider";
+import { SessionProvider } from "next-auth/react";
 
 export function MiniKitContextProvider({ children }: { children: ReactNode }) {
   return (
@@ -23,11 +23,11 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      <PrivyWrapper>
+      <SessionProvider>
         <GlobalProvider>
           <Rainbow>{children}</Rainbow>
         </GlobalProvider>
-      </PrivyWrapper>
+      </SessionProvider>
     </MiniKitProvider>
     // </MiniAppProvider>
   );

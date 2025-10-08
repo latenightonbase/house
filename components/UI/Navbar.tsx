@@ -27,44 +27,37 @@ export default function Navbar(){
                     <h1 className="text-xl font-bold text-white">Auction House</h1>
                     
                     <div className="flex items-center gap-4">
-                        {/* Profile Picture */}
-                        <div className="rounded-md overflow-hidden border border-white">
-                            {user ? <><Image 
-                                alt="Profile Picture"
-                                src={user.pfp_url}
-                                width={40}
-                                height={40}
-                                className="w-6 aspect-square"
-                            /></> : <div className="w-6 bg-white/30 animate-pulse aspect-square"></div>}
-                        </div>
+                    
 
-                        {/* Hamburger Menu Button */}
-                        <button 
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="flex flex-col gap-1 w-6 h-6 justify-center items-center"
-                        >
-                            <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                            <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-                            <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
-                        </button>
+                        {/* WalletConnect or Hamburger Menu */}
+                        <WalletConnect />
+                        {user &&(
+                            <button 
+                                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                className="flex flex-col gap-1 w-6 h-6 justify-center items-center"
+                            >
+                                <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+                                <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? 'opacity-0' : ''}`}></div>
+                                <div className={`w-4 h-0.5 bg-white transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 {/* Mobile Dropdown Menu */}
-                <ul className={`absolute w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200  bg-black rounded-b-lg shadow-lg overflow-hidden z-50`}>
-                    <li className="border-b border-primary/20 block px-4 py-3">
-                        <a 
-                        href="/create"
-                        onClick={handleCreateAuctionClick}
-                        className=" text-primary transition-colors cursor-pointer"
-                    >
-                        Create Auction
-                    </a>
-                    </li>
-                    <li className="border-b border-primary/20 block px-4 py-3">
-                        <WalletConnect/>
-                    </li>
-                </ul>
+                {user && (
+                    <ul className={`absolute w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200  bg-black rounded-b-lg shadow-lg overflow-hidden z-50`}>
+                        <li className="border-b border-primary/20 block px-4 py-3">
+                            <a 
+                            href="/create"
+                            onClick={handleCreateAuctionClick}
+                            className=" text-primary transition-colors cursor-pointer"
+                        >
+                            Create Auction
+                        </a>
+                        </li>
+                    </ul>
+                )}
             </div>
 
             {/* Desktop Sidebar */}
@@ -85,31 +78,12 @@ export default function Navbar(){
                             <span className="text-lg">Create Auction</span>
                         </a>
                         
-                        <div className="px-4 py-3">
-                            <WalletConnect/>
-                        </div>
                     </nav>
                 </div>
 
                 {/* Sidebar Footer - Profile */}
                 <div className="p-4 border-t border-secondary/20">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
-                        <div className="rounded-md overflow-hidden border border-white">
-                            {user ? <><Image 
-                                alt="Profile Picture"
-                                src={user.pfp_url}
-                                width={40}
-                                height={40}
-                                className="w-10 aspect-square"
-                            /></> : <div className="w-10 bg-white/30 animate-pulse aspect-square"></div>}
-                        </div>
-                        {user && (
-                            <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm font-medium truncate">{user.username}</p>
-                                <p className="text-secondary text-xs">FID: {user.fid}</p>
-                            </div>
-                        )}
-                    </div>
+                    <WalletConnect/>
                 </div>
             </div>
         </>

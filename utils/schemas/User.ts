@@ -17,14 +17,12 @@ const UserSchema: Schema = new Schema(
   {
     token: {
       type: String,
-      required: true,
-      unique: true,
       trim: true,
+      default: null,
     },
     fid: {
       type: String,
-      required: true,
-      unique: true,
+      default: null,
       trim: true,
     },
     wallet: {

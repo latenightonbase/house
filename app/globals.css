@@ -87,3 +87,13 @@ body {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Gradient Text Class */
+.gradient-text {
+  @apply bg-gradient-to-br from-green-600 via-emerald-600 to-green-800 text-transparent bg-clip-text;
+}
+
+/* Gradient Button Class */
+.gradient-button {
+  @apply bg-gradient-to-br from-emerald-600 to-green-700;
+}

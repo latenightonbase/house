@@ -1,6 +1,14 @@
+import { useGlobalContext } from '@/utils/providers/globalContext';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
+import Image from 'next/image';
 import { MdWallet } from 'react-icons/md';
+import { CiLogin } from "react-icons/ci";
+import { signOut } from "next-auth/react";
+
 export const WalletConnect = () => {
+
+  const {user} = useGlobalContext();
+
   return (
     <ConnectButton.Custom>
       {({
@@ -21,6 +29,11 @@ export const WalletConnect = () => {
           chain &&
           (!authenticationStatus ||
             authenticationStatus === 'authenticated');
+
+        const handleDisconnect = () => {
+          signOut(); // Clear the session
+        };
+
         return (
           <div
             {...(!ready && {
@@ -38,9 +51,9 @@ export const WalletConnect = () => {
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className=" text-center w-full rounded text-lg font-bold text-white "
+                    className=" text-center w-full flex gap-1 px-2 py-1 gradient-button items-center justify-center rounded text-md font-bold text-white "
                   >
-                    CONNECT
+                    Login<CiLogin className='text-xl'/>
                   </button>
                 );
               }
@@ -55,16 +68,27 @@ export const WalletConnect = () => {
                   </button>
                 );
               }
+
+              if(user?.pfp_url !== "" && user?.username !== "")
               return (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className=" flex items-center gap-2 text-center w-full rounded text-md font-bold text-white"
+                    className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white"
                   >
-                    <MdWallet/>
-                    {account.displayName.toUpperCase()}
-                    
+                    <div className='flex items-center gap-2'>
+                      <Image unoptimized
+                        alt="Profile Picture"
+                        src={user?.pfp_url}
+                        width={40}
+                        height={40}
+                        className="lg:w-8 lg:h-8 h-6 w-6 aspect-square border border-primary rounded-md"
+                      />
+                      <div className='flex flex-col text-left max-lg:hidden'>
+                        <span className='text-sm font-medium'>{user?.username}</span>
+                        </div>
+                    </div>
                   </button>
                 </div>
               );
