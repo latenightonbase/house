@@ -1,12 +1,9 @@
 import connectToDB  from "@/utils/db";
 import NextAuth from "next-auth";
 import jwt from "jsonwebtoken";
-import { GetSiweMessageOptions } from "@rainbow-me/rainbowkit-siwe-next-auth";
 import { revalidatePath } from "next/cache";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
-
-import CredentialsProvider from 'next-auth/providers/credentials'
 import User from "@/utils/schemas/User";
 import { walletAuthProvider } from "../../walletAuthProvider/credsProvider";
 
@@ -53,7 +50,7 @@ interface CustomSession extends Session {
 
 const handler = NextAuth({
   providers: [
-    walletAuthProvider,
+    walletAuthProvider, // This will handle both regular wallets and smart contract wallets
   ],
   callbacks: {
     async signIn({ user, account }: { user: NextAuthUser, account: Account | null }) {

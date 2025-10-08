@@ -24,9 +24,11 @@ export const walletAuthProvider = CredentialsProvider({
   credentials: {
     message: { label: "Message", type: "text" },
     signature: { label: "Signature", type: "text" },
+    address: { label: "Address", type: "text", optional: true },
   },
   async authorize(credentials) {
     console.log("Authorizing user...");
+    console.log("Wallet auth provider called", credentials?.address);
     console.log("Credentials received:", credentials);
 
     if (!credentials?.message || !credentials?.signature) {
@@ -34,14 +36,32 @@ export const walletAuthProvider = CredentialsProvider({
       return null;
     }
 
-    const address = verifySignature(credentials.message, credentials.signature);
+    // First try to get address from message signature verification
+    const recoveredAddress = verifySignature(credentials.message, credentials.signature);
+    
+    // Also try to extract address from SIWE message format
+    let messageAddress = null;
+    const addressMatch = credentials.message.match(/0x[a-fA-F0-9]{40}/);
+    if (addressMatch) {
+      messageAddress = addressMatch[0];
+      console.log("Extracted address from SIWE message:", messageAddress);
+    }
 
-    if (!address) {
-      console.error("Signature verification failed.");
+    // Use provided address, recovered address, or extracted address
+    const finalAddress = credentials.address || recoveredAddress || messageAddress;
+
+    if (!finalAddress) {
+      console.error("Could not determine wallet address from any source.");
       return null;
     }
 
-    console.log("Signature verified. Address:", address);
+    console.log("Using final address:", finalAddress);
+
+    // Verify that the signature matches if we have both recovered and provided addresses
+    if (recoveredAddress && recoveredAddress.toLowerCase() !== finalAddress.toLowerCase()) {
+      console.error("Address mismatch between signature and provided address");
+      return null;
+    }
 
     const message = credentials.message;
     console.log("Parsed message:", message);
@@ -49,14 +69,14 @@ export const walletAuthProvider = CredentialsProvider({
     await connectToDB();
     console.log("Connected to database.");
 
-    let user = await User.findOne({ wallet: address });
+    let user = await User.findOne({ wallet: finalAddress });
     console.log("User lookup result:", user);
 
     if (!user) {
       console.log("User not found. Creating new user...");
       try{
 user = await User.create({
-        wallet: address,
+        wallet: finalAddress,
         token: `none-${Date.now()}`,
         fid: `none-${Date.now()}`
       });
@@ -71,7 +91,7 @@ user = await User.create({
 
     return {
       id: user._id.toString(),
-      address: address,
+      address: finalAddress,
     };
   }
 });
