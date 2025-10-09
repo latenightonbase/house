@@ -4,7 +4,7 @@ import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { getServerSession } from 'next-auth';
 
-export async function POST(req: NextRequest, { params }: { params: { blockchainAuctionId: string } }) {
+export async function POST(req: NextRequest) {
   try {
     // Check for authentication
     const session = await getServerSession();
@@ -12,7 +12,10 @@ export async function POST(req: NextRequest, { params }: { params: { blockchainA
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { blockchainAuctionId } = params;
+    const blockchainAuctionId = req.nextUrl.pathname.split('/')[4];
+
+    console.log("Placing bid on auction ID:", blockchainAuctionId);
+
     const body = await req.json();
     const { bidAmount, userWallet } = body;
 
@@ -25,11 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: { blockchainA
       return NextResponse.json({ error: 'Invalid bid amount' }, { status: 400 });
     }
 
-    // Validate wallet address format (basic check)
-    if (!/^0x[a-fA-F0-9]{40}$/.test(userWallet)) {
-      return NextResponse.json({ error: 'Invalid wallet address format' }, { status: 400 });
-    }
-
     await dbConnect();
 
     // Find the auction by blockchainAuctionId
@@ -40,9 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { blockchainA
 
     // Check if auction is active
     const now = new Date();
-    if (now < auction.startDate) {
-      return NextResponse.json({ error: 'Auction has not started yet' }, { status: 400 });
-    }
+    
     if (now > auction.endDate) {
       return NextResponse.json({ error: 'Auction has ended' }, { status: 400 });
     }
