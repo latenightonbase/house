@@ -6,6 +6,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
+import { useRouter } from "next/navigation"
 
 export default function Navbar(){
 
@@ -19,12 +20,14 @@ export default function Navbar(){
         navigateWithLoader('/create')
     }
 
+    const router = useRouter()
+
     return (
         <>
             {/* Mobile Navbar */}
             <div className="relative z-50 md:hidden">
                 <div className="w-full p-4 flex justify-between items-center rounded-b-lg fixed h-12 top-0 left-0 border-b-[0.1px] border-b-secondary/50 bg-black/80 backdrop-blur-sm">
-                    <h1 className="text-xl font-bold text-white">Auction House</h1>
+                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white">AH</button>
                     
                     <div className="flex items-center gap-4">
                     

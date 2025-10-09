@@ -65,7 +65,7 @@ export const walletAuthProvider = CredentialsProvider({
 
     const message = credentials.message;
     console.log("Parsed message:", message);
-
+    console.log("Final address to use:", finalAddress);
     await connectToDB();
     console.log("Connected to database.");
 

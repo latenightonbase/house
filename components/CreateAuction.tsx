@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { writeContract } from "@wagmi/core";
-import { useAccount } from "wagmi";
+import { useAccount, useSendCalls } from "wagmi";
 import { config } from "@/utils/providers/rainbow";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
@@ -13,6 +13,14 @@ import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
 import { useSession } from "next-auth/react";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import { randomUUID } from "crypto";
+import { WalletConnect } from "./Web3/walletConnect";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { encodeFunctionData, numberToHex } from "viem";
+import {
+  base,
+  createBaseAccountSDK,
+  getCryptoKeyAccount,
+} from "@base-org/account";
 
 interface CurrencyOption {
   name: string;
@@ -33,7 +41,31 @@ export default function CreateAuction() {
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
 
+  const { sendCalls, isSuccess, status } = useSendCalls()
+
+  const { context } = useMiniKit()
+
   const navigate = useNavigateWithLoader();
+
+  useEffect(() => {
+    // When transaction succeeds
+    if (isSuccess) {
+      // Process successful transaction
+      const processSuccess = async () => {
+        try {
+          
+        } catch (error) {
+          
+        }
+      };
+      
+      processSuccess();
+    } 
+    // When transaction fails (status === 'error')
+    else if (status === 'error') {
+      
+    }
+  }, [isSuccess, status]);
 
   // Helper function to calculate duration in hours
   const calculateDurationHours = (endDate: Date): number => {
@@ -71,24 +103,55 @@ export default function CreateAuction() {
         parseFloat(minBidAmount || "0") * Math.pow(10, 18); // Convert to wei (assuming 18 decimals)
 
       const auctionId = randomUUID();
+      const calls = [
+        {
+          to: contractAdds.auctions,
+          value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+          data: encodeFunctionData({
+            abi: auctionAbi,
+            functionName: "startAuction",
+            args: [
+              auctionId,
+              selectedCurrency.contractAddress as `0x${string}`,
+              selectedCurrency.symbol,
+              numberToHex(BigInt(durationHours)),
+              numberToHex(BigInt(Math.floor(minBidAmountWei)))
+            ]
+          })
+        }
+      ]
 
-      const contract = await writeContractSetup(
-        contractAdds.auctions,
-        auctionAbi
-      );
+      if (context?.client.clientFid === 309857) {
+        const provider = createBaseAccountSDK({
+          appName: "Bill test app",
+          appLogoUrl: "https://farcaster-miniapp-chi.vercel.app/pfp.jpg",
+          appChainIds: [base.constants.CHAIN_IDS.base],
+        }).getProvider();
 
-      // Call the smart contract
-      const txHash = await contract?.startAuction(
-        auctionId,
-        selectedCurrency.contractAddress as `0x${string}`,
-        selectedCurrency.symbol,
-        BigInt(durationHours),
-        BigInt(Math.floor(minBidAmountWei))
-      );
+        const cryptoAccount = await getCryptoKeyAccount();
+        const fromAddress = cryptoAccount?.account?.address;
 
-      await txHash?.wait();
+        const result = await provider.request({
+          method: "wallet_sendCalls",
+          params: [
+            {
+              version: "2.0.0",
+              from: fromAddress,
+              chainId: numberToHex(base.constants.CHAIN_IDS.base),
+              atomicRequired: true,
+              calls: calls,
+            },
+          ],
+        });
+      }
+      else {
+        sendCalls({
+          // @ts-ignore
+          calls: sendingCalls,
+        });
 
-      console.log("Transaction hash:", txHash);
+
+      }
 
       // Call the API to save auction details in the database
       const response = await fetch("/api/protected/auctions/create", {
@@ -99,7 +162,6 @@ export default function CreateAuction() {
         body: JSON.stringify({
           auctionName: auctionTitle,
           blockchainAuctionId: auctionId,
-          creationHash: txHash?.hash,
           tokenAddress: selectedCurrency.contractAddress,
           endDate: endTime,
           currency: selectedCurrency.symbol,
@@ -160,21 +222,31 @@ export default function CreateAuction() {
     endTime &&
     minBidAmount.trim();
 
-  return (
-    <div className="max-w-2xl mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-        {/* Auction Title */}
-        <Input
-          label="Auction Title"
-          value={auctionTitle}
-          onChange={setAuctionTitle}
-          placeholder="Enter a title for your auction"
-          required
-        />
+  if (!session)
+    return (
+      <div className="h-screen w-screen flex flex-col gap-2 items-center justify-center fixed top-0 left-0 p-4 backdrop-blur-xl">
+        <p className="text-sm text-white text-center">You must be logged in to create an auction.</p>
+        <WalletConnect />
+      </div>
+    )
 
-        {/* Currency Selection Mode */}
-        <div>
-          {/*<label className="block text-sm font-medium text-foreground mb-3">
+
+  if (session?.user !== undefined)
+    return (
+      <div className="max-w-2xl mx-auto">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          {/* Auction Title */}
+          <Input
+            label="Auction Title"
+            value={auctionTitle}
+            onChange={setAuctionTitle}
+            placeholder="Enter a title for your auction"
+            required
+          />
+
+          {/* Currency Selection Mode */}
+          <div>
+            {/*<label className="block text-sm font-medium text-foreground mb-3">
                         How would you like to specify the currency? *
                     </label>
                     <div className="flex gap-3">
@@ -203,95 +275,95 @@ export default function CreateAuction() {
                             <div className="text-xs mt-1 opacity-75">Enter token address</div>
                         </button>
                     </div>*/}
-        </div>
-
-        {/* Currency Search/Input */}
-        <CurrencySearch
-          // mode={currencyMode}
-          onSelect={handleCurrencySelect}
-          selectedCurrency={selectedCurrency}
-        />
-
-        {/* Minimum Bid Amount */}
-        <Input
-          label="Minimum Bid Amount (Optional)"
-          value={minBidAmount}
-          onChange={setMinBidAmount}
-          placeholder="Enter the minimum bid amount (default: 0)"
-          type="number"
-        />
-
-        {/* End Time Picker */}
-        <DateTimePicker
-          label="Auction End Time (Local Time)"
-          value={endTime}
-          onChange={setEndTime}
-          placeholder=""
-          required
-          minDate={new Date()} // Prevent selecting past dates
-        />
-
-        {/* Time Remaining Display */}
-        {endTime && (
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="text-sm text-blue-700">
-              <strong>Auction Duration:</strong>{" "}
-              {(() => {
-                const now = new Date();
-                const diff = endTime.getTime() - now.getTime();
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor(
-                  (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-                );
-                const minutes = Math.floor(
-                  (diff % (1000 * 60 * 60)) / (1000 * 60)
-                );
-
-                if (diff <= 0) return "Invalid time (must be in the future)";
-
-                const parts = [];
-                if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
-                if (hours > 0)
-                  parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-                if (minutes > 0 && days === 0)
-                  parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-
-                return parts.join(", ");
-              })()}
-            </div>
           </div>
-        )}
 
-        {/* Submit Button */}
-        <button
-          type="submit" // This ensures the form submission triggers handleSubmit
-          disabled={!isFormValid || isLoading}
-          className="w-full py-4 px-6 bg-primary text-white rounded-lg font-semibold text-lg transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500 shadow-lg hover:shadow-xl"
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Creating Auction...
+          {/* Currency Search/Input */}
+          <CurrencySearch
+            // mode={currencyMode}
+            onSelect={handleCurrencySelect}
+            selectedCurrency={selectedCurrency}
+          />
+
+          {/* Minimum Bid Amount */}
+          <Input
+            label="Minimum Bid Amount (Optional)"
+            value={minBidAmount}
+            onChange={setMinBidAmount}
+            placeholder="Enter the minimum bid amount (default: 0)"
+            type="number"
+          />
+
+          {/* End Time Picker */}
+          <DateTimePicker
+            label="Auction End Time (Local Time)"
+            value={endTime}
+            onChange={setEndTime}
+            placeholder=""
+            required
+            minDate={new Date()} // Prevent selecting past dates
+          />
+
+          {/* Time Remaining Display */}
+          {endTime && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-sm text-blue-700">
+                <strong>Auction Duration:</strong>{" "}
+                {(() => {
+                  const now = new Date();
+                  const diff = endTime.getTime() - now.getTime();
+                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                  const hours = Math.floor(
+                    (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+                  );
+                  const minutes = Math.floor(
+                    (diff % (1000 * 60 * 60)) / (1000 * 60)
+                  );
+
+                  if (diff <= 0) return "Invalid time (must be in the future)";
+
+                  const parts = [];
+                  if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+                  if (hours > 0)
+                    parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+                  if (minutes > 0 && days === 0)
+                    parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+
+                  return parts.join(", ");
+                })()}
+              </div>
             </div>
-          ) : !isConnected ? (
-            "Login to Create"
-          ) : (
-            "Create Auction"
           )}
-        </button>
 
-        {/* Form Validation Helper */}
-        {!isConnected && (
-          <div className="text-sm text-red-500 text-center">
-            Please connect your wallet to create an auction
-          </div>
-        )}
-        {isConnected && !isFormValid && (
-          <div className="text-sm text-gray-500 text-center">
-            Please fill in all required fields to create your auction
-          </div>
-        )}
-      </form>
-    </div>
-  );
+          {/* Submit Button */}
+          <button
+            type="submit" // This ensures the form submission triggers handleSubmit
+            disabled={!isFormValid || isLoading}
+            className="w-full py-4 px-6 bg-primary text-white rounded-lg font-semibold text-lg transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500 shadow-lg hover:shadow-xl"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Creating Auction...
+              </div>
+            ) : !isConnected ? (
+              "Login to Create"
+            ) : (
+              "Create Auction"
+            )}
+          </button>
+
+          {/* Form Validation Helper */}
+          {!isConnected && (
+            <div className="text-sm text-red-500 text-center">
+              Please connect your wallet to create an auction
+            </div>
+          )}
+          {isConnected && !isFormValid && (
+            <div className="text-sm text-gray-500 text-center">
+              Please fill in all required fields to create your auction
+            </div>
+          )}
+        </form>
+      </div>
+    );
 }

@@ -48,7 +48,7 @@ const LandingAuctions: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/protected/auctions/getTopFive");
+      const response = await fetch("/api/auctions/getTopFive");
       const data: ApiResponse = await response.json();
 
       console.log("API Response:", data);
@@ -109,29 +109,26 @@ const LandingAuctions: React.FC = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="w-full max-w-6xl mx-auto mt-4">
-        <div className="text-center bg-red-50 border border-red-200 rounded-lg p-6">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchTopAuctions} variant="outline">
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <div className="w-full max-w-6xl mx-auto mt-4">
+  //       <div className="text-center bg-red-50 border border-red-200 rounded-lg p-6">
+  //         <p className="text-red-600 mb-4">{error}</p>
+  //         <Button onClick={fetchTopAuctions} variant="outline">
+  //           Try Again
+  //         </Button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (auctions.length === 0) {
     return (
-      <div className="w-full max-w-6xl mx-auto p-6">
-        <div className="text-center bg-red-500/20 border border-red-700 rounded-lg p-8">
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+      <div className="w-full max-w-6xl mx-auto mt-4">
+        <div className="text-center bg-white/10 border border-white/30 w-full rounded-lg p-8">
+          <h3 className="text-xl font-semibold text-gray-300">
             No Active Auctions
           </h3>
-          <p className="text-gray-600">
-            There are currently no running auctions to display.
-          </p>
         </div>
       </div>
     );
