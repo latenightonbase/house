@@ -92,28 +92,6 @@ const AuctionSchema: Schema = new Schema(
       required: true,
       min: 0,
     },
-    reservePrice: {
-      type: Number,
-      min: 0,
-      validate: {
-        validator: function(this: IAuction, value: number) {
-          return !value || value >= this.minimumBid;
-        },
-        message: 'Reserve price must be greater than or equal to minimum bid',
-      },
-    },
-    hostFeePercentage: {
-      type: Number,
-      required: true,
-      default: 2.5, // 2.5% default fee
-      min: 0,
-      max: 100,
-    },
-    totalRevenue: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
     blockchainAuctionId: {
       type: String,
       required: true,

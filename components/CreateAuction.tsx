@@ -5,6 +5,7 @@ import { writeContract } from "@wagmi/core";
 import { useAccount, useSendCalls } from "wagmi";
 import { config } from "@/utils/providers/rainbow";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
+import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
@@ -71,7 +72,7 @@ export default function CreateAuction() {
       setIsLoading(false);
       console.error("Transaction failed");
     }
-  }, [isSuccess, status, loadingToastId, genAuctionId]);
+  }, [isSuccess, status]);
 
   const processSuccess = async (auctionId: string) => {
     try {
@@ -128,6 +129,28 @@ export default function CreateAuction() {
     return Math.max(1, diffHours); // Minimum 1 hour
   };
 
+  // Function to get token decimals from ERC20 contract
+  const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
+    try {
+      // Use contract setup for reading decimals
+      const contract = await writeContractSetup(tokenAddress, erc20Abi);
+      const decimalsResult = await contract?.decimals();
+      return Number(decimalsResult) || 18; // Default to 18 if failed
+    } catch (error) {
+      console.error("Error fetching token decimals:", error);
+      // Default to 18 decimals if we can't fetch (most common for ERC20)
+      return 18;
+    }
+  };
+
+  // Function to convert bid amount to proper decimal format
+  const convertBidAmountToWei = (bidAmount: number, decimals: number): bigint => {
+    // Convert the bid amount to the token's decimal representation
+    const factor = Math.pow(10, decimals);
+    const amountInWei = Math.floor(bidAmount * factor);
+    return BigInt(amountInWei);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -157,8 +180,27 @@ export default function CreateAuction() {
     
     try {
       const durationHours = calculateDurationHours(endTime);
-      const minBidAmountWei =
-        parseFloat(minBidAmount || "0") * Math.pow(10, 18); // Convert to wei (assuming 18 decimals)
+      
+      // Get token decimals for proper conversion
+      let tokenDecimals = 18; // Default to 18
+      let minBidAmountWei: bigint;
+
+      try {
+        toast.loading("Fetching token information...", { id: toastId });
+        tokenDecimals = await getTokenDecimals(selectedCurrency.contractAddress);
+        console.log(`Token decimals for ${selectedCurrency.contractAddress}:`, tokenDecimals);
+        
+        // Convert minimum bid amount to proper decimal format
+        const minBidFloat = parseFloat(minBidAmount || "0");
+        minBidAmountWei = convertBidAmountToWei(minBidFloat, tokenDecimals);
+        console.log(`Minimum bid ${minBidFloat} converted to ${minBidAmountWei} with ${tokenDecimals} decimals`);
+      } catch (error) {
+        console.error("Error fetching token decimals, using default 18:", error);
+        // Fallback to 18 decimals if fetching fails
+        const minBidFloat = parseFloat(minBidAmount || "0");
+        minBidAmountWei = convertBidAmountToWei(minBidFloat, 18);
+        toast.loading("Using default token configuration...", { id: toastId });
+      }
 
       const auctionId = crypto.randomUUID();
 
@@ -175,8 +217,8 @@ export default function CreateAuction() {
           auctionId,
           selectedCurrency.contractAddress as `0x${string}`,
           auctionTitle,
-          BigInt(durationHours),
-          BigInt(Math.floor(minBidAmountWei))
+          BigInt(Math.round(durationHours)),
+          minBidAmountWei
         );
 
         toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
@@ -204,7 +246,7 @@ export default function CreateAuction() {
                 selectedCurrency.contractAddress as `0x${string}`,
                 selectedCurrency.symbol,
                 numberToHex(BigInt(durationHours)),
-                numberToHex(BigInt(Math.floor(minBidAmountWei))),
+                numberToHex(minBidAmountWei),
               ],
             }),
           },
@@ -312,7 +354,7 @@ export default function CreateAuction() {
 
   if (session?.user !== undefined)
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl max-lg:mx-auto">
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {/* Auction Title */}
           <Input

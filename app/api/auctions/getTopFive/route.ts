@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate }
     })
-    .populate('hostedBy', 'wallet username') // Populate host information
+    .populate('hostedBy', 'wallet username blockchainAuctionId') // Populate host information
     .lean(); // Use lean for better performance
 
     // Calculate additional fields for each auction

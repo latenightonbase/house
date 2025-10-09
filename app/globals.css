@@ -91,10 +91,10 @@ body {
 
 /* Gradient Text Class */
 .gradient-text {
-  @apply bg-gradient-to-br from-green-600 via-emerald-600 to-green-800 text-transparent bg-clip-text;
+  @apply bg-gradient-to-br from-green-500 via-emerald-500 to-green-700 text-transparent bg-clip-text;
 }
 
 /* Gradient Button Class */
 .gradient-button {
-  @apply bg-gradient-to-br from-emerald-600 to-green-700;
+  @apply bg-gradient-to-br from-green-500 via-emerald-600 to-green-800;
 }

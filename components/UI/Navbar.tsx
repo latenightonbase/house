@@ -2,17 +2,36 @@
 
 import { useGlobalContext } from "@/utils/providers/globalContext"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 export default function Navbar(){
 
     const {user} = useGlobalContext()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const navigateWithLoader = useNavigateWithLoader()
+    const pathname = usePathname()
+    const mobileMenuRef = useRef<HTMLDivElement>(null)
+
+    // Close mobile menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false)
+            }
+        }
+
+        if (isMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [isMenuOpen])
 
     const handleCreateAuctionClick = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -20,12 +39,18 @@ export default function Navbar(){
         navigateWithLoader('/create')
     }
 
+    const handleMyAuctionsClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setIsMenuOpen(false)
+        navigateWithLoader('/my-auctions')
+    }
+
     const router = useRouter()
 
     return (
         <>
             {/* Mobile Navbar */}
-            <div className="relative z-50 md:hidden">
+            <div className="relative z-50 md:hidden" ref={mobileMenuRef}>
                 <div className="w-full p-4 flex justify-between items-center rounded-b-lg fixed h-12 top-0 left-0 border-b-[0.1px] border-b-secondary/50 bg-black/80 backdrop-blur-sm">
                     <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white">AH</button>
                     
@@ -49,14 +74,27 @@ export default function Navbar(){
 
                 {/* Mobile Dropdown Menu */}
                 {user && (
-                    <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/10 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
+                    <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
                         <li className="border-b border-primary/50 block px-4 py-3">
                             <a 
                             href="/create"
                             onClick={handleCreateAuctionClick}
-                            className=" text-white font-semibold transition-colors cursor-pointer w-full"
+                            className={`text-white font-semibold transition-colors cursor-pointer w-full ${
+                                pathname === '/create' ? 'text-primary' : 'text-white'
+                            }`}
                         >
                             Create Auction
+                        </a>
+                        </li>
+                        <li className="border-b border-primary/50 block px-4 py-3">
+                            <a 
+                            href="/my-auctions"
+                            onClick={handleMyAuctionsClick}
+                            className={`font-semibold transition-colors cursor-pointer w-full ${
+                                pathname === '/my-auctions' ? 'text-primary' : 'text-white'
+                            }`}
+                        >
+                            My Auctions
                         </a>
                         </li>
                     </ul>
@@ -76,9 +114,25 @@ export default function Navbar(){
                         <a 
                             href="/create"
                             onClick={handleCreateAuctionClick}
-                            className="flex items-center px-4 py-3 text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
+                            className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
+                                pathname === '/create' 
+                                    ? 'text-primary bg-primary/20 border border-primary/30' 
+                                    : 'text-primary hover:bg-primary/10'
+                            }`}
                         >
                             <span className="text-lg">Create Auction</span>
+                        </a>
+                        
+                        <a 
+                            href="/my-auctions"
+                            onClick={handleMyAuctionsClick}
+                            className={`flex items-center px-4 py-3 rounded-lg transition-colors cursor-pointer ${
+                                pathname === '/my-auctions' 
+                                    ? 'text-primary bg-primary/20 border border-primary/30' 
+                                    : 'text-primary hover:bg-primary/10'
+                            }`}
+                        >
+                            <span className="text-lg">My Auctions</span>
                         </a>
                         
                     </nav>
