@@ -69,6 +69,17 @@ const LandingAuctions: React.FC = () => {
     fetchTopAuctions();
   }, []);
 
+  async function handleBid(auctionId: string) {
+    try{
+      //get auction meta
+      //trigger a batch txn for approval and placeBid
+    }
+    catch{
+      setError("Failed to place bid");
+      console.error("Bid error");
+    }
+  }
+
   const formatTimeRemaining = (hours: number): string => {
     if (hours < 1) return "Less than 1 hour";
     if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""}`;

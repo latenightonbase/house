@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
   try {
     const body = await req.json();
-    const { auctionName, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency } = body;
+    const { auctionName, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash } = body;
 
     if (!auctionName || !tokenAddress || !endDate || !startDate || !hostedBy || !minimumBid) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     await dbConnect();
 
-    const user = await User.findOne({ wallet: hostedBy });
+    var user = await User.findOne({ wallet: hostedBy });
     if (!user) {
       return NextResponse.json({ error: 'Hosting user not found' }, { status: 404 });
     }
@@ -31,12 +31,17 @@ export async function POST(req: NextRequest) {
       currency,
       tokenAddress,
       blockchainAuctionId,
+      creationHash,
       endDate,
       hostedBy: user._id,
       minimumBid,
     });
 
     await newAuction.save();
+
+    user.hostedAuctions.push(newAuction._id);
+
+    await user.save()
 
     return NextResponse.json(
       { message: 'Auction created successfully', auction: newAuction },
