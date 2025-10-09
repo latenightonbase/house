@@ -119,11 +119,6 @@ const AuctionSchema: Schema = new Schema(
       required: true,
       unique: true,
     },
-    creationHash: {
-      type: String,
-      required: true,
-      unique: true,
-    },
     tokenAddress: {
       type: String,
       required: true,

@@ -5,6 +5,7 @@ import { MiniKitContextProvider } from "@/utils/providers/MiniKitProvider";
 import Background from "@/components/UI/Background";
 import Navbar from "@/components/UI/Navbar";
 import { NProgressProvider } from "@/utils/useNavigateWithLoader";
+import { Toaster } from "react-hot-toast";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -54,6 +55,28 @@ export default function RootLayout({
               {children}
             </div>
             <Background />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#363636',
+                  color: '#fff',
+                },
+                success: {
+                  style: {
+                    background: '#4bb878',
+                    color: '#fff',
+                  },
+                },
+                error: {
+                  style: {
+                    background: '#ef4444',
+                    color: '#fff',
+                  },
+                },
+              }}
+            />
           </MiniKitContextProvider>
         </NProgressProvider>
       </body>

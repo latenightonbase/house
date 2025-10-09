@@ -21,6 +21,9 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
+import { RiLoader5Fill } from "react-icons/ri";
+import toast from "react-hot-toast";
+
 
 interface CurrencyOption {
   name: string;
@@ -40,32 +43,82 @@ export default function CreateAuction() {
   const [minBidAmount, setMinBidAmount] = useState("0"); // Made the minimum bid amount optional and default to 0
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
+  const [genAuctionId, setGenAuctionId] = useState("");
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const { sendCalls, isSuccess, status } = useSendCalls();
 
-  const { sendCalls, isSuccess, status } = useSendCalls()
-
-  const { context } = useMiniKit()
+  const { context } = useMiniKit();
 
   const navigate = useNavigateWithLoader();
 
   useEffect(() => {
     // When transaction succeeds
     if (isSuccess) {
-      // Process successful transaction
-      const processSuccess = async () => {
-        try {
-          
-        } catch (error) {
-          
-        }
-      };
-      
-      processSuccess();
-    } 
-    // When transaction fails (status === 'error')
-    else if (status === 'error') {
-      
+      if (loadingToastId) {
+        toast.success("Transaction successful! Saving auction details...", {
+          id: loadingToastId,
+        });
+      }
+      processSuccess(genAuctionId);
     }
-  }, [isSuccess, status]);
+    // When transaction fails (status === 'error')
+    else if (status === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, status, loadingToastId, genAuctionId]);
+
+  const processSuccess = async (auctionId: string) => {
+    try {
+      // Call the API to save auction details in the database
+
+      const now = new Date();
+      const response = await fetch("/api/protected/auctions/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          auctionName: auctionTitle,
+          blockchainAuctionId: auctionId,
+          tokenAddress: selectedCurrency?.contractAddress,
+          endDate: endTime,
+          currency: selectedCurrency?.symbol,
+          startDate: now,
+          hostedBy: address,
+          minimumBid: parseFloat(minBidAmount),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save auction details in the database");
+      }
+
+      if (loadingToastId) {
+        toast.success("Auction created successfully! Redirecting...", {
+          id: loadingToastId,
+        });
+      }
+
+      // Small delay to show success message before navigation
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (error) {
+      console.error("Error saving auction details:", error);
+      if (loadingToastId) {
+        toast.error("Failed to save auction details. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+    }
+  };
 
   // Helper function to calculate duration in hours
   const calculateDurationHours = (endDate: Date): number => {
@@ -80,104 +133,123 @@ export default function CreateAuction() {
 
     // Validation
     if (!auctionTitle || !selectedCurrency || !endTime) {
-      alert("Please fill in all required fields with valid values");
+      toast.error("Please fill in all required fields with valid values");
       return;
     }
 
     if (!isConnected || !address) {
-      alert("Please connect your wallet to create an auction");
+      toast.error("Please connect your wallet to create an auction");
       return;
     }
 
     // Ensure auction ends in the future
     const now = new Date();
     if (endTime <= now) {
-      alert("Auction end time must be in the future");
+      toast.error("Auction end time must be in the future");
       return;
     }
 
     setIsLoading(true);
+    
+    // Start loading toast
+    const toastId = toast.loading("Creating auction...");
+    setLoadingToastId(toastId);
+    
     try {
       const durationHours = calculateDurationHours(endTime);
       const minBidAmountWei =
         parseFloat(minBidAmount || "0") * Math.pow(10, 18); // Convert to wei (assuming 18 decimals)
 
-      const auctionId = randomUUID();
-      const calls = [
-        {
-          to: contractAdds.auctions,
-          value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
-          data: encodeFunctionData({
-            abi: auctionAbi,
-            functionName: "startAuction",
-            args: [
-              auctionId,
-              selectedCurrency.contractAddress as `0x${string}`,
-              selectedCurrency.symbol,
-              numberToHex(BigInt(durationHours)),
-              numberToHex(BigInt(Math.floor(minBidAmountWei)))
-            ]
-          })
-        }
-      ]
+      const auctionId = crypto.randomUUID();
 
-      if (context?.client.clientFid === 309857) {
-        const provider = createBaseAccountSDK({
-          appName: "Bill test app",
-          appLogoUrl: "https://farcaster-miniapp-chi.vercel.app/pfp.jpg",
-          appChainIds: [base.constants.CHAIN_IDS.base],
-        }).getProvider();
+      //PC flow
+      if (!context) {
+        toast.loading("Preparing transaction...", { id: toastId });
+        
+        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
 
-        const cryptoAccount = await getCryptoKeyAccount();
-        const fromAddress = cryptoAccount?.account?.address;
+        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        
+        // Call the smart contract
+        const txHash = await contract?.startAuction(
+          auctionId,
+          selectedCurrency.contractAddress as `0x${string}`,
+          auctionTitle,
+          BigInt(durationHours),
+          BigInt(Math.floor(minBidAmountWei))
+        );
 
-        const result = await provider.request({
-          method: "wallet_sendCalls",
-          params: [
-            {
-              version: "2.0.0",
-              from: fromAddress,
-              chainId: numberToHex(base.constants.CHAIN_IDS.base),
-              atomicRequired: true,
-              calls: calls,
-            },
-          ],
-        });
-      }
+        toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+        
+        await txHash?.wait();
+
+        toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
+
+        await processSuccess(auctionId);
+      } 
+      // Farcaster/Base App Flow
       else {
-        sendCalls({
-          // @ts-ignore
-          calls: sendingCalls,
-        });
+        toast.loading("Preparing transaction for mobile wallet...", { id: toastId });
+        
+        setGenAuctionId(auctionId);
+        const calls = [
+          {
+            to: contractAdds.auctions,
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+            data: encodeFunctionData({
+              abi: auctionAbi,
+              functionName: "startAuction",
+              args: [
+                auctionId,
+                selectedCurrency.contractAddress as `0x${string}`,
+                selectedCurrency.symbol,
+                numberToHex(BigInt(durationHours)),
+                numberToHex(BigInt(Math.floor(minBidAmountWei))),
+              ],
+            }),
+          },
+        ];
 
+        if (context?.client.clientFid === 309857) {
+          toast.loading("Connecting to Base SDK...", { id: toastId });
+          
+          const provider = createBaseAccountSDK({
+            appName: "Bill test app",
+            appLogoUrl: "https://farcaster-miniapp-chi.vercel.app/pfp.jpg",
+            appChainIds: [base.constants.CHAIN_IDS.base],
+          }).getProvider();
 
+          const cryptoAccount = await getCryptoKeyAccount();
+          const fromAddress = cryptoAccount?.account?.address;
+
+          toast.loading("Submitting transaction...", { id: toastId });
+
+          const result = await provider.request({
+            method: "wallet_sendCalls",
+            params: [
+              {
+                version: "2.0.0",
+                from: fromAddress,
+                chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
+                calls: calls,
+              },
+            ],
+          });
+
+          toast.loading("Processing transaction...", { id: toastId });
+          
+          //add a 5s delay
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        } else {
+          toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          
+          sendCalls({
+            // @ts-ignore
+            calls: calls,
+          });
+        }
       }
-
-      // Call the API to save auction details in the database
-      const response = await fetch("/api/protected/auctions/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          auctionName: auctionTitle,
-          blockchainAuctionId: auctionId,
-          tokenAddress: selectedCurrency.contractAddress,
-          endDate: endTime,
-          currency: selectedCurrency.symbol,
-          startDate: now,
-          hostedBy: address,
-          minimumBid: parseFloat(minBidAmount),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save auction details in the database");
-      }
-
-      //start here
-
-      navigate("/");
     } catch (error: any) {
       console.error("Error creating auction:", error);
 
@@ -200,9 +272,15 @@ export default function CreateAuction() {
         errorMessage = error.message;
       }
 
-      alert(errorMessage);
+      // Update the loading toast with error message
+      if (loadingToastId) {
+        toast.error(errorMessage, { id: loadingToastId });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
+      setLoadingToastId(null);
     }
   };
 
@@ -225,11 +303,12 @@ export default function CreateAuction() {
   if (!session)
     return (
       <div className="h-screen w-screen flex flex-col gap-2 items-center justify-center fixed top-0 left-0 p-4 backdrop-blur-xl">
-        <p className="text-sm text-white text-center">You must be logged in to create an auction.</p>
+        <p className="text-sm text-white text-center">
+          You must be logged in to create an auction.
+        </p>
         <WalletConnect />
       </div>
-    )
-
+    );
 
   if (session?.user !== undefined)
     return (
@@ -341,8 +420,8 @@ export default function CreateAuction() {
             className="w-full py-4 px-6 bg-primary text-white rounded-lg font-semibold text-lg transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500 shadow-lg hover:shadow-xl"
           >
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex items-center text-black/50 justify-center gap-2">
+                <RiLoader5Fill className="text-xl animate-spin"/>
                 Creating Auction...
               </div>
             ) : !isConnected ? (
