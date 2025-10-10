@@ -66,7 +66,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Fallback image generation
         if (!ensImage) {
-          ensImage = `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`;
+          ensImage = `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress.toLowerCase()}`;
         }
 
         user = {

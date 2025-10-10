@@ -5,6 +5,19 @@ import { useParams } from 'next/navigation';
 import { readContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
 import { contractAdds } from '@/utils/contracts/contractAdds';
+import { RiLoader5Fill } from 'react-icons/ri';
+import { Button } from '@/components/UI/button';
+import Input from '@/components/UI/Input';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/UI/Drawer';
 
 interface Bidder {
   displayName: string;
@@ -35,6 +48,12 @@ export default function BidPage() {
   const [auctionData, setAuctionData] = useState<AuctionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Drawer state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [bidAmount, setBidAmount] = useState("");
+  const [bidError, setBidError] = useState("");
+  const [isPlacingBid, setIsPlacingBid] = useState(false);
 
   useEffect(() => {
     const fetchAuctionData = async () => {
@@ -95,8 +114,8 @@ export default function BidPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading auction details...</p>
+          <RiLoader5Fill className='text-primary animate-spin text-3xl mx-auto' />
+          <p className="mt-4 text-caption">Loading auction details...</p>
         </div>
       </div>
     );
@@ -131,21 +150,75 @@ export default function BidPage() {
     // Use 6 decimals for USDC, otherwise use 18 decimals for ETH and other tokens
     const decimals = currency.toUpperCase() === 'USDC' ? 6 : 18;
     const converted = parseFloat(amount) / Math.pow(10, decimals);
-    return converted.toFixed(4);
+    return Math.round(converted).toLocaleString();
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
+  const openBidDrawer = () => {
+    setBidAmount("");
+    setBidError("");
+    setIsDrawerOpen(true);
+  };
+
+  const validateBidAmount = () => {
+    if (!auctionData) return false;
+    
+    const amount = parseFloat(bidAmount);
+    
+    if (!bidAmount || isNaN(amount) || amount <= 0) {
+      setBidError("Please enter a valid bid amount");
+      return false;
+    }
+
+    // Convert highest bid from wei to readable format for comparison
+    const currentHighestBid = parseFloat(formatBidAmount(auctionData.highestBid, auctionData.currency));
+
+    if (amount <= currentHighestBid) {
+      setBidError(`Bid must be higher than current highest bid of ${currentHighestBid} ${auctionData.currency}`);
+      return false;
+    }
+
+    setBidError("");
+    return true;
+  };
+
+  const handleConfirmBid = async () => {
+    if (!auctionData || !validateBidAmount()) return;
+    
+    setIsPlacingBid(true);
+    
+    try {
+      // Here you would implement the actual bid placement logic
+      // For now, we'll just simulate a successful bid
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+      
+      // Close drawer and refresh data
+      setIsDrawerOpen(false);
+      
+      // Refresh auction data to show new bid
+      // You might want to call fetchAuctionData() here or implement a refresh mechanism
+      
+      alert(`Bid of ${bidAmount} ${auctionData.currency} placed successfully!`);
+      
+    } catch (error) {
+      setBidError("Failed to place bid. Please try again.");
+      console.error("Bid placement error:", error);
+    } finally {
+      setIsPlacingBid(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
         {/* Auction Header */}
-        <div className="bg-white/10 rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-white/10 rounded-lg shadow-md p-4 mb-8">
           <div className="flex justify-between items-start mb-4">
-            <h1 className="text-3xl font-bold gradient-text">{auctionData.auctionName}</h1>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
               auctionData.auctionStatus === 'Running' 
                 ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
@@ -154,18 +227,18 @@ export default function BidPage() {
             </span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <div>
-              <p className="text-sm text-gray-500">End Date</p>
-              <p className="text-lg font-semibold">{formatDate(auctionData.endDate)}</p>
+              <p className="text-xs text-caption">End Date</p>
+              <p className="text-md font-semibold">{formatDate(auctionData.endDate)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Currency</p>
-              <p className="text-lg font-semibold">{auctionData.currency}</p>
+              <p className="text-xs text-caption">Currency</p>
+              <p className="text-md font-semibold">{auctionData.currency}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">Highest Bid</p>
-              <p className="text-lg font-semibold">
+              <p className="text-xs text-caption">Highest Bid</p>
+              <p className="text-md font-semibold">
                 {formatBidAmount(auctionData.highestBid, auctionData.currency)} {auctionData.currency}
               </p>
             </div>
@@ -173,13 +246,13 @@ export default function BidPage() {
         </div>
 
         {/* Bidders Section */}
-        <div className="bg-white/10 rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-white mb-6">
+        <div className="bg-white/10 rounded-lg shadow-md p-4">
+          <h2 className="text-xl font-bold text-white mb-4">
             Bidders ({auctionData.bidders.length})
           </h2>
           
           {auctionData.bidders.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No bids placed yet</p>
+            <p className="text-caption text-center py-8">No bids placed yet</p>
           ) : (
             <div className="space-y-4">
               {auctionData.bidders
@@ -190,14 +263,11 @@ export default function BidPage() {
                     <img 
                       src={bidder.image} 
                       alt={bidder.displayName}
-                      className="w-12 h-12 rounded-full"
+                      className="w-8 h-8 rounded-full"
                       
                     />
                     <div>
                       <p className="font-semibold text-white">{bidder.displayName}</p>
-                      <p className="text-sm text-caption">
-                        {bidder.walletAddress.slice(0, 6)}...{bidder.walletAddress.slice(-4)}
-                      </p>
                     </div>
                   </div>
                   
@@ -218,11 +288,80 @@ export default function BidPage() {
         {/* Place Bid Button (if auction is running) */}
         {auctionData.auctionStatus === 'Running' && (
           <div className="mt-8 text-center">
-            <button className="px-8 py-3 gradient-button text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+            <Button 
+              onClick={openBidDrawer}
+              className="px-8 py-3 gradient-button text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Place a Bid
-            </button>
+            </Button>
           </div>
         )}
+
+        {/* Bid Drawer */}
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="my-4 text-xl">Place Your Bid</DrawerTitle>
+              <div className="text-left text-md">
+                {auctionData && (
+                  <ul>
+                    <li className="border-b border-b-white/10 py-2 flex ">
+                      <span className="text-left w-1/2">Bidding on:</span> 
+                      <strong className="text-primary text-right w-1/2">{auctionData.auctionName}</strong>
+                    </li>
+                    <li className="border-b border-b-white/10 py-2 flex ">
+                      <span className="text-left w-1/2">Currency:</span>
+                      <strong className="text-primary text-right w-1/2">{auctionData.currency}</strong>
+                    </li>
+                    {parseFloat(auctionData.highestBid) > 0 && (
+                      <li className="border-b border-b-white/10 py-2 flex ">
+                        <span className="text-left w-1/2">Current highest bid:</span> 
+                        <strong className="text-primary text-right w-1/2">
+                          {formatBidAmount(auctionData.highestBid, auctionData.currency)} {auctionData.currency}
+                        </strong>
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </DrawerHeader>
+            
+            <div className="px-4 pb-2">
+              <Input
+                label="Bid Amount"
+                value={bidAmount}
+                onChange={(value) => {
+                  setBidAmount(value);
+                  if (bidError) setBidError(""); // Clear error when user types
+                }}
+                placeholder={auctionData ? `Enter amount in ${auctionData.currency}` : "Enter bid amount"}
+                type="number"
+                required
+                className="mb-2"
+              />
+              {bidError && (
+                <p className="text-red-500 text-sm mt-1">{bidError}</p>
+              )}
+            </div>
+
+            <DrawerFooter>
+              <Button 
+                onClick={handleConfirmBid}
+                disabled={isPlacingBid || !bidAmount}
+                className="w-full h-12 text-lg font-bold"
+              >
+                {isPlacingBid ? (
+                  <>
+                    <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  "Confirm Bid"
+                )}
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     </div>
   );

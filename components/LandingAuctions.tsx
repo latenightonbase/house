@@ -435,34 +435,82 @@ const LandingAuctions: React.FC = () => {
   if (loading) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="text-center">
-          <RiLoader5Fill className="inline-block animate-spin text-3xl text-primary"></RiLoader5Fill>
-          <p className="mt-4 text-lg text-gray-600">Loading top auctions...</p>
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <RiLoader5Fill className="animate-spin text-4xl text-primary" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Loading Auctions</h3>
+              <p className="text-caption">Fetching the latest auction data...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // if (error) {
-  //   return (
-  //     <div className="w-full max-w-6xl mx-auto mt-4">
-  //       <div className="text-center bg-red-50 border border-red-200 rounded-lg p-6">
-  //         <p className="text-red-600 mb-4">{error}</p>
-  //         <Button onClick={fetchTopAuctions} variant="outline">
-  //           Try Again
-  //         </Button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (error) {
+    return (
+      <div className="w-full max-w-6xl mx-auto mt-8">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+              <svg 
+                className="w-8 h-8 text-red-500 dark:text-red-400" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Unable to Load Auctions</h3>
+              <p className="text-caption mb-4">{error}</p>
+              <Button onClick={fetchTopAuctions} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (auctions.length === 0) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="text-center bg-white/10 border border-white/30 w-full rounded-lg p-8">
-          <h3 className="text-xl font-semibold text-gray-300">
-            No Active Auctions
-          </h3>
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No Active Auctions</h3>
+              <p className="text-caption mb-4">
+                There are currently no active auctions available.
+              </p>
+              <p className="text-sm text-caption">
+                Check back later or create your own auction to get started!
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );

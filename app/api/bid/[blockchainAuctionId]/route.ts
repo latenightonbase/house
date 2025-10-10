@@ -125,11 +125,11 @@ export async function POST(
         
         if (neynarUser) {
           processedBidders[i].displayName = neynarUser.display_name || neynarUser.username || `User ${bidder.fid}`;
-          processedBidders[i].image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder}`;
+          processedBidders[i].image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         } else {
           // Fallback if Neynar data not found
           processedBidders[i].displayName = `User ${bidder.fid}`;
-          processedBidders[i].image = `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder}`;
+          processedBidders[i].image = `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         }
       }
     }

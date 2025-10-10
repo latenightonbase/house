@@ -344,11 +344,36 @@ export default function CreateAuction() {
 
   if (!session)
     return (
-      <div className="h-screen w-screen flex flex-col gap-2 items-center justify-center fixed top-0 left-0 p-4 backdrop-blur-xl">
-        <p className="text-sm text-white text-center">
-          You must be logged in to create an auction.
-        </p>
-        <WalletConnect />
+      <div className="max-w-2xl max-lg:mx-auto">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Create Your First Auction</h3>
+              <p className="text-caption mb-4">
+                Connect your wallet to start creating and managing auctions on the platform.
+              </p>
+              <p className="text-sm text-caption">
+                Once connected, you'll be able to set up auctions with custom tokens, durations, and minimum bids.
+              </p>
+            </div>
+            <WalletConnect />
+          </div>
+        </div>
       </div>
     );
 
