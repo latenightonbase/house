@@ -556,7 +556,7 @@ const LandingAuctions: React.FC = () => {
                     className="w-[30%] h-12 hover:opacity-90"
                     onClick={() => {
                       // Navigate to auction detail page
-                      window.location.href = `/auction/${auction._id}`;
+                      window.location.href = `/bid/${auction.blockchainAuctionId}`;
                     }}
                   >
                     View
