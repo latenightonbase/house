@@ -14,6 +14,22 @@ import { signOut, useSession } from "next-auth/react";
 import { ethers } from "ethers";
 import { useAccount } from "wagmi";
 
+// Custom session interface to include wallet and fid
+interface CustomSession {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    wallet?: string;
+    fid?: string;
+    token?: string;
+  };
+  wallet?: string;
+  fid?: string;
+  token?: string;
+  expires: string;
+}
+
 interface GlobalContextProps {
   user: any;
   authenticatedUser: any;
@@ -24,12 +40,38 @@ interface GlobalContextProps {
 const GlobalContext = createContext<GlobalContextProps | null>(null);
 
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
-  const { data: session } = useSession();
+  const { data: session } = useSession() as { data: CustomSession | null };
   const { context } = useMiniKit();
   const { signIn } = useAuthenticate();
   const [user, setUser] = useState<any | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
   const {address, isDisconnected} = useAccount()
+
+  const updateUserFid = async () => {
+    try {
+      if (session?.user?.fid && session.user.fid.startsWith('none') && address && context?.user?.fid) {
+        const response = await fetch('/api/protected/user/update-fid', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            wallet: address,
+            fid: context.user.fid,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('FID updated successfully:', result);
+        } else {
+          console.error('Failed to update FID:', await response.text());
+        }
+      }
+    } catch (error) {
+      console.error('Error updating user FID:', error);
+    }
+  };
 
   const handleUserDetails = async (): Promise<void> => {
     if (user) return;
@@ -90,9 +132,14 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         handleUserDetails();
+        
+        // Check and update FID if conditions are met
+        if (session && address && context?.user) {
+          await updateUserFid();
+        }
       }
     })();
-  }, [context, session]);
+  }, [context, session, address]);
 
   return (
     <GlobalContext.Provider

@@ -364,6 +364,7 @@ const LandingAuctions: React.FC = () => {
   };
 
   const formatBidAmount = (amount: number, currency: string): string => {
+    console.log("Formatting bid amount:", amount, currency);
     return `${amount.toLocaleString()} ${currency}`;
   };
 
@@ -552,15 +553,20 @@ const LandingAuctions: React.FC = () => {
               <div className="space-y-3">
                 {/* Highest bid */}
                 <div className="flex justify-between items-center">
-                  <span className="text-caption text-sm">Highest Bid:</span>
-                  <span className="font-semibold text-lg text-primary">
-                    {auction.highestBid > 0
-                      ? formatBidAmount(auction.highestBid, auction.currency)
-                      : `Min: ${formatBidAmount(
+                  {auction.highestBid == 0 ? <>
+                  <span className="text-caption text-sm w-[30%]">Min Bid:</span>
+                  <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
+                    {formatBidAmount(
                           auction.minimumBid,
                           auction.currency
-                        )}`}
+                        )}
                   </span>
+                  </> : <>
+                  <span className="text-caption text-sm w-[30%]">Highest Bid:</span>
+                  <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
+                        {formatBidAmount(auction.highestBid, auction.currency)}
+                  </span>
+                  </>}
                 </div>
 
                 {/* Stats */}
@@ -585,7 +591,7 @@ const LandingAuctions: React.FC = () => {
                     <span className="text-caption">Hosted by:</span>
                     <span className="font-medium text-white">
                       {auction.hostedBy.username ||
-                        truncateAddress(auction.hostedBy.wallet)}
+                        auction.hostedBy.wallet}
                     </span>
                   </div>
                 </div>
