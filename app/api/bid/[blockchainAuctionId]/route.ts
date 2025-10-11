@@ -75,7 +75,7 @@ export async function POST(
         const truncatedAddress = `${fidValue.slice(0, 6)}...${fidValue.slice(-4)}`;
         processedBidders.push({
           displayName: truncatedAddress,
-          image: `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder}`,
+          image: `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
           bidAmount: bidder.bidAmount,
           walletAddress: bidder.bidder
         });
@@ -91,6 +91,8 @@ export async function POST(
         });
       }
     }
+
+    console.log("Numeric FIDs to fetch from Neynar:", numericFids);
 
     // Fetch Neynar data for numeric FIDs if any exist
     let neynarUsers: any[] = [];

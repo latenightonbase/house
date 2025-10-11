@@ -301,7 +301,7 @@ const LandingAuctions: React.FC = () => {
               args: [
                 auctionId,
                 numberToHex(bidAmountInWei),
-                user
+                String(user.fid) || address
               ],
             }),
           },
