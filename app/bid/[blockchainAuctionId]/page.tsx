@@ -258,7 +258,7 @@ export default function BidPage() {
               {auctionData.bidders
                 .sort((a, b) => parseFloat(b.bidAmount) - parseFloat(a.bidAmount))
                 .map((bidder, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border border-primary bg-primary/10 rounded-lg hover:bg-white/20 duration-200">
+                <div key={index} className="flex max-lg:flex-col items-center justify-center lg:justify-between p-4 border border-primary bg-primary/10 rounded-lg hover:bg-white/20 duration-200">
                   <div className="flex items-center space-x-4">
                     <img 
                       src={bidder.image} 
