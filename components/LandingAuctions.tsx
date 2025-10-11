@@ -29,6 +29,7 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
+import { useSession } from "next-auth/react";
 
 interface Bidder {
   user: string;
@@ -109,9 +110,13 @@ const LandingAuctions: React.FC = () => {
     }
   };
 
+  const { data: session } = useSession();
+
   useEffect(() => {
-    fetchTopAuctions();
-  }, []);
+    if(session){
+      fetchTopAuctions();
+  }
+  }, [session]);
 
   const navigate = useNavigateWithLoader();
 
