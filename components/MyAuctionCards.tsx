@@ -10,6 +10,15 @@ import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import toast from "react-hot-toast";
+import { useAccount, useSendCalls } from "wagmi";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { encodeFunctionData, numberToHex } from "viem";
+import { useGlobalContext } from "@/utils/providers/globalContext";
+import {
+  base,
+  createBaseAccountSDK,
+  getCryptoKeyAccount,
+} from "@base-org/account";
 
 interface Bidder {
   user: string;
@@ -65,8 +74,92 @@ export default function MyAuctionCards() {
     "active"
   );
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentEndingAuction, setCurrentEndingAuction] = useState<{auctionId: string, bidders: any[]} | null>(null);
 
   const navigate = useNavigateWithLoader();
+  const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
+  const { context } = useMiniKit();
+  const { address } = useAccount();
+  const { user } = useGlobalContext();
+
+  useEffect(() => {
+    // When transaction succeeds
+    if (isSuccess && currentEndingAuction) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Ending auction...", {
+          id: loadingToastId,
+        });
+      }
+      processEndAuctionSuccess(currentEndingAuction.auctionId, currentEndingAuction.bidders);
+      setCurrentEndingAuction(null);
+    }
+    // When transaction fails (status === 'error')
+    else if (txStatus === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setEndingAuction(null);
+      setCurrentEndingAuction(null);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, txStatus]);
+
+  const processEndAuctionSuccess = async (auctionId: string, bidders: any[]) => {
+    try {
+      // Call the API to end the auction with bidders data
+      const response = await fetch(
+        `/api/protected/auctions/${auctionId}/end`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            bidders: bidders,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to end auction");
+      }
+
+      const data = await response.json();
+      
+      if (loadingToastId) {
+        toast.success("Auction ended successfully! Refreshing auctions...", {
+          id: loadingToastId,
+        });
+      }
+
+      setSuccessMessage("Auction ended successfully!");
+      
+      // Refresh auctions after ending
+      await fetchAuctions();
+      // Switch to ended tab to show the ended auction
+      setActiveTab("ended");
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+      
+      setIsLoading(false);
+      setEndingAuction(null);
+    } catch (error) {
+      console.error("Error ending auction:", error);
+      if (loadingToastId) {
+        toast.error(`Failed to end auction: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setEndingAuction(null);
+    }
+  };
 
   const fetchAuctions = async () => {
     if (!session?.wallet) return;
@@ -108,7 +201,13 @@ export default function MyAuctionCards() {
       setEndingAuction(blockchainAuctionId);
       setSuccessMessage(null);
 
+      const toastId = toast.loading("Preparing to end auction...");
+      setLoadingToastId(toastId);
+      setIsLoading(true);
+
       // Step 1: Get all bidders from the smart contract
+      toast.loading("Fetching auction data...", { id: toastId });
+      
       const contract = await readContractSetup(
         contractAdds.auctions,
         auctionAbi
@@ -119,54 +218,104 @@ export default function MyAuctionCards() {
 
       // Get bidders from contract
       const contractBidders = await contract.getBidders(blockchainAuctionId);
-
       console.log("Contract Bidders:", contractBidders);
 
-      // Step 2: Call the API to end the auction with bidders data
-      const response = await fetch(
-        `/api/protected/auctions/${blockchainAuctionId}/end`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            bidders: contractBidders.map((item:any)=> ({bidder: item[0], bidAmount: item[1], fid: item[2]})),
-          }),
-        }
-      );
+      const formattedBidders = contractBidders.map((item: any) => ({
+        bidder: item[0], 
+        bidAmount: item[1], 
+        fid: item[2]
+      }));
 
-      if (response.ok) {
-        // Step 3: Call the contract's endAuction method
+      if (!context) {
+        toast.loading("Sending end auction transaction...", { id: toastId });
+        
         const writeContract = await writeContractSetup(
           contractAdds.auctions,
           auctionAbi
         );
 
-        if (writeContract) {
-          const tx = await writeContract.endAuction(blockchainAuctionId);
-          await tx.wait(); // Wait for transaction confirmation
+        if (!writeContract) {
+          throw new Error("Failed to setup write contract");
         }
 
-        const data = await response.json();
-        setSuccessMessage(
-          `Auction ended successfully!`
-        );
-        // Refresh auctions after ending
-        await fetchAuctions();
-        // Switch to ended tab to show the ended auction
-        setActiveTab("ended");
-        // Clear success message after 5 seconds
-        setTimeout(() => setSuccessMessage(null), 5000);
+        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        
+        const tx = await writeContract.endAuction(blockchainAuctionId);
+        await tx.wait(); // Wait for transaction confirmation
+
+        toast.loading("Transaction confirmed! Ending auction...", { id: toastId });
+
+        await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to end auction");
+        const calls = [
+          {
+            to: contractAdds.auctions as `0x${string}`,
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
+            data: encodeFunctionData({
+              abi: auctionAbi,
+              functionName: "endAuction",
+              args: [blockchainAuctionId],
+            }),
+          },
+        ];
+
+        setCurrentEndingAuction({
+          auctionId: blockchainAuctionId,
+          bidders: formattedBidders
+        });
+
+        if (context?.client.clientFid === 309857) {
+          toast.loading("Connecting to Base SDK...", { id: toastId });
+          
+          const provider = createBaseAccountSDK({
+            appName: "Bill test app",
+            appLogoUrl: "https://farcaster-miniapp-chi.vercel.app/pfp.jpg",
+            appChainIds: [base.constants.CHAIN_IDS.base],
+          }).getProvider();
+
+          const cryptoAccount = await getCryptoKeyAccount();
+          const fromAddress = cryptoAccount?.account?.address;
+
+          toast.loading("Submitting transaction...", { id: toastId });
+
+          const result = await provider.request({
+            method: "wallet_sendCalls",
+            params: [
+              {
+                version: "2.0.0",
+                from: fromAddress,
+                chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
+                calls: calls,
+              },
+            ],
+          });
+
+          toast.loading("Processing transaction...", { id: toastId });
+          
+          // Add a 5s delay
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        } else {
+          toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          
+          sendCalls({
+            // @ts-ignore
+            calls: calls,
+          });
+        }
+        
+        // processEndAuctionSuccess will be called when transaction succeeds via useEffect
       }
     } catch (err) {
       console.error("Error ending auction:", err);
-      toast.error(err instanceof Error ? err.message : "Failed to end auction");
-    } finally {
+      if (loadingToastId) {
+        toast.error(err instanceof Error ? err.message : "Failed to end auction", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
       setEndingAuction(null);
+      setCurrentEndingAuction(null);
     }
   };
 
@@ -380,12 +529,12 @@ export default function MyAuctionCards() {
                 {auction.status === "active" && (
                   <Button
                     onClick={() => endAuction(auction.blockchainAuctionId)}
-                    disabled={endingAuction === auction.blockchainAuctionId}
+                    disabled={isLoading || endingAuction === auction.blockchainAuctionId}
                     variant="default"
                     size="sm"
                     className="flex-1 h-10"
                   >
-                    {endingAuction === auction.blockchainAuctionId ? (
+                    {(isLoading && endingAuction === auction.blockchainAuctionId) || endingAuction === auction.blockchainAuctionId ? (
                       <>
                         <RiLoader5Fill className="animate-spin h-3 w-3 mr-2" />
                         Ending...

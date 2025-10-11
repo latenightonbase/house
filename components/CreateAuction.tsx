@@ -100,11 +100,9 @@ export default function CreateAuction() {
         throw new Error("Failed to save auction details in the database");
       }
 
-      if (loadingToastId) {
-        toast.success("Auction created successfully! Redirecting...", {
-          id: loadingToastId,
-        });
-      }
+      
+        toast.success("Auction created successfully! Redirecting...");
+      
 
       // Small delay to show success message before navigation
       setTimeout(() => {
@@ -281,8 +279,6 @@ export default function CreateAuction() {
 
           toast.loading("Processing transaction...", { id: toastId });
           
-          //add a 5s delay
-          await new Promise((resolve) => setTimeout(resolve, 5000));
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           

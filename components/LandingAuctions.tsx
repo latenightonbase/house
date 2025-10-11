@@ -128,8 +128,8 @@ const LandingAuctions: React.FC = () => {
           id: loadingToastId,
         });
       }
+      // Don't clear currentBid here - let processSuccess handle it
       processSuccess(currentBid.auctionId, currentBid.amount);
-      setCurrentBid(null);
     }
     // When transaction fails (status === 'error')
     else if (status === "error") {
@@ -140,12 +140,15 @@ const LandingAuctions: React.FC = () => {
       }
       setIsLoading(false);
       setCurrentBid(null);
+      setLoadingToastId(null);
       console.error("Transaction failed");
     }
-  }, [isSuccess, status, currentBid]);
+  }, [isSuccess, status]);
 
   const processSuccess = async (auctionId: string, bidAmount: number) => {
     try {
+      console.log("Starting processSuccess with:", { auctionId, bidAmount, address });
+      
       // Call the API to save bid details in the database
       const response = await fetch(`/api/protected/auctions/${auctionId}/bid`, {
         method: 'POST',
@@ -158,33 +161,35 @@ const LandingAuctions: React.FC = () => {
         }),
       });
 
+      console.log("API Response status:", response.status);
       const data = await response.json();
+      console.log("API Response data:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to save bid details in the database");
+        throw new Error(data.error || `API request failed with status ${response.status}`);
       }
 
-      if (loadingToastId) {
-        toast.success("Bid placed successfully! Refreshing auctions...", {
-          id: loadingToastId,
-        });
-      }
+      
+        toast.success("Bid placed successfully! Refreshing auctions...");
+     
 
       // Refresh the auctions to show updated bid data
       await fetchTopAuctions();
       
-      // Close the drawer after successful completion
-      setIsDrawerOpen(false);
-      setIsLoading(false);
+      console.log("Successfully completed processSuccess");
+      
     } catch (error) {
-      console.error("Error saving bid details:", error);
+      console.error("Error in processSuccess:", error);
       if (loadingToastId) {
         toast.error(`Failed to save bid details: ${error instanceof Error ? error.message : 'Unknown error'}`, {
           id: loadingToastId,
         });
       }
+    } finally {
+      // Always clean up state regardless of success/failure
       setIsLoading(false);
-      // Close drawer on error too
+      setCurrentBid(null);
+      setLoadingToastId(null);
       setIsDrawerOpen(false);
     }
   };
@@ -273,6 +278,7 @@ const LandingAuctions: React.FC = () => {
 
         toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
 
+        // Directly call processSuccess for non-MiniKit flow
         await processSuccess(auctionId, bidAmount);
       } else {
         const calls = [
@@ -301,6 +307,9 @@ const LandingAuctions: React.FC = () => {
           },
         ];
         
+        // Store current bid info for useEffect to handle
+        setCurrentBid({ auctionId, amount: bidAmount });
+        
        if (context?.client.clientFid === 309857) {
           toast.loading("Connecting to Base SDK...", { id: toastId });
           
@@ -328,10 +337,14 @@ const LandingAuctions: React.FC = () => {
             ],
           });
 
-          toast.loading("Processing transaction...", { id: toastId });
+          toast.loading("Transaction submitted! Waiting for confirmation...", { id: toastId });
           
-          //add a 5s delay
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+          // Wait longer for transaction to be mined and confirmed
+          await new Promise((resolve) => setTimeout(resolve, 8000));
+          
+          // Directly call processSuccess for Base SDK flow since useEffect won't trigger
+          await processSuccess(auctionId, bidAmount);
+          
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
@@ -345,15 +358,18 @@ const LandingAuctions: React.FC = () => {
         // processSuccess will be called when transaction succeeds
       }
     } catch (error) {
-      setError("Failed to place bid");
       console.error("Bid error:", error);
+      
       if (loadingToastId) {
-        toast.error("Failed to place bid. Please try again.", {
+        toast.error(`Failed to place bid: ${error instanceof Error ? error.message : 'Unknown error'}`, {
           id: loadingToastId,
         });
       }
+      
+      // Clean up state on error
       setIsLoading(false);
-      // Close drawer on bid error too
+      setCurrentBid(null);
+      setLoadingToastId(null);
       setIsDrawerOpen(false);
     }
   }

@@ -56,9 +56,9 @@ export default function RootLayout({
             </div>
             <Background />
             <Toaster 
-              position="top-right"
+              position="top-center"
               toastOptions={{
-                duration: 4000,
+                duration: 8000,
                 style: {
                   background: '#363636',
                   color: '#fff',

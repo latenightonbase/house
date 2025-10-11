@@ -5,6 +5,25 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
+// Hook to handle viewport height changes for mobile keyboards
+const useViewportHeight = () => {
+  React.useEffect(() => {
+    const updateVh = () => {
+      const vh = window.innerHeight * 0.01
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+    }
+
+    updateVh()
+    window.addEventListener('resize', updateVh)
+    window.addEventListener('orientationchange', updateVh)
+
+    return () => {
+      window.removeEventListener('resize', updateVh)
+      window.removeEventListener('orientationchange', updateVh)
+    }
+  }, [])
+}
+
 const Drawer = ({
   shouldScaleBackground = true,
   ...props
@@ -25,34 +44,68 @@ const DrawerClose = DrawerPrimitive.Close
 const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  useViewportHeight()
+  
+  return (
+    <DrawerPrimitive.Overlay
+      ref={ref}
+      className={cn("fixed inset-0 z-50 bg-black/80", "h-[calc(var(--vh,1vh)*100)]", className)}
+      {...props}
+    />
+  )
+})
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] bg-background",
-        className
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-primary/20" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-))
+>(({ className, children, ...props }, ref) => {
+  const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
+  
+  React.useEffect(() => {
+    const initialViewportHeight = window.visualViewport?.height || window.innerHeight
+    
+    const handleViewportChange = () => {
+      const currentViewportHeight = window.visualViewport?.height || window.innerHeight
+      const heightDifference = initialViewportHeight - currentViewportHeight
+      
+      // Consider keyboard open if viewport height decreased significantly (more than 150px)
+      setIsKeyboardOpen(heightDifference > 150)
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange)
+      return () => window.visualViewport?.removeEventListener('resize', handleViewportChange)
+    } else {
+      window.addEventListener('resize', handleViewportChange)
+      return () => window.removeEventListener('resize', handleViewportChange)
+    }
+  }, [])
+
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-x-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] bg-background",
+          isKeyboardOpen 
+            ? "bottom-0 max-h-[calc(var(--vh,1vh)*100-env(keyboard-inset-height,0px))]" 
+            : "bottom-0",
+          "overflow-hidden", // Prevent content from extending beyond drawer
+          className
+        )}
+        {...props}
+      >
+        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-primary/20 flex-shrink-0" />
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  )
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({
@@ -70,7 +123,7 @@ const DrawerFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("mt-auto flex flex-col gap-2 p-4", className)} {...props} />
+  <div className={cn("flex flex-col gap-2 p-4 flex-shrink-0 bg-background", className)} {...props} />
 )
 DrawerFooter.displayName = "DrawerFooter"
 
