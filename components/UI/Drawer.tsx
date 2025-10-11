@@ -62,6 +62,7 @@ const DrawerContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
   const [isKeyboardOpen, setIsKeyboardOpen] = React.useState(false)
+  const [focusedInput, setFocusedInput] = React.useState<HTMLElement | null>(null)
   
   React.useEffect(() => {
     const initialViewportHeight = window.visualViewport?.height || window.innerHeight
@@ -74,12 +75,43 @@ const DrawerContent = React.forwardRef<
       setIsKeyboardOpen(heightDifference > 150)
     }
 
+    // Handle input focus to scroll to focused element when keyboard opens
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        setFocusedInput(target)
+        // Small delay to ensure keyboard is open before scrolling
+        setTimeout(() => {
+          target.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          })
+        }, 300)
+      }
+    }
+
+    const handleFocusOut = () => {
+      setFocusedInput(null)
+    }
+
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', handleViewportChange)
-      return () => window.visualViewport?.removeEventListener('resize', handleViewportChange)
     } else {
       window.addEventListener('resize', handleViewportChange)
-      return () => window.removeEventListener('resize', handleViewportChange)
+    }
+    
+    document.addEventListener('focusin', handleFocusIn)
+    document.addEventListener('focusout', handleFocusOut)
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange)
+      } else {
+        window.removeEventListener('resize', handleViewportChange)
+      }
+      document.removeEventListener('focusin', handleFocusIn)
+      document.removeEventListener('focusout', handleFocusOut)
     }
   }, [])
 
@@ -89,17 +121,21 @@ const DrawerContent = React.forwardRef<
       <DrawerPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed inset-x-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] bg-background",
+          "fixed inset-x-0 z-50 flex flex-col rounded-t-[10px] bg-background",
+          "transition-all duration-300 ease-in-out", // Smooth transitions
           isKeyboardOpen 
-            ? "bottom-0 max-h-[calc(var(--vh,1vh)*100-env(keyboard-inset-height,0px))]" 
-            : "bottom-0",
-          "overflow-hidden", // Prevent content from extending beyond drawer
+            ? "bottom-0 h-[calc(100dvh-env(keyboard-inset-height,0px))] max-h-[80vh]" 
+            : "bottom-0 mt-24 h-auto max-h-[90vh]",
           className
         )}
+        style={{
+          // Ensure drawer doesn't go above safe area
+          minHeight: isKeyboardOpen ? '50vh' : 'auto',
+        }}
         {...props}
       >
         <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-primary/20 flex-shrink-0" />
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto px-1">
           {children}
         </div>
       </DrawerPrimitive.Content>
@@ -123,7 +159,13 @@ const DrawerFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col gap-2 p-4 flex-shrink-0 bg-background", className)} {...props} />
+  <div 
+    className={cn(
+      "flex flex-col gap-2 p-4 flex-shrink-0 bg-background border-t border-white/10 sticky bottom-0", 
+      className
+    )} 
+    {...props} 
+  />
 )
 DrawerFooter.displayName = "DrawerFooter"
 

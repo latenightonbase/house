@@ -42,13 +42,54 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   /* Prevent scroll when virtual keyboard appears */
   overflow-x: hidden;
+  /* Fix for iOS Safari viewport handling */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* Support for keyboard-inset-height environment variable */
+/* Prevent iOS Safari zoom on input focus */
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  font-size: 16px !important;
+  transform: scale(1);
+  transition: transform 0.1s ease-in-out;
+}
+
+/* Handle virtual keyboard on mobile */
 @supports (height: env(keyboard-inset-height)) {
   .drawer-content-keyboard {
     height: calc(100vh - env(keyboard-inset-height));
   }
+}
+
+/* Smooth scrolling for input focus */
+.drawer-content input:focus,
+.drawer-content textarea:focus {
+  scroll-margin-top: 100px;
+}
+
+/* Custom scrollbar for drawer content */
+.drawer-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.drawer-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.drawer-content::-webkit-scrollbar-thumb {
+  background: rgba(75, 184, 120, 0.3);
+  border-radius: 2px;
+}
+
+.drawer-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 184, 120, 0.5);
 }
 
 /* NProgress Loader Styles */

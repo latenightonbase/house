@@ -645,7 +645,7 @@ const LandingAuctions: React.FC = () => {
 
       {/* Bid Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent>
+        <DrawerContent className="drawer-content">
           <DrawerHeader>
             <DrawerTitle className="my-4 text-xl">Place Your Bid</DrawerTitle>
             <div className="text-left text-md">

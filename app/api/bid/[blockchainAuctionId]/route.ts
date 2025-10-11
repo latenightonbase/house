@@ -107,6 +107,9 @@ export async function POST(
 
         if (neynarResponse.ok) {
           const neynarData = await neynarResponse.json();
+
+          console.log("Neynar data fetched:", neynarData);
+
           neynarUsers = neynarData.users || [];
         }
       } catch (error) {

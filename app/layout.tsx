@@ -18,6 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
     title: "Auction House",
     description:
       "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+    viewport: {
+      width: "device-width",
+      initialScale: 1,
+      maximumScale: 1,
+      userScalable: false,
+      viewportFit: "cover"
+    },
     other: {
       "fc:frame": JSON.stringify({
         version: "next",
