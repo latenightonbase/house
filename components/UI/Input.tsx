@@ -59,6 +59,7 @@ export default function Input({
       
       {/* Input Field */}
       <input
+      onPointerDown={(e) => e.stopPropagation()}
         id={inputId}
         type={type}
         value={value}

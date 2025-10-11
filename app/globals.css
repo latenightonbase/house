@@ -59,6 +59,9 @@ select {
   font-size: 16px !important;
   transform: scale(1);
   transition: transform 0.1s ease-in-out;
+  /* Prevent input from being hidden behind virtual keyboard */
+  scroll-margin-bottom: 120px;
+  scroll-margin-top: 20px;
 }
 
 /* Handle virtual keyboard on mobile */
@@ -71,7 +74,28 @@ select {
 /* Smooth scrolling for input focus */
 .drawer-content input:focus,
 .drawer-content textarea:focus {
-  scroll-margin-top: 100px;
+  scroll-margin-top: 20px;
+  scroll-margin-bottom: 20px;
+}
+
+/* Drawer content specific styles */
+.drawer-content {
+  /* Prevent abrupt movements */
+  transition: none !important;
+  /* Ensure proper positioning */
+  position: fixed !important;
+  bottom: 0 !important;
+  /* Better mobile handling */
+  will-change: transform;
+  /* Prevent content shift */
+  contain: layout style;
+}
+
+/* When keyboard is open, adjust drawer behavior */
+@media (max-height: 600px) {
+  .drawer-content {
+    max-height: 80vh !important;
+  }
 }
 
 /* Custom scrollbar for drawer content */
