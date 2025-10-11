@@ -133,7 +133,7 @@ export default function CreateAuction() {
   const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
     try {
       // Use contract setup for reading decimals
-      const contract = await writeContractSetup(tokenAddress, erc20Abi);
+      const contract = await readContractSetup(tokenAddress, erc20Abi);
       const decimalsResult = await contract?.decimals();
       return Number(decimalsResult) || 18; // Default to 18 if failed
     } catch (error) {
