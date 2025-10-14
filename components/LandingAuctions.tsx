@@ -655,7 +655,7 @@ const LandingAuctions: React.FC = () => {
                     <div className="text-caption text-sm">Top Bidder</div>
                     <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
                     <Image alt="top bidder" src={auction.topBidder?.pfp_url || ""} width={100} height={100} className="rounded-full w-6 aspect-square"  />
-                      <h3 className="w-32 truncate text-md">{auction.topBidder?.username}</h3>
+                      <h3 className="max-w-32 truncate text-md">{auction.topBidder?.username}</h3>
                     </div>
                     
                   </div>}

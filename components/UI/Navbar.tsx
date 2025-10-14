@@ -75,22 +75,22 @@ export default function Navbar(){
                 {/* Mobile Dropdown Menu */}
                 {user && (
                     <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
-                        <li className="border-b border-primary/50 block px-4 py-3">
+                        <li className="border-b border-primary/50">
                             <a 
                             href="/create"
                             onClick={handleCreateAuctionClick}
-                            className={`text-white font-semibold transition-colors cursor-pointer w-full ${
+                            className={`block px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
                                 pathname === '/create' ? 'text-primary' : 'text-white'
                             }`}
                         >
                             Create Auction
                         </a>
                         </li>
-                        <li className="border-b border-primary/50 block px-4 py-3">
+                        <li className="border-b border-primary/50">
                             <a 
                             href="/my-auctions"
                             onClick={handleMyAuctionsClick}
-                            className={`font-semibold transition-colors cursor-pointer w-full ${
+                            className={`block px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
                                 pathname === '/my-auctions' ? 'text-primary' : 'text-white'
                             }`}
                         >
@@ -105,7 +105,7 @@ export default function Navbar(){
             <div className="hidden md:flex md:fixed md:left-0 md:top-0 md:h-full md:w-64 md:flex-col md:bg-black/90 md:backdrop-blur-sm md:border-r md:border-r-secondary/50 md:z-50">
                 {/* Sidebar Header */}
                 <div className="p-6 border-b border-secondary/20">
-                    <h1 className="text-2xl font-bold text-white">Auction House</h1>
+                    <button onClick={()=>{router.push("/")}} className="text-2xl font-bold text-white cursor-pointer hover:text-primary transition-colors">Auction House</button>
                 </div>
 
                 {/* Sidebar Content */}

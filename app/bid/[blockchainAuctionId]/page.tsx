@@ -261,7 +261,7 @@ export default function BidPage() {
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
         {/* Auction Header */}
-        <div className="bg-white/10 rounded-lg shadow-md p-4 mb-8">
+        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8">
           <div className="flex justify-between items-start mb-4">
             <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
             <span className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -292,7 +292,7 @@ export default function BidPage() {
         </div>
 
         {/* Bidders Section */}
-        <div className="bg-white/10 rounded-lg shadow-md p-4">
+        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2">
           <h2 className="text-xl font-bold text-white mb-4">
             Bidders ({auctionData.bidders.length})
           </h2>
@@ -304,8 +304,8 @@ export default function BidPage() {
               {auctionData.bidders
                 .sort((a, b) => parseFloat(b.bidAmount) - parseFloat(a.bidAmount))
                 .map((bidder, index) => (
-                <div key={index} className="flex max-lg:flex-col items-center justify-center lg:justify-between max-lg:gap-2 p-4 border border-primary bg-primary/10 rounded-lg hover:bg-white/20 duration-200">
-                  <div className="flex items-center space-x-4">
+                <div key={index} className={`flex justify-between max-lg:gap-2 lg:p-4 p-2 ${index == 0 ? "border border-primary bg-primary/10" : "bg-white/10"} rounded-lg hover:bg-white/20 duration-200`}>
+                  <div className="flex items-center lg:space-x-4 space-x-2">
                     <img 
                       src={bidder.image} 
                       alt={bidder.displayName}
@@ -313,12 +313,12 @@ export default function BidPage() {
                       
                     />
                     <div>
-                      <p className="font-semibold text-white">{bidder.displayName}</p>
+                      <p className="font-semibold text-white max-w-40 truncate">{bidder.displayName}</p>
                     </div>
                   </div>
                   
                   <div className="lg:text-right text-center">
-                    <p className="font-bold text-lg">
+                    <p className="font-bold lg:text-lg text-md">
                       {formatBidAmount(bidder.bidAmount, auctionData.currency)} {auctionData.currency}
                     </p>
                     {bidder.usdValue && (
@@ -326,9 +326,7 @@ export default function BidPage() {
                         {formatUSDAmount(bidder.usdValue)}
                       </p>
                     )}
-                    {index === 0 && (
-                      <span className="text-xs text-primary font-medium">Highest Bid</span>
-                    )}
+                    
                   </div>
                 </div>
               ))}
