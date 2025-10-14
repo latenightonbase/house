@@ -103,7 +103,7 @@ export default function CreateAuction() {
       
         toast.success("Auction created successfully! Redirecting...");
       
-
+setIsLoading(false);
       // Small delay to show success message before navigation
       setTimeout(() => {
         navigate("/");
@@ -317,7 +317,6 @@ export default function CreateAuction() {
         toast.error(errorMessage);
       }
     } finally {
-      setIsLoading(false);
       setLoadingToastId(null);
     }
   };
@@ -336,7 +335,8 @@ export default function CreateAuction() {
     auctionTitle.trim() &&
     selectedCurrency &&
     endTime &&
-    minBidAmount.trim();
+    minBidAmount.trim() !== "" && 
+    !isNaN(parseFloat(minBidAmount));
 
   if (!session)
     return (
@@ -428,7 +428,7 @@ export default function CreateAuction() {
 
           {/* Minimum Bid Amount */}
           <Input
-            label="Minimum Bid Amount (Optional)"
+            label="Minimum Bid Amount"
             value={minBidAmount}
             onChange={setMinBidAmount}
             placeholder="Enter the minimum bid amount (default: 0)"

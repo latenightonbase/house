@@ -18,11 +18,13 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/UI/Drawer';
+import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from '@/utils/tokenPrice';
 
 interface Bidder {
   displayName: string;
   image: string;
   bidAmount: string;
+  usdValue?: number;
   walletAddress: string;
 }
 
@@ -37,6 +39,7 @@ interface AuctionData {
   auctionStatus: 'Running' | 'Ended';
   endDate: string;
   currency: string;
+  tokenAddress: string;
   highestBid: string;
   bidders: Bidder[];
 }
@@ -54,6 +57,47 @@ export default function BidPage() {
   const [bidAmount, setBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
+  
+  // Token price state
+  const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+  const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+
+  // Debounced token price fetching
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!auctionData || !bidAmount || parseFloat(bidAmount) <= 0) {
+        setTokenPrice(null);
+        setPriceError(null);
+        return;
+      }
+
+      try {
+        setTokenPriceLoading(true);
+        setPriceError(null);
+        const price = await fetchTokenPrice(auctionData.tokenAddress);
+        setTokenPrice(price);
+      } catch (error) {
+        console.error('Error fetching token price:', error);
+        setPriceError('Unable to fetch price');
+        setTokenPrice(null);
+      } finally {
+        setTokenPriceLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchPrice, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [bidAmount, auctionData?.tokenAddress]);
+
+  const getUSDValue = () => {
+    if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
+    const amount = parseFloat(bidAmount);
+    console.log('Calculating USD value for amount:', amount, 'with token price:', tokenPrice);
+    return calculateUSDValue(amount, tokenPrice);
+  };
 
   useEffect(() => {
     const fetchAuctionData = async () => {
@@ -150,7 +194,7 @@ export default function BidPage() {
     // Use 6 decimals for USDC, otherwise use 18 decimals for ETH and other tokens
     const decimals = currency.toUpperCase() === 'USDC' ? 6 : 18;
     const converted = parseFloat(amount) / Math.pow(10, decimals);
-    return Math.round(converted).toLocaleString();
+    return converted.toFixed(2).toLocaleString();
   };
 
   const formatDate = (dateString: string) => {
@@ -160,6 +204,8 @@ export default function BidPage() {
   const openBidDrawer = () => {
     setBidAmount("");
     setBidError("");
+    setTokenPrice(null);
+    setPriceError(null);
     setIsDrawerOpen(true);
   };
 
@@ -258,7 +304,7 @@ export default function BidPage() {
               {auctionData.bidders
                 .sort((a, b) => parseFloat(b.bidAmount) - parseFloat(a.bidAmount))
                 .map((bidder, index) => (
-                <div key={index} className="flex max-lg:flex-col items-center justify-center lg:justify-between p-4 border border-primary bg-primary/10 rounded-lg hover:bg-white/20 duration-200">
+                <div key={index} className="flex max-lg:flex-col items-center justify-center lg:justify-between max-lg:gap-2 p-4 border border-primary bg-primary/10 rounded-lg hover:bg-white/20 duration-200">
                   <div className="flex items-center space-x-4">
                     <img 
                       src={bidder.image} 
@@ -271,12 +317,17 @@ export default function BidPage() {
                     </div>
                   </div>
                   
-                  <div className="text-right">
+                  <div className="lg:text-right text-center">
                     <p className="font-bold text-lg">
                       {formatBidAmount(bidder.bidAmount, auctionData.currency)} {auctionData.currency}
                     </p>
+                    {bidder.usdValue && (
+                      <p className="text-xs text-secondary">
+                        {formatUSDAmount(bidder.usdValue)}
+                      </p>
+                    )}
                     {index === 0 && (
-                      <span className="text-xs text-green-600 font-medium">Highest Bid</span>
+                      <span className="text-xs text-primary font-medium">Highest Bid</span>
                     )}
                   </div>
                 </div>
@@ -339,6 +390,37 @@ export default function BidPage() {
                 required
                 className="mb-2"
               />
+              
+              {/* USD Value Display */}
+              {bidAmount && parseFloat(bidAmount) > 0 && (
+                <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-caption">USD Value:</span>
+                    <div className="flex items-center">
+                      {tokenPriceLoading ? (
+                        <>
+                          <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                          <span className="text-caption">Loading...</span>
+                        </>
+                      ) : priceError ? (
+                        <span className="text-red-400">{priceError}</span>
+                      ) : tokenPrice && getUSDValue() ? (
+                        <span className="text-primary font-medium">
+                          {formatUSDAmount(getUSDValue()!)}
+                        </span>
+                      ) : (
+                        <span className="text-caption">--</span>
+                      )}
+                    </div>
+                  </div>
+                  {tokenPrice && !tokenPriceLoading && !priceError && (
+                    <div className="text-xs text-caption mt-1">
+                      1 {auctionData?.currency} = {formatUSDAmount(tokenPrice)}
+                    </div>
+                  )}
+                </div>
+              )}
+              
               {bidError && (
                 <p className="text-red-500 text-sm mt-1">{bidError}</p>
               )}

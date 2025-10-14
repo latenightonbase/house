@@ -15,19 +15,30 @@ export async function GET(req: NextRequest) {
       endDate: { $gte: currentDate }
     })
     .populate('hostedBy', 'wallet username blockchainAuctionId fid') // Populate host information
+    .populate('bidders.user', 'wallet username fid') // Populate bidder user information
     .sort({ endDate: 1 }) // Sort by end date ascending (soonest ending first)
     .limit(5) // Limit to top 5
     .lean(); // Use lean for better performance
 
     console.log("Running auctions fetched:", runningAuctions);
 
-    // Process hostedBy data to fetch display names from Neynar API
+    // Process hostedBy and top bidders data to fetch display names from Neynar API
     const uniqueFids = new Set<string>();
     
-    // Collect unique FIDs that don't start with "none"
+    // Collect unique FIDs that don't start with "none" from hosts and top bidders
     runningAuctions.forEach(auction => {
+      // Add host FID
       if (auction.hostedBy?.fid && !auction.hostedBy.fid.startsWith('none')) {
         uniqueFids.add(auction.hostedBy.fid);
+      }
+      
+      // Add top bidder FID if there are bidders
+      if (auction.bidders.length > 0) {
+        const highestBid = Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount));
+        const topBidder = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
+        if (topBidder?.user?.fid && !topBidder.user.fid.startsWith('none')) {
+          uniqueFids.add(topBidder.user.fid);
+        }
       }
     });
 
@@ -67,6 +78,36 @@ export async function GET(req: NextRequest) {
         ? Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount))
         : 0;
 
+      // Find top bidder
+      let topBidder = null;
+      if (auction.bidders.length > 0) {
+        const topBidderData = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
+        if (topBidderData) {
+          topBidder = {
+            ...topBidderData.user,
+            bidAmount: topBidderData.bidAmount,
+            bidTimestamp: topBidderData.bidTimestamp
+          };
+
+          // Enhance top bidder with Neynar data
+          if (topBidder.fid) {
+            if (topBidder.fid.startsWith('none')) {
+              // For FIDs starting with "none", use truncated wallet as username
+              const wallet = topBidder.wallet;
+              topBidder.username = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet;
+              topBidder.pfp_url = null;
+            } else {
+              // For valid FIDs, use data from Neynar API
+              const neynarUser = neynarUsers[topBidder.fid];
+              const fallbackWallet = topBidder.wallet;
+              const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
+              topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
+              topBidder.pfp_url = neynarUser?.pfp_url || null;
+            }
+          }
+        }
+      }
+
       // Calculate participant count
       const uniqueUsers = new Set(auction.bidders.map((bidder: any) => bidder.user.toString()));
       const participantCount = uniqueUsers.size;
@@ -95,6 +136,7 @@ export async function GET(req: NextRequest) {
         ...auction,
         hostedBy: enhancedHostedBy,
         highestBid,
+        topBidder,
         participantCount,
         hoursRemaining,
         bidCount: auction.bidders.length

@@ -4,6 +4,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 export interface IBidder {
   user: Types.ObjectId;
   bidAmount: number;
+  usdcValue?: number;
   bidTimestamp: Date;
 }
 
@@ -36,6 +37,12 @@ const BidderSchema = new Schema({
     type: Number,
     required: true,
     min: 0,
+  },
+  usdcValue: {
+    type: Number,
+    required: false,
+    min: 0,
+    default: null,
   },
   bidTimestamp: {
     type: Date,

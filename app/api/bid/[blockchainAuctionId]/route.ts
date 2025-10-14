@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
 import connectToDB from '@/utils/db';
+import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 
 interface ContractBidder {
   bidder: string;
@@ -12,6 +13,7 @@ interface ProcessedBidder {
   displayName: string;
   image: string;
   bidAmount: string;
+  usdValue?: number;
   walletAddress: string;
 }
 
@@ -44,7 +46,9 @@ export async function POST(
     }
 
     // Find auction in database
-    const auction = await Auction.findOne({ blockchainAuctionId }).lean() as IAuction | null;
+    const auction = await Auction.findOne({ blockchainAuctionId })
+      .populate('bidders.user', 'wallet username fid')
+      .lean() as IAuction | null;
     
     if (!auction) {
       return NextResponse.json(
@@ -58,16 +62,57 @@ export async function POST(
     const isRunning = now <= auction.endDate;
     const auctionStatus = isRunning ? 'Running' : 'Ended';
 
+    // Determine decimal places and fetch token price if needed
+    const isUSDC = auction.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+    const decimals = isUSDC ? 6 : 18;
+    
+    let tokenPriceUSD = 0;
+    let hasStoredUSDValues = false;
+
+    // Check if auction already has stored USD values in database
+    if (auction.bidders && auction.bidders.length > 0) {
+      hasStoredUSDValues = auction.bidders.some((bidder: any) => bidder.usdcValue !== null && bidder.usdcValue !== undefined);
+    }
+
+    // Fetch token price if we don't have stored USD values
+    if (!hasStoredUSDValues) {
+      try {
+        if (isUSDC) {
+          tokenPriceUSD = 1; // USDC is always $1
+        } else {
+          tokenPriceUSD = await fetchTokenPrice(auction.tokenAddress);
+        }
+        console.log(`Token price for ${auction.tokenAddress}: $${tokenPriceUSD}`);
+      } catch (error) {
+        console.error('Error fetching token price:', error);
+        // Continue without USD values if price fetch fails
+        tokenPriceUSD = 0;
+      }
+    }
+
     const bidders: ContractBidder[] = contractBidders;
 
     // Process bidders - separate numeric FIDs from wallet address FIDs
     const numericFids: string[] = [];
     const processedBidders: ProcessedBidder[] = [];
 
-    for (const bidder of bidders) {
+    for (let i = 0; i < bidders.length; i++) {
+      const bidder = bidders[i];
       const fidValue = bidder.fid;
 
       console.log(bidder.bidAmount, bidder, "Details of each bid")
+      
+      // Calculate USD value
+      let usdValue: number | undefined = undefined;
+      
+      if (hasStoredUSDValues && auction.bidders && auction.bidders[i]) {
+        // Use stored USD value from database if available
+        usdValue = (auction.bidders[i] as any).usdcValue || undefined;
+      } else if (tokenPriceUSD > 0) {
+        // Calculate USD value using current token price
+        const bidAmountFormatted = Number(bidder.bidAmount) / Math.pow(10, decimals);
+        usdValue = calculateUSDValue(bidAmountFormatted, tokenPriceUSD);
+      }
       
       // Check if FID is a hex string (wallet address)
       if (fidValue.startsWith('0x')) {
@@ -77,6 +122,7 @@ export async function POST(
           displayName: truncatedAddress,
           image: `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
           bidAmount: bidder.bidAmount,
+          usdValue,
           walletAddress: bidder.bidder
         });
       } else {
@@ -87,6 +133,7 @@ export async function POST(
           displayName: '',
           image: '',
           bidAmount: bidder.bidAmount,
+          usdValue,
           walletAddress: bidder.bidder
         });
       }
@@ -150,6 +197,7 @@ export async function POST(
       auctionStatus,
       endDate: auction.endDate,
       currency: auction.currency,
+      tokenAddress: auction.tokenAddress,
       highestBid: highestBid.toString(),
       bidders: processedBidders
     };

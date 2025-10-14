@@ -5,6 +5,7 @@ import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authOptions } from '@/utils/auth';
 import { ethers } from 'ethers';
+import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,6 +71,22 @@ export async function POST(req: NextRequest) {
       const isUSDC = auction.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
       const decimals = isUSDC ? 6 : 18;
       
+      // Fetch token price for USD conversion
+      let tokenPriceUSD = 0;
+      try {
+        if (!isUSDC) {
+          // Only fetch price for non-USDC tokens (USDC price is always $1)
+          tokenPriceUSD = await fetchTokenPrice(auction.tokenAddress);
+          console.log(`Token price for ${auction.tokenAddress}: $${tokenPriceUSD}`);
+        } else {
+          tokenPriceUSD = 1; // USDC is always $1
+        }
+      } catch (error) {
+        console.error('Error fetching token price:', error);
+        // Continue without USD value if price fetch fails
+        tokenPriceUSD = 0;
+      }
+      
       // Process each bidder from contract
       for (const contractBidder of contractBidders) {
 
@@ -90,13 +107,20 @@ export async function POST(req: NextRequest) {
         console.log("BIG NUMBER",contractBidder.bidAmount)
         console.log("NORMAL",ethers.utils.formatUnits(contractBidder.bidAmount, decimals))
 
-
         const formattedBidAmount = Number(ethers.utils.formatUnits(contractBidder.bidAmount, decimals));
+        
+        // Calculate USD value
+        let usdValue = null;
+        if (tokenPriceUSD > 0) {
+          usdValue = calculateUSDValue(formattedBidAmount, tokenPriceUSD);
+          console.log(`Bid amount: ${formattedBidAmount}, USD value: $${usdValue}`);
+        }
 
         // Add bidder to auction
         auction.bidders.push({
           user: bidderUser._id,
           bidAmount: formattedBidAmount,
+          usdcValue: usdValue,
           bidTimestamp: new Date() // Use current time since we don't have exact timestamp from contract
         } as IBidder);
       }

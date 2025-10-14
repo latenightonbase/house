@@ -30,6 +30,8 @@ import {
   getCryptoKeyAccount,
 } from "@base-org/account";
 import { useSession } from "next-auth/react";
+import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
+import Image from "next/image";
 
 interface Bidder {
   user: string;
@@ -54,6 +56,14 @@ interface Auction {
   hostedBy: HostInfo;
   bidders: Bidder[];
   highestBid: number;
+  topBidder: {
+    wallet: string,
+    username: string, // Enhanced with Neynar display_name
+    fid: string,
+    pfp_url: string | null, // Profile picture from Neynar
+    bidAmount: number,
+    bidTimestamp: Date
+  } | null;
   participantCount: number;
   hoursRemaining: number;
   bidCount: number;
@@ -80,6 +90,11 @@ const LandingAuctions: React.FC = () => {
   const [selectedAuction, setSelectedAuction] = useState<Auction | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
+  
+  // Token price state
+  const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+  const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
+  const [priceError, setPriceError] = useState<string | null>(null);
   
   const { sendCalls, isSuccess, status } = useSendCalls();
 
@@ -385,7 +400,6 @@ const LandingAuctions: React.FC = () => {
   };
 
   const formatBidAmount = (amount: number, currency: string): string => {
-    console.log("Formatting bid amount:", amount, currency);
     return `${amount.toLocaleString()} ${currency}`;
   };
 
@@ -419,6 +433,8 @@ const LandingAuctions: React.FC = () => {
     setSelectedAuction(auction);
     setBidAmount("");
     setBidError("");
+    setTokenPrice(null);
+    setPriceError(null);
     setIsDrawerOpen(true);
   };
 
@@ -444,6 +460,41 @@ const LandingAuctions: React.FC = () => {
 
     setBidError("");
     return true;
+  };
+
+  // Debounced token price fetching
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!selectedAuction || !bidAmount || parseFloat(bidAmount) <= 0) {
+        setTokenPrice(null);
+        setPriceError(null);
+        return;
+      }
+
+      try {
+        setTokenPriceLoading(true);
+        setPriceError(null);
+        const price = await fetchTokenPrice(selectedAuction.tokenAddress);
+        setTokenPrice(price);
+      } catch (error) {
+        console.error('Error fetching token price:', error);
+        setPriceError('Unable to fetch price');
+        setTokenPrice(null);
+      } finally {
+        setTokenPriceLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchPrice, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [bidAmount, selectedAuction?.tokenAddress]);
+
+  const getUSDValue = () => {
+    if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
+    const amount = parseFloat(bidAmount);
+    console.log('Calculating USD value for amount:', amount, 'with token price:', tokenPrice);
+    return calculateUSDValue(amount, tokenPrice);
   };
 
   const handleConfirmBid = () => {
@@ -591,20 +642,24 @@ const LandingAuctions: React.FC = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="bg-white/10 rounded-lg p-3 text-center">
-                    <div className="font-semibold text-white">
+                
+                  <div className="flex justify-between items-center">
+                    <div className="text-caption text-sm">Participants</div>
+                    <div className="font-semibold text-md text-white">
                       {auction.participantCount}
                     </div>
-                    <div className="text-caption">Participants</div>
+                    
                   </div>
-                  <div className="bg-white/10 rounded-lg p-3 text-center">
-                    <div className="font-semibold text-white">
-                      {auction.bidCount}
+
+                  {auction.topBidder && <div className="flex justify-between items-center">
+                    <div className="text-caption text-sm">Top Bidder</div>
+                    <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
+                    <Image alt="top bidder" src={auction.topBidder?.pfp_url || ""} width={100} height={100} className="rounded-full w-6 aspect-square"  />
+                      <h3 className="w-32 truncate text-md">{auction.topBidder?.username}</h3>
                     </div>
-                    <div className="text-caption">Bids</div>
-                  </div>
-                </div>
+                    
+                  </div>}
+                
 
                 {/* Host info */}
                 <div className="border-t pt-3">
@@ -683,6 +738,37 @@ const LandingAuctions: React.FC = () => {
               required
               className="mb-2"
             />
+            
+            {/* USD Value Display */}
+            {bidAmount && parseFloat(bidAmount) > 0 && (
+              <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-caption">USD Value:</span>
+                  <div className="flex items-center">
+                    {tokenPriceLoading ? (
+                      <>
+                        <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                        <span className="text-caption">Loading...</span>
+                      </>
+                    ) : priceError ? (
+                      <span className="text-red-400">{priceError}</span>
+                    ) : tokenPrice && getUSDValue() ? (
+                      <span className="text-primary font-medium">
+                        {formatUSDAmount(getUSDValue()!)}
+                      </span>
+                    ) : (
+                      <span className="text-caption">--</span>
+                    )}
+                  </div>
+                </div>
+                {tokenPrice && !tokenPriceLoading && !priceError && (
+                  <div className="text-xs text-caption mt-1">
+                    1 {selectedAuction?.currency} = {formatUSDAmount(tokenPrice)}
+                  </div>
+                )}
+              </div>
+            )}
+            
             {bidError && (
               <p className="text-red-500 text-sm mt-1">{bidError}</p>
             )}
