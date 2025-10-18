@@ -24,6 +24,9 @@ import {
 } from "@base-org/account";
 import { RiLoader5Fill } from "react-icons/ri";
 import toast from "react-hot-toast";
+import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 
 interface CurrencyOption {
@@ -47,6 +50,10 @@ export default function CreateAuction() {
   const [genAuctionId, setGenAuctionId] = useState("");
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
+  
+  const [currentStep, setCurrentStep] = useState(0);
+  const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+  const [loadingPrice, setLoadingPrice] = useState(false);
 
   const { context } = useMiniKit();
 
@@ -73,6 +80,19 @@ export default function CreateAuction() {
       console.error("Transaction failed");
     }
   }, [isSuccess, status]);
+
+  useEffect(() => {
+    if (selectedCurrency?.contractAddress) {
+      setLoadingPrice(true);
+      fetchTokenPrice(selectedCurrency.contractAddress)
+        .then(price => setTokenPrice(price))
+        .catch(err => {
+          console.error("Failed to fetch token price:", err);
+          setTokenPrice(null);
+        })
+        .finally(() => setLoadingPrice(false));
+    }
+  }, [selectedCurrency]);
 
   const processSuccess = async (auctionId: string) => {
     try {
@@ -338,9 +358,34 @@ setIsLoading(false);
     minBidAmount.trim() !== "" && 
     !isNaN(parseFloat(minBidAmount));
 
+  const canGoNext = () => {
+    switch (currentStep) {
+      case 0:
+        return auctionTitle.trim().length > 0;
+      case 1:
+        return selectedCurrency !== null && selectedCurrency.name && !loadingPrice;
+      case 2:
+        return minBidAmount.trim() !== "" && !isNaN(parseFloat(minBidAmount));
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoNext() && currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   if (!session)
     return (
-      <div className="max-w-2xl max-lg:mx-auto">
+      <div className=" max-lg:mx-auto mt-4">
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
@@ -376,135 +421,193 @@ setIsLoading(false);
   if (session?.user !== undefined)
     return (
       <div className="max-w-2xl max-lg:mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          {/* Auction Title */}
-          <Input
-            label="Auction Title"
-            value={auctionTitle}
-            onChange={setAuctionTitle}
-            placeholder="Enter a title for your auction"
-            required
-          />
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          <div className="min-h-[400px] flex flex-col justify-between">
+            <AnimatePresence mode="wait">
+              {currentStep === 0 && (
+                <motion.div
+                  key="step-0"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <Input
+                    label="Auction Title"
+                    value={auctionTitle}
+                    onChange={setAuctionTitle}
+                    placeholder="Enter a title for your auction"
+                    required
+                  />
+                </motion.div>
+              )}
 
-          {/* Currency Selection Mode */}
-          <div>
-            {/*<label className="block text-sm font-medium text-foreground mb-3">
-                        How would you like to specify the currency? *
-                    </label>
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={() => handleCurrencyModeChange('search')}
-                            className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all font-medium ${
-                                currencyMode === 'search'
-                                    ? 'border-primary text-primary bg-primary/10'
-                                    : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
-                            }`}
-                        >
-                            🔍 Search Coin
-                            <div className="text-xs mt-1 opacity-75">Search popular tokens</div>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleCurrencyModeChange('contract')}
-                            className={`flex-1 px-4 py-3 rounded-lg border-2 transition-all font-medium ${
-                                currencyMode === 'contract'
-                                    ? 'border-primary text-primary bg-primary/10'
-                                    : 'border-gray-300 text-gray-600 hover:border-gray-400 hover:bg-gray-50'
-                            }`}
-                        >
-                            📝 Contract Address
-                            <div className="text-xs mt-1 opacity-75">Enter token address</div>
-                        </button>
-                    </div>*/}
+              {currentStep === 1 && (
+                <motion.div
+                  key="step-1"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <CurrencySearch
+                    onSelect={handleCurrencySelect}
+                    selectedCurrency={selectedCurrency}
+                  />
+                  {selectedCurrency && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-blue-700">
+                        <strong>Selected Token:</strong> {selectedCurrency.name} ({selectedCurrency.symbol})
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {currentStep === 2 && (
+                <motion.div
+                  key="step-2"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <Input
+                    label="Minimum Bid Amount"
+                    value={minBidAmount}
+                    onChange={setMinBidAmount}
+                    placeholder="Enter the minimum bid amount (default: 0)"
+                    type="number"
+                  />
+                  {minBidAmount && tokenPrice !== null && !loadingPrice && (
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="text-sm text-green-700">
+                        <strong>USD Value:</strong>{" "}
+                        {formatUSDAmount(calculateUSDValue(parseFloat(minBidAmount), tokenPrice))}
+                      </div>
+                    </div>
+                  )}
+                  {loadingPrice && (
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="text-sm text-gray-700 flex items-center gap-2">
+                        <RiLoader5Fill className="animate-spin" />
+                        Fetching token price...
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {currentStep === 3 && (
+                <motion.div
+                  key="step-3"
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-4"
+                >
+                  <DateTimePicker
+                    label="Auction End Time (Local Time)"
+                    value={endTime}
+                    onChange={setEndTime}
+                    placeholder=""
+                    required
+                    minDate={new Date()}
+                  />
+                  {endTime && (
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-blue-700">
+                        <strong>Auction Duration:</strong>{" "}
+                        {(() => {
+                          const now = new Date();
+                          const diff = endTime.getTime() - now.getTime();
+                          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                          const hours = Math.floor(
+                            (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+                          );
+                          const minutes = Math.floor(
+                            (diff % (1000 * 60 * 60)) / (1000 * 60)
+                          );
+
+                          if (diff <= 0) return "Invalid time (must be in the future)";
+
+                          const parts = [];
+                          if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
+                          if (hours > 0)
+                            parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+                          if (minutes > 0 && days === 0)
+                            parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+
+                          return parts.join(", ");
+                        })()}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-8 space-y-4">
+              <div className="flex justify-between items-center gap-4">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  disabled={currentStep === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
+                >
+                  <FaChevronLeft />
+                  Previous
+                </button>
+
+                {currentStep < 3 ? (
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    disabled={!canGoNext()}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
+                  >
+                    Next
+                    <FaChevronRight />
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={!isFormValid || isLoading}
+                    className="px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center text-black/50 justify-center gap-2">
+                        <RiLoader5Fill className="text-xl animate-spin"/>
+                        Creating...
+                      </div>
+                    ) : (
+                      "Create"
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="flex justify-center gap-2">
+                {[0, 1, 2, 3].map((step) => (
+                  <div
+                    key={step}
+                    className={`h-2 w-12 rounded-full transition-all ${
+                      step === currentStep
+                        ? "bg-primary"
+                        : step < currentStep
+                        ? "bg-primary/50"
+                        : "bg-gray-300"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-
-          {/* Currency Search/Input */}
-          <CurrencySearch
-            // mode={currencyMode}
-            onSelect={handleCurrencySelect}
-            selectedCurrency={selectedCurrency}
-          />
-
-          {/* Minimum Bid Amount */}
-          <Input
-            label="Minimum Bid Amount"
-            value={minBidAmount}
-            onChange={setMinBidAmount}
-            placeholder="Enter the minimum bid amount (default: 0)"
-            type="number"
-          />
-
-          {/* End Time Picker */}
-          <DateTimePicker
-            label="Auction End Time (Local Time)"
-            value={endTime}
-            onChange={setEndTime}
-            placeholder=""
-            required
-            minDate={new Date()} // Prevent selecting past dates
-          />
-
-          {/* Time Remaining Display */}
-          {endTime && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-sm text-blue-700">
-                <strong>Auction Duration:</strong>{" "}
-                {(() => {
-                  const now = new Date();
-                  const diff = endTime.getTime() - now.getTime();
-                  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                  const hours = Math.floor(
-                    (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-                  );
-                  const minutes = Math.floor(
-                    (diff % (1000 * 60 * 60)) / (1000 * 60)
-                  );
-
-                  if (diff <= 0) return "Invalid time (must be in the future)";
-
-                  const parts = [];
-                  if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
-                  if (hours > 0)
-                    parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-                  if (minutes > 0 && days === 0)
-                    parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-
-                  return parts.join(", ");
-                })()}
-              </div>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit" // This ensures the form submission triggers handleSubmit
-            disabled={!isFormValid || isLoading}
-            className="w-full py-4 px-6 bg-primary text-white rounded-lg font-semibold text-lg transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500 shadow-lg hover:shadow-xl"
-          >
-            {isLoading ? (
-              <div className="flex items-center text-black/50 justify-center gap-2">
-                <RiLoader5Fill className="text-xl animate-spin"/>
-                Creating Auction...
-              </div>
-            ) : !isConnected ? (
-              "Login to Create"
-            ) : (
-              "Create Auction"
-            )}
-          </button>
-
-          {/* Form Validation Helper */}
-          {!isConnected && (
-            <div className="text-sm text-red-500 text-center">
-              Please connect your wallet to create an auction
-            </div>
-          )}
-          {isConnected && !isFormValid && (
-            <div className="text-sm text-gray-500 text-center">
-              Please fill in all required fields to create your auction
-            </div>
-          )}
         </form>
       </div>
     );

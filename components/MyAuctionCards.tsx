@@ -448,16 +448,35 @@ export default function MyAuctionCards() {
 
       {/* Auctions Grid */}
       {filteredAuctions.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-caption text-lg">No {activeTab} auctions found.</p>
-          {activeTab === "active" && (
-            <p className="text-sm text-caption mt-2">
-              Your active auctions will appear here when they go live.
-            </p>
-          )}
+        <div className="w-full max-w-6xl mx-auto mt-8">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No {activeTab} Auctions</h3>
+              <p className="text-caption mb-4">
+                There are currently no {activeTab} auctions available.
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
       ) : (
-        <div className="">
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAuctions.map((auction) => (
             <div
               key={auction._id}

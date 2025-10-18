@@ -7,11 +7,14 @@ import Link from "next/link"
 import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
+import SearchBar from "./SearchBar"
+import { RiSearchLine } from "react-icons/ri"
 
 export default function Navbar(){
 
     const {user} = useGlobalContext()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
     const navigateWithLoader = useNavigateWithLoader()
     const pathname = usePathname()
     const mobileMenuRef = useRef<HTMLDivElement>(null)
@@ -49,13 +52,22 @@ export default function Navbar(){
 
     return (
         <>
+            {/* Search Bar Overlay */}
+            <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
             {/* Mobile Navbar */}
-            <div className="relative z-50 md:hidden" ref={mobileMenuRef}>
+            <div className="relative z-50 lg:hidden" ref={mobileMenuRef}>
                 <div className="w-full p-4 flex justify-between items-center rounded-b-lg fixed h-12 top-0 left-0 border-b-[0.1px] border-b-secondary/50 bg-black/80 backdrop-blur-sm">
-                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white">AH</button>
+                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold w-8 h-8 aspect-square rounded-lg border border-primary/10 overflow-hidden"><Image src="/pfp.jpg" alt="Logo" width={32} height={32} className="scale-125" /></button>
                     
                     <div className="flex items-center gap-4">
-                    
+                        {/* Search Button */}
+                        <button 
+                            onClick={() => setIsSearchOpen(true)}
+                            className="text-primary hover:text-white transition-colors"
+                        >
+                            <RiSearchLine className="text-xl" />
+                        </button>
 
                         {/* WalletConnect or Hamburger Menu */}
                         <WalletConnect />
@@ -102,10 +114,22 @@ export default function Navbar(){
             </div>
 
             {/* Desktop Sidebar */}
-            <div className="hidden md:flex md:fixed md:left-0 md:top-0 md:h-full md:w-64 md:flex-col md:bg-black/90 md:backdrop-blur-sm md:border-r md:border-r-secondary/50 md:z-50">
+            <div className="hidden lg:flex lg:fixed lg:left-0 lg:top-0 lg:h-full lg:w-64 lg:flex-col lg:bg-black/90 lg:backdrop-blur-sm lg:border-r lg:border-r-secondary/50 lg:z-50">
                 {/* Sidebar Header */}
-                <div className="p-6 border-b border-secondary/20">
-                    <button onClick={()=>{router.push("/")}} className="text-2xl font-bold text-white cursor-pointer hover:text-primary transition-colors">Auction House</button>
+                <div className="p-6  flex items-center justify-between">
+                <Image src="/pfp.jpg" alt="Logo" width={32} height={32} className="scale-125 border-primary/10 rounded-lg border" />
+                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white cursor-pointer hover:text-primary transition-colors">Auction House</button>
+                </div>
+
+                {/* Search Button */}
+                <div className="px-4 mb-4">
+                    <button
+                        onClick={() => setIsSearchOpen(true)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 transition-colors text-caption hover:text-white"
+                    >
+                        <RiSearchLine className="text-xl" />
+                        <span>Search Users</span>
+                    </button>
                 </div>
 
                 {/* Sidebar Content */}

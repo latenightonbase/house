@@ -52,9 +52,9 @@ export async function GET(req: NextRequest) {
 
       // Determine auction status
       let status = 'upcoming';
-      if (currentDate >= auction.startDate && currentDate <= auction.endDate) {
+      if (!auction.winningBid) {
         status = 'active';
-      } else if (currentDate > auction.endDate) {
+      }else{
         status = 'ended';
       }
 
