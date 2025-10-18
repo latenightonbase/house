@@ -5,12 +5,12 @@ import Auction from '@/utils/schemas/Auction';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     await connectDB();
 
-    const { userId } = params;
+    const { userId } = await params;
 
     // Find user and their auctions
     const userDoc = await User.findById(userId)
