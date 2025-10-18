@@ -5,6 +5,7 @@ export interface IUser extends Document {
   token: string;
   fid: string;
   wallet: string;
+  username?: string;
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
@@ -33,6 +34,12 @@ const UserSchema: Schema = new Schema(
       trim: true,
       lowercase: true,
     },
+    username: {
+      type: String,
+      trim: true,
+      default: null,
+      lowercase: true,
+    },
     hostedAuctions: [{
       type: Schema.Types.ObjectId,
       ref: 'Auction',
@@ -52,6 +59,7 @@ const UserSchema: Schema = new Schema(
 );
 
 UserSchema.index({ wallet: 1 });
+UserSchema.index({ username: 1 });
 
 // Export the model
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

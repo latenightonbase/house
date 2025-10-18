@@ -273,7 +273,7 @@ export default function BidPage() {
             </span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
             <div>
               <p className="text-xs text-caption">End Date</p>
               <p className="text-md font-semibold">{formatDate(auctionData.endDate)}</p>

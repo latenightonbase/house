@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
         tokenPriceUSD = 0;
       }
       
+      // Create sub array to track all bids
+      const allBids = [];
+      
       // Process each bidder from contract
       for (const contractBidder of contractBidders) {
 
@@ -116,13 +119,25 @@ export async function POST(req: NextRequest) {
           console.log(`Bid amount: ${formattedBidAmount}, USD value: $${usdValue}`);
         }
 
-        // Add bidder to auction
-        auction.bidders.push({
+        const bidData = {
           user: bidderUser._id,
           bidAmount: formattedBidAmount,
           usdcValue: usdValue,
           bidTimestamp: new Date() // Use current time since we don't have exact timestamp from contract
-        } as IBidder);
+        };
+
+        // Add to both arrays
+        auction.bidders.push(bidData as IBidder);
+        allBids.push({ ...bidData, bidderUser });
+      }
+
+      // Find bid with highest usdValue and set winningBid
+      if (allBids.length > 0) {
+        const highestBid = allBids.reduce((prev, current) => {
+          return (current.usdcValue || 0) > (prev.usdcValue || 0) ? current : prev;
+        });
+        
+        auction.winningBid = highestBid.bidderUser._id;
       }
     }
 
