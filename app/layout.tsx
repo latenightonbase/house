@@ -28,7 +28,7 @@ export async function generateMetadata(): Promise<Metadata> {
     other: {
       "fc:frame": JSON.stringify({
         version: "next",
-        imageUrl: "https://auction-house-red.vercel.app/pfp.jpg",
+        imageUrl: "https://house-peach-one.vercel.app/pfp.jpg",
         button: {
           title: `Bid Now!`,
           action: {
@@ -36,7 +36,7 @@ export async function generateMetadata(): Promise<Metadata> {
             name: "Auction House",
             url: URL,
             splashImageUrl:
-              "https://auction-house-red.vercel.app/pfp.jpg",
+              "https://house-peach-one.vercel.app/pfp.jpg",
             splashBackgroundColor: "#000000",
           },
         },

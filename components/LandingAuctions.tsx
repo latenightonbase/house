@@ -330,7 +330,7 @@ const LandingAuctions: React.FC = () => {
           
           const provider = createBaseAccountSDK({
             appName: "Bill test app",
-            appLogoUrl: "https://farcaster-miniapp-chi.vercel.app/pfp.jpg",
+            appLogoUrl: "https://house-peach-one.vercel.app/pfp.jpg",
             appChainIds: [base.constants.CHAIN_IDS.base],
           }).getProvider();
 
