@@ -13,7 +13,9 @@ const poppins = Poppins({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const URL = "https://auction-house-red.vercel.app";
+  const URL = "https://www.houseproto.fun";
+  const IMAGE = "https://www.houseproto.fun/pfp.jpg";
+
   return {
     title: "Auction House",
     description:
@@ -23,20 +25,53 @@ export async function generateMetadata(): Promise<Metadata> {
       initialScale: 1,
       maximumScale: 1,
       userScalable: false,
-      viewportFit: "cover"
+      viewportFit: "cover",
     },
+
+    // 🔹 Open Graph (Facebook, LinkedIn, Discord)
+    openGraph: {
+      title: "Auction House",
+      description:
+        "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+      url: URL,
+      siteName: "Auction House",
+      images: [
+        {
+          url: IMAGE,
+          width: 1200,
+          height: 630,
+          alt: "Auction House",
+        },
+      ],
+      locale: "en_US",
+      type: "website",
+    },
+
+    // 🔹 Twitter Card metadata
+    twitter: {
+      card: "summary_large_image",
+      title: "Auction House",
+      description:
+        "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+      creator: "@houseproto",
+      images: [IMAGE],
+    },
+
+    // 🔹 Discord embeds & others (covered by OG tags)
+    // Discord uses Open Graph automatically, so no separate section needed
+
+    // 🔹 Farcaster frame metadata
     other: {
       "fc:frame": JSON.stringify({
         version: "next",
-        imageUrl: "https://house-peach-one.vercel.app/pfp.jpg",
+        imageUrl: IMAGE,
         button: {
-          title: `Bid Now!`,
+          title: "Bid Now!",
           action: {
             type: "launch_frame",
             name: "Auction House",
             url: URL,
-            splashImageUrl:
-              "https://house-peach-one.vercel.app/pfp.jpg",
+            splashImageUrl: IMAGE,
             splashBackgroundColor: "#000000",
           },
         },
@@ -44,6 +79,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
   };
 }
+
 
 export default function RootLayout({
   children,
