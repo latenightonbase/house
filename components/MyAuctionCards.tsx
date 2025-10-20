@@ -269,7 +269,7 @@ export default function MyAuctionCards() {
           
           const provider = createBaseAccountSDK({
             appName: "Bill test app",
-            appLogoUrl: "https://house-peach-one.vercel.app/pfp.jpg",
+            appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
             appChainIds: [base.constants.CHAIN_IDS.base],
           }).getProvider();
 
