@@ -9,6 +9,7 @@ import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
 import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine } from "react-icons/ri"
+import { useSession } from "next-auth/react"
 
 export default function Navbar(){
 
@@ -44,10 +45,12 @@ export default function Navbar(){
 
     const router = useRouter()
 
+    const {data:session} = useSession()
+
     return (
         <>
             {/* Search Bar Overlay */}
-            <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+            {session && <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
 
             {/* Mobile Navbar */}
             <div className="relative z-50 lg:hidden" ref={mobileMenuRef}>
@@ -56,12 +59,12 @@ export default function Navbar(){
                     
                     <div className="flex items-center gap-4">
                         {/* Search Button */}
-                        <button 
+                       {session && <button 
                             onClick={() => setIsSearchOpen(true)}
                             className="text-primary hover:text-white transition-colors"
                         >
                             <RiSearchLine className="text-xl" />
-                        </button>
+                        </button>}
 
                         {/* WalletConnect or Hamburger Menu */}
                         <WalletConnect />
@@ -154,7 +157,7 @@ export default function Navbar(){
                 </div>
 
                 {/* Search Button */}
-                <div className="px-4 mb-4">
+                {session && <div className="px-4 mb-4">
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 transition-colors text-caption hover:text-white"
@@ -162,7 +165,7 @@ export default function Navbar(){
                         <RiSearchLine className="text-xl" />
                         <span>Search Users</span>
                     </button>
-                </div>
+                </div>}
 
                 {/* Sidebar Content */}
                 <div className="flex-1 p-4">

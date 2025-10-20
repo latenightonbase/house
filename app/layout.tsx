@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Auction House",
     description:
-      "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+      "Your House. Their Bids. The Exchange for Attention Lives here.",
     viewport: {
       width: "device-width",
       initialScale: 1,
@@ -32,7 +32,7 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: "Auction House",
       description:
-        "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+        "Your House. Their Bids. The Exchange for Attention Lives here.",
       url: URL,
       siteName: "Auction House",
       images: [
@@ -52,7 +52,7 @@ export async function generateMetadata(): Promise<Metadata> {
       card: "summary_large_image",
       title: "Auction House",
       description:
-        "Create, bid, and trade NFTs seamlessly on Base with our Auction House.",
+        "Your House. Their Bids. The Exchange for Attention Lives here.",
       creator: "@houseproto",
       images: [IMAGE],
     },
