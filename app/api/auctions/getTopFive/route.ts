@@ -94,15 +94,15 @@ export async function GET(req: NextRequest) {
             if (topBidder.fid.startsWith('none')) {
               // For FIDs starting with "none", use truncated wallet as username
               const wallet = topBidder.wallet;
-              topBidder.username = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet;
-              topBidder.pfp_url = null;
+              topBidder.username = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-2)}` : wallet;
+              topBidder.pfp_url =  `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
             } else {
               // For valid FIDs, use data from Neynar API
               const neynarUser = neynarUsers[topBidder.fid];
               const fallbackWallet = topBidder.wallet;
               const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
               topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
-              topBidder.pfp_url = neynarUser?.pfp_url || null;
+              topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet.toLowerCase()}`;
             }
           }
         }

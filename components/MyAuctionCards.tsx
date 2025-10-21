@@ -213,11 +213,14 @@ export default function MyAuctionCards() {
         auctionAbi
       );
       if (!contract) {
+        console.log("Contract not found!")
         throw new Error("Failed to setup contract connection");
       }
 
+      console.log("Contract", contract);
+
       // Get bidders from contract
-      const contractBidders = await contract.getBidders(blockchainAuctionId);
+      const contractBidders = await contract?.getBidders(blockchainAuctionId);
       console.log("Contract Bidders:", contractBidders);
 
       const formattedBidders = contractBidders.map((item: any) => ({
@@ -239,6 +242,8 @@ export default function MyAuctionCards() {
         }
 
         toast.loading("Waiting for transaction confirmation...", { id: toastId });
+
+        console.log()
         
         const tx = await writeContract.endAuction(blockchainAuctionId);
         await tx.wait(); // Wait for transaction confirmation
@@ -257,6 +262,16 @@ export default function MyAuctionCards() {
               args: [blockchainAuctionId],
             }),
           },
+          {
+            to: contractAdds.auctions as `0x${string}`,
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
+            data: encodeFunctionData(
+              {
+                abi:auctionAbi,
+                functionName: "handleBurnAndRewards"
+              }
+            )
+          }
         ];
 
         setCurrentEndingAuction({

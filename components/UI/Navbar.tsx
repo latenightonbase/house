@@ -87,13 +87,13 @@ export default function Navbar(){
                         <li className="border-b border-primary/50">
                             <a 
                             href="/"
-                            onClick={(e) => handleNavClick(e, '/')}
+                            onClick={(e) => handleNavClick(e, '/my-auctions')}
                             className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
-                                pathname === '/' ? 'text-primary' : 'text-white'
+                                pathname === '/my-auctions' ? 'text-primary' : 'text-white'
                             }`}
                         >
                             <RiAuctionLine className="text-lg" />
-                            Current Auctions
+                            My Auctions
                         </a>
                         </li>
                         <li className="border-b border-primary/50">
@@ -172,15 +172,15 @@ export default function Navbar(){
                     <nav className="space-y-2">
                         <a 
                             href="/"
-                            onClick={(e) => handleNavClick(e, '/')}
+                            onClick={(e) => handleNavClick(e, '/my-auctions')}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
-                                pathname === '/' 
+                                pathname === '/my-auctions' 
                                     ? 'text-primary bg-primary/20 border border-primary/30' 
                                     : 'text-primary hover:bg-primary/10'
                             }`}
                         >
                             <RiAuctionLine className="text-xl" />
-                            <span className="text-md">Current Auctions</span>
+                            <span className="text-md">My Auctions</span>
                         </a>
                         
                         <a 
