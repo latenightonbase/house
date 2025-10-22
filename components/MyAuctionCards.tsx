@@ -262,16 +262,7 @@ export default function MyAuctionCards() {
               args: [blockchainAuctionId],
             }),
           },
-          {
-            to: contractAdds.auctions as `0x${string}`,
-            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
-            data: encodeFunctionData(
-              {
-                abi:auctionAbi,
-                functionName: "handleBurnAndRewards"
-              }
-            )
-          }
+          
         ];
 
         setCurrentEndingAuction({
