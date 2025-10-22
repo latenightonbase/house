@@ -3,23 +3,18 @@ export const auctionAbi = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "_wallet1",
-				"type": "address"
-			},
-			{
-				"internalType": "address[3]",
-				"name": "_walletGroup",
-				"type": "address[3]"
-			},
-			{
-				"internalType": "address",
-				"name": "_finalRewardWallet",
+				"name": "_initialFeeReceiver",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "_feePercent",
+				"name": "_initialFeePercent",
 				"type": "uint256"
+			},
+			{
+				"internalType": "address",
+				"name": "owner",
+				"type": "address"
 			}
 		],
 		"stateMutability": "nonpayable",
@@ -153,25 +148,6 @@ export const auctionAbi = [
 		"type": "event"
 	},
 	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "burnAmount",
-				"type": "uint256"
-			},
-			{
-				"indexed": false,
-				"internalType": "uint256",
-				"name": "rewardAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "BurnAndRewardsHandled",
-		"type": "event"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "string",
@@ -192,42 +168,16 @@ export const auctionAbi = [
 				"internalType": "uint256",
 				"name": "newFeePercent",
 				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "newFeeReceiver",
+				"type": "address"
 			}
 		],
 		"name": "FeeSettingsUpdated",
 		"type": "event"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "wallet1",
-				"type": "address"
-			},
-			{
-				"indexed": false,
-				"internalType": "address[3]",
-				"name": "group",
-				"type": "address[3]"
-			},
-			{
-				"indexed": false,
-				"internalType": "address",
-				"name": "rewardWallet",
-				"type": "address"
-			}
-		],
-		"name": "FeeWalletsUpdated",
-		"type": "event"
-	},
-	{
-		"inputs": [],
-		"name": "handleBurnAndRewards",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
 	},
 	{
 		"anonymous": false,
@@ -327,6 +277,11 @@ export const auctionAbi = [
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "_newReceiver",
+				"type": "address"
+			},
+			{
 				"internalType": "uint256",
 				"name": "_newPercent",
 				"type": "uint256"
@@ -335,42 +290,6 @@ export const auctionAbi = [
 		"name": "updateFeeSettings",
 		"outputs": [],
 		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_wallet1",
-				"type": "address"
-			},
-			{
-				"internalType": "address[3]",
-				"name": "_walletGroup",
-				"type": "address[3]"
-			},
-			{
-				"internalType": "address",
-				"name": "_finalRewardWallet",
-				"type": "address"
-			}
-		],
-		"name": "updateFeeWallets",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "BURN_TOKEN",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -401,12 +320,54 @@ export const auctionAbi = [
 	},
 	{
 		"inputs": [],
-		"name": "feeWallet1",
+		"name": "getActiveAuctions",
 		"outputs": [
 			{
-				"internalType": "address",
+				"components": [
+					{
+						"internalType": "address",
+						"name": "caInUse",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "tokenName",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "auctionId",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "auctionOwner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "highestBid",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "highestBidder",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct AuctionMeta[]",
 				"name": "",
-				"type": "address"
+				"type": "tuple[]"
 			}
 		],
 		"stateMutability": "view",
@@ -415,30 +376,120 @@ export const auctionAbi = [
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
+				"internalType": "address",
+				"name": "_owner",
+				"type": "address"
 			}
 		],
-		"name": "feeWalletGroup",
+		"name": "getActiveAuctionsByOwner",
 		"outputs": [
 			{
-				"internalType": "address",
+				"components": [
+					{
+						"internalType": "address",
+						"name": "caInUse",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "tokenName",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "auctionId",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "auctionOwner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "highestBid",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "highestBidder",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct AuctionMeta[]",
 				"name": "",
-				"type": "address"
+				"type": "tuple[]"
 			}
 		],
 		"stateMutability": "view",
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "finalRewardWallet",
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_auctionId",
+				"type": "string"
+			}
+		],
+		"name": "getAuctionMeta",
 		"outputs": [
 			{
-				"internalType": "address",
+				"components": [
+					{
+						"internalType": "address",
+						"name": "caInUse",
+						"type": "address"
+					},
+					{
+						"internalType": "string",
+						"name": "tokenName",
+						"type": "string"
+					},
+					{
+						"internalType": "uint256",
+						"name": "deadline",
+						"type": "uint256"
+					},
+					{
+						"internalType": "string",
+						"name": "auctionId",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "auctionOwner",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "highestBid",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "highestBidder",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "minBidAmount",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct AuctionMeta",
 				"name": "",
-				"type": "address"
+				"type": "tuple"
 			}
 		],
 		"stateMutability": "view",
@@ -483,32 +534,6 @@ export const auctionAbi = [
 	{
 		"inputs": [],
 		"name": "owner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "UNISWAP_V4_ROUTER",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "WETH_ADDRESS",
 		"outputs": [
 			{
 				"internalType": "address",
