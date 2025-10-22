@@ -1,3 +1,3 @@
 export const contractAdds = {
-    auctions: "0x4810BE695168B096AeE1101a147f1fE0a5FdB39E"
+    auctions: "0xdBC059647a7E1fF48aB35E1d91F61d4f7E1dE890"
 }
