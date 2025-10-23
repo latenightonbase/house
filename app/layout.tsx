@@ -13,11 +13,11 @@ const poppins = Poppins({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const URL = "https://www.houseproto.fun";
-  const IMAGE = "https://www.houseproto.fun/pfp.jpg";
+  const URL = "https://houseproto.fun";
+  const IMAGE = "https://houseproto.fun/pfp.jpg";
 
   return {
-    title: "Auction House",
+    title: "House",
     description:
       "Your House. Their Bids. The Exchange for Attention Lives here.",
     viewport: {
@@ -30,17 +30,17 @@ export async function generateMetadata(): Promise<Metadata> {
 
     // 🔹 Open Graph (Facebook, LinkedIn, Discord)
     openGraph: {
-      title: "Auction House",
+      title: "House",
       description:
         "Your House. Their Bids. The Exchange for Attention Lives here.",
       url: URL,
-      siteName: "Auction House",
+      siteName: "House",
       images: [
         {
           url: IMAGE,
           width: 1200,
           height: 630,
-          alt: "Auction House",
+          alt: "House",
         },
       ],
       locale: "en_US",
@@ -50,10 +50,10 @@ export async function generateMetadata(): Promise<Metadata> {
     // 🔹 Twitter Card metadata
     twitter: {
       card: "summary_large_image",
-      title: "Auction House",
+      title: "House",
       description:
         "Your House. Their Bids. The Exchange for Attention Lives here.",
-      creator: "@houseproto",
+      creator: "@latenightonbase",
       images: [IMAGE],
     },
 
@@ -69,7 +69,7 @@ export async function generateMetadata(): Promise<Metadata> {
           title: "Bid Now!",
           action: {
             type: "launch_frame",
-            name: "Auction House",
+            name: "House",
             url: URL,
             splashImageUrl: IMAGE,
             splashBackgroundColor: "#000000",
