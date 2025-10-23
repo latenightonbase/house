@@ -44,7 +44,7 @@ export default function CreateAuction() {
   const [selectedCurrency, setSelectedCurrency] =
     useState<CurrencyOption | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
-  const [minBidAmount, setMinBidAmount] = useState("0"); // Made the minimum bid amount optional and default to 0
+  const [minBidAmount, setMinBidAmount] = useState("5"); // Made the minimum bid amount optional and default to 0
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
   const [genAuctionId, setGenAuctionId] = useState("");
@@ -559,7 +559,7 @@ setIsLoading(false);
               )}
             </AnimatePresence>
 
-            <div className="mt-8 space-y-4">
+            <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
               <div className="flex justify-between items-center gap-4">
                 <button
                   type="button"
@@ -609,7 +609,7 @@ setIsLoading(false);
                         ? "bg-primary"
                         : step < currentStep
                         ? "bg-primary/50"
-                        : "bg-gray-300"
+                        : "bg-primary/10"
                     }`}
                   />
                 ))}
