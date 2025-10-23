@@ -24,6 +24,7 @@ export interface IAuction extends Document {
   createdAt: Date;
   updatedAt: Date;
   tokenAddress: string;
+  enabled: boolean;
 }
 
 // Sub-schema for bidders
@@ -88,6 +89,10 @@ const AuctionSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
     },
     winningBid: {
       type: Schema.Types.ObjectId,
