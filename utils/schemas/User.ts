@@ -11,6 +11,7 @@ export interface IUser extends Document {
   participatedAuctions: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+  whitelisted?: boolean;
 }
 
 // Mongoose schema for User
@@ -21,6 +22,10 @@ const UserSchema: Schema = new Schema(
       trim: true,
       default: null,
       
+    },
+    whitelisted: {
+      type: Boolean,
+      default: false,
     },
     fid: {
       type: String,
@@ -40,6 +45,7 @@ const UserSchema: Schema = new Schema(
       default: null,
       lowercase: true,
     },
+
     hostedAuctions: [{
       type: Schema.Types.ObjectId,
       ref: 'Auction',

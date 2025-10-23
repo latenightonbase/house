@@ -171,6 +171,13 @@ setIsLoading(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const res = await fetch(`/api/users/${address}/checkWhitelist`);
+    const user = await res.json();
+    //first check if the user is whitelisted, if not, show error toast and return
+    if (!user?.whitelisted) {
+      toast.error("You are not whitelisted to create an auction");
+      return;
+    }
 
     // Validation
     if (!auctionTitle || !selectedCurrency || !endTime) {
