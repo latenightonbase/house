@@ -173,6 +173,7 @@ setIsLoading(false);
     e.preventDefault();
     const res = await fetch(`/api/users/${address}/checkWhitelist`);
     const user = await res.json();
+    console.log("Whitelist check result:", user);
     //first check if the user is whitelisted, if not, show error toast and return
     if (!user?.whitelisted) {
       toast.error("You are not whitelisted to create an auction");
