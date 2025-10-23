@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import NProgress from "nprogress";
-import "nprogress/nprogress.css";
 import LandingAuctions from "@/components/LandingAuctions";
 import PageLayout from "@/components/UI/PageLayout";
 import Welcome from "@/components/Welcome";
