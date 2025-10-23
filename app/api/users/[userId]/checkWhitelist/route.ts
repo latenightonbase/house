@@ -1,10 +1,13 @@
 import User from "@/utils/schemas/User";
 
-export async function GET(request: Request, { params }: { params: { userId: string } }) {
+export async function GET(request: Request) {
   try {
-    const userId = params.userId;
+    const address = request.url.split("/")[3];
     // Fetch user from database
-    const user = await User.findById(userId);
+    const user = await User.findOne({ wallet: address });
+
+    
+
     if (!user) {
       return new Response("User not found", { status: 404 });
     }
