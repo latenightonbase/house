@@ -5,6 +5,7 @@ import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
 import User from "@/utils/schemas/User";
 import { walletAuthProvider } from "../app/api/walletAuthProvider/credsProvider";
+import { isWhitelisted } from "@/utils/whitelist";
 
 // Type definitions
 interface NextAuthUser {
@@ -101,7 +102,13 @@ export const authOptions = {
           token.fid = dbUser.fid;
           token.token = dbUser.token;
         } else {
-          // Fallback to the address from user object if no DB user found
+          // Create new user with whitelist status
+          const newUser = new User({
+            wallet: user.address,
+            whitelisted: isWhitelisted(user.address)
+          });
+          await newUser.save();
+          
           token.wallet = user.address;
         }
       }
