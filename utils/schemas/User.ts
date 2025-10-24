@@ -6,12 +6,12 @@ export interface IUser extends Document {
   fid: string;
   wallet: string;
   username?: string;
+  whitelisted: boolean;
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
-  whitelisted?: boolean;
 }
 
 // Mongoose schema for User
@@ -22,10 +22,6 @@ const UserSchema: Schema = new Schema(
       trim: true,
       default: null,
       
-    },
-    whitelisted: {
-      type: Boolean,
-      default: false,
     },
     fid: {
       type: String,
@@ -45,7 +41,10 @@ const UserSchema: Schema = new Schema(
       default: null,
       lowercase: true,
     },
-
+    whitelisted: {
+      type: Boolean,
+      default: false,
+    },
     hostedAuctions: [{
       type: Schema.Types.ObjectId,
       ref: 'Auction',
