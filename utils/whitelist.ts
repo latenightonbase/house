@@ -9,7 +9,8 @@ const BETA_ACCESS_WALLETS = [
   "0x4C3B573643A32a419C516C666Be1095d58817a7e", // Gist
   "0x8c4cf2Ed871F71a2E4Fe1aab7Dfe52F873B62904", // Simon
   "0x9f03621DDba9936C479e0bA845C3521CaA0a4E23", // Bill
-  "0x9857d2cbd8430f4802da7cca440e66238bc8e28d"
+  "0x9857d2cbd8430f4802da7cca440e66238bc8e28d",
+  "0x530EA625a4cAd0f0E5b62cc60e4e69A303582141"
 ];
 
 export function isWhitelisted(walletAddress: string): boolean {
