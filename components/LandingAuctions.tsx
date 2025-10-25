@@ -341,9 +341,6 @@ const LandingAuctions: React.FC = () => {
           const fromAddress = cryptoAccount?.account?.address;
 
           toast.loading(`Submitting transaction...`, { id: toastId });
-          toast.loading(`${fromAddress}`, { id: "1" });
-          toast.loading(`${numberToHex(base.constants.CHAIN_IDS.base)}`, { id: "2" });
-          toast.loading(`Calls: ${JSON.stringify(sendingCalls)}`, { id: "3" });
 
           const result = await provider.request({
             method: "wallet_sendCalls",
