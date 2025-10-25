@@ -298,7 +298,7 @@ const LandingAuctions: React.FC = () => {
         await processSuccess(auctionId, bidAmount);
       } else {
         toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, { id: toastId });
-        const calls = [
+        const sendingCalls = [
           {
             //approve transaction
             to: auction.tokenAddress as `0x${string}`,
@@ -350,7 +350,7 @@ const LandingAuctions: React.FC = () => {
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
                 atomicRequired: true,
-                calls: calls,
+                calls: sendingCalls,
               },
             ],
           });
@@ -368,7 +368,7 @@ const LandingAuctions: React.FC = () => {
           
           sendCalls({
             // @ts-ignore
-            calls: calls,
+            calls: sendingCalls,
           });
         }
         
