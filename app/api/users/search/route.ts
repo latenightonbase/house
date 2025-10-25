@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
+import { getServerSession } from 'next-auth';
+import { signOut } from 'next-auth/react';
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(); // Ensure session is initialized if needed in future
+    if(!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     await connectDB();
 
     const searchParams = req.nextUrl.searchParams;

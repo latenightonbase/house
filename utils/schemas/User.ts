@@ -33,7 +33,6 @@ const UserSchema: Schema = new Schema(
       required: true,
       unique: true,
       trim: true,
-      lowercase: true,
     },
     username: {
       type: String,
