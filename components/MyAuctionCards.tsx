@@ -255,7 +255,8 @@ export default function MyAuctionCards() {
         const calls = [
           {
             to: contractAdds.auctions as `0x${string}`,
-            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+
             data: encodeFunctionData({
               abi: auctionAbi,
               functionName: "endAuction",

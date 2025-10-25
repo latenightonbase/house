@@ -301,7 +301,7 @@ const LandingAuctions: React.FC = () => {
           {
             //approve transaction
             to: auction.tokenAddress as `0x${string}`,
-            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
             data: encodeFunctionData({
               abi: erc20Abi,
               functionName: "approve",
@@ -310,7 +310,8 @@ const LandingAuctions: React.FC = () => {
           },
           {
             to: contractAdds.auctions as `0x${string}`,
-            value: context?.client.clientFid !== 309857 ? BigInt(0) : BigInt(0),
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+
             data: encodeFunctionData({
               abi: auctionAbi,
               functionName: "placeBid",
