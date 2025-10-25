@@ -297,6 +297,7 @@ const LandingAuctions: React.FC = () => {
         // Directly call processSuccess for non-MiniKit flow
         await processSuccess(auctionId, bidAmount);
       } else {
+        toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, { id: toastId });
         const calls = [
           {
             //approve transaction
@@ -317,7 +318,7 @@ const LandingAuctions: React.FC = () => {
               functionName: "placeBid",
               args: [
                 auctionId,
-                numberToHex(bidAmountInWei),
+                bidAmountInWei,
                 String(user.fid) || address
               ],
             }),
