@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
 import connectToDB from '@/utils/db';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
+import { getServerSession } from 'next-auth';
 
 interface ContractBidder {
   bidder: string;
@@ -22,6 +23,13 @@ export async function POST(
   req: NextRequest
 ) {
   try {
+    const session = await getServerSession(); // Ensure session is initialized if needed in future
+    if(!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     await connectToDB();
     
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[3];
