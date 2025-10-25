@@ -20,7 +20,15 @@ export async function GET(req: NextRequest) {
     .limit(5) // Limit to top 5
     .lean(); // Use lean for better performance
 
-    console.log("Running auctions fetched:", runningAuctions);
+    console.log('Running Auctions:', runningAuctions);
+
+    if (runningAuctions.length === 0) {
+      return NextResponse.json({
+        success: true,
+        auctions: [],
+        total: 0
+      }, { status: 200 });
+    }
 
     // Process hostedBy and top bidders data to fetch display names from Neynar API
     const uniqueFids = new Set<string>();
