@@ -24,15 +24,14 @@ export async function POST(req: NextRequest) {
 		// Check if current fid starts with "none"
 		if (!user.fid || user.fid.startsWith('none')) {
 			// Update the fid
-			const updatedUser = await User.findOneAndUpdate(
-				{ fid: fid },
-				{ new: true, select: 'fid wallet token hostedAuctions bidsWon participatedAuctions' }
-			);
+			user.fid = fid;
+			await user.save();
+			
 
 			return NextResponse.json({ 
 				success: true, 
 				message: 'FID updated successfully',
-				user: updatedUser 
+				user: user 
 			});
 		} else {
 			return NextResponse.json({ 
