@@ -13,6 +13,7 @@ import { generateNonce } from "siwe";
 import { signOut, useSession } from "next-auth/react";
 import { ethers } from "ethers";
 import { useAccount } from "wagmi";
+import toast from "react-hot-toast";
 
 // Custom session interface to include wallet and fid
 interface CustomSession {
@@ -49,6 +50,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateUserFid = async () => {
     try {
+      toast.success(JSON.stringify(session));
       if (session?.user?.fid && session.user.fid.startsWith('none') && address && context?.user?.fid) {
         const response = await fetch('/api/protected/user/update-fid', {
           method: 'POST',
@@ -130,7 +132,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         sdk.actions.ready();
       }
 
-      if (session?.user) {
+      if (session) {
         handleUserDetails();
         
         // Check and update FID if conditions are met
