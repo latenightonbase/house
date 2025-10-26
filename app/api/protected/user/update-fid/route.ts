@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Find user by wallet address
-		const user = await User.findOne({ wallet: wallet.toLowerCase() });
+		const user = await User.findOne({ wallet: wallet });
 		
 		if (!user) {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest) {
 		if (!user.fid || user.fid.startsWith('none')) {
 			// Update the fid
 			const updatedUser = await User.findOneAndUpdate(
-				{ wallet: wallet.toLowerCase() },
 				{ fid: fid },
 				{ new: true, select: 'fid wallet token hostedAuctions bidsWon participatedAuctions' }
 			);
