@@ -5,7 +5,7 @@ export async function GET(request: Request) {
     const address = request.url.split("/")[5];
     console.log("Checking whitelist for address:", address);
     // Fetch user from database
-    const user = await User.findOne({ wallet: address.toLowerCase() });
+    const user = await User.findOne({ wallet: address });
     
   
     if (!user) {
