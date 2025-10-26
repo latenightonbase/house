@@ -368,7 +368,7 @@ const LandingAuctions: React.FC = () => {
           toast.loading("Transaction submitted! Waiting for confirmation...", { id: toastId });
           
           // Wait longer for transaction to be mined and confirmed
-          await new Promise((resolve) => setTimeout(resolve, 8000));
+          await new Promise((resolve) => setTimeout(resolve, 5000));
           
           // Directly call processSuccess for Base SDK flow since useEffect won't trigger
           await processSuccess(auctionId, bidAmount);

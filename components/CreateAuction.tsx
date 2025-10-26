@@ -306,6 +306,12 @@ setIsLoading(false);
           });
 
           toast.loading("Processing transaction...", { id: toastId });
+
+          // Wait longer for transaction to be mined and confirmed
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          
+          // Directly call processSuccess for Base SDK flow since useEffect won't trigger
+          await processSuccess(auctionId);
           
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
