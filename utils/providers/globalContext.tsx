@@ -51,6 +51,8 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const updateUserFid = async () => {
     try {
       toast.success(JSON.stringify(session?.fid));
+      toast.success(address as `0x${string}`);
+      toast.success(JSON.stringify(context?.user));
       if (session?.fid && session.fid.startsWith('none') && address && context?.user?.fid) {
         const response = await fetch('/api/protected/user/update-fid', {
           method: 'POST',
