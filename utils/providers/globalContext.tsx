@@ -66,12 +66,8 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         if (response.ok) {
           const result = await response.json();
           console.log('FID updated successfully:', result);
-          toast.success('FID updated successfully');
-          toast.success(JSON.stringify(result));
         } else {
           console.error('Failed to update FID:', await response.text());
-          toast.error('Failed to update FID');
-          toast.error(JSON.stringify(await response.text()));
         }
       }
     } catch (error) {
