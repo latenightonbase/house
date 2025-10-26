@@ -74,7 +74,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleUserDetails = async (): Promise<void> => {
-    if (user) return;
+    if (!session?.fid?.includes("none")) return;
     try {
       let user: any = null;
 

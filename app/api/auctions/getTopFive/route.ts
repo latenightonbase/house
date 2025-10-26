@@ -52,9 +52,11 @@ export async function GET(req: NextRequest) {
 
     // Fetch display names from Neynar API for valid FIDs
     let neynarUsers: Record<string, any> = {};
+    console.log('Unique FIDs collected:', Array.from(uniqueFids));
     if (uniqueFids.size > 0) {
       try {
         const fidsArray = Array.from(uniqueFids);
+        console.log('Fetching user data for FIDs:', fidsArray);
         const res = await fetch(
           `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
           {
@@ -66,12 +68,16 @@ export async function GET(req: NextRequest) {
         
         if (res.ok) {
           const jsonRes = await res.json();
+          console.log('Neynar API response:', jsonRes);
           if (jsonRes.users) {
             // Create a map of fid -> user data
             jsonRes.users.forEach((user: any) => {
               neynarUsers[user.fid] = user;
             });
+            console.log('Neynar users mapped:', Object.keys(neynarUsers));
           }
+        } else {
+          console.error('Neynar API error:', res.status, await res.text());
         }
       } catch (error) {
         console.error('Error fetching user data from Neynar:', error);
