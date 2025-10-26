@@ -41,7 +41,6 @@ export const fetchTokenPrice = async (contractAddress: string): Promise<number> 
  * @returns The total USD value
  */
 export const calculateUSDValue = (tokenAmount: number, pricePerToken: number): number => {
-  console.log('Calculating USD value:', tokenAmount*pricePerToken);
   return tokenAmount * pricePerToken;
 };
 

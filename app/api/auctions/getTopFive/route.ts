@@ -116,11 +116,18 @@ export async function GET(req: NextRequest) {
               const fallbackWallet = topBidder.wallet;
               const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
               topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
-              topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet.toLowerCase()}`;
+              topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
             }
+          }
+          else{
+            const wallet = topBidder.wallet;
+            topBidder.username = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-2)}` : wallet;
+            topBidder.pfp_url =  `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
           }
         }
       }
+
+      console.log("Auction's Top Bidder:", topBidder);
 
       // Calculate participant count
       const uniqueUsers = new Set(auction.bidders.map((bidder: any) => bidder.user.toString()));

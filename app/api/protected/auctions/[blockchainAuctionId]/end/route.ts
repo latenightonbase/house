@@ -145,9 +145,38 @@ export async function POST(req: NextRequest) {
     auction.endDate = currentDate;
     await auction.save();
 
+    // Trigger fee distribution in the background (true fire-and-forget)
+    // This runs server-side so it continues even if client disconnects
+    if (auction.tokenAddress) {
+      console.log('🔄 Initiating server-side fee distribution for token:', auction.tokenAddress);
+      
+      // Create the fee distribution request
+      const feeDistributionPayload = {
+        token: auction.tokenAddress
+      };
+
+      // True fire-and-forget: no await, no promise chaining
+      // This will not block the response and runs completely independently
+      fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/handleFeeDistribution`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feeDistributionPayload)
+      }).catch(error => {
+        // Only catch to prevent unhandled rejection warnings
+        console.error('❌ Fee distribution request failed to initiate:', error);
+      });
+      
+      console.log('ℹ️ Fee distribution initiated in background (35-40s expected)');
+    } else {
+      console.log('ℹ️ No token address found, skipping fee distribution');
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Auction ended successfully',
+      tokenAddress: auction.tokenAddress, // Include for client logging
     }, { status: 200 });
 
   } catch (error) {

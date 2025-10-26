@@ -15,6 +15,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { auctionName, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash } = body;
 
+    console.log('Creating auction with data:', body);
+
     if (!auctionName || !tokenAddress || !endDate || !startDate || !hostedBy || !minimumBid) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -22,6 +24,9 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     var user = await User.findOne({ wallet: hostedBy });
+
+    console.log('Hosting user:', user);
+
     if (!user) {
       return NextResponse.json({ error: 'Hosting user not found' }, { status: 404 });
     }

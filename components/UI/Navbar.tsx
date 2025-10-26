@@ -10,6 +10,7 @@ import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
 import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine } from "react-icons/ri"
 import { useSession } from "next-auth/react"
+import { MdPerson } from "react-icons/md"
 
 export default function Navbar(){
 
@@ -84,6 +85,18 @@ export default function Navbar(){
                 {/* Mobile Dropdown Menu */}
                 {user && (
                     <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
+                        <li className="border-b border-primary/50">
+                            <a 
+                            href="/"
+                            onClick={(e) => handleNavClick(e, '/')}
+                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
+                                pathname === '/' ? 'text-primary' : 'text-white'
+                            }`}
+                        >
+                            <MdPerson className="text-lg" />
+                            Running Auctions
+                        </a>
+                        </li>
                         <li className="border-b border-primary/50">
                             <a 
                             href="/"
@@ -170,6 +183,19 @@ export default function Navbar(){
                 {/* Sidebar Content */}
                 <div className="flex-1 p-4">
                     <nav className="space-y-2">
+                        <a 
+                            href="/"
+                            onClick={(e) => handleNavClick(e, '/')}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
+                                pathname === '/' 
+                                    ? 'text-primary bg-primary/20 border border-primary/30' 
+                                    : 'text-primary hover:bg-primary/10'
+                            }`}
+                        >
+                            <MdPerson className="text-xl" />
+                            <span className="text-md">Running Auctions</span>
+                        </a>
+                        
                         <a 
                             href="/"
                             onClick={(e) => handleNavClick(e, '/my-auctions')}

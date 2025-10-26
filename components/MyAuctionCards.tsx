@@ -19,6 +19,7 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
+import { checkStatus } from "@/utils/checkStatus";
 
 interface Bidder {
   user: string;
@@ -131,9 +132,13 @@ export default function MyAuctionCards() {
       }
 
       const data = await response.json();
+
+      // Fee distribution will be handled server-side by the auction end API
+      // This ensures it runs regardless of client connection status
+      console.log('✅ Auction ended successfully, fee distribution initiated server-side');
       
       if (loadingToastId) {
-        toast.success("Auction ended successfully! Refreshing auctions...", {
+        toast.success("Auction ended successfully! Fee distribution running in background...", {
           id: loadingToastId,
         });
       }
@@ -285,7 +290,7 @@ export default function MyAuctionCards() {
 
           toast.loading("Submitting transaction...", { id: toastId });
 
-          const result = await provider.request({
+          const callsId:any = await provider.request({
             method: "wallet_sendCalls",
             params: [
               {
@@ -299,9 +304,13 @@ export default function MyAuctionCards() {
           });
 
           toast.loading("Processing transaction...", { id: toastId });
-          
-          // Add a 5s delay
-          await new Promise((resolve) => setTimeout(resolve, 5000));
+
+          const result = await checkStatus(callsId);
+          if (result) {
+
+            await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
+            
+          }
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
@@ -483,7 +492,7 @@ export default function MyAuctionCards() {
         </div>
       </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {filteredAuctions.map((auction) => (
             <div
               key={auction._id}

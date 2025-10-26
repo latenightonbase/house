@@ -27,6 +27,7 @@ import toast from "react-hot-toast";
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { checkStatus } from "@/utils/checkStatus";
 
 
 interface CurrencyOption {
@@ -56,6 +57,8 @@ export default function CreateAuction() {
   const [loadingPrice, setLoadingPrice] = useState(false);
 
   const { context } = useMiniKit();
+
+  const [myCallId, setMyCallId] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
 
@@ -170,6 +173,7 @@ setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    setIsLoading(true);
     e.preventDefault();
     const res = await fetch(`/api/users/${address}/checkWhitelist`);
     const user = await res.json();
@@ -177,6 +181,7 @@ setIsLoading(false);
     //first check if the user is whitelisted, if not, show error toast and return
     if (!user?.whitelisted) {
       toast.error("You are not whitelisted to create an auction");
+      
       return;
     }
 
@@ -197,8 +202,6 @@ setIsLoading(false);
       toast.error("Auction end time must be in the future");
       return;
     }
-
-    setIsLoading(true);
     
     // Start loading toast
     const toastId = toast.loading("Creating auction...");
@@ -292,7 +295,7 @@ setIsLoading(false);
 
           toast.loading("Submitting transaction...", { id: toastId });
 
-          const result = await provider.request({
+          const callsId:any = await provider.request({
             method: "wallet_sendCalls",
             params: [
               {
@@ -307,12 +310,12 @@ setIsLoading(false);
 
           toast.loading("Processing transaction...", { id: toastId });
 
-          // Wait longer for transaction to be mined and confirmed
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          
-          // Directly call processSuccess for Base SDK flow since useEffect won't trigger
-          await processSuccess(auctionId);
-          
+          const result = await checkStatus(callsId);
+
+          if (result) {
+            await processSuccess(auctionId);
+          }
+
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
@@ -352,6 +355,7 @@ setIsLoading(false);
       }
     } finally {
       setLoadingToastId(null);
+      setIsLoading(false);
     }
   };
 

@@ -32,6 +32,9 @@ import {
 import { useSession } from "next-auth/react";
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
 import Image from "next/image";
+import { checkStatus } from "@/utils/checkStatus";
+import { ethers } from "ethers";
+import { checkUsdc } from "@/utils/checkUsdc";
 
 interface Bidder {
   user: string;
@@ -261,6 +264,16 @@ const LandingAuctions: React.FC = () => {
         toast.loading("Using default token configuration...", { id: toastId });
       }
 
+      const contract = await readContractSetup(auction.tokenAddress, erc20Abi);
+      const balanceResult = await contract?.balanceOf(address as `0x${string}`);
+
+      const formattedBalance = parseFloat(ethers.utils.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
+      if(formattedBalance < bidAmount){
+        toast.error("Insufficient token balance to place bid", { id: toastId });
+        setIsLoading(false);
+        return;
+      }
+
       if (!context) {
         toast.loading("Sending approval transaction", { id: toastId });
         const erc20Contract = await writeContractSetup(auction.tokenAddress, erc20Abi);
@@ -352,7 +365,7 @@ const LandingAuctions: React.FC = () => {
 
           toast.loading(`Submitting transaction...`, { id: toastId });
 
-          const result = await provider.request({
+          const callsId:any = await provider.request({
             method: "wallet_sendCalls",
             params: [
               {
@@ -367,11 +380,11 @@ const LandingAuctions: React.FC = () => {
 
           toast.loading("Transaction submitted! Waiting for confirmation...", { id: toastId });
           
-          // Wait longer for transaction to be mined and confirmed
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          
-          // Directly call processSuccess for Base SDK flow since useEffect won't trigger
-          await processSuccess(auctionId, bidAmount);
+          const result = await checkStatus(callsId);
+
+          if(result){
+            await processSuccess(auctionId, bidAmount);
+          }
           
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
@@ -506,7 +519,7 @@ const LandingAuctions: React.FC = () => {
   const getUSDValue = () => {
     if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
     const amount = parseFloat(bidAmount);
-    console.log('Calculating USD value for amount:', amount, 'with token price:', tokenPrice);
+    
     return calculateUSDValue(amount, tokenPrice);
   };
 
