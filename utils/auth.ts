@@ -105,7 +105,6 @@ export const authOptions = {
           // Create new user with whitelist status
           const newUser = new User({
             wallet: user.address,
-            whitelisted: isWhitelisted(user.address)
           });
           await newUser.save();
           

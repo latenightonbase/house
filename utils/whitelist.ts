@@ -18,5 +18,8 @@ const BETA_ACCESS_WALLETS = [
 ];
 
 export function isWhitelisted(walletAddress: string): boolean {
-  return BETA_ACCESS_WALLETS.includes(walletAddress.toLowerCase());
+  const normalizedAddress = walletAddress.toLowerCase();
+  console.log("Checking whitelist for address:", normalizedAddress);
+  console.log("Whitelist contains:", BETA_ACCESS_WALLETS.includes(normalizedAddress));
+  return BETA_ACCESS_WALLETS.includes(normalizedAddress);
 }

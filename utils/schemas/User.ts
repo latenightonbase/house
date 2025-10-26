@@ -40,10 +40,6 @@ const UserSchema: Schema = new Schema(
       default: null,
       lowercase: true,
     },
-    whitelisted: {
-      type: Boolean,
-      default: false,
-    },
     hostedAuctions: [{
       type: Schema.Types.ObjectId,
       ref: 'Auction',
