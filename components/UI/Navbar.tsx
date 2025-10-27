@@ -70,7 +70,7 @@ export default function Navbar(){
 
                         {/* WalletConnect or Hamburger Menu */}
                         <WalletConnect />
-                        {user &&(
+                        {session && (
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                                 className="flex flex-col gap-1 w-6 h-6 justify-center items-center"
@@ -84,7 +84,7 @@ export default function Navbar(){
                 </div>
 
                 {/* Mobile Dropdown Menu */}
-                {user && (
+                {session && (
                     <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
                         <li className="border-b border-primary/50">
                             <a 
