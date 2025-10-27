@@ -1,4 +1,5 @@
 import { base, createBaseAccountSDK } from "@base-org/account";
+import toast from "react-hot-toast";
 
 export const checkStatus = async (callsId: string) => {
 
@@ -12,10 +13,13 @@ export const checkStatus = async (callsId: string) => {
     method: 'wallet_getCallsStatus',
     params: [callsId]
   });
+
+  toast.loading('Checking transaction status...', { id: callsId });
   
   if (status.status === 200) {
     console.log('Batch completed successfully!');
     console.log('Transaction receipts:', status.receipts);
+    toast.success('Transaction completed successfully!', { id: callsId });
     return true;
   } else if (status.status === 100) {
     console.log('Batch still pending...');

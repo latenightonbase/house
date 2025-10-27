@@ -283,8 +283,8 @@ setIsLoading(false);
                 auctionId,
                 selectedCurrency.contractAddress as `0x${string}`,
                 selectedCurrency.symbol,
-                numberToHex(BigInt(durationHours)),
-                numberToHex(minBidAmountWei),
+                BigInt(durationHours),
+                minBidAmountWei
               ],
             }),
           },
