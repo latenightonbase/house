@@ -101,6 +101,8 @@ export default function CreateAuction() {
     try {
       // Call the API to save auction details in the database
 
+      toast.loading("Saving auction details...");
+
       const now = new Date();
       const response = await fetch("/api/protected/auctions/create", {
         method: "POST",
@@ -138,6 +140,7 @@ setIsLoading(false);
           id: loadingToastId,
         });
       }
+      toast.error("Failed to save auction details. Please try again.");
       setIsLoading(false);
     }
   };
