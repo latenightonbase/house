@@ -308,16 +308,15 @@ setIsLoading(false);
             method: "wallet_sendCalls",
             params: [
               {
-                version: "2.0.0",
-                from: fromAddress,
+                version: "1.0",
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
-                atomicRequired: true,
-                calls: calls,
+                from: fromAddress,
+                calls: calls
               },
             ],
           });
 
-          toast.loading("Processing transaction...", { id: toastId });
+          toast.loading(`Processing transaction ${callsId}`, { id: toastId });
 
           const result = await checkStatus(callsId);
 
