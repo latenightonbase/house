@@ -18,6 +18,7 @@ import toast from "react-hot-toast";
 import { useAccount, useSendCalls, useReadContract } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { RiLoader5Fill } from "react-icons/ri";
+import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import { encodeFunctionData, numberToHex } from "viem";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
@@ -87,6 +88,7 @@ const LandingAuctions: React.FC = () => {
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
+  const [shareDropdownOpen, setShareDropdownOpen] = useState<string | null>(null);
   
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -215,6 +217,7 @@ const LandingAuctions: React.FC = () => {
 
   async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
     try {
+      
       let bidAmount: number;
       
       if (bidAmountParam) {
@@ -524,11 +527,29 @@ const LandingAuctions: React.FC = () => {
   };
 
   const handleConfirmBid = () => {
+    //check if address and session exist
+          if (!address || !session) {
+            toast.error("Please connect your wallet");
+            return;
+          }
     if (!selectedAuction || !validateBidAmount()) return;
     
     const amount = parseFloat(bidAmount);
     // Don't close drawer here - let it close after processSuccess completes
     handleBid(selectedAuction.blockchainAuctionId, selectedAuction, amount);
+  };
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${type} copied to clipboard!`);
+      setShareDropdownOpen(null);
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard');
+    });
+  };
+
+  const handleShareClick = (auctionId: string) => {
+    setShareDropdownOpen(shareDropdownOpen === auctionId ? null : auctionId);
   };
 
   if (loading) {
@@ -624,21 +645,108 @@ const LandingAuctions: React.FC = () => {
         </p>
       </div>
 
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         {auctions.map((auction, index) => (
           <div
             key={auction._id}
             className="bg-primary/10 w-full border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
           >
             {/* Header with ranking */}
-            <div className="gradient-button p-4">
+            <div className="gradient-button p-4 relative">
               <div className="flex items-center justify-between">
                 <span className="bg-white/20 text-white text-sm font-semibold px-3 py-1 rounded-full">
                   #{index + 1}
                 </span>
-                <span className="text-white text-sm">
-                  {formatTimeRemaining(auction.hoursRemaining)} left
-                </span>
+                <div className="flex items-center gap-2 ">
+                  <span className="text-white text-sm">
+                    {formatTimeRemaining(auction.hoursRemaining)} left
+                  </span>
+                  <div className="">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                      onClick={() => handleShareClick(auction.blockchainAuctionId)}
+                    >
+                      <IoShareOutline className="h-4 w-4" />
+                    </Button>
+                    {shareDropdownOpen === auction.blockchainAuctionId && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          right: '10px',
+                          top: '40px',
+                          background: 'rgba(0, 0, 0, 0.8)',
+                          backdropFilter: 'blur(24px)',
+                          borderRadius: '8px',
+                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                          zIndex: 50,
+                          width: '180px',
+                          padding: '8px'
+                        }}
+                      >
+                        <button
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            color: 'hsl(var(--primary))',
+                            backgroundColor: 'transparent',
+                            borderRadius: '4px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                          }}
+                          onClick={() => copyToClipboard(`https://houseproto.fun/bid/${auction.blockchainAuctionId}`, 'Web URL')}
+                        >
+                          <IoLinkOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                          Web URL
+                        </button>
+                        <button
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            color: 'hsl(var(--primary))',
+                            backgroundColor: 'transparent',
+                            borderRadius: '4px',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                          }}
+                          onClick={() => copyToClipboard(`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`, 'Miniapp URL')}
+                        >
+                          <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                          Miniapp URL
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -723,6 +831,14 @@ const LandingAuctions: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Click outside to close share dropdown */}
+      {shareDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShareDropdownOpen(null)}
+        />
+      )}
 
       {/* Bid Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>

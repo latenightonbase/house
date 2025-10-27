@@ -10,7 +10,8 @@ import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
 import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine } from "react-icons/ri"
 import { useSession } from "next-auth/react"
-import { MdPerson } from "react-icons/md"
+import { GoDotFill } from "react-icons/go";
+
 
 export default function Navbar(){
 
@@ -93,8 +94,8 @@ export default function Navbar(){
                                 pathname === '/' ? 'text-primary' : 'text-white'
                             }`}
                         >
-                            <MdPerson className="text-lg" />
-                            Running Auctions
+                            <GoDotFill className="text-lg animate-pulse" />
+                            Live Auctions
                         </a>
                         </li>
                         <li className="border-b border-primary/50">
@@ -192,8 +193,8 @@ export default function Navbar(){
                                     : 'text-primary hover:bg-primary/10'
                             }`}
                         >
-                            <MdPerson className="text-xl" />
-                            <span className="text-md">Running Auctions</span>
+                            <GoDotFill className="text-xl animate-pulse" />
+                            <span className="text-md">Live Auctions</span>
                         </a>
                         
                         <a 

@@ -203,6 +203,11 @@ export default function MyAuctionCards() {
 
   const endAuction = async (blockchainAuctionId: string) => {
     try {
+      //check if address and session exist
+      if (!address || !session) {
+        toast.error("Please connect your wallet");
+        return;
+      }
       setEndingAuction(blockchainAuctionId);
       setSuccessMessage(null);
 

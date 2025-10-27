@@ -57,6 +57,8 @@ export async function POST(
     const auction = await Auction.findOne({ blockchainAuctionId })
       .populate('bidders.user', 'wallet username fid')
       .lean() as IAuction | null;
+
+      console.log('Fetched auction from DB:', auction);
     
     if (!auction) {
       return NextResponse.json(
@@ -207,6 +209,7 @@ export async function POST(
       currency: auction.currency,
       tokenAddress: auction.tokenAddress,
       highestBid: highestBid.toString(),
+      minimumBid: auction.minimumBid.toString(),
       bidders: processedBidders
     };
 

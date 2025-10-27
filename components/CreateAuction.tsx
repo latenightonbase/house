@@ -176,8 +176,14 @@ setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    //check if address and session exist
+      if (!address || !session) {
+        toast.error("Please connect your wallet");
+        return;
+      }
     setIsLoading(true);
     e.preventDefault();
+
     const res = await fetch(`/api/users/${address}/checkWhitelist`);
     const user = await res.json();
     console.log("Whitelist check result:", user);

@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { readContractSetup } from '@/utils/contractSetup';
+import { readContractSetup, writeContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
+import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
 import { contractAdds } from '@/utils/contracts/contractAdds';
 import { RiLoader5Fill } from 'react-icons/ri';
+import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
 import { Button } from '@/components/UI/button';
 import Input from '@/components/UI/Input';
 import {
@@ -19,6 +21,20 @@ import {
   DrawerTrigger,
 } from '@/components/UI/Drawer';
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from '@/utils/tokenPrice';
+import toast from 'react-hot-toast';
+import { useAccount, useSendCalls } from "wagmi";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { encodeFunctionData, numberToHex } from "viem";
+import { useGlobalContext } from "@/utils/providers/globalContext";
+import {
+  base,
+  createBaseAccountSDK,
+  getCryptoKeyAccount,
+} from "@base-org/account";
+import { useSession } from "next-auth/react";
+import { checkStatus } from "@/utils/checkStatus";
+import { ethers } from "ethers";
+import { checkUsdc } from "@/utils/checkUsdc";
 
 interface Bidder {
   displayName: string;
@@ -41,7 +57,20 @@ interface AuctionData {
   currency: string;
   tokenAddress: string;
   highestBid: string;
+  minimumBid: string;
   bidders: Bidder[];
+}
+
+interface Auction {
+  _id: string;
+  auctionName: string;
+  endDate: string;
+  startDate: string;
+  currency: string;
+  minimumBid: number;
+  tokenAddress: string;
+  blockchainAuctionId: string;
+  highestBid: number;
 }
 
 export default function BidPage() {
@@ -51,6 +80,7 @@ export default function BidPage() {
   const [auctionData, setAuctionData] = useState<AuctionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
   
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -62,6 +92,18 @@ export default function BidPage() {
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
+
+  // Additional state for handleBid functionality
+  const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
+  
+  // Hooks
+  const { sendCalls, isSuccess, status } = useSendCalls();
+  const { context } = useMiniKit();
+  const { address } = useAccount();
+  const { user } = useGlobalContext();
+  const { data: session } = useSession();
 
 
   // Debounced token price fetching
@@ -91,6 +133,32 @@ export default function BidPage() {
 
     return () => clearTimeout(timeoutId);
   }, [bidAmount, auctionData?.tokenAddress]);
+
+  // Handle transaction success/failure
+  useEffect(() => {
+    // When transaction succeeds
+    if (isSuccess && currentBid) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Saving bid details...", {
+          id: loadingToastId,
+        });
+      }
+      // Don't clear currentBid here - let processSuccess handle it
+      processSuccess(currentBid.auctionId, currentBid.amount);
+    }
+    // When transaction fails (status === 'error')
+    else if (status === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, status]);
 
   const getUSDValue = () => {
     if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
@@ -153,6 +221,19 @@ export default function BidPage() {
       fetchAuctionData();
     }
   }, [blockchainAuctionId]);
+
+  const copyToClipboard = (text: string, type: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${type} copied to clipboard!`);
+      setShareDropdownOpen(false);
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard');
+    });
+  };
+
+  const handleShareClick = () => {
+    setShareDropdownOpen(!shareDropdownOpen);
+  };
 
   if (loading) {
     return (
@@ -219,58 +300,485 @@ export default function BidPage() {
       return false;
     }
 
-    // Convert highest bid from wei to readable format for comparison
+    // Check against minimum bid if no bids exist, otherwise check against highest bid
     const currentHighestBid = parseFloat(formatBidAmount(auctionData.highestBid, auctionData.currency));
+    const minimumBidAmount = parseFloat(formatBidAmount(auctionData.minimumBid, auctionData.currency));
 
-    if (amount <= currentHighestBid) {
-      setBidError(`Bid must be higher than current highest bid of ${currentHighestBid} ${auctionData.currency}`);
-      return false;
+    if (currentHighestBid > 0) {
+      // There are existing bids - must beat the highest bid
+      if (amount <= currentHighestBid) {
+        setBidError(`Bid must be higher than current highest bid of ${currentHighestBid} ${auctionData.currency}`);
+        return false;
+      }
+    } else {
+      // No existing bids - must meet minimum bid
+      if (amount < minimumBidAmount) {
+        setBidError(`Bid must be at least ${minimumBidAmount} ${auctionData.currency}`);
+        return false;
+      }
     }
 
     setBidError("");
     return true;
   };
 
-  const handleConfirmBid = async () => {
-    if (!auctionData || !validateBidAmount()) return;
-    
-    setIsPlacingBid(true);
-    
+  // Function to get token decimals from ERC20 contract
+  const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
     try {
-      // Here you would implement the actual bid placement logic
-      // For now, we'll just simulate a successful bid
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+      // Use contract setup for reading decimals
+      const contract = await readContractSetup(tokenAddress, erc20Abi);
+      const decimalsResult = await contract?.decimals();
+      return Number(decimalsResult) || 18; // Default to 18 if failed
+    } catch (error) {
+      console.error("Error fetching token decimals:", error);
+      // Default to 18 decimals if we can't fetch (most common for ERC20)
+      return 18;
+    }
+  };
+
+  // Function to convert bid amount to proper decimal format
+  const convertBidAmountToWei = (bidAmount: number, decimals: number): bigint => {
+    // Convert the bid amount to the token's decimal representation
+    const factor = Math.pow(10, decimals);
+    const amountInWei = Math.floor(bidAmount * factor);
+    return BigInt(amountInWei);
+  };
+
+  const processSuccess = async (auctionId: string, bidAmount: number) => {
+    try {
+      console.log("Starting processSuccess with:", { auctionId, bidAmount, address });
       
-      // Close drawer and refresh data
-      setIsDrawerOpen(false);
+      // Call the API to save bid details in the database
+      const response = await fetch(`/api/protected/auctions/${auctionId}/bid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bidAmount: bidAmount,
+          userWallet: address,
+        }),
+      });
+
+      console.log("API Response status:", response.status);
+      const data = await response.json();
+      console.log("API Response data:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || `API request failed with status ${response.status}`);
+      }
+
+      toast.success("Bid placed successfully! Refreshing auction data...");
+
+      // Refresh the auction data to show updated bid data
+      if (blockchainAuctionId) {
+        const fetchAuctionData = async () => {
+          try {
+            setLoading(true);
+            
+            // Get bidders from contract
+            let contractBidders: ContractBidder[] = [];
+            try {
+              console.log('Setting up contract...');
+              const contract = await readContractSetup(contractAdds.auctions, auctionAbi);
+              
+              if (contract) {
+                console.log('Fetching bidders from contract for auction ID:', blockchainAuctionId);
+                contractBidders = await contract.getBidders(blockchainAuctionId);
+                console.log('Fetched bidders from contract:', contractBidders.length);
+              }
+            } catch (contractError) {
+              console.error('Error fetching bidders from contract:', contractError);
+              // Continue with empty bidders array if contract call fails
+            }
+            
+            // Process the bidders data via API (which will also fetch auction info)
+            const processedResponse = await fetch(`/api/bid/${blockchainAuctionId}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                contractBidders: contractBidders.map(bidder => ({
+                  bidder: bidder.bidder,
+                  bidAmount: bidder.bidAmount.toString(),
+                  fid: bidder.fid
+                }))
+              })
+            });
+            
+            if (!processedResponse.ok) {
+              const errorData = await processedResponse.json();
+              throw new Error(errorData.error || 'Failed to process auction data');
+            }
+            
+            const data = await processedResponse.json();
+            setAuctionData(data);
+          } catch (err: any) {
+            setError(err.message);
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        await fetchAuctionData();
+      }
       
-      // Refresh auction data to show new bid
-      // You might want to call fetchAuctionData() here or implement a refresh mechanism
-      
-      alert(`Bid of ${bidAmount} ${auctionData.currency} placed successfully!`);
+      console.log("Successfully completed processSuccess");
       
     } catch (error) {
-      setBidError("Failed to place bid. Please try again.");
-      console.error("Bid placement error:", error);
+      console.error("Error in processSuccess:", error);
+      if (loadingToastId) {
+        toast.error(`Failed to save bid details: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+          id: loadingToastId,
+        });
+      }
     } finally {
-      setIsPlacingBid(false);
+      // Always clean up state regardless of success/failure
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+      setIsDrawerOpen(false);
     }
+  };
+
+ async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
+    try {
+
+      //check if address and session exist
+      if (!address || !session) {
+        toast.error("Please connect your wallet");
+        return;
+      }
+
+      let bidAmount: number;
+      
+      if (bidAmountParam) {
+        bidAmount = bidAmountParam;
+      } else {
+        // Fallback to prompt if called directly (though we should use drawer now)
+        const bidAmountStr = prompt(`Enter your bid amount (minimum: ${auction.minimumBid} ${auction.currency}):`);
+        if (!bidAmountStr) return;
+        
+        bidAmount = parseFloat(bidAmountStr);
+        if (isNaN(bidAmount) || bidAmount <= 0) {
+          toast.error("Invalid bid amount");
+          return;
+        }
+
+        if (bidAmount < auction.minimumBid) {
+          toast.error(`Bid must be at least ${auction.minimumBid} ${auction.currency}`);
+          return;
+        }
+
+        if (bidAmount <= auction.highestBid) {
+          toast.error(`Bid must be higher than current highest bid of ${auction.highestBid} ${auction.currency}`);
+          return;
+        }
+      }
+
+      const toastId = toast.loading("Preparing transaction...");
+      setLoadingToastId(toastId);
+      setIsLoading(true);
+
+      // Get token decimals for proper conversion
+      let tokenDecimals = 18; // Default to 18
+      let bidAmountInWei: bigint;
+
+      try {
+        toast.loading("Fetching token information...", { id: toastId });
+        console.log("Fetching token decimals for:", auction.tokenAddress);
+        tokenDecimals = await getTokenDecimals(auction.tokenAddress);
+        console.log(`Token decimals for ${auction.tokenAddress}:`, tokenDecimals);
+        
+        // Convert bid amount to proper decimal format
+        bidAmountInWei = convertBidAmountToWei(bidAmount, tokenDecimals);
+        console.log(`Bid amount ${bidAmount} converted to ${bidAmountInWei} with ${tokenDecimals} decimals`);
+      } catch (error) {
+        console.error("Error fetching token decimals, using default 18:", error);
+        // Fallback to 18 decimals if fetching fails
+        bidAmountInWei = convertBidAmountToWei(bidAmount, 18);
+        toast.loading("Using default token configuration...", { id: toastId });
+      }
+
+      const contract = await readContractSetup(auction.tokenAddress, erc20Abi);
+      
+      console.log("Contract setup", contract);
+      
+      const balanceResult = await contract?.balanceOf(address as `0x${string}`);
+
+      console.log("User balance:", balanceResult ? balanceResult.toString() : "N/A");
+
+      const formattedBalance = parseFloat(ethers.utils.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
+      if(formattedBalance < bidAmount){
+        toast.error("Insufficient token balance to place bid", { id: toastId });
+        setIsLoading(false);
+        return;
+      }
+
+      if (!context) {
+        toast.loading("Sending approval transaction", { id: toastId });
+        const erc20Contract = await writeContractSetup(auction.tokenAddress, erc20Abi);
+
+        // approve transaction
+        const approveTx = await erc20Contract?.approve(
+          contractAdds.auctions as `0x${string}`,
+          bidAmountInWei
+        );
+
+        await approveTx?.wait();
+
+        toast.success("Approval successful!", { id: toastId });
+
+        toast.loading("Sending bid transaction", { id: toastId });
+
+        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
+
+        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        
+        // Call the smart contract
+        const txHash = await contract?.placeBid(
+          auctionId,
+          bidAmountInWei,
+          address as `0x${string}`
+        );
+
+        toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+        
+        await txHash?.wait();
+
+        toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
+
+        // Directly call processSuccess for non-MiniKit flow
+        await processSuccess(auctionId, bidAmount);
+      } else {
+        toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, { id: toastId });
+        const sendingCalls = [
+          {
+            //approve transaction
+            to: auction.tokenAddress as `0x${string}`,
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [contractAdds.auctions, bidAmountInWei],
+            }),
+          },
+          {
+            to: contractAdds.auctions as `0x${string}`,
+            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
+
+            data: encodeFunctionData({
+              abi: auctionAbi,
+              functionName: "placeBid",
+              args: [
+                auctionId,
+                bidAmountInWei,
+                String(user.fid) || address
+              ],
+            }),
+          },
+        ];
+        
+        // Store current bid info for useEffect to handle
+        setCurrentBid({ auctionId, amount: bidAmount });
+        
+       if (context?.client.clientFid === 309857) {
+          toast.loading("Connecting to Base SDK...", { id: toastId });
+          
+          const provider = createBaseAccountSDK({
+            appName: "Bill test app",
+            appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
+            appChainIds: [base.constants.CHAIN_IDS.base],
+          }).getProvider();
+
+          const cryptoAccount = await getCryptoKeyAccount();
+          const fromAddress = cryptoAccount?.account?.address;
+
+          const balance = await provider.request({
+            method: "eth_getBalance",
+            params: [fromAddress, "latest"],
+          });
+
+          if (!balance || BigInt(balance as `0x${string}`) < BigInt(0)) {
+            toast.error("Insufficient ETH balance for gas fees", { id: toastId });
+            return;
+          }
+
+          toast.loading(`Submitting transaction...`, { id: toastId });
+
+          const callsId:any = await provider.request({
+            method: "wallet_sendCalls",
+            params: [
+              {
+                version: "2.0.0",
+                from: fromAddress,
+                chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
+                calls: sendingCalls,
+              },
+            ],
+          });
+
+          toast.loading("Transaction submitted! Waiting for confirmation...", { id: toastId });
+          
+          const result = await checkStatus(callsId);
+
+          if(result){
+            await processSuccess(auctionId, bidAmount);
+          }
+          
+        } else {
+          toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          
+          sendCalls({
+            // @ts-ignore
+            calls: sendingCalls,
+          });
+        }
+        
+        
+        // processSuccess will be called when transaction succeeds
+      }
+    } catch (error) {
+      console.error("Bid error:", error);
+      
+      if (loadingToastId) {
+        toast.error(`Failed to place bid: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+          id: loadingToastId,
+        });
+      }
+      
+      // Clean up state on error
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+      setIsDrawerOpen(false);
+    }
+  }
+
+  const handleConfirmBid = () => {
+    if (!auctionData || !validateBidAmount()) return;
+    
+    const amount = parseFloat(bidAmount);
+    // Create an Auction object from auctionData for handleBid
+    const auction: Auction = {
+      _id: blockchainAuctionId,
+      auctionName: auctionData.auctionName,
+      endDate: auctionData.endDate,
+      startDate: auctionData.endDate, // Using endDate as placeholder
+      currency: auctionData.currency,
+      minimumBid: parseFloat(auctionData.minimumBid),
+      tokenAddress: auctionData.tokenAddress,
+      blockchainAuctionId: blockchainAuctionId,
+      highestBid: parseFloat(auctionData.highestBid),
+    };
+    
+    // Don't close drawer here - let it close after processSuccess completes
+    handleBid(blockchainAuctionId, auction, amount);
   };
 
   return (
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
         {/* Auction Header */}
-        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8">
+        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
           <div className="flex justify-between items-start mb-4">
             <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
-            <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-              auctionData.auctionStatus === 'Running' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {auctionData.auctionStatus}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                auctionData.auctionStatus === 'Running' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {auctionData.auctionStatus}
+              </span>
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                  onClick={handleShareClick}
+                >
+                  <IoShareOutline className="h-4 w-4" />
+                </Button>
+                {shareDropdownOpen && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      right: '0px',
+                      top: '40px',
+                      background: 'rgba(0, 0, 0, 0.8)',
+                      backdropFilter: 'blur(24px)',
+                      borderRadius: '8px',
+                      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                      zIndex: 50,
+                      width: '180px',
+                      padding: '8px'
+                    }}
+                  >
+                    <button
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        color: 'hsl(var(--primary))',
+                        backgroundColor: 'transparent',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onClick={() => copyToClipboard(`https://houseproto.fun/bid/${blockchainAuctionId}`, 'Web URL')}
+                    >
+                      <IoLinkOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                      Web URL
+                    </button>
+                    <button
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        color: 'hsl(var(--primary))',
+                        backgroundColor: 'transparent',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onClick={() => copyToClipboard(`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${blockchainAuctionId}`, 'Miniapp URL')}
+                    >
+                      <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                      Miniapp URL
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
@@ -283,13 +791,26 @@ export default function BidPage() {
               <p className="text-md font-semibold">{auctionData.currency}</p>
             </div>
             <div>
-              <p className="text-xs text-caption">Highest Bid</p>
+              <p className="text-xs text-caption">
+                {parseFloat(auctionData.highestBid) > 0 ? 'Highest Bid' : 'Minimum Bid'}
+              </p>
               <p className="text-md font-semibold">
-                {formatBidAmount(auctionData.highestBid, auctionData.currency)} {auctionData.currency}
+                {parseFloat(auctionData.highestBid) > 0 
+                  ? `${formatBidAmount(auctionData.highestBid, auctionData.currency)} ${auctionData.currency}`
+                  : `${auctionData.minimumBid} ${auctionData.currency}`
+                }
               </p>
             </div>
           </div>
         </div>
+
+        {/* Click outside to close share dropdown */}
+        {shareDropdownOpen && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setShareDropdownOpen(false)}
+          />
+        )}
 
         {/* Bidders Section */}
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2">
@@ -362,11 +883,18 @@ export default function BidPage() {
                       <span className="text-left w-1/2">Currency:</span>
                       <strong className="text-primary text-right w-1/2">{auctionData.currency}</strong>
                     </li>
-                    {parseFloat(auctionData.highestBid) > 0 && (
+                    {parseFloat(auctionData.highestBid) > 0 ? (
                       <li className="border-b border-b-white/10 py-2 flex ">
                         <span className="text-left w-1/2">Current highest bid:</span> 
                         <strong className="text-primary text-right w-1/2">
                           {formatBidAmount(auctionData.highestBid, auctionData.currency)} {auctionData.currency}
+                        </strong>
+                      </li>
+                    ) : (
+                      <li className="border-b border-b-white/10 py-2 flex ">
+                        <span className="text-left w-1/2">Minimum bid:</span> 
+                        <strong className="text-primary text-right w-1/2">
+                          {auctionData.minimumBid} {auctionData.currency}
                         </strong>
                       </li>
                     )}
