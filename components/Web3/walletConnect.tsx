@@ -69,7 +69,33 @@ export const WalletConnect = () => {
                 );
               }
 
-              if(user && user?.pfp_url !== "" && user?.username !== "")
+              // If user exists and has complete profile info, show profile
+              if(user && user?.pfp_url !== "" && user?.username !== "") {
+                return (
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      onClick={openAccountModal}
+                      type="button"
+                      className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white"
+                    >
+                      <div className='flex items-center gap-2'>
+                        <Image unoptimized
+                          alt="Profile Picture"
+                          src={user?.pfp_url}
+                          width={40}
+                          height={40}
+                          className="lg:w-8 lg:h-8 h-6 w-6 aspect-square border border-primary rounded-md"
+                        />
+                        <div className='flex flex-col text-left max-lg:hidden'>
+                          <span className='text-sm font-medium'>{user?.username}</span>
+                          </div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              }
+
+              // Fallback for when user exists but profile is incomplete
               return (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
@@ -78,16 +104,12 @@ export const WalletConnect = () => {
                     className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white"
                   >
                     <div className='flex items-center gap-2'>
-                      <Image unoptimized
-                        alt="Profile Picture"
-                        src={user?.pfp_url}
-                        width={40}
-                        height={40}
-                        className="lg:w-8 lg:h-8 h-6 w-6 aspect-square border border-primary rounded-md"
-                      />
+                      <div className="lg:w-8 lg:h-8 h-6 w-6 aspect-square border border-primary rounded-md bg-gray-600 flex items-center justify-center">
+                        <MdWallet className='text-sm' />
+                      </div>
                       <div className='flex flex-col text-left max-lg:hidden'>
-                        <span className='text-sm font-medium'>{user?.username}</span>
-                        </div>
+                        <span className='text-sm font-medium'>{account.displayName}</span>
+                      </div>
                     </div>
                   </button>
                 </div>
