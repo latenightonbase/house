@@ -316,11 +316,7 @@ setIsLoading(false);
             ],
           });
 
-          toast.loading(`Processing transaction ${callsId}`, { id: toastId });
-
           const result = await checkStatus(callsId);
-
-          toast.loading(`Transaction processed! Saving auction details. ${result}`, { id: toastId });
 
           if (result) {
             await processSuccess(auctionId);

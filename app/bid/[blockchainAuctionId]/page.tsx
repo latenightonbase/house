@@ -603,16 +603,13 @@ export default function BidPage() {
             method: "wallet_sendCalls",
             params: [
               {
-                version: "2.0.0",
+                version: "1.0",
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
-                atomicRequired: true,
-                calls: sendingCalls,
+                calls: sendingCalls
               },
             ],
           });
-
-          toast.loading("Transaction submitted! Waiting for confirmation...", { id: toastId });
           
           const result = await checkStatus(callsId);
 

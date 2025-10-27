@@ -299,16 +299,13 @@ export default function MyAuctionCards() {
             method: "wallet_sendCalls",
             params: [
               {
-                version: "2.0.0",
+                version: "1.0",
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
-                atomicRequired: true,
                 calls: calls,
               },
             ],
           });
-
-          toast.loading("Processing transaction...", { id: toastId });
 
           const result = await checkStatus(callsId);
           if (result) {
