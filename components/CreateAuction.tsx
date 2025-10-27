@@ -316,12 +316,16 @@ setIsLoading(false);
             ],
           });
 
+          toast.loading("Transaction submitted, checking status...", { id: toastId });
+
           const result = await checkStatus(callsId);
 
-          toast.loading(`Transaction processed! ${result}`, { id: toastId });
-
           if (result) {
+            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
             await processSuccess(auctionId);
+          } else {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
           }
 
         } else {

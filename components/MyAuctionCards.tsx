@@ -308,10 +308,13 @@ export default function MyAuctionCards() {
           });
 
           const result = await checkStatus(callsId);
-          if (result) {
 
+          if (result) {
+            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
             await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
-            
+          } else {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
           }
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });

@@ -371,11 +371,17 @@ const LandingAuctions: React.FC = () => {
               },
             ],
           });
+
+          toast.loading("Transaction submitted, checking status...", { id: toastId });
           
           const result = await checkStatus(callsId);
 
-          if(result){
+          if (result) {
+            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
             await processSuccess(auctionId, bidAmount);
+          } else {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
           }
           
         } else {

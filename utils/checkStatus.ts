@@ -1,7 +1,7 @@
 import { base, createBaseAccountSDK } from "@base-org/account";
 import toast from "react-hot-toast";
 
-export const checkStatus = async (callsId: string, attempt: number = 1) => {
+export const checkStatus = async (callsId: string, attempt: number = 1): Promise<boolean> => {
 
     const provider = createBaseAccountSDK({
         appName: "Bill test app",
@@ -19,12 +19,14 @@ export const checkStatus = async (callsId: string, attempt: number = 1) => {
     console.log('Transaction receipts:', status.receipts);
     toast.success('Transaction completed successfully!', { id: callsId });
     return true;
-  } else if (status.status !== "CONFIRMED") {
-    if (attempt < 5) {
-      console.log(`Batch still pending... (Attempt ${attempt}/5)`);
-      setTimeout(() => checkStatus(callsId, attempt + 1), 2000); // Check again in 2 seconds
+  } else if (status.status === "PENDING") {
+    if (attempt < 10) { // Increased max attempts
+      console.log(`Batch still pending... (Attempt ${attempt}/10)`);
+      // Use a proper promise-based delay instead of setTimeout
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return await checkStatus(callsId, attempt + 1);
     } else {
-      console.error('Batch failed: Maximum retry attempts (5) reached');
+      console.error('Batch failed: Maximum retry attempts (10) reached');
       toast.error('Transaction check failed: Maximum attempts reached', { id: callsId });
       return false;
     }
