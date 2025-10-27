@@ -320,6 +320,8 @@ setIsLoading(false);
 
           const result = await checkStatus(callsId);
 
+          toast.loading(`Transaction processed! Saving auction details. ${result}`, { id: toastId });
+
           if (result) {
             await processSuccess(auctionId);
           }
