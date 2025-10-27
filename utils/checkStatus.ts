@@ -14,7 +14,7 @@ export const checkStatus = async (callsId: string) => {
     params: [callsId]
   });
 
-  toast.loading('Checking transaction status...', { id: callsId });
+  toast.loading(`Checking transaction status ${status.status} `, { id: callsId });
   
   if (status.status === 200) {
     console.log('Batch completed successfully!');
