@@ -217,7 +217,7 @@ const LandingAuctions: React.FC = () => {
 
   async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
     try {
-      
+
       let bidAmount: number;
       
       if (bidAmountParam) {
@@ -356,15 +356,7 @@ const LandingAuctions: React.FC = () => {
           const cryptoAccount = await getCryptoKeyAccount();
           const fromAddress = cryptoAccount?.account?.address;
 
-          const balance = await provider.request({
-            method: "eth_getBalance",
-            params: [fromAddress, "latest"],
-          });
-
-          if (!balance || BigInt(balance as `0x${string}`) < BigInt(0)) {
-            toast.error("Insufficient ETH balance for gas fees", { id: toastId });
-            return;
-          }
+        
 
           toast.loading(`Submitting transaction...`, { id: toastId });
 
