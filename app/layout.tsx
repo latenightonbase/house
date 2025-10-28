@@ -105,8 +105,6 @@ export default function RootLayout({
                 style: {
                   background: '#363636',
                   color: '#fff',
-                  position: 'fixed',
-                  top: '20px',
                 },
                 success: {
                   style: {
