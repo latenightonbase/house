@@ -3,12 +3,10 @@ import lnobAbi from "@/utils/contracts/abis/lnobAbi";
 import { ethers } from "ethers";
 import { NextRequest, NextResponse } from "next/server";
 
-const USDC_BASE = "0x4200000000000000000000000000000000000006";
+const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const TARGET_TOKEN = "0x8c32bcfc720fec35443748a96030ce866d0665ff";
 const ZERO_X_API_KEY = process.env.ZERO_X_API_KEY;
 const BASE_CHAIN_ID = "8453";
-
-const FALLBACK_ADDRESS="0x1ce256752fBa067675F09291d12A1f069f34f5e8"
 
 export async function POST(req: NextRequest) {
     const startTime = Date.now();
@@ -31,13 +29,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (!process.env.BILL_WALLET || !process.env.RISAV_WALLET ||
-            !process.env.STAKING_CONTRACT || !FALLBACK_ADDRESS) {
+            !process.env.STAKING_CONTRACT) {
             console.error('❌ Required wallet addresses not configured');
             console.error('Missing wallets:', {
                 BILL_WALLET: !!process.env.BILL_WALLET,
                 RISAV_WALLET: !!process.env.RISAV_WALLET,
                 STAKING_CONTRACT: !!process.env.STAKING_CONTRACT,
-                FALLBACK_ADDRESS: !!FALLBACK_ADDRESS
             });
             return NextResponse.json({ success: false, message: 'Required wallet addresses not configured' }, { status: 500 });
         }
@@ -270,13 +267,13 @@ export async function POST(req: NextRequest) {
 
         // // Send to BILL_WALLET
         // console.log('💸 Sending to BILL_WALLET...');
-        const billTx = await usdcContract.transfer(process.env.BILL_WALLET || FALLBACK_ADDRESS, billAmount);
-        await billTx.wait();
-        console.log('✅ Sent to BILL_WALLET:', billAmount.toString(), 'Hash:', billTx.hash);
+        // const billTx = await usdcContract.transfer(process.env.BILL_WALLET, billAmount);
+        // await billTx.wait();
+        // console.log('✅ Sent to BILL_WALLET:', billAmount.toString(), 'Hash:', billTx.hash);
 
         // Send entire dev amount to RISAV_WALLET only
         console.log('💸 Sending dev amount to RISAV_WALLET...');
-        const risavTx = await usdcContract.transfer(process.env.RISAV_WALLET || FALLBACK_ADDRESS, devAmount);
+        const risavTx = await usdcContract.transfer(process.env.RISAV_WALLET, devAmount);
         await risavTx.wait();
         console.log('✅ Sent to RISAV_WALLET:', devAmount.toString(), 'Hash:', risavTx.hash);
 
@@ -406,9 +403,9 @@ export async function POST(req: NextRequest) {
         // PART 3: Send last 2 parts to staking contract
         console.log('🏦 PART 3: Sending final portion to staking contract...');
         console.log('Amount to send:', lastTwo.toString());
-        console.log('Staking contract address:', process.env.STAKING_CONTRACT || FALLBACK_ADDRESS);
+        console.log('Staking contract address:', process.env.STAKING_CONTRACT);
 
-        const stakingTx = await usdcContract.transfer(process.env.STAKING_CONTRACT || FALLBACK_ADDRESS, lastTwo);
+        const stakingTx = await usdcContract.transfer(process.env.BILL_WALLET, lastTwo.add(billAmount));
         await stakingTx.wait();
         // console.log('✅ Successfully sent to STAKING_CONTRACT!');
         // // console.log('Amount sent:', lastTwo.toString());
@@ -419,7 +416,7 @@ export async function POST(req: NextRequest) {
         
         console.log('🎉 === FEE DISTRIBUTION COMPLETED SUCCESSFULLY ===');
         console.log('Total execution time:', executionTime + 'ms');
-        console.log('Currency used: WETH (18 decimals)');
+        console.log('Currency used: USDC (6 decimals)');
         // console.log('Summary:', {
         //     originalToken: token,
         //     totalUSDCDistributed: totalUSDC.toString(),
