@@ -94,7 +94,7 @@ select {
 /* When keyboard is open, adjust drawer behavior */
 @media (max-height: 600px) {
   .drawer-content {
-    max-height: 80vh !important;
+    max-height: 90vh !important;
   }
 }
 
