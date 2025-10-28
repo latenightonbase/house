@@ -251,7 +251,7 @@ export default function MyAuctionCards() {
           throw new Error("Failed to setup write contract");
         }
 
-        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
 
         console.log()
         

@@ -13,8 +13,8 @@ const poppins = Poppins({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const URL = "https://houseproto.fun";
-  const IMAGE = "https://houseproto.fun/pfp.jpg";
+  const URL = process.env.NEXT_PUBLIC_DOMAIN;
+  const IMAGE = `${URL}/pfp.jpg`;
 
   return {
     title: "House",

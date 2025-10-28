@@ -295,7 +295,7 @@ const LandingAuctions: React.FC = () => {
 
         const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
 
-        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
         
         // Call the smart contract
         const txHash = await contract?.placeBid(
@@ -704,7 +704,7 @@ const LandingAuctions: React.FC = () => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                             e.currentTarget.style.color = 'hsl(var(--primary))';
                           }}
-                          onClick={() => copyToClipboard(`https://houseproto.fun/bid/${auction.blockchainAuctionId}`, 'Web URL')}
+                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_DOMAIN}/bid/${auction.blockchainAuctionId}`, 'Web URL')}
                         >
                           <IoLinkOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
                           Web URL
@@ -733,7 +733,7 @@ const LandingAuctions: React.FC = () => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                             e.currentTarget.style.color = 'hsl(var(--primary))';
                           }}
-                          onClick={() => copyToClipboard(`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`, 'Miniapp URL')}
+                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${auction.blockchainAuctionId}`, 'Miniapp URL')}
                         >
                           <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
                           Miniapp URL
@@ -815,7 +815,7 @@ const LandingAuctions: React.FC = () => {
                     className="w-[30%] h-12 hover:opacity-90"
                     onClick={() => {
                       // Navigate to auction detail page
-                      window.location.href = `/bid/${auction.blockchainAuctionId}`;
+                      navigate(`/bid/${auction.blockchainAuctionId}`);
                     }}
                   >
                     View

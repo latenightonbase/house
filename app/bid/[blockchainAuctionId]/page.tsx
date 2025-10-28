@@ -534,7 +534,7 @@ export default function BidPage() {
 
         const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
 
-        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
         
         // Call the smart contract
         const txHash = await contract?.placeBid(
@@ -736,7 +736,7 @@ export default function BidPage() {
                         e.currentTarget.style.backgroundColor = 'transparent';
                         e.currentTarget.style.color = 'hsl(var(--primary))';
                       }}
-                      onClick={() => copyToClipboard(`https://houseproto.fun/bid/${blockchainAuctionId}`, 'Web URL')}
+                      onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_DOMAIN}/bid/${blockchainAuctionId}`, 'Web URL')}
                     >
                       <IoLinkOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
                       Web URL
@@ -765,7 +765,7 @@ export default function BidPage() {
                         e.currentTarget.style.backgroundColor = 'transparent';
                         e.currentTarget.style.color = 'hsl(var(--primary))';
                       }}
-                      onClick={() => copyToClipboard(`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${blockchainAuctionId}`, 'Miniapp URL')}
+                      onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${blockchainAuctionId}`, 'Miniapp URL')}
                     >
                       <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
                       Miniapp URL

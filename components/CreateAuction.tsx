@@ -251,7 +251,7 @@ setIsLoading(false);
         
         const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
 
-        toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
         
         // Call the smart contract
         const txHash = await contract?.startAuction(
