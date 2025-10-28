@@ -143,6 +143,9 @@ setIsLoading(false);
       toast.error("Failed to save auction details. Please try again.");
       setIsLoading(false);
     }
+    finally{
+      setIsLoading(false);
+    }
   };
 
   // Helper function to calculate duration in hours
@@ -365,9 +368,6 @@ setIsLoading(false);
       } else {
         toast.error(errorMessage);
       }
-    } finally {
-      setLoadingToastId(null);
-      setIsLoading(false);
     }
   };
 
