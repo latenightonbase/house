@@ -25,7 +25,6 @@ const UserSchema: Schema = new Schema(
     },
     fid: {
       type: String,
-      default: null,
       trim: true,
     },
     wallet: {

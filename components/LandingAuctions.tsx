@@ -837,8 +837,8 @@ const LandingAuctions: React.FC = () => {
 
       {/* Bid Drawer */}
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="drawer-content">
-          <DrawerHeader>
+        <DrawerContent className="drawer-content max-h-[85vh] h-auto flex flex-col">
+          <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="my-4 text-xl">Place Your Bid</DrawerTitle>
             <div className="text-left text-md">
               {selectedAuction && (
@@ -862,7 +862,7 @@ const LandingAuctions: React.FC = () => {
             </div>
           </DrawerHeader>
           
-          <div className="px-4 pb-2">
+          <div className="px-4 pb-2 flex-1 overflow-hidden">
             <Input
               label="Bid Amount"
               value={bidAmount}
@@ -911,7 +911,7 @@ const LandingAuctions: React.FC = () => {
             )}
           </div>
 
-          <DrawerFooter>
+          <DrawerFooter className="flex-shrink-0">
             <Button 
               onClick={handleConfirmBid}
               disabled={isLoading || !bidAmount}
