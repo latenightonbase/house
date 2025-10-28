@@ -70,12 +70,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Find or create the user
-    console.log("👤 Looking for user with wallet:", userWallet.toLowerCase());
-    let user = await User.findOne({ wallet: userWallet.toLowerCase() });
+    let user = await User.findOne({ wallet: userWallet });
     if (!user) {
       console.log("👤 User not found, creating new user...");
       user = new User({
-        wallet: userWallet.toLowerCase(),
+        wallet: userWallet,
         participatedAuctions: []
       });
       await user.save();

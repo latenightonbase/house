@@ -95,12 +95,12 @@ export async function POST(req: NextRequest) {
 
         console.log("BIDDER",contractBidder)
         // Find or create user for each bidder
-        let bidderUser = await User.findOne({ wallet: contractBidder.bidder.toLowerCase() });
+        let bidderUser = await User.findOne({ wallet: contractBidder.bidder });
         
         if (!bidderUser) {
           // Create a new user if they don't exist
           bidderUser = new User({
-            wallet: contractBidder.bidder.toLowerCase(),
+            wallet: contractBidder.bidder,
             username: `User_${contractBidder.bidder.slice(-6)}`, // Generate a default username
             fid: contractBidder.fid || null
           });

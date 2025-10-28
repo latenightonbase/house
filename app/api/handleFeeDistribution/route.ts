@@ -3,7 +3,7 @@ import lnobAbi from "@/utils/contracts/abis/lnobAbi";
 import { ethers } from "ethers";
 import { NextRequest, NextResponse } from "next/server";
 
-const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const USDC_BASE = "0x4200000000000000000000000000000000000006";
 const TARGET_TOKEN = "0x8c32bcfc720fec35443748a96030ce866d0665ff";
 const ZERO_X_API_KEY = process.env.ZERO_X_API_KEY;
 const BASE_CHAIN_ID = "8453";
@@ -419,7 +419,7 @@ export async function POST(req: NextRequest) {
         
         console.log('🎉 === FEE DISTRIBUTION COMPLETED SUCCESSFULLY ===');
         console.log('Total execution time:', executionTime + 'ms');
-        console.log('Currency used: USDC (6 decimals)');
+        console.log('Currency used: WETH (18 decimals)');
         // console.log('Summary:', {
         //     originalToken: token,
         //     totalUSDCDistributed: totalUSDC.toString(),
