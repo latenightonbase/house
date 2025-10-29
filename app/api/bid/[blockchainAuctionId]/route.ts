@@ -23,13 +23,7 @@ export async function POST(
   req: NextRequest
 ) {
   try {
-    const session = await getServerSession(); // Ensure session is initialized if needed in future
-    if(!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    
     await connectToDB();
     
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[3];

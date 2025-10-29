@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "./UI/button";
 import Input from "./UI/Input";
 import {
@@ -36,6 +36,7 @@ import Image from "next/image";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
+import { WalletConnect } from "./Web3/walletConnect";
 
 interface Bidder {
   user: string;
@@ -77,6 +78,8 @@ interface ApiResponse {
   success: boolean;
   auctions: Auction[];
   total: number;
+  page: number;
+  hasMore: boolean;
   error?: string;
   message?: string;
 }
@@ -84,11 +87,17 @@ interface ApiResponse {
 const LandingAuctions: React.FC = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [page, setPage] = useState(1);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
   const [shareDropdownOpen, setShareDropdownOpen] = useState<string | null>(null);
+  
+  // Intersection Observer ref
+  const observerRef = useRef<HTMLDivElement>(null);
   
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -108,19 +117,30 @@ const LandingAuctions: React.FC = () => {
   const {address} = useAccount()
   const {user} = useGlobalContext()
 
-  const fetchTopAuctions = async () => {
+  const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
     try {
-      setLoading(true);
+      if (pageNum === 1) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
 
-      const response = await fetch("/api/auctions/getTopFive");
+      const response = await fetch(`/api/auctions/getTopFive?page=${pageNum}&limit=3`);
       const data: ApiResponse = await response.json();
 
       console.log("API Response:", data);
 
       if (data.success) {
         console.log("Auctions", data.auctions);
-        setAuctions(data.auctions);
+        console.log("HasMore:", data.hasMore, "Page:", data.page);
+        if (append) {
+          setAuctions(prev => [...prev, ...data.auctions]);
+        } else {
+          setAuctions(data.auctions);
+        }
+        setHasMore(data.hasMore);
+        setPage(data.page);
       } else {
         setError(data.message || data.error || "Failed to fetch auctions");
       }
@@ -128,16 +148,47 @@ const LandingAuctions: React.FC = () => {
       setError("Network error: Unable to fetch auctions");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
+
+  const loadMoreAuctions = useCallback(() => {
+    console.log("loadMoreAuctions called:", { loadingMore, hasMore, page });
+    if (!loadingMore && hasMore) {
+      console.log("Fetching page:", page + 1);
+      fetchTopAuctions(page + 1, true);
+    }
+  }, [page, hasMore, loadingMore]);
 
   const { data: session } = useSession();
 
   useEffect(() => {
     if(session){
-      fetchTopAuctions();
-  }
+      fetchTopAuctions(1, false);
+    }
   }, [session]);
+
+  // Intersection Observer for lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        console.log("Observer triggered:", entries[0].isIntersecting, "hasMore:", hasMore, "loadingMore:", loadingMore);
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          console.log("Loading more auctions via observer");
+          loadMoreAuctions();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loadMoreAuctions, hasMore, loadingMore]);
 
   const navigate = useNavigateWithLoader();
 
@@ -195,7 +246,7 @@ const LandingAuctions: React.FC = () => {
      
 
       // Refresh the auctions to show updated bid data
-      await fetchTopAuctions();
+      await fetchTopAuctions(1, false);
       
       console.log("Successfully completed processSuccess");
       
@@ -547,6 +598,47 @@ const LandingAuctions: React.FC = () => {
     setShareDropdownOpen(shareDropdownOpen === auctionId ? null : auctionId);
   };
 
+  const SkeletonCard = () => (
+    <div className="bg-gray-400/10 w-full border border-gray-300 rounded-xl shadow-sm overflow-hidden animate-pulse">
+      {/* Header */}
+      <div className="bg-gray-300 dark:bg-gray-700 p-4">
+        <div className="flex items-center justify-between">
+          <div className="bg-gray-400 dark:bg-gray-600 h-6 w-12 rounded-full"></div>
+          <div className="bg-gray-400 dark:bg-gray-600 h-4 w-24 rounded"></div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-4 space-y-3">
+        <div className="bg-gray-300 dark:bg-gray-700 h-6 w-3/4 rounded"></div>
+        
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-16 rounded"></div>
+            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-20 rounded"></div>
+          </div>
+          
+          <div className="flex justify-between items-center">
+            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-20 rounded"></div>
+            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-8 rounded"></div>
+          </div>
+
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between">
+              <div className="bg-gray-300 dark:bg-gray-700 h-4 w-16 rounded"></div>
+              <div className="bg-gray-300 dark:bg-gray-700 h-4 w-24 rounded"></div>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2 px-1">
+            <div className="bg-gray-300 dark:bg-gray-700 h-12 w-[70%] rounded"></div>
+            <div className="bg-gray-300 dark:bg-gray-700 h-12 w-[30%] rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
@@ -586,7 +678,7 @@ const LandingAuctions: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold mb-2">Unable to Load Auctions</h3>
               <p className="text-caption mb-4">{error}</p>
-              <Button onClick={fetchTopAuctions} variant="outline">
+              <Button onClick={() => fetchTopAuctions(1, false)} variant="outline">
                 Try Again
               </Button>
             </div>
@@ -825,7 +917,39 @@ const LandingAuctions: React.FC = () => {
             </div>
           </div>
         ))}
+
+        {/* Skeleton cards for loading more */}
+        {loadingMore && (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
+        )}
+
+        {/* Observer element for intersection observer */}
+        {hasMore && !loadingMore && auctions.length > 0 && (
+          <div ref={observerRef} className="w-full h-10" />
+        )}
       </div>
+
+      {/* Debug info and manual load more */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-4 bg-gray-800 rounded">
+          <p>Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)}, page={page}, auctionsCount={auctions.length}</p>
+          {hasMore && (
+            <Button 
+              onClick={loadMoreAuctions} 
+              disabled={loadingMore}
+              className="mt-2"
+            >
+              {loadingMore ? 'Loading...' : 'Load More (Manual)'}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Click outside to close share dropdown */}
       {shareDropdownOpen && (
@@ -862,71 +986,82 @@ const LandingAuctions: React.FC = () => {
             </div>
           </DrawerHeader>
           
-          <div className="px-4 pb-2 flex-1 overflow-hidden">
-            <Input
-              label="Bid Amount"
-              value={bidAmount}
-              onChange={(value) => {
-                setBidAmount(value);
-                if (bidError) setBidError(""); // Clear error when user types
-              }}
-              placeholder={selectedAuction ? `Enter amount in ${selectedAuction.currency}` : "Enter bid amount"}
-              type="number"
-              required
-              className="mb-2"
-            />
-            
-            {/* USD Value Display */}
-            {bidAmount && parseFloat(bidAmount) > 0 && (
-              <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-caption">USD Value:</span>
-                  <div className="flex items-center">
-                    {tokenPriceLoading ? (
-                      <>
-                        <RiLoader5Fill className="animate-spin text-primary mr-1" />
-                        <span className="text-caption">Loading...</span>
-                      </>
-                    ) : priceError ? (
-                      <span className="text-red-400">{priceError}</span>
-                    ) : tokenPrice && getUSDValue() ? (
-                      <span className="text-primary font-medium">
-                        {formatUSDAmount(getUSDValue()!)}
-                      </span>
-                    ) : (
-                      <span className="text-caption">--</span>
+          {!session || !address ? (
+            <div className="px-4 pb-4">
+              <div className="text-center mb-4">
+                <p className="text-caption mb-4">Please connect your wallet to place a bid</p>
+                <WalletConnect />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="px-4 pb-2 flex-1 overflow-hidden">
+                <Input
+                  label="Bid Amount"
+                  value={bidAmount}
+                  onChange={(value) => {
+                    setBidAmount(value);
+                    if (bidError) setBidError(""); // Clear error when user types
+                  }}
+                  placeholder={selectedAuction ? `Enter amount in ${selectedAuction.currency}` : "Enter bid amount"}
+                  type="number"
+                  required
+                  className="mb-2"
+                />
+                
+                {/* USD Value Display */}
+                {bidAmount && parseFloat(bidAmount) > 0 && (
+                  <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-caption">USD Value:</span>
+                      <div className="flex items-center">
+                        {tokenPriceLoading ? (
+                          <>
+                            <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                            <span className="text-caption">Loading...</span>
+                          </>
+                        ) : priceError ? (
+                          <span className="text-red-400">{priceError}</span>
+                        ) : tokenPrice && getUSDValue() ? (
+                          <span className="text-primary font-medium">
+                            {formatUSDAmount(getUSDValue()!)}
+                          </span>
+                        ) : (
+                          <span className="text-caption">--</span>
+                        )}
+                      </div>
+                    </div>
+                    {tokenPrice && !tokenPriceLoading && !priceError && (
+                      <div className="text-xs text-caption mt-1">
+                        1 {selectedAuction?.currency} = {formatUSDAmount(tokenPrice)}
+                      </div>
                     )}
                   </div>
-                </div>
-                {tokenPrice && !tokenPriceLoading && !priceError && (
-                  <div className="text-xs text-caption mt-1">
-                    1 {selectedAuction?.currency} = {formatUSDAmount(tokenPrice)}
-                  </div>
+                )}
+                
+                {bidError && (
+                  <p className="text-red-500 text-sm mt-1">{bidError}</p>
                 )}
               </div>
-            )}
-            
-            {bidError && (
-              <p className="text-red-500 text-sm mt-1">{bidError}</p>
-            )}
-          </div>
 
-          <DrawerFooter className="flex-shrink-0">
-            <Button 
-              onClick={handleConfirmBid}
-              disabled={isLoading || !bidAmount}
-              className="w-full h-12 text-lg font-bold"
-            >
-              {isLoading ? (
-                <>
-                  <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Confirm Bid"
-              )}
-            </Button>
-          </DrawerFooter>
+              <DrawerFooter className="flex-shrink-0">
+                <Button 
+                  onClick={handleConfirmBid}
+                  disabled={isLoading || !bidAmount}
+                  className="w-full h-12 text-lg font-bold"
+                >
+                  {isLoading ? (
+                    <>
+                      <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Confirm Bid"
+                  )}
+                </Button>
+              </DrawerFooter>
+            </>
+          )}
         </DrawerContent>
       </Drawer>
 

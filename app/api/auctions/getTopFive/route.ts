@@ -7,9 +7,13 @@ export async function GET(req: NextRequest) {
     await dbConnect();
 
     const currentDate = new Date();
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '5');
+    const skip = (page - 1) * limit;
 
     // Find auctions that are currently running (started but not ended)
-    // Sort by endDate ascending (soonest ending first) and limit to 5
+    // Sort by endDate ascending (soonest ending first) and implement pagination
     const runningAuctions = await Auction.find({
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate }
@@ -17,14 +21,33 @@ export async function GET(req: NextRequest) {
     .populate('hostedBy') // Populate full host information
     .populate('bidders.user') // Populate full bidder user information
     .sort({ endDate: 1 }) // Sort by end date ascending (soonest ending first)
-    .limit(5) // Limit to top 5
+    .skip(skip)
+    .limit(limit)
     .lean(); // Use lean() for faster read-only queries
 
-    if (runningAuctions.length === 0) {
+    // Get total count for pagination info
+    const totalCount = await Auction.countDocuments({
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    });
+
+    if (runningAuctions.length === 0 && page === 1) {
       return NextResponse.json({
         success: true,
         auctions: [],
-        total: 0
+        total: 0,
+        page,
+        hasMore: false
+      }, { status: 200 });
+    }
+
+    if (runningAuctions.length === 0 && page > 1) {
+      return NextResponse.json({
+        success: true,
+        auctions: [],
+        total: totalCount,
+        page,
+        hasMore: false
       }, { status: 200 });
     }
 
@@ -169,7 +192,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       auctions: auctionsWithStats,
-      total: auctionsWithStats.length
+      total: totalCount,
+      page,
+      hasMore: skip + auctionsWithStats.length < totalCount
     }, { status: 200 });
 
   } catch (error) {

@@ -51,7 +51,7 @@ export const WalletConnect = () => {
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className=" text-center w-full flex gap-1 px-2 py-1 gradient-button items-center justify-center rounded text-md font-bold text-white "
+                    className=" text-center w-full flex gap-1 px-2 max-lg:py-1 py-3 gradient-button items-center justify-center rounded text-md font-bold text-white "
                   >
                     Login<CiLogin className='text-xl'/>
                   </button>

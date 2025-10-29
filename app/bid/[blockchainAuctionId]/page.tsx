@@ -35,6 +35,7 @@ import { useSession } from "next-auth/react";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
+import { WalletConnect } from "@/components/Web3/walletConnect";
 
 interface Bidder {
   displayName: string;
@@ -838,7 +839,7 @@ export default function BidPage() {
                       {formatBidAmount(bidder.bidAmount, auctionData.currency)} {auctionData.currency}
                     </p>
                     {bidder.usdValue && (
-                      <p className="text-xs text-secondary">
+                      <p className="text-xs text-secondary text-right">
                         {formatUSDAmount(bidder.usdValue)}
                       </p>
                     )}
@@ -855,7 +856,7 @@ export default function BidPage() {
           <div className="mt-8 text-center">
             <Button 
               onClick={openBidDrawer}
-              className="px-8 py-3 gradient-button text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-12 py-6 text-xl gradient-button text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
             >
               Place a Bid
             </Button>
@@ -898,71 +899,82 @@ export default function BidPage() {
               </div>
             </DrawerHeader>
             
-            <div className="px-4 pb-2">
-              <Input
-                label="Bid Amount"
-                value={bidAmount}
-                onChange={(value) => {
-                  setBidAmount(value);
-                  if (bidError) setBidError(""); // Clear error when user types
-                }}
-                placeholder={auctionData ? `Enter amount in ${auctionData.currency}` : "Enter bid amount"}
-                type="number"
-                required
-                className="mb-2"
-              />
-              
-              {/* USD Value Display */}
-              {bidAmount && parseFloat(bidAmount) > 0 && (
-                <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-caption">USD Value:</span>
-                    <div className="flex items-center">
-                      {tokenPriceLoading ? (
-                        <>
-                          <RiLoader5Fill className="animate-spin text-primary mr-1" />
-                          <span className="text-caption">Loading...</span>
-                        </>
-                      ) : priceError ? (
-                        <span className="text-red-400">{priceError}</span>
-                      ) : tokenPrice && getUSDValue() ? (
-                        <span className="text-primary font-medium">
-                          {formatUSDAmount(getUSDValue()!)}
-                        </span>
-                      ) : (
-                        <span className="text-caption">--</span>
+            {!session || !address ? (
+              <div className="px-4 pb-4">
+                <div className="text-center mb-4">
+                  <p className="text-caption mb-4">You must be logged in</p>
+                  <WalletConnect />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="px-4 pb-2">
+                  <Input
+                    label="Bid Amount"
+                    value={bidAmount}
+                    onChange={(value) => {
+                      setBidAmount(value);
+                      if (bidError) setBidError(""); // Clear error when user types
+                    }}
+                    placeholder={auctionData ? `Enter amount in ${auctionData.currency}` : "Enter bid amount"}
+                    type="number"
+                    required
+                    className="mb-2"
+                  />
+                  
+                  {/* USD Value Display */}
+                  {bidAmount && parseFloat(bidAmount) > 0 && (
+                    <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-caption">USD Value:</span>
+                        <div className="flex items-center">
+                          {tokenPriceLoading ? (
+                            <>
+                              <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                              <span className="text-caption">Loading...</span>
+                            </>
+                          ) : priceError ? (
+                            <span className="text-red-400">{priceError}</span>
+                          ) : tokenPrice && getUSDValue() ? (
+                            <span className="text-primary font-medium">
+                              {formatUSDAmount(getUSDValue()!)}
+                            </span>
+                          ) : (
+                            <span className="text-caption">--</span>
+                          )}
+                        </div>
+                      </div>
+                      {tokenPrice && !tokenPriceLoading && !priceError && (
+                        <div className="text-xs text-caption mt-1">
+                          1 {auctionData?.currency} = {formatUSDAmount(tokenPrice)}
+                        </div>
                       )}
                     </div>
-                  </div>
-                  {tokenPrice && !tokenPriceLoading && !priceError && (
-                    <div className="text-xs text-caption mt-1">
-                      1 {auctionData?.currency} = {formatUSDAmount(tokenPrice)}
-                    </div>
+                  )}
+                  
+                  {bidError && (
+                    <p className="text-red-500 text-sm mt-1">{bidError}</p>
                   )}
                 </div>
-              )}
-              
-              {bidError && (
-                <p className="text-red-500 text-sm mt-1">{bidError}</p>
-              )}
-            </div>
 
-            <DrawerFooter>
-              <Button 
-                onClick={handleConfirmBid}
-                disabled={isPlacingBid || !bidAmount}
-                className="w-full h-12 text-lg font-bold"
-              >
-                {isPlacingBid ? (
-                  <>
-                    <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  "Confirm Bid"
-                )}
-              </Button>
-            </DrawerFooter>
+                <DrawerFooter>
+                  <Button 
+                    onClick={handleConfirmBid}
+                    disabled={isPlacingBid || !bidAmount}
+                    className="w-full h-12 text-lg font-bold"
+                  >
+                    {isPlacingBid ? (
+                      <>
+                        <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Confirm Bid"
+                    )}
+                  </Button>
+                </DrawerFooter>
+              </>
+            )}
           </DrawerContent>
         </Drawer>
       </div>
