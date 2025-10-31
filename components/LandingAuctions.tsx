@@ -163,10 +163,9 @@ const LandingAuctions: React.FC = () => {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if(session){
-      fetchTopAuctions(1, false);
-    }
-  }, [session]);
+    // Always fetch auctions regardless of session status
+    fetchTopAuctions(1, false);
+  }, []);
 
   // Intersection Observer for lazy loading
   useEffect(() => {

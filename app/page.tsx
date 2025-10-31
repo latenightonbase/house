@@ -31,12 +31,10 @@ export default function Home() {
       setProgress(100);
       setTimeout(() => {
         setLoading(false);
-        if (session) {
-          setShowContent(true);
-        }
+        setShowContent(true); // Always show content, regardless of session
       }, 300);
     }
-  }, [status, session]);
+  }, [status]);
 
   if (loading || status === "loading") {
     return (
@@ -52,14 +50,14 @@ export default function Home() {
     );
   }
 
-  if (!session) {
-    return (
-      <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
-        <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl">is ready!</span></h1>
-        <WalletConnect />
-      </div>
-    );
-  }
+  // if (!session) {
+  //   return (
+  //     <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
+  //       <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl">is ready!</span></h1>
+  //       <WalletConnect />
+  //     </div>
+  //   );
+  // }
 
   return (
     <PageLayout 
