@@ -1,49 +1,33 @@
 import { signIn } from "next-auth/react";
-import { useAccount } from "wagmi";
-import { SiweMessage } from "siwe";
-import { useSignMessage } from "wagmi";
+import { usePrivy } from "@privy-io/react-auth";
 
-export const useCustomSiweAuth = () => {
-  const { address } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+export const useCustomFarcasterAuth = () => {
+  const { authenticated, user: privyUser, login } = usePrivy();
 
   const customSignIn = async () => {
     try {
-      if (!address) {
-        throw new Error("No wallet connected");
+      if (!authenticated || !privyUser?.farcaster) {
+        // Trigger Privy login first
+        await login();
+        return;
       }
 
-      // Create SIWE message
-      const message = new SiweMessage({
-        domain: window.location.host,
-        address: address,
-        statement: "Sign in to Auction House",
-        uri: window.location.origin,
-        version: "1",
-        chainId: 8453, // Base chain
-        nonce: Math.random().toString(36).substring(2, 15),
-        issuedAt: new Date().toISOString(),
-      });
-
-      // Sign the message
-      const signature = await signMessageAsync({
-        message: message.prepareMessage(),
-      });
-
-      // Sign in with NextAuth, passing the address explicitly
+      // Sign in with NextAuth using Farcaster data
       const result = await signIn("credentials", {
-        message: message.prepareMessage(),
-        signature: signature,
-        address: address, // Explicitly pass the address
+        fid: privyUser.farcaster.fid?.toString() || "",
+        username: privyUser.farcaster.username || "",
+        pfpUrl: privyUser.farcaster.pfp || "",
+        bio: privyUser.farcaster.bio || "",
+        verifications: JSON.stringify([]),
         redirect: false,
       });
 
       return result;
     } catch (error) {
-      console.error("Custom SIWE auth failed:", error);
+      console.error("Custom Farcaster auth failed:", error);
       throw error;
     }
   };
 
-  return { customSignIn };
+  return { customSignIn, authenticated, user: privyUser };
 };
