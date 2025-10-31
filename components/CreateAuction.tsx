@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { writeContract } from "@wagmi/core";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSendCalls } from "wagmi";
 import { config } from "@/utils/providers/rainbow";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
@@ -39,9 +39,7 @@ interface CurrencyOption {
 type CurrencySelectionMode = "search" | "contract";
 
 export default function CreateAuction() {
-  const { user: privyUser } = usePrivy();
-  const address = privyUser?.wallet?.address;
-  const isConnected = !!privyUser?.wallet;
+  const { address, isConnected } = useAccount();
   const [auctionTitle, setAuctionTitle] = useState("");
   // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
   const [selectedCurrency, setSelectedCurrency] =
@@ -52,8 +50,7 @@ export default function CreateAuction() {
   const { data: session } = useSession();
   const [genAuctionId, setGenAuctionId] = useState("");
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
-  // Remove wagmi sendCalls for now
-  // const { sendCalls, isSuccess, status } = useSendCalls();
+  const { sendCalls, isSuccess, status } = useSendCalls();
   
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -66,27 +63,26 @@ export default function CreateAuction() {
   const navigate = useNavigateWithLoader();
 
   useEffect(() => {
-    // Transaction monitoring disabled for Farcaster migration
     // When transaction succeeds
-    // if (isSuccess) {
-    //   if (loadingToastId) {
-    //     toast.success("Transaction successful! Saving auction details...", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   processSuccess(genAuctionId);
-    // }
+    if (isSuccess) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Saving auction details...", {
+          id: loadingToastId,
+        });
+      }
+      processSuccess(genAuctionId);
+    }
     // When transaction fails (status === 'error')
-    // else if (status === "error") {
-    //   if (loadingToastId) {
-    //     toast.error("Transaction failed. Please try again.", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   setIsLoading(false);
-    //   console.error("Transaction failed");
-    // }
-  }, []);  // Removed isSuccess, status dependencies
+    else if (status === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, status]);
 
   useEffect(() => {
     if (selectedCurrency?.contractAddress) {
@@ -338,18 +334,10 @@ setIsLoading(false);
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
-          // TODO: Implement transaction sending for Farcaster auth
-          // sendCalls({
-          //   // @ts-ignore
-          //   calls: calls,
-          // });
-          
-          // For now, directly call processSuccess (remove when implementing proper transactions)
-          setTimeout(() => {
-            processSuccess(genAuctionId);
-            setIsLoading(false);
-            setLoadingToastId(null);
-          }, 2000);
+          sendCalls({
+            // @ts-ignore
+            calls: calls,
+          });
         }
       }
     } catch (error: any) {

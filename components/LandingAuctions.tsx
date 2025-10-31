@@ -15,7 +15,7 @@ import {
 } from "./UI/Drawer";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import toast from "react-hot-toast";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSendCalls, useReadContract } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { RiLoader5Fill } from "react-icons/ri";
 import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
@@ -110,11 +110,11 @@ const LandingAuctions: React.FC = () => {
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   
-  const { user: privyUser } = usePrivy();
+  const { sendCalls, isSuccess, status } = useSendCalls();
 
   const { context } = useMiniKit();
 
-  const address = privyUser?.wallet?.address;
+  const {address} = useAccount()
   const {user} = useGlobalContext()
 
   const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
@@ -192,30 +192,29 @@ const LandingAuctions: React.FC = () => {
   const navigate = useNavigateWithLoader();
 
   useEffect(() => {
-    // Transaction monitoring disabled for Farcaster migration
-    // // When transaction succeeds
-    // if (isSuccess && currentBid) {
-    //   if (loadingToastId) {
-    //     toast.success("Transaction successful! Saving bid details...", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   // Don't clear currentBid here - let processSuccess handle it
-    //   processSuccess(currentBid.auctionId, currentBid.amount);
-    // }
-    // // When transaction fails (status === 'error')
-    // else if (status === "error") {
-    //   if (loadingToastId) {
-    //     toast.error("Transaction failed. Please try again.", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   setIsLoading(false);
-    //   setCurrentBid(null);
-    //   setLoadingToastId(null);
-    //   console.error("Transaction failed");
-    // }
-  }, []);  // Removed isSuccess, status dependencies
+    // When transaction succeeds
+    if (isSuccess && currentBid) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Saving bid details...", {
+          id: loadingToastId,
+        });
+      }
+      // Don't clear currentBid here - let processSuccess handle it
+      processSuccess(currentBid.auctionId, currentBid.amount);
+    }
+    // When transaction fails (status === 'error')
+    else if (status === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, status]);
 
   const processSuccess = async (auctionId: string, bidAmount: number) => {
     try {
@@ -435,22 +434,14 @@ const LandingAuctions: React.FC = () => {
             setIsLoading(false);
           }
           
-          } else {
-            toast.loading("Waiting for wallet confirmation...", { id: toastId });
-            
-            // TODO: Implement transaction sending for Farcaster auth
-            // sendCalls({
-            //   // @ts-ignore
-            //   calls: sendingCalls,
-            // });
-            
-            // For now, directly call processSuccess (remove when implementing proper transactions)
-            setTimeout(() => {
-              processSuccess(auction._id, bidAmount);
-              setCurrentBid(null);
-              setLoadingToastId(null);
-            }, 2000);
-          }
+        } else {
+          toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          
+          sendCalls({
+            // @ts-ignore
+            calls: sendingCalls,
+          });
+        }
         
         
         // processSuccess will be called when transaction succeeds

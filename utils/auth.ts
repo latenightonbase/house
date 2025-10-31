@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { JWT } from "next-auth/jwt";
 import { Session } from "next-auth";
 import User from "@/utils/schemas/User";
-import { farcasterAuthProvider } from "../app/api/walletAuthProvider/farcasterProvider";
+import { walletAuthProvider } from "../app/api/walletAuthProvider/credsProvider";
+import { isWhitelisted } from "@/utils/whitelist";
 
 // Type definitions
 interface NextAuthUser {
@@ -12,10 +13,7 @@ interface NextAuthUser {
   name?: string | null;
   email?: string | null;
   image?: string | null;
-  fid?: string;
-  username?: string;
-  pfpUrl?: string;
-  bio?: string;
+  address?: string;
 }
 
 interface Account {
@@ -29,13 +27,12 @@ interface CustomToken extends JWT {
   refreshToken?: string;
   provider?: string;
   id?: string;
+  walletAddress?: string;
   username?: string;
   role?: string;
   wallet?: string;
   fid?: string;
   token?: string;
-  pfpUrl?: string;
-  bio?: string;
 }
 
 interface CustomSession extends Session {
@@ -48,15 +45,12 @@ interface CustomSession extends Session {
     wallet?: string;
     fid?: string;
     token?: string;
-    username?: string;
-    pfpUrl?: string;
-    bio?: string;
   } & Session["user"];
 }
 
 export const authOptions = {
   providers: [
-    farcasterAuthProvider,
+    walletAuthProvider, // This will handle both regular wallets and smart contract wallets
   ],
   callbacks: {
     async signIn({ user, account }: { user: NextAuthUser, account: Account | null }) {
@@ -72,12 +66,12 @@ export const authOptions = {
         token.provider = account.provider;
         token.id = user.id;
 
-        if ('fid' in user) {
-          token.fid = user.fid;
-          token.username = user.username;
-          token.pfpUrl = user.pfpUrl;
-          token.bio = user.bio;
-        }
+        if ('address' in user) {
+          token.walletAddress = user.address;
+        } else if (account.provider === "anonymous") {
+          token.username = user.name;
+          token.role = "ANONYMOUS";
+        } 
 
         const accessToken = jwt.sign(
           { userId: user.id, provider: account.provider },
@@ -94,18 +88,27 @@ export const authOptions = {
         token.accessToken = accessToken;
         token.refreshToken = refreshToken;
 
-        // Find user in database using the FID
+        if(account.provider === "anonymous"){
+          return token;
+        }
+
+        // Find user in database using the wallet address
         const dbUser = await User.findOne({
-          fid: user?.fid
+          wallet: user?.address
         });
 
         if(dbUser) {
           token.wallet = dbUser.wallet;
           token.fid = dbUser.fid;
           token.token = dbUser.token;
-          token.username = dbUser.username;
-          token.pfpUrl = dbUser.pfp_url;
-          token.bio = dbUser.bio;
+        } else {
+          // Create new user with whitelist status
+          const newUser = new User({
+            wallet: user.address,
+          });
+          await newUser.save();
+          
+          token.wallet = user.address;
         }
       }
       return token;
@@ -118,17 +121,13 @@ export const authOptions = {
         refreshToken: token.refreshToken || '',
         fid: token.fid || '',
         token: token.token || '',
-        wallet: token.wallet || '',
+        wallet: token.wallet || token.walletAddress || '',
         user: {
           ...session.user,
-          name: token.username || session.user?.name || 'Farcaster User',
-          wallet: token.wallet,
+          name: session.user?.name || 'Wallet User',
+          wallet: token.wallet || token.walletAddress,
           fid: token.fid,
           token: token.token,
-          username: token.username,
-          pfpUrl: token.pfpUrl,
-          bio: token.bio,
-          image: token.pfpUrl || session.user?.image,
         },
         expires: session.expires
       };

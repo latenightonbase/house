@@ -22,7 +22,7 @@ import {
 } from '@/components/UI/Drawer';
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from '@/utils/tokenPrice';
 import toast from 'react-hot-toast';
-import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSendCalls } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
 import { useGlobalContext } from "@/utils/providers/globalContext";
@@ -100,11 +100,9 @@ export default function BidPage() {
   const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
   
   // Hooks
-  // Remove wagmi hooks for Farcaster migration
-  // const { sendCalls, isSuccess, status } = useSendCalls();
+  const { sendCalls, isSuccess, status } = useSendCalls();
   const { context } = useMiniKit();
-  const { user: privyUser } = usePrivy();
-  const address = privyUser?.wallet?.address;
+  const { address } = useAccount();
   const { user } = useGlobalContext();
   const { data: session } = useSession();
 
@@ -137,31 +135,31 @@ export default function BidPage() {
     return () => clearTimeout(timeoutId);
   }, [bidAmount, auctionData?.tokenAddress]);
 
-  // Handle transaction success/failure - disabled for Farcaster migration
+  // Handle transaction success/failure
   useEffect(() => {
-    // // When transaction succeeds
-    // if (isSuccess && currentBid) {
-    //   if (loadingToastId) {
-    //     toast.success("Transaction successful! Saving bid details...", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   // Don't clear currentBid here - let processSuccess handle it
-    //   processSuccess(currentBid.auctionId, currentBid.amount);
-    // }
-    // // When transaction fails (status === 'error')
-    // else if (status === "error") {
-    //   if (loadingToastId) {
-    //     toast.error("Transaction failed. Please try again.", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   setIsLoading(false);
-    //   setCurrentBid(null);
-    //   setLoadingToastId(null);
-    //   console.error("Transaction failed");
-    // }
-  }, []);  // Removed isSuccess, status dependencies
+    // When transaction succeeds
+    if (isSuccess && currentBid) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Saving bid details...", {
+          id: loadingToastId,
+        });
+      }
+      // Don't clear currentBid here - let processSuccess handle it
+      processSuccess(currentBid.auctionId, currentBid.amount);
+    }
+    // When transaction fails (status === 'error')
+    else if (status === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, status]);
 
   const getUSDValue = () => {
     if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
@@ -629,18 +627,10 @@ export default function BidPage() {
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
-          // TODO: Implement transaction sending for Farcaster auth
-          // sendCalls({
-          //   // @ts-ignore
-          //   calls: sendingCalls,
-          // });
-          
-          // For now, directly call processSuccess (remove when implementing proper transactions)
-          setTimeout(() => {
-            processSuccess(auction._id, bidAmount);
-            setCurrentBid(null);
-            setLoadingToastId(null);
-          }, 2000);
+          sendCalls({
+            // @ts-ignore
+            calls: sendingCalls,
+          });
         }
         
         

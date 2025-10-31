@@ -10,7 +10,7 @@ import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import toast from "react-hot-toast";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAccount, useSendCalls } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
 import { useGlobalContext } from "@/utils/providers/globalContext";
@@ -80,38 +80,35 @@ export default function MyAuctionCards() {
   const [currentEndingAuction, setCurrentEndingAuction] = useState<{auctionId: string, bidders: any[]} | null>(null);
 
   const navigate = useNavigateWithLoader();
-  // Remove wagmi hooks for Farcaster migration
-  // const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
+  const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
   const { context } = useMiniKit();
-  const { user: privyUser } = usePrivy();
-  const address = privyUser?.wallet?.address;
+  const { address } = useAccount();
   const { user } = useGlobalContext();
 
   useEffect(() => {
-    // Transaction monitoring disabled for Farcaster migration
-    // // When transaction succeeds
-    // if (isSuccess && currentEndingAuction) {
-    //   if (loadingToastId) {
-    //     toast.success("Transaction successful! Ending auction...", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   processEndAuctionSuccess(currentEndingAuction.auctionId, currentEndingAuction.bidders);
-    //   setCurrentEndingAuction(null);
-    // }
-    // // When transaction fails (status === 'error')
-    // else if (txStatus === "error") {
-    //   if (loadingToastId) {
-    //     toast.error("Transaction failed. Please try again.", {
-    //       id: loadingToastId,
-    //     });
-    //   }
-    //   setIsLoading(false);
-    //   setEndingAuction(null);
-    //   setCurrentEndingAuction(null);
-    //   console.error("Transaction failed");
-    // }
-  }, []);  // Removed isSuccess, txStatus dependencies
+    // When transaction succeeds
+    if (isSuccess && currentEndingAuction) {
+      if (loadingToastId) {
+        toast.success("Transaction successful! Ending auction...", {
+          id: loadingToastId,
+        });
+      }
+      processEndAuctionSuccess(currentEndingAuction.auctionId, currentEndingAuction.bidders);
+      setCurrentEndingAuction(null);
+    }
+    // When transaction fails (status === 'error')
+    else if (txStatus === "error") {
+      if (loadingToastId) {
+        toast.error("Transaction failed. Please try again.", {
+          id: loadingToastId,
+        });
+      }
+      setIsLoading(false);
+      setEndingAuction(null);
+      setCurrentEndingAuction(null);
+      console.error("Transaction failed");
+    }
+  }, [isSuccess, txStatus]);
 
   const processEndAuctionSuccess = async (auctionId: string, bidders: any[]) => {
     try {
@@ -322,18 +319,10 @@ export default function MyAuctionCards() {
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
-          // TODO: Implement transaction sending for Farcaster auth
-          // sendCalls({
-          //   // @ts-ignore
-          //   calls: calls,
-          // });
-          
-          // For now, directly call processEndAuctionSuccess (remove when implementing proper transactions)
-          setTimeout(() => {
-            processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
-            setCurrentEndingAuction(null);
-            setLoadingToastId(null);
-          }, 2000);
+          sendCalls({
+            // @ts-ignore
+            calls: calls,
+          });
         }
         
         // processEndAuctionSuccess will be called when transaction succeeds via useEffect

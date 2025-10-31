@@ -1,45 +1,47 @@
 "use client";
-import { PrivyProvider } from '@privy-io/react-auth';
+import '@rainbow-me/rainbowkit/styles.css';
+import { RainbowKitSiweNextAuthProvider } from "@rainbow-me/rainbowkit-siwe-next-auth";
+import { getDefaultConfig, RainbowKitProvider } from "@rainbow-me/rainbowkit";
 import { SessionProvider } from "next-auth/react";
+import type { Session } from "next-auth";
+import { AppProps } from "next/app";
 import { WagmiProvider } from "wagmi";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { base } from "viem/chains";
 import { ReactNode } from "react";
+import {
+  GetSiweMessageOptions,
+} from '@rainbow-me/rainbowkit-siwe-next-auth';
 import { GlobalProvider } from './globalContext';
-import { createConfig, http } from '@wagmi/core';
+
+const getSiweMessageOptions: GetSiweMessageOptions = () => ({
+  statement: "Sign in to Auction House",
+});
 
 const queryClient = new QueryClient();
 
-export const config = createConfig({
+export const config = getDefaultConfig({
+  appName: "My RainbowKit App",
+  projectId: "5d10af3027c340310f3a3da64cbcedac",
   chains: [base],
-  transports: {
-    [base.id]: http(),
-  },
+  ssr: true, // If your dApp uses server side rendering (SSR)
 });
 
 const Rainbow = ({ children }: { children: ReactNode }) => {
   return (
-    <PrivyProvider
-      appId="cmggt86he00kmjy0crv42kfso"
-      config={{
-        appearance: {
-          loginMethods: ['farcaster'],
-        },
-        embeddedWallets: {
-          createOnLogin: 'users-without-wallets',
-        },
-      }}
-    >
-      <WagmiProvider config={config}>
-        <SessionProvider refetchInterval={0}>
-          <GlobalProvider>
-            <QueryClientProvider client={queryClient}>
-              {children}
-            </QueryClientProvider>
-          </GlobalProvider>
-        </SessionProvider>
-      </WagmiProvider>
-    </PrivyProvider>
+    <WagmiProvider config={config}>
+      <SessionProvider refetchInterval={0}>
+        <GlobalProvider>
+
+        
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitSiweNextAuthProvider getSiweMessageOptions={getSiweMessageOptions}>
+            <RainbowKitProvider>{children}</RainbowKitProvider>
+          </RainbowKitSiweNextAuthProvider>
+        </QueryClientProvider>
+        </GlobalProvider>
+      </SessionProvider>
+    </WagmiProvider>
   );
 };
 
