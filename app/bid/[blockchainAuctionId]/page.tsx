@@ -102,8 +102,8 @@ export default function BidPage() {
   // Hooks
   const { sendCalls, isSuccess, status } = useSendCalls();
   const { context } = useMiniKit();
-  const { address } = useAccount();
   const { user } = useGlobalContext();
+  const {address} = useAccount()
   const { data: session } = useSession();
 
 

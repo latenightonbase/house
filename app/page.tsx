@@ -6,6 +6,7 @@ import LandingAuctions from "@/components/LandingAuctions";
 import PageLayout from "@/components/UI/PageLayout";
 import Welcome from "@/components/Welcome";
 import { WalletConnect } from "@/components/Web3/walletConnect";
+import { UsernameManager } from "@/components/UI/UsernameManager";
 
 NProgress.configure({ showSpinner: false });
 
@@ -31,10 +32,12 @@ export default function Home() {
       setProgress(100);
       setTimeout(() => {
         setLoading(false);
-        setShowContent(true); // Always show content, regardless of session
+        if (session) {
+          setShowContent(true);
+        }
       }, 300);
     }
-  }, [status]);
+  }, [status, session]);
 
   if (loading || status === "loading") {
     return (
@@ -50,19 +53,12 @@ export default function Home() {
     );
   }
 
-  // if (!session) {
-  //   return (
-  //     <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
-  //       <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl">is ready!</span></h1>
-  //       <WalletConnect />
-  //     </div>
-  //   );
-  // }
 
   return (
     <PageLayout 
       className="min-h-screen flex flex-col items-start justify-start"
     >
+      <UsernameManager />
       <Welcome/>
       <LandingAuctions/>
      

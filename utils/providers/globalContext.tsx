@@ -24,6 +24,7 @@ interface CustomSession {
     wallet?: string;
     fid?: string;
     token?: string;
+    username?: string;
   };
   wallet?: string;
   fid?: string;
@@ -90,6 +91,34 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Session wallet:", session.wallet);
 
         const walletAddress = session.wallet;
+
+        // First, try to fetch user from database
+        try {
+          const dbResponse = await fetch(`/api/users/${walletAddress}`);
+
+          console.log("Database response status:", dbResponse);
+
+          if (dbResponse.ok) {
+            const dbUser = await dbResponse.json();
+
+            console.log("Database user fetched:", dbUser);
+
+            if (dbUser.user && dbUser.user.username) {
+              // Use database username and profile data
+              user = {
+                username: dbUser.user.username,
+                pfp_url: dbUser.user.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`,
+                fid: dbUser.user.fid || walletAddress,
+              };
+              setUser(user);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user from database:", error);
+        }
+
+        // Fallback to ENS/wallet display if no database user found
         const provider = new ethers.providers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
 
         // Fetch ENS name

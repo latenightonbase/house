@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
           }
         } else {
           // Use wallet-based defaults
-          displayUsername = `${user.wallet.slice(0, 6)}...${user.wallet.slice(-4)}`;
+          displayUsername =  user.username ? user.username : `${user.wallet.slice(0, 6)}...${user.wallet.slice(-4)}`;
           pfp_url = `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet.toLowerCase()}`;
         }
 

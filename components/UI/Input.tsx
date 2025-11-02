@@ -52,7 +52,7 @@ export default function Input({
     <div className={twMerge('relative text-white flex flex-col-reverse gap-2', className)}>
       {/* Error Message */}
       {showError && (
-        <p className="text-red-500 text-sm -mt-2">
+        <p className="text-red-500 text-xs">
           {label} is required
         </p>
       )}

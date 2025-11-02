@@ -10,13 +10,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '5');
+    const currencyFilter = searchParams.get('currency') || 'all';
     const skip = (page - 1) * limit;
+
+    // Build currency filter query
+    let currencyQuery = {};
+    if (currencyFilter === 'usdc') {
+      currencyQuery = { currency: 'USDC' };
+    } else if (currencyFilter === 'creator-coins') {
+      currencyQuery = { currency: { $ne: 'USDC' } };
+    }
 
     // Find auctions that are currently running (started but not ended)
     // Sort by endDate ascending (soonest ending first) and implement pagination
     const runningAuctions = await Auction.find({
       startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate }
+      endDate: { $gte: currentDate },
+      ...currencyQuery
     })
     .populate('hostedBy') // Populate full host information
     .populate('bidders.user') // Populate full bidder user information
@@ -28,7 +38,8 @@ export async function GET(req: NextRequest) {
     // Get total count for pagination info
     const totalCount = await Auction.countDocuments({
       startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate }
+      endDate: { $gte: currentDate },
+      ...currencyQuery
     });
 
     if (runningAuctions.length === 0 && page === 1) {
@@ -162,20 +173,40 @@ export async function GET(req: NextRequest) {
       const timeRemaining = auction.endDate.getTime() - currentDate.getTime();
       const hoursRemaining = Math.max(0, Math.floor(timeRemaining / (1000 * 60 * 60)));
 
-      // Process hostedBy to add username field
+      // Process hostedBy to add username and display_name fields
       let enhancedHostedBy = { ...auction.hostedBy };
       if (auction.hostedBy?.fid) {
         if (!auction.hostedBy.fid || auction.hostedBy.fid === '' || auction.hostedBy.fid.startsWith('none')) {
           // For FIDs starting with "none" or empty, use truncated wallet as username
           const wallet = auction.hostedBy.wallet;
           enhancedHostedBy.username = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet;
+          enhancedHostedBy.display_name = null;
         } else {
-          // For valid FIDs, use displayName from Neynar API or fallback to existing username
+          // For valid FIDs, use data from Neynar API
           const neynarUser = neynarUsers[auction.hostedBy.fid];
           const fallbackWallet = auction.hostedBy.wallet;
           const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
-          enhancedHostedBy.username = neynarUser?.display_name || auction.hostedBy.username || truncatedWallet;
+          
+          console.log(`Processing host ${auction.hostedBy.fid}:`, {
+            neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
+            originalUsername: auction.hostedBy.username,
+            fallback: truncatedWallet
+          });
+          
+          // Set both username and display_name
+          enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
+          enhancedHostedBy.display_name = neynarUser?.display_name || null;
+          
+          console.log(`Enhanced host data:`, {
+            username: enhancedHostedBy.username,
+            display_name: enhancedHostedBy.display_name
+          });
         }
+      } else {
+        // No FID, use existing username or truncated wallet
+        const wallet = auction.hostedBy.wallet;
+        enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);
+        enhancedHostedBy.display_name = null;
       }
 
       return {

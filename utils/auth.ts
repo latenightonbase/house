@@ -45,6 +45,7 @@ interface CustomSession extends Session {
     wallet?: string;
     fid?: string;
     token?: string;
+    username?: string;
   } & Session["user"];
 }
 
@@ -101,6 +102,7 @@ export const authOptions = {
           token.wallet = dbUser.wallet;
           token.fid = dbUser.fid;
           token.token = dbUser.token;
+          token.username = dbUser.username;
         } else {
           // Create new user with whitelist status
           const newUser = new User({
@@ -128,6 +130,7 @@ export const authOptions = {
           wallet: token.wallet || token.walletAddress,
           fid: token.fid,
           token: token.token,
+          username: token.username,
         },
         expires: session.expires
       };

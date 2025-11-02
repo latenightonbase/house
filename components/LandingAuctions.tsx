@@ -45,8 +45,11 @@ interface Bidder {
 }
 
 interface HostInfo {
+  _id: string;
   wallet: string;
   username?: string;
+  display_name?: string;
+  fid?: string;
 }
 
 interface Auction {
@@ -95,6 +98,7 @@ const LandingAuctions: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
   const [shareDropdownOpen, setShareDropdownOpen] = useState<string | null>(null);
+  const [currencyFilter, setCurrencyFilter] = useState<'all' | 'usdc' | 'creator-coins'>('all');
   
   // Intersection Observer ref
   const observerRef = useRef<HTMLDivElement>(null);
@@ -109,13 +113,13 @@ const LandingAuctions: React.FC = () => {
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
-  
   const { sendCalls, isSuccess, status } = useSendCalls();
 
   const { context } = useMiniKit();
 
-  const {address} = useAccount()
-  const {user} = useGlobalContext()
+  const { address } = useAccount();
+
+  const { user } = useGlobalContext();
 
   const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
     try {
@@ -126,7 +130,7 @@ const LandingAuctions: React.FC = () => {
       }
       setError(null);
 
-      const response = await fetch(`/api/auctions/getTopFive?page=${pageNum}&limit=3`);
+      const response = await fetch(`/api/auctions/getTopFive?page=${pageNum}&limit=3&currency=${currencyFilter}`);
       const data: ApiResponse = await response.json();
 
       console.log("API Response:", data);
@@ -163,9 +167,10 @@ const LandingAuctions: React.FC = () => {
   const { data: session } = useSession();
 
   useEffect(() => {
-    // Always fetch auctions regardless of session status
-    fetchTopAuctions(1, false);
-  }, []);
+    if(session){
+      fetchTopAuctions(1, false);
+    }
+  }, [session, currencyFilter]);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -722,6 +727,82 @@ const LandingAuctions: React.FC = () => {
     );
   }
 
+  // Handle case when auctions is empty but we have a filter applied
+  if (auctions.length === 0 && currencyFilter !== 'all') {
+    return (
+      <div className="w-full max-lg:mx-auto mt-8">
+        <div className="flex flex-col items-start justify-between mb-8">
+          <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
+          <p className="text-caption text-sm mt-2">
+            Discover the most active auctions happening right now
+          </p>
+        </div>
+
+        {/* Currency Filter */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setCurrencyFilter('all')}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+          >
+            All
+          </button>
+          <button
+            onClick={() => setCurrencyFilter('usdc')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              currencyFilter === 'usdc'
+                ? 'bg-primary text-white'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+            }`}
+          >
+            USDC
+          </button>
+          <button
+            onClick={() => setCurrencyFilter('creator-coins')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              currencyFilter === 'creator-coins'
+                ? 'bg-primary text-white'
+                : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+            }`}
+          >
+            Creator Coins
+          </button>
+        </div>
+
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
+              <svg 
+                className="w-8 h-8 text-white" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">No auctions found</h3>
+              <p className="text-caption mb-4">
+                No auctions match the selected filter. Try selecting a different filter.
+              </p>
+              <button
+                onClick={() => setCurrencyFilter('all')}
+                className="gradient-button text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity"
+              >
+                View All Auctions
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-lg:mx-auto mt-8">
       <div className="flex flex-col items-start justify-between mb-8">
@@ -731,14 +812,48 @@ const LandingAuctions: React.FC = () => {
         </p>
       </div>
 
+      {/* Currency Filter */}
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setCurrencyFilter('all')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            currencyFilter === 'all'
+              ? 'bg-primary text-white'
+              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setCurrencyFilter('usdc')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            currencyFilter === 'usdc'
+              ? 'bg-primary text-white'
+              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+          }`}
+        >
+          USDC
+        </button>
+        <button
+          onClick={() => setCurrencyFilter('creator-coins')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            currencyFilter === 'creator-coins'
+              ? 'bg-primary text-white'
+              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+          }`}
+        >
+          Creator Coins
+        </button>
+      </div>
+
       <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         {auctions.map((auction, index) => (
           <div
             key={auction._id}
-            className="bg-primary/10 w-full border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
+            className="bg-primary/10 w-full border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full"
           >
             {/* Header with ranking */}
-            <div className="gradient-button p-4 relative">
+            <div className="gradient-button p-4 relative flex-shrink-0">
               <div className="flex items-center justify-between">
                 <span className="bg-white/20 text-white text-sm font-semibold px-3 py-1 rounded-full">
                   #{index + 1}
@@ -837,12 +952,12 @@ const LandingAuctions: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-4">
-              <h3 className="text-xl font-semibold text-white mb-2 line-clamp-2">
+            <div className="p-4 flex flex-col flex-grow">
+              <h3 className="text-xl font-semibold text-white mb-2 line-clamp-2 min-h-[3.5rem] flex items-start">
                 {auction.auctionName}
               </h3>
 
-              <div className="space-y-3">
+              <div className="space-y-3 flex-grow flex flex-col">
                 {/* Highest bid */}
                 <div className="flex justify-between items-center">
                   {auction.highestBid == 0 ? <>
@@ -862,32 +977,46 @@ const LandingAuctions: React.FC = () => {
                 </div>
 
                 {/* Stats */}
-                
-                  <div className="flex justify-between items-center">
-                    <div className="text-caption text-sm">Participants</div>
-                    <div className="font-semibold text-md text-white">
-                      {auction.participantCount}
-                    </div>
-                    
+                <div className="flex justify-between items-center">
+                  <div className="text-caption text-sm">Participants</div>
+                  <div className="font-semibold text-md text-white">
+                    {auction.participantCount}
                   </div>
+                </div>
 
-                  {auction.topBidder && <div className="flex justify-between items-center">
-                    <div className="text-caption text-sm">Top Bidder</div>
-                    <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
-                    <Image unoptimized alt="top bidder" src={auction.topBidder?.pfp_url || ""} width={100} height={100} className="rounded-full w-6 aspect-square"  />
-                      <h3 className="max-w-32 truncate text-md">{auction.topBidder?.username}</h3>
-                    </div>
-                    
-                  </div>}
-                
+                {/* Top Bidder - Always reserve space */}
+                <div className="flex justify-between items-center min-h-[32px]">
+                  {auction.topBidder ? (
+                    <>
+                      <div className="text-caption text-sm">Top Bidder</div>
+                      <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
+                        <Image unoptimized alt="top bidder" src={auction.topBidder?.pfp_url || ""} width={100} height={100} className="rounded-full w-6 aspect-square"  />
+                        <h3 className="max-w-32 truncate text-md">{auction.topBidder?.username}</h3>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-caption text-sm">Top Bidder</div>
+                      <div className="font-semibold text-md text-caption">
+                        No bids yet
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Spacer to push content to bottom */}
+                <div className="flex-grow"></div>
 
                 {/* Host info */}
-                <div className="border-t pt-3">
+                <div className="border-t pt-3 mt-auto">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-caption">Hosted by:</span>
-                    <span className="font-medium text-white">
-                      {auction.hostedBy.username ||
-                        auction.hostedBy.wallet}
+                    <span 
+                      className=" text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200"
+                      onClick={() => navigate(`/user/${auction.hostedBy._id}`)}
+                    >
+                      {auction.hostedBy.display_name || 
+                       (auction.hostedBy.username ? `@${auction.hostedBy.username}` : truncateAddress(auction.hostedBy.wallet))}
                     </span>
                   </div>
                 </div>
@@ -937,7 +1066,7 @@ const LandingAuctions: React.FC = () => {
       {/* Debug info and manual load more */}
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-4 p-4 bg-gray-800 rounded">
-          <p>Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)}, page={page}, auctionsCount={auctions.length}</p>
+          <p>Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)}, page={page}, auctionsCount={auctions.length}, filter={currencyFilter}</p>
           {hasMore && (
             <Button 
               onClick={loadMoreAuctions} 

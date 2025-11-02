@@ -28,6 +28,7 @@ import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tok
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { checkStatus } from "@/utils/checkStatus";
+import { useGlobalContext } from "@/utils/providers/globalContext";
 
 
 interface CurrencyOption {
@@ -39,6 +40,7 @@ interface CurrencyOption {
 type CurrencySelectionMode = "search" | "contract";
 
 export default function CreateAuction() {
+
   const { address, isConnected } = useAccount();
   const [auctionTitle, setAuctionTitle] = useState("");
   // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
@@ -182,7 +184,7 @@ setIsLoading(false);
     //check if address and session exist
       if (!address || !session) {
         toast.error("Please connect your wallet");
-        return;
+        // return;
       }
     setIsLoading(true);
     e.preventDefault();
@@ -200,11 +202,19 @@ setIsLoading(false);
     // Validation
     if (!auctionTitle || !selectedCurrency || !endTime) {
       toast.error("Please fill in all required fields with valid values");
+      setIsLoading(false);
+      return;
+    }
+
+    if (auctionTitle.length > 30) {
+      toast.error("Auction title cannot exceed 30 characters");
+      setIsLoading(false);
       return;
     }
 
     if (!isConnected || !address) {
       toast.error("Please connect your wallet to create an auction");
+      setIsLoading(false);
       return;
     }
 
@@ -212,6 +222,7 @@ setIsLoading(false);
     const now = new Date();
     if (endTime <= now) {
       toast.error("Auction end time must be in the future");
+      setIsLoading(false);
       return;
     }
     
@@ -466,10 +477,17 @@ setIsLoading(false);
                   <Input
                     label="Auction Title"
                     value={auctionTitle}
-                    onChange={setAuctionTitle}
-                    placeholder="Enter a title for your auction"
+                    onChange={(value) => {
+                      if (value.length <= 30) {
+                        setAuctionTitle(value);
+                      }
+                    }}
+                    placeholder="Enter a title for your auction (max 30 chars)"
                     required
                   />
+                  <div className="text-xs text-gray-400 text-right">
+                    {auctionTitle.length}/30 characters
+                  </div>
                 </motion.div>
               )}
 
