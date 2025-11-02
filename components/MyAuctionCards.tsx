@@ -20,7 +20,6 @@ import {
   getCryptoKeyAccount,
 } from "@base-org/account";
 import { checkStatus } from "@/utils/checkStatus";
-import { useAccount } from "wagmi";
 
 interface Bidder {
   user: string;
