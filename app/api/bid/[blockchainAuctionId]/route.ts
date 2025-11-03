@@ -50,6 +50,7 @@ export async function POST(
     // Find auction in database
     const auction = await Auction.findOne({ blockchainAuctionId })
       .populate('bidders.user', 'wallet username fid')
+      .populate('hostedBy', 'username displayName')
       .lean() as IAuction | null;
 
       console.log('Fetched auction from DB:', auction);
@@ -204,7 +205,8 @@ export async function POST(
       tokenAddress: auction.tokenAddress,
       highestBid: highestBid.toString(),
       minimumBid: auction.minimumBid.toString(),
-      bidders: processedBidders
+      bidders: processedBidders,
+      hostedBy: (auction.hostedBy as any)?.username || (auction.hostedBy as any)?.displayName || 'Unknown Host'
     };
 
     return NextResponse.json(response);

@@ -36,6 +36,8 @@ import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
 import { WalletConnect } from "@/components/Web3/walletConnect";
+import sdk from '@farcaster/miniapp-sdk';
+import { FaShare } from 'react-icons/fa';
 
 interface Bidder {
   displayName: string;
@@ -60,6 +62,7 @@ interface AuctionData {
   highestBid: string;
   minimumBid: string;
   bidders: Bidder[];
+  hostedBy: string;
 }
 
 interface Auction {
@@ -674,6 +677,23 @@ export default function BidPage() {
     handleBid(blockchainAuctionId, auction, amount);
   };
 
+  async function composeCast() {
+    try {
+      if (!auctionData) return;
+      
+      const baseUrl = process.env.NEXT_PUBLIC_MINIAPP_URL || process.env.NEXT_PUBLIC_DOMAIN || window.location.origin;
+      const url = `${baseUrl}/bid/${blockchainAuctionId}`;
+      const text = `Check out "${auctionData.auctionName}" hosted by ${auctionData.hostedBy}! Bidding in ${auctionData.currency}. ${url}`;
+      
+      await sdk.actions.composeCast({
+        text,
+        embeds: [url],
+      });
+    } catch (e) {
+      console.error("Error composing cast:", e);
+    }
+  }
+
   return (
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
@@ -771,6 +791,35 @@ export default function BidPage() {
                       <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
                       Miniapp URL
                     </button>
+                    {context && <button
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        color: 'hsl(var(--primary))',
+                        backgroundColor: 'transparent',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        whiteSpace: 'nowrap'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'hsl(var(--primary))';
+                      }}
+                      onClick={() => composeCast()}
+                    >
+                      <FaShare style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                      Share Cast
+                    </button>}
                   </div>
                 )}
               </div>
