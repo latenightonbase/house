@@ -10,6 +10,12 @@ export interface IUser extends Document {
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
+  twitterProfile?: {
+    id: string;
+    username: string;
+    name: string;
+    profileImageUrl?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +57,24 @@ const UserSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Auction',
     }],
+    twitterProfile: {
+      id: {
+        type: String,
+        trim: true,
+      },
+      username: {
+        type: String,
+        trim: true,
+      },
+      name: {
+        type: String,
+        trim: true,
+      },
+      profileImageUrl: {
+        type: String,
+        trim: true,
+      },
+    },
   },
   {
     timestamps: true, // Automatically adds createdAt and updatedAt fields

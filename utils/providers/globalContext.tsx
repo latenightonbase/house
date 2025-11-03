@@ -36,6 +36,10 @@ interface GlobalContextProps {
   user: any;
   authenticatedUser: any;
   isAuthenticated: boolean;
+  isDesktopWallet: boolean;
+  hasTwitterProfile: boolean;
+  authenticateWithTwitter: () => Promise<void>;
+  refreshTwitterProfile: () => Promise<void>;
 }
 
 // Create a context with a default value matching the expected structure
@@ -45,9 +49,45 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session } = useSession() as { data: CustomSession | null };
   const { context } = useMiniKit();
   const { signIn } = useAuthenticate();
+  const { login } = usePrivy();
   const [user, setUser] = useState<any | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
+  const [hasTwitterProfile, setHasTwitterProfile] = useState<boolean>(false);
   const {address, isDisconnected} = useAccount()
+
+  // Check if user is using desktop wallet (no MiniKit context)
+  const isDesktopWallet = !context?.client;
+
+  const authenticateWithTwitter = async (): Promise<void> => {
+    try {
+      await login();
+    } catch (error) {
+      console.error('Twitter authentication error:', error);
+      toast.error('Failed to authenticate with Twitter');
+    }
+  };
+
+  const refreshTwitterProfile = async (): Promise<void> => {
+    await checkTwitterProfile();
+  };
+
+  const checkTwitterProfile = async () => {
+    if (session?.wallet) {
+      try {
+        console.log('Checking Twitter profile for wallet:', session.wallet);
+        const response = await fetch(`/api/users/${session.wallet}`);
+        if (response.ok) {
+          const userData = await response.json();
+          console.log('User data:', userData);
+          const hasTwitter = !!userData.user?.twitterProfile?.id;
+          console.log('Has Twitter profile:', hasTwitter);
+          setHasTwitterProfile(hasTwitter);
+        }
+      } catch (error) {
+        console.error('Error checking Twitter profile:', error);
+      }
+    }
+  };
 
   const updateUserFid = async () => {
     try {
@@ -162,6 +202,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session) {
         handleUserDetails();
+        checkTwitterProfile();
         
         // Check and update FID if conditions are met
         if (session && address && context?.user) {
@@ -177,6 +218,10 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         authenticatedUser,
         isAuthenticated: !!authenticatedUser,
+        isDesktopWallet,
+        hasTwitterProfile,
+        authenticateWithTwitter,
+        refreshTwitterProfile,
       }}
     >
       {children}

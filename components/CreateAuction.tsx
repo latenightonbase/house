@@ -29,6 +29,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { checkStatus } from "@/utils/checkStatus";
 import { useGlobalContext } from "@/utils/providers/globalContext";
+import TwitterAuthModal from "./UI/TwitterAuthModal";
 
 
 interface CurrencyOption {
@@ -42,6 +43,7 @@ type CurrencySelectionMode = "search" | "contract";
 export default function CreateAuction() {
 
   const { address, isConnected } = useAccount();
+  const { isDesktopWallet, hasTwitterProfile } = useGlobalContext();
   const [auctionTitle, setAuctionTitle] = useState("");
   // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
   const [selectedCurrency, setSelectedCurrency] =
@@ -53,6 +55,7 @@ export default function CreateAuction() {
   const [genAuctionId, setGenAuctionId] = useState("");
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
+  const [showTwitterModal, setShowTwitterModal] = useState(false);
   
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -181,13 +184,20 @@ setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check if desktop wallet user needs Twitter auth
+    if (isDesktopWallet && !hasTwitterProfile) {
+      setShowTwitterModal(true);
+      return;
+    }
+
     //check if address and session exist
       if (!address || !session) {
         toast.error("Please connect your wallet");
         // return;
       }
     setIsLoading(true);
-    e.preventDefault();
 
     const res = await fetch(`/api/users/${address}/checkWhitelist`);
     const user = await res.json();
@@ -657,6 +667,15 @@ setIsLoading(false);
             </div>
           </div>
         </form>
+
+        <TwitterAuthModal 
+          isOpen={showTwitterModal}
+          onClose={() => setShowTwitterModal(false)}
+          onSuccess={() => {
+            // Close modal and let the global context update naturally
+            setShowTwitterModal(false);
+          }}
+        />
       </div>
     );
 }

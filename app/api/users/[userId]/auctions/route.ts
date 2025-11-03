@@ -22,7 +22,7 @@ export async function GET(
 
     // Find user and their auctions
     const userDoc = await User.findById(userId)
-      .select('wallet fid username hostedAuctions')
+      .select('wallet fid username hostedAuctions twitterProfile')
       .lean();
 
     if (!userDoc) {
@@ -90,6 +90,17 @@ export async function GET(
       // FID starts with "none" or doesn't exist, use wallet-based defaults
       userProfile.username = user.username ? user.username : `${user.wallet.slice(0, 6)}...${user.wallet.slice(-4)}`;
       userProfile.pfp_url = `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet.toLowerCase()}`;
+      
+      // Check for Twitter profile in database
+      if (user.twitterProfile && user.twitterProfile.username) {
+        userProfile.x_username = user.twitterProfile.username;
+        if (user.twitterProfile.profileImageUrl) {
+          userProfile.pfp_url = user.twitterProfile.profileImageUrl;
+        }
+        if (user.twitterProfile.name) {
+          userProfile.display_name = user.twitterProfile.name;
+        }
+      }
     }
 
     // Get all auctions hosted by this user

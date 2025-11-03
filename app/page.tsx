@@ -6,7 +6,7 @@ import LandingAuctions from "@/components/LandingAuctions";
 import PageLayout from "@/components/UI/PageLayout";
 import Welcome from "@/components/Welcome";
 import { WalletConnect } from "@/components/Web3/walletConnect";
-import { UsernameManager } from "@/components/UI/UsernameManager";
+// import { UsernameManager } from "@/components/UI/UsernameManager";
 
 NProgress.configure({ showSpinner: false });
 
@@ -58,7 +58,7 @@ export default function Home() {
     <PageLayout 
       className="min-h-screen flex flex-col items-start justify-start"
     >
-      <UsernameManager />
+      {/* <UsernameManager /> */}
       <Welcome/>
       <LandingAuctions/>
      

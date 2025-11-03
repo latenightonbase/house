@@ -6,6 +6,7 @@ import { base } from "wagmi/chains";
 import Rainbow from "./rainbow";
 import { GlobalProvider } from "./globalContext";
 import { SessionProvider } from "next-auth/react";
+import { PrivyProvider } from "@privy-io/react-auth";
 
 export function MiniKitContextProvider({ children }: { children: ReactNode }) {
   return (
@@ -23,9 +24,27 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      
-          <Rainbow>{children}</Rainbow>
-        
+      <PrivyProvider 
+        appId={`cmggt86he00kmjy0crv42kfso`}
+        config={{
+          loginMethods: ['twitter'],
+          appearance: {
+            theme: 'dark',
+            accentColor: '#676FFF',
+          },
+          embeddedWallets: {
+            ethereum: {
+              createOnLogin: 'users-without-wallets',
+            },
+          },
+        }}
+      >
+        <SessionProvider>
+          <GlobalProvider>
+            <Rainbow>{children}</Rainbow>
+          </GlobalProvider>
+        </SessionProvider>
+      </PrivyProvider>
     </MiniKitProvider>
     // </MiniAppProvider>
   );
