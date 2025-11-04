@@ -47,13 +47,18 @@ const DrawerContent = React.forwardRef<
         ref={ref}
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-[10px] bg-background",
-          "mt-24 max-h-[90vh] max-w-[800px] mx-auto",
+          "max-h-[90vh] max-w-[800px] mx-auto",
+          "min-h-0", // Prevent content from expanding beyond container
           className
         )}
+        style={{ 
+          bottom: 0, // Force bottom positioning
+          transform: 'none', // Override any transforms that might shift position
+        }}
         {...props}
       >
         <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-primary/20 flex-shrink-0" />
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-1">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-1 min-h-0">
           {children}
         </div>
       </DrawerPrimitive.Content>

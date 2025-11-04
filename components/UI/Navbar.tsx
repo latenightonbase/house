@@ -8,7 +8,7 @@ import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
-import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine } from "react-icons/ri"
+import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiMedalLine } from "react-icons/ri"
 import { useSession } from "next-auth/react"
 import { GoDotFill } from "react-icons/go";
 
@@ -112,6 +112,18 @@ export default function Navbar(){
                         </li>
                         <li className="border-b border-primary/50">
                             <a 
+                            href="/won-bids"
+                            onClick={(e) => handleNavClick(e, '/won-bids')}
+                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
+                                pathname === '/won-bids' ? 'text-primary' : 'text-white'
+                            }`}
+                        >
+                            <RiMedalLine className="text-lg" />
+                            Won Auctions
+                        </a>
+                        </li>
+                        <li className="border-b border-primary/50">
+                            <a 
                             href="/info"
                             onClick={(e) => handleNavClick(e, '/info')}
                             className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
@@ -208,6 +220,19 @@ export default function Navbar(){
                         >
                             <RiAuctionLine className="text-xl" />
                             <span className="text-md">My Auctions</span>
+                        </a>
+                        
+                        <a 
+                            href="/won-bids"
+                            onClick={(e) => handleNavClick(e, '/won-bids')}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
+                                pathname === '/won-bids' 
+                                    ? 'text-primary bg-primary/20 border border-primary/30' 
+                                    : 'text-primary hover:bg-primary/10'
+                            }`}
+                        >
+                            <RiMedalLine className="text-xl" />
+                            <span className="text-md">Won Auctions</span>
                         </a>
                         
                         <a 

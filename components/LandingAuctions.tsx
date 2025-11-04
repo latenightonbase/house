@@ -868,7 +868,7 @@ const LandingAuctions: React.FC = () => {
         {auctions.map((auction, index) => (
           <div
             key={auction._id}
-            className="bg-primary/10 w-full border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full"
+            className="bg-primary/10 w-full text-white border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full"
           >
             {/* Header with ranking */}
             <div className="gradient-button p-4 relative flex-shrink-0">

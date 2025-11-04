@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       { wallet: session.wallet },
       {
         $set: {
+          username: twitterProfile.username,
           twitterProfile: {
             id: twitterProfile.id,
             username: twitterProfile.username,

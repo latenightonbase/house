@@ -138,6 +138,12 @@ export async function POST(req: NextRequest) {
         });
         
         auction.winningBid = highestBid.bidderUser._id;
+        
+        // Update the winner's bidsWon field
+        await User.findByIdAndUpdate(
+          highestBid.bidderUser._id,
+          { $addToSet: { bidsWon: auction._id } }
+        );
       }
     }
 

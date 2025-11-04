@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { readContractSetup, writeContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
 import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
@@ -38,6 +39,7 @@ import { checkUsdc } from "@/utils/checkUsdc";
 import { WalletConnect } from "@/components/Web3/walletConnect";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from 'react-icons/fa';
+import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader';
 
 interface Bidder {
   displayName: string;
@@ -62,7 +64,14 @@ interface AuctionData {
   highestBid: string;
   minimumBid: string;
   bidders: Bidder[];
-  hostedBy: string;
+  hostedBy: {
+    _id?: string;
+    username: string;
+    display_name?: string;
+    pfp_url?: string;
+    fid?: string;
+    wallet?: string;
+  };
 }
 
 interface Auction {
@@ -80,6 +89,8 @@ interface Auction {
 export default function BidPage() {
   const params = useParams();
   const blockchainAuctionId = params.blockchainAuctionId as string;
+
+  const navigate = useNavigateWithLoader();
   
   const [auctionData, setAuctionData] = useState<AuctionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -683,7 +694,8 @@ export default function BidPage() {
       
       const baseUrl = process.env.NEXT_PUBLIC_MINIAPP_URL || process.env.NEXT_PUBLIC_DOMAIN || window.location.origin;
       const url = `${baseUrl}/bid/${blockchainAuctionId}`;
-      const text = `Check out "${auctionData.auctionName}" hosted by ${auctionData.hostedBy}! Bidding in ${auctionData.currency}. ${url}`;
+      const hostName = auctionData.hostedBy.display_name || auctionData.hostedBy.username;
+      const text = `Check out "${auctionData.auctionName}" hosted by ${hostName}! Bidding in ${auctionData.currency}. ${url}`;
       
       await sdk.actions.composeCast({
         text,
@@ -826,7 +838,32 @@ export default function BidPage() {
             </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+            <div>
+              <p className="text-xs text-caption mb-1">Hosted By</p>
+              <div className="flex items-center gap-2">
+                {auctionData.hostedBy.pfp_url && (
+                  <img 
+                    src={auctionData.hostedBy.pfp_url} 
+                    alt="Host avatar" 
+                    className="w-6 h-6 rounded-full"
+                  />
+                )}
+                {auctionData.hostedBy._id ? (
+                  <button 
+                    onClick={() => { navigate(`/user/${auctionData.hostedBy._id}`) }}
+         
+                    className="text-md font-semibold text-primary bg-transparent px-0 hover:text-primary/80 transition-colors"
+                  >
+                    {auctionData.hostedBy.display_name || auctionData.hostedBy.username}
+                  </button>
+                ) : (
+                  <span className="text-md font-semibold">
+                    {auctionData.hostedBy.display_name || auctionData.hostedBy.username}
+                  </span>
+                )}
+              </div>
+            </div>
             <div>
               <p className="text-xs text-caption">End Date</p>
               <p className="text-md font-semibold">{formatDate(auctionData.endDate)}</p>
