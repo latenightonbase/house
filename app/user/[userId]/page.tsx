@@ -145,7 +145,7 @@ export default function UserPage() {
               )}
               <div className='flex gap-2 w-full items-center justify-center'>
                 {userData.user.x_username && (
-                <div className="mt-2">
+                <div className="">
                   <a 
                     href={`https://x.com/${userData.user.x_username}`}
                     target="_blank"
