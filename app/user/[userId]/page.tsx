@@ -143,7 +143,8 @@ export default function UserPage() {
                     {userData.user.bio && (
                 <p className="text-white/80 text-xs my-3 line-clamp-2">{userData.user.bio}</p>
               )}
-                    {userData.user.x_username && (
+              <div className='flex gap-2 w-full items-center justify-center'>
+                {userData.user.x_username && (
                 <div className="mt-2">
                   <a 
                     href={`https://x.com/${userData.user.x_username}`}
@@ -163,18 +164,22 @@ export default function UserPage() {
                   </a>
                 </div>
               )}
-                </div>
-                <div className="lg:text-right text-center flex flex-col items-center gap-2">
-                  {/* View Profile Button - only show if context is available and user has fid */}
-                  {context && userData.user.fid && (
+                {context && userData.user.fid && (
                     <button
                       onClick={handleViewProfile}
                       className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 text-primary rounded-lg hover:bg-primary/30 transition-colors text-sm font-medium"
                     >
                       <RiUserLine className="text-sm" />
-                      View Profile
+                      Profile
                     </button>
                   )}
+
+              </div>
+                    
+                </div>
+                <div className="lg:text-right text-center flex flex-col items-center gap-2">
+                  {/* View Profile Button - only show if context is available and user has fid */}
+                  
                   <div>
                     <p className="text-caption text-xs">Total Auctions</p>
                     <p className="text-2xl font-bold text-primary">
