@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { RiLoader5Fill, RiArrowLeftLine } from 'react-icons/ri'
+import { RiLoader5Fill, RiArrowLeftLine, RiUserLine } from 'react-icons/ri'
 import UserAuctions from '@/components/UserAuctions'
+import { useMiniKit } from '@coinbase/onchainkit/minikit'
+import { sdk } from '@farcaster/miniapp-sdk'
 
 interface UserData {
   user: {
@@ -28,6 +30,20 @@ export default function UserPage() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const {context} = useMiniKit()
+
+  const handleViewProfile = async () => {
+    if (context && userData?.user.fid) {
+      try {
+        await sdk.actions.viewProfile({ 
+          fid: parseInt(userData.user.fid)
+        })
+      } catch (error) {
+        console.error('Error viewing profile:', error)
+      }
+    }
+  }
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -148,11 +164,23 @@ export default function UserPage() {
                 </div>
               )}
                 </div>
-                <div className="lg:text-right text-center">
-                  <p className="text-caption text-xs">Total Auctions</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {userData.activeAuctions.length + userData.endedAuctions.length}
-                  </p>
+                <div className="lg:text-right text-center flex flex-col items-center gap-2">
+                  {/* View Profile Button - only show if context is available and user has fid */}
+                  {context && userData.user.fid && (
+                    <button
+                      onClick={handleViewProfile}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 text-primary rounded-lg hover:bg-primary/30 transition-colors text-sm font-medium"
+                    >
+                      <RiUserLine className="text-sm" />
+                      View Profile
+                    </button>
+                  )}
+                  <div>
+                    <p className="text-caption text-xs">Total Auctions</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {userData.activeAuctions.length + userData.endedAuctions.length}
+                    </p>
+                  </div>
                 </div>
               </div>
 

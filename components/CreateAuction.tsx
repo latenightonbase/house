@@ -185,12 +185,6 @@ setIsLoading(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if desktop wallet user needs Twitter auth
-    if (isDesktopWallet && !hasTwitterProfile) {
-      setShowTwitterModal(true);
-      return;
-    }
 
     //check if address and session exist
       if (!address || !session) {
@@ -423,9 +417,15 @@ setIsLoading(false);
   };
 
   const handleNext = () => {
-    if (canGoNext() && currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+    if (!canGoNext() || currentStep >= 3) return;
+    
+    // Check Twitter auth after auction name is entered (step 0)
+    if (currentStep === 0 && isDesktopWallet && !hasTwitterProfile) {
+      setShowTwitterModal(true);
+      return;
     }
+    
+    setCurrentStep(currentStep + 1);
   };
 
   const handlePrev = () => {
@@ -672,8 +672,9 @@ setIsLoading(false);
           isOpen={showTwitterModal}
           onClose={() => setShowTwitterModal(false)}
           onSuccess={() => {
-            // Close modal and let the global context update naturally
+            // Close modal and proceed to next step after successful Twitter auth
             setShowTwitterModal(false);
+            setCurrentStep(currentStep + 1);
           }}
         />
       </div>
