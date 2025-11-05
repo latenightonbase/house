@@ -52,10 +52,10 @@ export async function GET(req: NextRequest) {
 
       // Determine auction status
       let status = 'upcoming';
-      if (!auction.winningBid) {
-        status = 'active';
-      }else{
+      if (auction.endDate <= currentDate) {
         status = 'ended';
+      } else {
+        status = 'active';
       }
 
       // Calculate time remaining (for active auctions) or time since end (for ended auctions)

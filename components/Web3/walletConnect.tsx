@@ -4,13 +4,29 @@ import Image from 'next/image';
 import { MdWallet } from 'react-icons/md';
 import { CiLogin } from "react-icons/ci";
 import { signOut } from "next-auth/react";
+import { useState } from 'react';
+import ProfileDrawer from '../UI/ProfileDrawer';
 
-export const WalletConnect = () => {
+interface WalletConnectProps {
+  onProfileClick?: () => void;
+}
+
+export const WalletConnect = ({ onProfileClick }: WalletConnectProps = {}) => {
 
   const {user} = useGlobalContext();
+  const [isProfileDrawerOpen, setIsProfileDrawerOpen] = useState(false);
+
+  const handleProfileClick = () => {
+    if (onProfileClick) {
+      onProfileClick();
+    } else {
+      setIsProfileDrawerOpen(true);
+    }
+  };
 
   return (
-    <ConnectButton.Custom>
+    <>
+      <ConnectButton.Custom>
       {({
         account,
         chain,
@@ -74,9 +90,9 @@ export const WalletConnect = () => {
                 return (
                   <div style={{ display: 'flex', gap: 12 }}>
                     <button
-                      onClick={openAccountModal}
+                      onClick={handleProfileClick}
                       type="button"
-                      className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white"
+                      className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white hover:bg-primary/20 transition-colors"
                     >
                       <div className='flex items-center gap-2'>
                         <Image unoptimized
@@ -99,9 +115,9 @@ export const WalletConnect = () => {
               return (
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
-                    onClick={openAccountModal}
+                    onClick={handleProfileClick}
                     type="button"
-                    className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white"
+                    className=" flex bg-primary/10 lg:p-2 items-center gap-2 text-center w-full rounded-lg text-md font-bold text-white hover:bg-primary/20 transition-colors"
                   >
                     <div className='flex items-center gap-2'>
                       <div className="lg:w-8 lg:h-8 h-6 w-6 aspect-square border border-primary rounded-md bg-gray-600 flex items-center justify-center">
@@ -119,5 +135,11 @@ export const WalletConnect = () => {
         );
       }}
     </ConnectButton.Custom>
-  );
+    
+    <ProfileDrawer 
+      isOpen={isProfileDrawerOpen} 
+      onClose={() => setIsProfileDrawerOpen(false)} 
+    />
+  </>
+);
 };

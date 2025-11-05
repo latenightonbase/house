@@ -8,7 +8,7 @@ import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
-import { RiSearchLine, RiAuctionLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiMedalLine } from "react-icons/ri"
+import { RiSearchLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiUserLine } from "react-icons/ri"
 import { useSession } from "next-auth/react"
 import { GoDotFill } from "react-icons/go";
 
@@ -88,6 +88,18 @@ export default function Navbar(){
                     <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
                         <li className="border-b border-primary/50">
                             <a 
+                            href="/profile"
+                            onClick={(e) => handleNavClick(e, '/profile')}
+                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
+                                pathname === '/profile' ? 'text-primary' : 'text-white'
+                            }`}
+                        >
+                            <RiUserLine className="text-lg" />
+                            My Profile
+                        </a>
+                        </li>
+                        <li className="border-b border-primary/50">
+                            <a 
                             href="/"
                             onClick={(e) => handleNavClick(e, '/')}
                             className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
@@ -96,30 +108,6 @@ export default function Navbar(){
                         >
                             <GoDotFill className="text-lg animate-pulse" />
                             Live Auctions
-                        </a>
-                        </li>
-                        <li className="border-b border-primary/50">
-                            <a 
-                            href="/"
-                            onClick={(e) => handleNavClick(e, '/my-auctions')}
-                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
-                                pathname === '/my-auctions' ? 'text-primary' : 'text-white'
-                            }`}
-                        >
-                            <RiAuctionLine className="text-lg" />
-                            My Auctions
-                        </a>
-                        </li>
-                        <li className="border-b border-primary/50">
-                            <a 
-                            href="/won-bids"
-                            onClick={(e) => handleNavClick(e, '/won-bids')}
-                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
-                                pathname === '/won-bids' ? 'text-primary' : 'text-white'
-                            }`}
-                        >
-                            <RiMedalLine className="text-lg" />
-                            Won Auctions
                         </a>
                         </li>
                         <li className="border-b border-primary/50">
@@ -197,6 +185,19 @@ export default function Navbar(){
                 <div className="flex-1 p-4">
                     <nav className="space-y-2">
                         <a 
+                            href="/profile"
+                            onClick={(e) => handleNavClick(e, '/profile')}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
+                                pathname === '/profile' 
+                                    ? 'text-primary bg-primary/20 border border-primary/30' 
+                                    : 'text-primary hover:bg-primary/10'
+                            }`}
+                        >
+                            <RiUserLine className="text-xl" />
+                            <span className="text-md">My Profile</span>
+                        </a>
+                        
+                        <a 
                             href="/"
                             onClick={(e) => handleNavClick(e, '/')}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
@@ -207,32 +208,6 @@ export default function Navbar(){
                         >
                             <GoDotFill className="text-xl animate-pulse" />
                             <span className="text-md">Live Auctions</span>
-                        </a>
-                        
-                        <a 
-                            href="/"
-                            onClick={(e) => handleNavClick(e, '/my-auctions')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
-                                pathname === '/my-auctions' 
-                                    ? 'text-primary bg-primary/20 border border-primary/30' 
-                                    : 'text-primary hover:bg-primary/10'
-                            }`}
-                        >
-                            <RiAuctionLine className="text-xl" />
-                            <span className="text-md">My Auctions</span>
-                        </a>
-                        
-                        <a 
-                            href="/won-bids"
-                            onClick={(e) => handleNavClick(e, '/won-bids')}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors cursor-pointer ${
-                                pathname === '/won-bids' 
-                                    ? 'text-primary bg-primary/20 border border-primary/30' 
-                                    : 'text-primary hover:bg-primary/10'
-                            }`}
-                        >
-                            <RiMedalLine className="text-xl" />
-                            <span className="text-md">Won Auctions</span>
                         </a>
                         
                         <a 
