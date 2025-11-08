@@ -165,9 +165,9 @@ export default function Navbar(){
             {/* Desktop Sidebar */}
             <div className="hidden lg:flex lg:fixed lg:left-0 lg:top-0 lg:h-full lg:w-64 lg:flex-col lg:bg-black/90 lg:backdrop-blur-sm lg:border-r lg:border-r-secondary/50 lg:z-50">
                 {/* Sidebar Header */}
-                <div className="p-6  flex items-center justify-between">
+                <div className="p-6  flex items-center justify-start gap-4">
                 <Image src="/pfp.jpg" alt="Logo" width={32} height={32} className="scale-125 border-primary/10 rounded-lg border" />
-                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white cursor-pointer hover:text-primary transition-colors">Auction House</button>
+                    <button onClick={()=>{router.push("/")}} className="text-xl font-bold text-white cursor-pointer hover:text-primary transition-colors">House</button>
                 </div>
 
                 {/* Search Button */}

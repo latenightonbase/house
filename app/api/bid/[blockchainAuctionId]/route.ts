@@ -235,6 +235,7 @@ export async function POST(
     // Prepare response with auction info and processed bidders
     const response = {
       auctionName: auction.auctionName,
+      description: auction.description,
       auctionStatus,
       endDate: auction.endDate,
       currency: auction.currency,

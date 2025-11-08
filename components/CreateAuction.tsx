@@ -45,6 +45,7 @@ export default function CreateAuction() {
   const { address, isConnected } = useAccount();
   const { isDesktopWallet, hasTwitterProfile } = useGlobalContext();
   const [auctionTitle, setAuctionTitle] = useState("");
+  const [description, setDescription] = useState("");
   // const [currencyMode, setCurrencyMode] = useState<CurrencySelectionMode>('search')
   const [selectedCurrency, setSelectedCurrency] =
     useState<CurrencyOption | null>(null);
@@ -71,7 +72,7 @@ export default function CreateAuction() {
     // When transaction succeeds
     if (isSuccess) {
       if (loadingToastId) {
-        toast.success("Transaction successful! Saving auction details...", {
+        toast.success("Transaction successful!", {
           id: loadingToastId,
         });
       }
@@ -116,6 +117,7 @@ export default function CreateAuction() {
         },
         body: JSON.stringify({
           auctionName: auctionTitle,
+          description: description || undefined,
           blockchainAuctionId: auctionId,
           tokenAddress: selectedCurrency?.contractAddress,
           endDate: endTime,
@@ -281,7 +283,7 @@ setIsLoading(false);
         
         await txHash?.wait();
 
-        toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
+        toast.loading("Transaction confirmed!", { id: toastId });
 
         await processSuccess(auctionId);
       } 
@@ -339,7 +341,7 @@ setIsLoading(false);
           const result = await checkStatus(callsId);
 
           if (result) {
-            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
+            toast.loading("Transaction confirmed!", { id: toastId });
             await processSuccess(auctionId);
           } else {
             toast.error("Transaction failed or timed out", { id: toastId });
@@ -497,6 +499,21 @@ setIsLoading(false);
                   />
                   <div className="text-xs text-gray-400 text-right">
                     {auctionTitle.length}/30 characters
+                  </div>
+                  <Input
+                    label="Description (Optional)"
+                    value={description}
+                    onChange={(value) => {
+                      if (value.length <= 200) {
+                        setDescription(value);
+                      }
+                    }}
+                    placeholder="Enter a description for your auction (max 200 chars)"
+                    multiline
+                    rows={3}
+                  />
+                  <div className="text-xs text-gray-400 text-right">
+                    {description.length}/200 characters
                   </div>
                 </motion.div>
               )}

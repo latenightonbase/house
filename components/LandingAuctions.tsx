@@ -57,6 +57,7 @@ interface HostInfo {
 interface Auction {
   _id: string;
   auctionName: string;
+  description?: string;
   endDate: string;
   startDate: string;
   currency: string;
@@ -633,6 +634,8 @@ const LandingAuctions: React.FC = () => {
       {/* Content */}
       <div className="p-4 space-y-3">
         <div className="bg-gray-300 dark:bg-gray-700 h-6 w-3/4 rounded"></div>
+        <div className="bg-gray-300 dark:bg-gray-700 h-4 w-full rounded"></div>
+        <div className="bg-gray-300 dark:bg-gray-700 h-4 w-5/6 rounded"></div>
         
         <div className="space-y-3">
           <div className="flex justify-between items-center">
@@ -1000,9 +1003,15 @@ const LandingAuctions: React.FC = () => {
 
             {/* Content */}
             <div className="p-4 flex flex-col flex-grow">
-              <h3 className="text-xl font-semibold text-white mb-2 line-clamp-2 min-h-[3.5rem] flex items-start">
+              <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
                 {auction.auctionName}
               </h3>
+              
+              {auction.description && (
+                <p className="text-caption text-sm mb-3 line-clamp-2 min-h-[2.5rem]">
+                  {auction.description}
+                </p>
+              )}
 
               <div className="space-y-3 flex-grow flex flex-col">
                 {/* Highest bid */}

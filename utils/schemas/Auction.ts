@@ -11,6 +11,7 @@ export interface IBidder {
 // Interface for the Auction document
 export interface IAuction extends Document {
   auctionName: string;
+  description?: string;
   endDate: Date;
   bidders: IBidder[];
   currency: string;
@@ -58,6 +59,12 @@ const AuctionSchema: Schema = new Schema(
     auctionName: {
       type: String,
       required: true,
+      trim: true,
+      maxlength: 200,
+    },
+    description: {
+      type: String,
+      required: false,
       trim: true,
       maxlength: 200,
     },

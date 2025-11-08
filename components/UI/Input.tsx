@@ -13,6 +13,8 @@ interface InputProps {
   required?: boolean
   className?: string
   id?: string
+  multiline?: boolean
+  rows?: number
 }
 
 export default function Input({
@@ -24,7 +26,9 @@ export default function Input({
   disabled = false,
   required = false,
   className = '',
-  id
+  id,
+  multiline = false,
+  rows = 4
 }: InputProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [hasInteracted, setHasInteracted] = useState(false)
@@ -44,9 +48,18 @@ export default function Input({
     setIsFocused(false)
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     onChange(e.target.value)
   }
+
+  const sharedClassName = twMerge(
+    'w-full px-4 py-3 rounded-lg border-[1px] bg-transparent transition-all outline-0 duration-200 text-foreground peer',
+    disabled && 'border-disabled cursor-not-allowed opacity-60',
+    !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
+    !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
+    !disabled && !(isFocused || hasValue) && 'border-white/30 ',
+    isFocused && 'outline-1 outline-offset-1'
+  )
 
   return (
     <div className={twMerge('relative text-white flex flex-col-reverse gap-2', className)}>
@@ -58,26 +71,35 @@ export default function Input({
       )}
       
       {/* Input Field */}
-      <input
-      onPointerDown={(e) => e.stopPropagation()}
-        id={inputId}
-        type={type}
-        value={value}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        className={twMerge(
-          'w-full px-4 py-3 rounded-lg border-[1px] bg-transparent transition-all outline-0 duration-200 text-foreground peer',
-          disabled && 'border-disabled cursor-not-allowed opacity-60',
-          !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
-          !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
-          !disabled && !(isFocused || hasValue) && 'border-white/30 ',
-          isFocused && 'outline-1 outline-offset-1'
-        )}
-      />
+      {multiline ? (
+        <textarea
+          onPointerDown={(e) => e.stopPropagation()}
+          id={inputId}
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          rows={rows}
+          className={twMerge(sharedClassName, 'resize-none')}
+        />
+      ) : (
+        <input
+          onPointerDown={(e) => e.stopPropagation()}
+          id={inputId}
+          type={type}
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          className={sharedClassName}
+        />
+      )}
       
       {/* Floating Label */}
       <label

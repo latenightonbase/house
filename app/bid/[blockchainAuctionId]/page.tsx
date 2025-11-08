@@ -57,6 +57,7 @@ interface ContractBidder {
 
 interface AuctionData {
   auctionName: string;
+  description?: string;
   auctionStatus: 'Running' | 'Ended';
   endDate: string;
   currency: string;
@@ -224,6 +225,7 @@ export default function BidPage() {
         }
         
         const data = await processedResponse.json();
+        console.log('Fetched auction data from API:', data);
         setAuctionData(data);
       } catch (err: any) {
         setError(err.message);
@@ -712,7 +714,12 @@ export default function BidPage() {
         {/* Auction Header */}
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
           <div className="flex justify-between items-start mb-4">
-            <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
+              {auctionData.description && (
+                <p className="text-caption text-sm mt-2">{auctionData.description}</p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                 auctionData.auctionStatus === 'Running' 
