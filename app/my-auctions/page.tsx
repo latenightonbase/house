@@ -6,7 +6,7 @@ import React from 'react';
 const MyAuctions: React.FC = () => {
   return (
     <div className="w-full">
-      <div className="text-left ">
+      <div className="text-left text-white">
         
         
           <MyAuctionCards/>

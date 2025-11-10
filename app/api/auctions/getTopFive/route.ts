@@ -141,25 +141,22 @@ export async function GET(req: NextRequest) {
           };
 
           // Enhance top bidder with Neynar data
-          if (topBidder.fid) {
-            if (!topBidder.fid || topBidder.fid === '' || topBidder.fid.startsWith('none')) {
-              // For FIDs starting with "none" or empty, use truncated wallet as username
-              const wallet = topBidder.wallet;
-              topBidder.username = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-2)}` : wallet;
-              topBidder.pfp_url =  `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
-            } else {
-              // For valid FIDs, use data from Neynar API
-              const neynarUser = neynarUsers[topBidder.fid];
-              const fallbackWallet = topBidder.wallet;
-              const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
-              topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
-              topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
-            }
-          }
-          else{
+          if (topBidder.fid && topBidder.fid !== '' && !topBidder.fid.startsWith('none')) {
+            // For valid FIDs, use data from Neynar API
+            const neynarUser = neynarUsers[topBidder.fid];
+            const fallbackWallet = topBidder.wallet;
+            const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
+            topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
+            topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
+          } else if (topBidder.twitterProfile?.username) {
+            // No valid FID, use Twitter profile
+            topBidder.username = topBidder.twitterProfile.username;
+            topBidder.pfp_url = topBidder.twitterProfile.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${topBidder.wallet}`;
+          } else {
+            // No FID or Twitter profile, use truncated wallet
             const wallet = topBidder.wallet;
             topBidder.username = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-2)}` : wallet;
-            topBidder.pfp_url =  `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
+            topBidder.pfp_url = `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
           }
         }
       }
@@ -175,35 +172,33 @@ export async function GET(req: NextRequest) {
 
       // Process hostedBy to add username and display_name fields
       let enhancedHostedBy = { ...auction.hostedBy };
-      if (auction.hostedBy?.fid) {
-        if (!auction.hostedBy.fid || auction.hostedBy.fid === '' || auction.hostedBy.fid.startsWith('none')) {
-          // For FIDs starting with "none" or empty, use truncated wallet as username
-          const wallet = auction.hostedBy.wallet;
-          enhancedHostedBy.username = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet;
-          enhancedHostedBy.display_name = null;
-        } else {
-          // For valid FIDs, use data from Neynar API
-          const neynarUser = neynarUsers[auction.hostedBy.fid];
-          const fallbackWallet = auction.hostedBy.wallet;
-          const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
-          
-          console.log(`Processing host ${auction.hostedBy.fid}:`, {
-            neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
-            originalUsername: auction.hostedBy.username,
-            fallback: truncatedWallet
-          });
-          
-          // Set both username and display_name
-          enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
-          enhancedHostedBy.display_name = neynarUser?.display_name || null;
-          
-          console.log(`Enhanced host data:`, {
-            username: enhancedHostedBy.username,
-            display_name: enhancedHostedBy.display_name
-          });
-        }
+      if (auction.hostedBy?.fid && auction.hostedBy.fid !== '' && !auction.hostedBy.fid.startsWith('none')) {
+        // For valid FIDs, use data from Neynar API
+        const neynarUser = neynarUsers[auction.hostedBy.fid];
+        const fallbackWallet = auction.hostedBy.wallet;
+        const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
+        
+        console.log(`Processing host ${auction.hostedBy.fid}:`, {
+          neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
+          originalUsername: auction.hostedBy.username,
+          fallback: truncatedWallet
+        });
+        
+        // Set both username and display_name
+        enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
+        enhancedHostedBy.display_name = neynarUser?.display_name || null;
+        
+        console.log(`Enhanced host data:`, {
+          username: enhancedHostedBy.username,
+          display_name: enhancedHostedBy.display_name
+        });
+      } else if (auction.hostedBy?.twitterProfile?.username) {
+        // No valid FID, use Twitter profile username
+        enhancedHostedBy.username = auction.hostedBy.twitterProfile.username;
+        enhancedHostedBy.display_name = auction.hostedBy.twitterProfile.name || null;
+        enhancedHostedBy.pfp_url = auction.hostedBy.twitterProfile.profileImageUrl || null;
       } else {
-        // No FID, use existing username or truncated wallet
+        // No FID or Twitter profile, use existing username or truncated wallet
         const wallet = auction.hostedBy.wallet;
         enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);
         enhancedHostedBy.display_name = null;
