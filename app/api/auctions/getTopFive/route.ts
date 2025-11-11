@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const currentDate = new Date();
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '5');
+    const limit = parseInt(searchParams.get('limit') || '3'); // Changed default to 3 for faster loading
     const currencyFilter = searchParams.get('currency') || 'all';
     const skip = (page - 1) * limit;
 
@@ -184,24 +184,27 @@ export async function GET(req: NextRequest) {
           fallback: truncatedWallet
         });
         
-        // Set both username and display_name
+        // Set both username, display_name, and profile picture
         enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
         enhancedHostedBy.display_name = neynarUser?.display_name || null;
+        enhancedHostedBy.pfp_url = neynarUser?.pfp_url || auction.hostedBy.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
         
         console.log(`Enhanced host data:`, {
           username: enhancedHostedBy.username,
-          display_name: enhancedHostedBy.display_name
+          display_name: enhancedHostedBy.display_name,
+          pfp_url: enhancedHostedBy.pfp_url
         });
       } else if (auction.hostedBy?.twitterProfile?.username) {
         // No valid FID, use Twitter profile username
         enhancedHostedBy.username = auction.hostedBy.twitterProfile.username;
         enhancedHostedBy.display_name = auction.hostedBy.twitterProfile.name || null;
-        enhancedHostedBy.pfp_url = auction.hostedBy.twitterProfile.profileImageUrl || null;
+        enhancedHostedBy.pfp_url = auction.hostedBy.twitterProfile.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`;
       } else {
         // No FID or Twitter profile, use existing username or truncated wallet
         const wallet = auction.hostedBy.wallet;
         enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);
         enhancedHostedBy.display_name = null;
+        enhancedHostedBy.pfp_url = `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
       }
 
       return {

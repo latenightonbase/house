@@ -14,7 +14,6 @@ export default function Home() {
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
     if (status === "loading") {
@@ -28,16 +27,13 @@ export default function Home() {
       
       return () => clearInterval(interval);
     } else {
-      // Complete the progress bar
+      // Complete the progress bar and show content regardless of session
       setProgress(100);
       setTimeout(() => {
         setLoading(false);
-        if (session) {
-          setShowContent(true);
-        }
       }, 300);
     }
-  }, [status, session]);
+  }, [status]);
 
   if (loading || status === "loading") {
     return (

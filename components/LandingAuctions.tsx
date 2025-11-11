@@ -52,6 +52,7 @@ interface HostInfo {
   username?: string;
   display_name?: string;
   fid?: string;
+  pfp_url?: string;
 }
 
 interface Auction {
@@ -170,10 +171,9 @@ const LandingAuctions: React.FC = () => {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if(session){
-      fetchTopAuctions(1, false);
-    }
-  }, [session, currencyFilter]);
+    // Fetch auctions for all users (both authenticated and unauthenticated)
+    fetchTopAuctions(1, false);
+  }, [currencyFilter]);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -1067,13 +1067,23 @@ const LandingAuctions: React.FC = () => {
                 <div className="border-t pt-3 mt-auto">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-caption">Hosted by:</span>
-                    <span 
-                      className=" text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200"
+                    <div 
+                      className="flex items-center gap-2 text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200"
                       onClick={() => navigate(`/user/${auction.hostedBy._id}`)}
                     >
-                      {auction.hostedBy.display_name || 
-                       (auction.hostedBy.username ? `@${auction.hostedBy.username}` : truncateAddress(auction.hostedBy.wallet))}
-                    </span>
+                      <Image 
+                        unoptimized 
+                        alt="host" 
+                        src={auction.hostedBy.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`} 
+                        width={24} 
+                        height={24} 
+                        className="rounded-full w-6 h-6 aspect-square object-cover"  
+                      />
+                      <span className="max-w-32 truncate">
+                        {auction.hostedBy.display_name || 
+                         (auction.hostedBy.username ? `@${auction.hostedBy.username}` : truncateAddress(auction.hostedBy.wallet))}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
