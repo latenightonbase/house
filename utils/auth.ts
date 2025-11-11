@@ -55,7 +55,8 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ user, account }: { user: NextAuthUser, account: Account | null }) {
-      revalidatePath('/', 'layout') 
+      revalidatePath('/', 'layout')
+      revalidatePath('/', 'page')
       await connectToDB();
       return true;
     },

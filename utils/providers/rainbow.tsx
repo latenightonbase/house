@@ -24,13 +24,13 @@ export const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId: "5d10af3027c340310f3a3da64cbcedac",
   chains: [base],
-  ssr: true, // If your dApp uses server side rendering (SSR)
+  ssr: true,
 });
 
 const Rainbow = ({ children }: { children: ReactNode }) => {
   return (
     <WagmiProvider config={config}>
-      <SessionProvider refetchInterval={0}>
+      <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
         <GlobalProvider>
 
         
