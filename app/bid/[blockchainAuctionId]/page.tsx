@@ -701,7 +701,6 @@ export default function BidPage() {
       
       await sdk.actions.composeCast({
         text,
-        embeds: [url],
       });
     } catch (e) {
       console.error("Error composing cast:", e);
