@@ -340,7 +340,7 @@ setIsLoading(false);
 
           const result = await checkStatus(callsId);
 
-          if (result) {
+          if (result == true) {
             toast.loading("Transaction confirmed!", { id: toastId });
             await processSuccess(auctionId);
           } else {
