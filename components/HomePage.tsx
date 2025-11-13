@@ -10,7 +10,7 @@ import { WalletConnect } from "@/components/Web3/walletConnect";
 
 NProgress.configure({ showSpinner: false });
 
-export default function Home() {
+export default function HomePage() {
   const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
