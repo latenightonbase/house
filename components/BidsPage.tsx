@@ -698,7 +698,7 @@ export default function BidPage() {
       const text = `Check out "${auctionData.auctionName}" hosted by ${hostName}! Bidding in ${auctionData.currency}. ${url}`;
       
       await sdk.actions.composeCast({
-        text, embeds:[url]
+        text, embeds:[`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${blockchainAuctionId}`]
       });
     } catch (e) {
       console.error("Error composing cast:", e);

@@ -2,8 +2,9 @@
 import BidPage from "@/components/BidsPage";
 import { Metadata } from "next";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ blockchainAuctionId: string }> }): Promise<Metadata> {
   const URL = process.env.NEXT_PUBLIC_DOMAIN;
+  const {blockchainAuctionId} = await params;
   const IMAGE = `${URL}/pfp.jpg`;
 
   return {
@@ -60,7 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
           action: {
             type: "launch_frame",
             name: "House",
-            url: URL,
+            url: `${URL}/bid/${blockchainAuctionId}`,
             splashImageUrl: IMAGE,
             splashBackgroundColor: "#000000",
           },

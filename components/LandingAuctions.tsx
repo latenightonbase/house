@@ -612,7 +612,7 @@ const LandingAuctions: React.FC = () => {
       const text = `Check out "${auction.auctionName}" hosted by ${hostName}! Bidding in ${auction.currency}. ${url}`;
       
       await sdk.actions.composeCast({
-        text, embeds:[url]
+        text, embeds:[`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`]
       });
     } catch (e) {
       console.error("Error composing cast:", e);
