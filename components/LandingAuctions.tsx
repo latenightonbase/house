@@ -607,8 +607,7 @@ const LandingAuctions: React.FC = () => {
 
   const composeCast = async (auction: Auction) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_DOMAIN;
-      const url = `${baseUrl}/bid/${auction.blockchainAuctionId}`;
+      const url = `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`;
       const hostName = auction.hostedBy.display_name || (auction.hostedBy.username ? `@${auction.hostedBy.username}` : 'Unknown Host');
       const text = `Check out "${auction.auctionName}" hosted by ${hostName}! Bidding in ${auction.currency}.`;
       
