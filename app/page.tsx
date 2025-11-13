@@ -1,63 +1,76 @@
-'use client'
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import NProgress from "nprogress";
-import LandingAuctions from "@/components/LandingAuctions";
-import PageLayout from "@/components/UI/PageLayout";
-import Welcome from "@/components/Welcome";
-import { WalletConnect } from "@/components/Web3/walletConnect";
-// import { UsernameManager } from "@/components/UI/UsernameManager";
+import Home from "@/components/HomePage";
+import { Metadata } from "next";
 
-NProgress.configure({ showSpinner: false });
+export async function generateMetadata(): Promise<Metadata> {
+  const URL = process.env.NEXT_PUBLIC_DOMAIN;
+  const IMAGE = `${URL}/pfp.jpg`;
 
-export default function Home() {
-  const { data: session, status } = useSession();
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  return {
+    title: "House",
+    description:
+      "Your House. Their Bids. The Exchange for Attention Lives here.",
+    viewport: {
+      width: "device-width",
+      initialScale: 1,
+      maximumScale: 1,
+      userScalable: false,
+      viewportFit: "cover",
+    },
 
-  useEffect(() => {
-    if (status === "loading") {
-      // Simulate progress bar loading
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
-        });
-      }, 200);
-      
-      return () => clearInterval(interval);
-    } else {
-      // Complete the progress bar and show content regardless of session
-      setProgress(100);
-      setTimeout(() => {
-        setLoading(false);
-      }, 300);
-    }
-  }, [status]);
+    // 🔹 Open Graph (Facebook, LinkedIn, Discord)
+    openGraph: {
+      title: "House",
+      description:
+        "Your House. Their Bids. The Exchange for Attention Lives here.",
+      url: URL,
+      siteName: "House",
+      images: [
+        {
+          url: IMAGE,
+          width: 1200,
+          height: 630,
+          alt: "House",
+        },
+      ],
+      locale: "en_US",
+      type: "website",
+    },
 
-  if (loading || status === "loading") {
-    return (
-      <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
-        <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></h1>
-        <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden my-3">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out" 
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    );
-  }
+    // 🔹 Twitter Card metadata
+    twitter: {
+      card: "summary_large_image",
+      title: "House",
+      description:
+        "Your House. Their Bids. The Exchange for Attention Lives here.",
+      creator: "@latenightonbase",
+      images: [IMAGE],
+    },
 
+    // 🔹 Discord embeds & others (covered by OG tags)
+    // Discord uses Open Graph automatically, so no separate section needed
 
-  return (
-    <PageLayout 
-      className="min-h-screen flex flex-col items-start justify-start"
-    >
-      {/* <UsernameManager /> */}
-      <Welcome/>
-      <LandingAuctions/>
-     
-    </PageLayout>
-  );
+    // 🔹 Farcaster frame metadata
+    other: {
+      "fc:frame": JSON.stringify({
+        version: "next",
+        imageUrl: IMAGE,
+        button: {
+          title: "Bid Now!",
+          action: {
+            type: "launch_frame",
+            name: "House",
+            url: URL,
+            splashImageUrl: IMAGE,
+            splashBackgroundColor: "#000000",
+          },
+        },
+      }),
+    },
+  };
+}
+
+export async function HomePage(){
+  return <>
+    <Home />
+  </>
 }
