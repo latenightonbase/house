@@ -5,6 +5,7 @@ import { Metadata } from "next";
 export async function generateMetadata({ params }: { params: Promise<{ blockchainAuctionId: string }> }): Promise<Metadata> {
   
   const {blockchainAuctionId} = await params;
+  console.log("blockchainAuctionId:", blockchainAuctionId);
   const URL = `${process.env.NEXT_PUBLIC_DOMAIN}/bid/${blockchainAuctionId}`;
   const IMAGE = `${process.env.NEXT_PUBLIC_DOMAIN}/pfp.jpg`;
 
@@ -18,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ blockchai
         version: "next",
         imageUrl: IMAGE,
         button: {
-          title: "Bid Now!",
+          title: "View Auction",
           action: {
             type: "launch_frame",
             name: "House",
