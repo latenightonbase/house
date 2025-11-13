@@ -609,11 +609,10 @@ const LandingAuctions: React.FC = () => {
     try {
       const url = `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`;
       const hostName = auction.hostedBy.display_name || (auction.hostedBy.username ? `@${auction.hostedBy.username}` : 'Unknown Host');
-      const text = `Check out "${auction.auctionName}" hosted by ${hostName}! Bidding in ${auction.currency}.`;
+      const text = `Check out "${auction.auctionName}" hosted by ${hostName}! Bidding in ${auction.currency}. ${url}`;
       
       await sdk.actions.composeCast({
-        text, 
-        embeds: [url] as [string]
+        text
       });
     } catch (e) {
       console.error("Error composing cast:", e);
