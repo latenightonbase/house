@@ -698,7 +698,7 @@ export default function BidPage() {
       const text = `Check out "${auctionData.auctionName}" hosted by ${hostName}! Bidding in ${auctionData.currency}. ${url}`;
       
       await sdk.actions.composeCast({
-        text
+        text, embeds:[url]
       });
     } catch (e) {
       console.error("Error composing cast:", e);
