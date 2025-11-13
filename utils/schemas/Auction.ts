@@ -26,6 +26,7 @@ export interface IAuction extends Document {
   updatedAt: Date;
   tokenAddress: string;
   enabled: boolean;
+  status: 'ongoing' | 'ended' | 'paused';
 }
 
 // Sub-schema for bidders
@@ -119,6 +120,11 @@ const AuctionSchema: Schema = new Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: ['ongoing', 'ended', 'paused'],
+      default: 'ongoing',
     },
   },
   {

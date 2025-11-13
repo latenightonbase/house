@@ -694,16 +694,18 @@ export default function BidPage() {
     try {
       if (!auctionData) return;
       
-      const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || window.location.origin;
+      const baseUrl = process.env.NEXT_PUBLIC_DOMAIN;
       const url = `${baseUrl}/bid/${blockchainAuctionId}`;
       const hostName = auctionData.hostedBy.display_name || auctionData.hostedBy.username;
-      const text = `Check out "${auctionData.auctionName}" hosted by ${hostName}! Bidding in ${auctionData.currency}. ${url}`;
+      const text = `Check out "${auctionData.auctionName}" hosted by ${hostName}! Bidding in ${auctionData.currency}.`;
       
       await sdk.actions.composeCast({
-        text, embeds: [url]
+        text, 
+        embeds: [url] as [string]
       });
     } catch (e) {
       console.error("Error composing cast:", e);
+      toast.error("Failed to compose cast");
     }
   }
 

@@ -151,8 +151,9 @@ export async function POST(req: NextRequest) {
       auction.winningBid = 'no_bids';
     }
 
-    // End the auction by setting the end date to now
+    // End the auction by setting the end date to now and status to ended
     auction.endDate = currentDate;
+    auction.status = 'ended';
     await auction.save();
 
     // Trigger fee distribution in the background (true fire-and-forget)

@@ -50,15 +50,8 @@ export async function GET(req: NextRequest) {
       const uniqueUsers = new Set(auction.bidders.map((bidder: any) => bidder.user.toString()));
       const participantCount = uniqueUsers.size;
 
-      // Determine status based on winningBid field
-      // If winningBid is null/undefined, auction is active/upcoming
-      // If winningBid exists (either an ObjectId or 'no_bids'), auction is ended
-      let status: 'active' | 'upcoming' | 'ended' = 'active';
-      if (auction.winningBid !== null && auction.winningBid !== undefined) {
-        status = 'ended';
-      } else if (auction.startDate > currentDate) {
-        status = 'upcoming';
-      }
+      // Use status field from database
+      const status = auction.status === 'ended' ? 'ended' : 'active';
 
       // Calculate time remaining (for active auctions) or time since end (for ended auctions)
       let timeInfo = '';
@@ -70,10 +63,6 @@ export async function GET(req: NextRequest) {
         const timeSinceEnd = currentDate.getTime() - auction.endDate.getTime();
         const daysSinceEnd = Math.floor(timeSinceEnd / (1000 * 60 * 60 * 24));
         timeInfo = `Ended ${daysSinceEnd} day${daysSinceEnd !== 1 ? 's' : ''} ago`;
-      } else {
-        const timeUntilStart = auction.startDate.getTime() - currentDate.getTime();
-        const hoursUntilStart = Math.floor(timeUntilStart / (1000 * 60 * 60));
-        timeInfo = `Starts in ${hoursUntilStart} hours`;
       }
 
       return {
