@@ -17,7 +17,7 @@ export interface IAuction extends Document {
   currency: string;
   startDate: Date;
   hostedBy: Types.ObjectId;
-  winningBid?: Types.ObjectId;
+  winningBid?: Types.ObjectId | string;
   minimumBid: number;
   reservePrice?: number;
   hostFeePercentage: number;
@@ -102,8 +102,7 @@ const AuctionSchema: Schema = new Schema(
       default: true,
     },
     winningBid: {
-      type: Schema.Types.ObjectId,
-      ref: 'WinningBid',
+      type: Schema.Types.Mixed,
       default: null,
     },
     minimumBid: {

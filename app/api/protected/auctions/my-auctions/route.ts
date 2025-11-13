@@ -50,12 +50,14 @@ export async function GET(req: NextRequest) {
       const uniqueUsers = new Set(auction.bidders.map((bidder: any) => bidder.user.toString()));
       const participantCount = uniqueUsers.size;
 
-      // Determine auction status
-      let status = 'upcoming';
-      if (auction.endDate <= currentDate) {
+      // Determine status based on winningBid field
+      // If winningBid is null/undefined, auction is active/upcoming
+      // If winningBid exists (either an ObjectId or 'no_bids'), auction is ended
+      let status: 'active' | 'upcoming' | 'ended' = 'active';
+      if (auction.winningBid !== null && auction.winningBid !== undefined) {
         status = 'ended';
-      } else {
-        status = 'active';
+      } else if (auction.startDate > currentDate) {
+        status = 'upcoming';
       }
 
       // Calculate time remaining (for active auctions) or time since end (for ended auctions)

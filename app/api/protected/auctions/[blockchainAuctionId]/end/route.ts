@@ -144,7 +144,11 @@ export async function POST(req: NextRequest) {
           highestBid.bidderUser._id,
           { $addToSet: { bidsWon: auction._id } }
         );
+      } else {
+        auction.winningBid = 'no_bids';
       }
+    } else {
+      auction.winningBid = 'no_bids';
     }
 
     // End the auction by setting the end date to now
