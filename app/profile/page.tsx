@@ -4,7 +4,7 @@ import { useGlobalContext } from '@/utils/providers/globalContext'
 import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { MdWallet } from 'react-icons/md'
-import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine } from 'react-icons/ri'
+import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
 import { useState, useEffect } from 'react'
 import TwitterAuthModal from '@/components/UI/TwitterAuthModal'
@@ -88,7 +88,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <RiLoader5Fill className='text-primary animate-spin text-4xl mb-4 mx-auto' />
           <p className="text-caption">Loading profile...</p>
         </div>
       </div>

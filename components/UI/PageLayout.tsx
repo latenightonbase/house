@@ -12,7 +12,7 @@ export default function PageLayout({
 }: PageLayoutProps) {
   return (
     <div className={twMerge(
-      'px-4 py-6 lg:px-4 lg:py-8',
+      'px-2 py-3 lg:px-4 lg:py-8',
       className
     )}>
       {children}
