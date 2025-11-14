@@ -39,7 +39,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
           },
         }}
       >
-        <SessionProvider>
+        <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
           <GlobalProvider>
             <Rainbow>{children}</Rainbow>
           </GlobalProvider>
