@@ -1,23 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa'
 
 const cards = [
   {
-    title: "Create Flexible Auctions",
-    description: "Launch auctions with any ERC20 token on Base. Choose your token, set minimum bid and end time—your auction goes live instantly on-chain for global bidders.",
+    title: "Create Auctions in Seconds",
+    bullets: [
+      "Launch onchain auctions with any Base token.",
+      "Pick your token → set a min bid → go live instantly."
+    ],
     icon: "🎯"
   },
   {
-    title: "Fair & Instant Bidding",
-    description: "Place bids with confidence—your tokens are held securely in the smart contract. Get outbid? Instant automatic refund, no fees. Auctions end when owners decide.",
+    title: "Fair, Instant, Onchain Bidding",
+    bullets: [
+      "Your bid is held safely in the contract.",
+      "Get outbid? Auto-refund. Zero fees. No rug pulls."
+    ],
     icon: "⚡"
   },
   {
-    title: "Weekly Rewards",
-    description: "Top earners and bidders on the global leaderboard receive weekly rewards. Create auctions, place bids, climb rankings—the more you engage, the more you earn.",
+    title: "Earn Weekly Rewards",
+    bullets: [
+      "Top bidders & top earners get paid every week.",
+      "Bid, win, host, climb the leaderboard."
+    ],
     icon: "🏆"
   }
 ]
@@ -25,6 +34,14 @@ const cards = [
 export default function InfoCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      paginate(1)
+    }, 10000)
+    
+    return () => clearInterval(interval)
+  }, [currentIndex])
 
   const slideVariants = {
     enter: (direction: number) => ({
@@ -59,9 +76,9 @@ export default function InfoCarousel() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto my-8 min-h-40">
+    <div className="w-full max-w-6xl max-lg:mx-auto my-8 min-h-40">
       {/* Desktop: Show all cards */}
-      <div className="hidden lg:flex gap-6 justify-start">
+      <div className="hidden lg:flex gap-6 lg:justify-start lg:items-center w-full">
         {cards.map((card, index) => (
           <div key={index} className="w-80">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl h-full">
@@ -71,9 +88,14 @@ export default function InfoCarousel() {
                   {card.title}
                 </h3>
               </div>
-              <p className="text-gray-200 leading-relaxed">
-                {card.description}
-              </p>
+              <ul className="space-y-2">
+                {card.bullets.map((bullet, idx) => (
+                  <li key={idx} className="text-gray-200 leading-relaxed flex items-start">
+                    <span className="mr-2 text-primary">•</span>
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         ))}
@@ -116,31 +138,59 @@ export default function InfoCarousel() {
                       {cards[currentIndex].title}
                     </h3>
                   </div>
-                  <p className="text-gray-200 leading-relaxed">
-                    {cards[currentIndex].description}
-                  </p>
+                  <ul className="space-y-2">
+                    {cards[currentIndex].bullets.map((bullet, idx) => (
+                      <li key={idx} className="text-gray-200 leading-relaxed flex items-start">
+                        <span className="mr-2 text-primary">•</span>
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </motion.div>
             </AnimatePresence>
           </div>
         </div>
 
-        <div className="flex justify-center gap-2 mt-10">
-          {cards.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                setDirection(index > currentIndex ? 1 : -1)
-                setCurrentIndex(index)
-              }}
-              className={`h-2 rounded-full transition-all ${
-                index === currentIndex
-                  ? 'w-8 bg-primary'
-                  : 'w-2 bg-white/30 hover:bg-white/50'
-              }`}
-              aria-label={`Go to card ${index + 1}`}
-            />
-          ))}
+        <div className="flex justify-center items-center gap-4 mt-10">
+          <button
+            onClick={() => paginate(-1)}
+            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all"
+            aria-label="Previous card"
+          >
+            <FaChevronLeft className="text-white text-lg" />
+          </button>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex gap-2">
+              {cards.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setDirection(index > currentIndex ? 1 : -1)
+                    setCurrentIndex(index)
+                  }}
+                  className={`h-2 rounded-full transition-all ${
+                    index === currentIndex
+                      ? 'w-8 bg-primary'
+                      : 'w-2 bg-white/30 hover:bg-white/50'
+                  }`}
+                  aria-label={`Go to card ${index + 1}`}
+                />
+              ))}
+            </div>
+            <div className="text-white/60 text-sm">
+              {currentIndex + 1} / {cards.length}
+            </div>
+          </div>
+
+          <button
+            onClick={() => paginate(1)}
+            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all"
+            aria-label="Next card"
+          >
+            <FaChevronRight className="text-white text-lg" />
+          </button>
         </div>
       </div>
     </div>
