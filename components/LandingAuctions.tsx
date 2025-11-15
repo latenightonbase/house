@@ -750,7 +750,7 @@ const LandingAuctions: React.FC = () => {
   // Handle case when auctions is empty but we have a filter applied
   if (auctions.length === 0 && currencyFilter !== 'all') {
     return (
-      <div className="w-full max-lg:mx-auto mt-8">
+      <div className="w-full max-lg:mx-auto mt-2">
         <div className="flex flex-col items-start justify-between mb-8">
           <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
           <p className="text-caption text-sm mt-2">
@@ -759,29 +759,29 @@ const LandingAuctions: React.FC = () => {
         </div>
 
         {/* Currency Filter */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex mb-6 overflow-x-hidden">
           <button
             onClick={() => setCurrencyFilter('all')}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700"
+            className="px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 text-primary border-b-2 border-primary bg-white/5 rounded-md"
           >
             All
           </button>
           <button
             onClick={() => setCurrencyFilter('usdc')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
               currencyFilter === 'usdc'
-                ? 'bg-primary text-white'
-                : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+                ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
+                : 'text-caption hover:text-foreground'
             }`}
           >
             USDC
           </button>
           <button
             onClick={() => setCurrencyFilter('creator-coins')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
               currencyFilter === 'creator-coins'
-                ? 'bg-primary text-white'
-                : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+                ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
+                : 'text-caption hover:text-foreground'
             }`}
           >
             Creator Coins
@@ -824,7 +824,7 @@ const LandingAuctions: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-lg:mx-auto mt-8">
+    <div className="w-full max-lg:mx-auto mt-2">
       <div className="flex flex-col items-start justify-between mb-8">
         <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
         <p className="text-caption text-sm mt-2">
@@ -833,33 +833,33 @@ const LandingAuctions: React.FC = () => {
       </div>
 
       {/* Currency Filter */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex mb-6 overflow-x-hidden">
         <button
           onClick={() => setCurrencyFilter('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
             currencyFilter === 'all'
-              ? 'bg-primary text-white'
-              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
+              : 'text-caption hover:text-foreground'
           }`}
         >
           All
         </button>
         <button
           onClick={() => setCurrencyFilter('usdc')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
             currencyFilter === 'usdc'
-              ? 'bg-primary text-white'
-              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
+              : 'text-caption hover:text-foreground'
           }`}
         >
           USDC
         </button>
         <button
           onClick={() => setCurrencyFilter('creator-coins')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
             currencyFilter === 'creator-coins'
-              ? 'bg-primary text-white'
-              : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
+              : 'text-caption hover:text-foreground'
           }`}
         >
           Creator Coins

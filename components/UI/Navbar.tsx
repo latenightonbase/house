@@ -143,7 +143,7 @@ export default function Navbar(){
                             }`}
                         >
                             <RiTrophyLine className="text-lg" />
-                            The Winner Circle
+                            Global Leaderboard
                         </a>
                         </li>
                         <li className="border-b border-primary/50">
@@ -155,7 +155,7 @@ export default function Navbar(){
                             }`}
                         >
                             <RiQrScanLine className="text-lg" />
-                            Scan to Earn
+                            Weekly Rewards
                         </a>
                         </li>
                     </ul>
@@ -246,7 +246,7 @@ export default function Navbar(){
                             }`}
                         >
                             <RiTrophyLine className="text-xl" />
-                            <span className="text-md">The Winner Circle</span>
+                            <span className="text-md">Global Leaderboard</span>
                         </a>
                         
                         <a 
@@ -259,7 +259,7 @@ export default function Navbar(){
                             }`}
                         >
                             <RiQrScanLine className="text-xl" />
-                            <span className="text-md">Scan to Earn</span>
+                            <span className="text-md">Weekly Rewards</span>
                         </a>
                         
                     </nav>
