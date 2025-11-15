@@ -9,7 +9,8 @@ const Drawer = ({
   shouldScaleBackground = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
+  <DrawerPrimitive.Root 
+    repositionInputs={false}
     shouldScaleBackground={shouldScaleBackground}
     {...props}
   />
