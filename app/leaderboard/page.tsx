@@ -131,7 +131,7 @@ export default function LeaderboardPage() {
       key: 'totalRevenue',
       label: 'Revenue ($)',
       render: (value: number) => (
-        <span className="font-semibold text-green-500">${formatNumber(value)}</span>
+        <span className="font-semibold text-primary">${formatNumber(value)}</span>
       ),
       className: 'text-right'
     },
@@ -182,7 +182,7 @@ export default function LeaderboardPage() {
       label: 'Bid Amount',
       render: (value: number, row: HighestBid) => (
         <div>
-          <div className="font-semibold text-blue-500">
+          <div className="font-semibold text-primary">
             {formatNumber(value)} {row.currency}
           </div>
           {row.usdcValue && (
@@ -204,13 +204,13 @@ export default function LeaderboardPage() {
 
   return (
     <PageLayout className="min-h-screen flex flex-col items-start justify-start">
-      <div className="w-full max-w-7xl mx-auto">
+      <div className="w-full max-w-7xl max-lg:mx-auto">
         <div className="flex items-center gap-4 mb-8 max-lg:mb-4">
           <div className="w-12 h-12 gradient-button rounded-full flex items-center justify-center">
             <RiTrophyLine className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Leaderboard</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold">Leaderboard</h1>
           </div>
         </div>
 

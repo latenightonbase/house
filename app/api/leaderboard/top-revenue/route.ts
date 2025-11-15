@@ -2,10 +2,52 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
+import { fetchTokenPrice } from '@/utils/tokenPrice';
 
 export async function GET() {
   try {
     await connectDB();
+
+    // Fix missing usdcValue for winning bids in non-USDC auctions
+    const auctionsNeedingFix = await Auction.find({
+      status: 'ended',
+      currency: { $ne: 'USDC' },
+      bidders: { $exists: true, $ne: [] }
+    });
+
+    for (const auction of auctionsNeedingFix) {
+      if (auction.bidders && auction.bidders.length > 0) {
+        // Find the highest bid
+        let maxBidAmount = -1;
+        let maxBidIndex = -1;
+        
+        auction.bidders.forEach((bid: any, index: number) => {
+          if (bid.bidAmount > maxBidAmount) {
+            maxBidAmount = bid.bidAmount;
+            maxBidIndex = index;
+          }
+        });
+
+        // Check if the highest bid is missing usdcValue
+        if (maxBidIndex >= 0 && !auction.bidders[maxBidIndex].usdcValue) {
+          try {
+            console.log(`Fixing missing usdcValue for auction ${auction._id}, currency: ${auction.currency}`);
+            
+            // Fetch token price
+            const tokenPrice = await fetchTokenPrice(auction.tokenAddress);
+            const usdcValue = auction.bidders[maxBidIndex].bidAmount * tokenPrice;
+            
+            // Update the bid with usdcValue
+            auction.bidders[maxBidIndex].usdcValue = usdcValue;
+            await auction.save();
+            
+            console.log(`Updated auction ${auction._id} highest bid with usdcValue: ${usdcValue}`);
+          } catch (error) {
+            console.error(`Failed to fetch price for token ${auction.tokenAddress}:`, error);
+          }
+        }
+      }
+    }
 
     const topRevenueUsers = await Auction.aggregate([
       {

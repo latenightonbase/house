@@ -138,7 +138,7 @@ export default function Navbar(){
                             <a 
                             href="/leaderboard"
                             onClick={(e) => handleNavClick(e, '/leaderboard')}
-                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full ${
+                            className={`flex items-center gap-2 px-4 py-3 font-semibold transition-colors cursor-pointer w-full text-nowrap ${
                                 pathname === '/leaderboard' ? 'text-primary' : 'text-white'
                             }`}
                         >
@@ -246,7 +246,7 @@ export default function Navbar(){
                             }`}
                         >
                             <RiTrophyLine className="text-xl" />
-                            <span className="text-md">Global Leaderboard</span>
+                            <span className="text-md text-nowrap">Global Leaderboard</span>
                         </a>
                         
                         <a 

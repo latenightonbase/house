@@ -47,7 +47,7 @@ export default function LeaderboardTable({
   if (loading) {
     return (
       <div className="w-full">
-        <h2 className="text-xl font-bold mb-4 gradient-text">{title}</h2>
+        <h2 className="text-xl lg:text-2xl font-bold mb-4 gradient-text">{title}</h2>
         <div className="bg-white/10 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
           <div className="flex items-center justify-center">
             <RiLoader5Fill className='text-primary animate-spin text-xl' />
@@ -60,11 +60,11 @@ export default function LeaderboardTable({
   return (
     <div className="w-full">
       <h2 className="text-xl font-bold mb-4 gradient-text">{title}</h2>
-      <div className="bg-white/10 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white/5 rounded-lg border border-primary/30 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-gray-200 dark:border-gray-700 hover:bg-transparent">
+              <TableRow className="border-b border-primary/30 hover:bg-transparent">
                 <TableHead className="w-16 font-bold">#</TableHead>
                 {columns.map((column) => (
                   <TableHead key={column.key} className={column.className}>
@@ -84,7 +84,7 @@ export default function LeaderboardTable({
                 data.map((row, index) => (
                   <TableRow
                     key={row._id || index}
-                    className="border-b border-gray-200/50 dark:border-gray-700/50 cursor-pointer hover:bg-white/5"
+                    className="border-b border-primary/10 cursor-pointer hover:bg-white/5"
                     onClick={() => handleRowClick(row)}
                   >
                     <TableCell className="font-medium">
