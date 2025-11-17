@@ -283,6 +283,12 @@ setIsLoading(false);
         
         await txHash?.wait();
 
+        if(!txHash){
+          toast.error("Transaction failed to send", { id: toastId });
+          setIsLoading(false);
+          return;
+        }
+
         toast.loading("Transaction confirmed!", { id: toastId });
 
         await processSuccess(auctionId);
