@@ -81,7 +81,7 @@ export default function Welcome() {
         }
     }, [user?.wallet]);
 
-    if(context)
+    
     return (
             <div className="space-y-4 flex flex-col  max-lg:justify-center w-full">
                 <div className="text-left text-caption flex flex-col font-semibold text-xl gap-2 mb-4">
@@ -93,7 +93,7 @@ export default function Welcome() {
                     <FaPlus/> Create Auction
                 </button>
 
-                {!hasNotifications && user && (
+                {!hasNotifications && session && context && (
                     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                         <DrawerContent>
                             <DrawerHeader>
@@ -143,12 +143,7 @@ export default function Welcome() {
                     </Drawer>
                 )}
 
-                {hasNotifications && (
-                    <div className="max-lg:w-full w-80 px-4 py-2 bg-green-600/20 border border-green-600/50 flex gap-2 items-center justify-center text-green-400 rounded-md text-sm">
-                        <IoMdNotifications className="text-lg"/> 
-                        Notifications Enabled
-                    </div>
-                )}
+                
             </div>
 
     )
