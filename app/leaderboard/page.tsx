@@ -41,27 +41,12 @@ interface HighestBid {
   currency: string;
 }
 
-interface WeeklyBidder {
-  _id: string;
-  userId: string;
-  wallet: string;
-  username?: string;
-  display_name?: string;
-  pfp_url?: string;
-  totalSpentUSD: number;
-  bidCount: number;
-  weekStartDate: string;
-  weekEndDate: string;
-}
-
 export default function LeaderboardPage() {
   const [topRevenue, setTopRevenue] = useState<TopRevenueUser[]>([]);
   const [highestBids, setHighestBids] = useState<HighestBid[]>([]);
-  const [weeklyBidders, setWeeklyBidders] = useState<WeeklyBidder[]>([]);
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const [loadingBids, setLoadingBids] = useState(true);
-  const [loadingWeekly, setLoadingWeekly] = useState(true);
-  const [activeTab, setActiveTab] = useState<'revenue' | 'bids' | 'weekly'>('revenue');
+  const [activeTab, setActiveTab] = useState<'revenue' | 'bids'>('revenue');
 
   useEffect(() => {
     const fetchTopRevenue = async () => {
@@ -92,23 +77,8 @@ export default function LeaderboardPage() {
       }
     };
 
-    const fetchWeeklyBidders = async () => {
-      try {
-        const response = await fetch('/api/leaderboard/weekly-bidders');
-        const result = await response.json();
-        if (result.success) {
-          setWeeklyBidders(result.data);
-        }
-      } catch (error) {
-        console.error('Error fetching weekly bidders:', error);
-      } finally {
-        setLoadingWeekly(false);
-      }
-    };
-
     fetchTopRevenue();
     fetchHighestBids();
-    fetchWeeklyBidders();
   }, []);
 
   const formatWallet = (wallet: string) => {
@@ -232,49 +202,6 @@ export default function LeaderboardPage() {
     }
   ];
 
-  const weeklyColumns = [
-    {
-      key: 'username',
-      label: 'User',
-      render: (value: string, row: WeeklyBidder) => (
-        <div className="flex items-center gap-3 min-w-0">
-          {row.pfp_url && (
-            <img
-              src={row.pfp_url}
-              alt={row.display_name || row.username || 'User'}
-              className="w-6 h-6 rounded-full flex-shrink-0"
-            />
-          )}
-          <div className="min-w-0">
-            <div className="font-medium truncate">
-              {row.display_name || row.username || formatWallet(row.wallet)}
-            </div>
-            {row.username && row.display_name && (
-              <div className="text-xs text-caption truncate">@{row.username}</div>
-            )}
-          </div>
-        </div>
-      ),
-      className: 'font-bold'
-    },
-    {
-      key: 'totalSpentUSD',
-      label: 'Total Spent ($)',
-      render: (value: number) => (
-        <span className="font-semibold text-primary">${formatNumber(value)}</span>
-      ),
-      className: 'text-right'
-    },
-    {
-      key: 'bidCount',
-      label: 'Bids',
-      render: (value: number) => (
-        <span className="text-caption">{value}</span>
-      ),
-      className: 'text-right'
-    }
-  ];
-
   return (
     <PageLayout className="min-h-screen flex flex-col items-start justify-start">
       <div className="w-full max-w-7xl max-lg:mx-auto">
@@ -310,17 +237,6 @@ export default function LeaderboardPage() {
           >
             💎 Bids
           </button>
-          <button
-            onClick={() => setActiveTab('weekly')}
-            className={cn(
-              "px-4 py-2 font-medium transition-colors whitespace-nowrap flex-shrink-0",
-              activeTab === 'weekly'
-                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-                : "text-caption hover:text-foreground"
-            )}
-          >
-            📅 Weekly Bidders
-          </button>
         </div>
 
         {activeTab === 'revenue' && (
@@ -340,16 +256,6 @@ export default function LeaderboardPage() {
             data={highestBids}
             loading={loadingBids}
             emptyMessage="No bids placed yet"
-          />
-        )}
-
-        {activeTab === 'weekly' && (
-          <LeaderboardTable
-            title="Weekly Top Bidders (This Week)"
-            columns={weeklyColumns}
-            data={weeklyBidders}
-            loading={loadingWeekly}
-            emptyMessage="No qualifying bids this week (minimum $10 USD)"
           />
         )}
       </div>

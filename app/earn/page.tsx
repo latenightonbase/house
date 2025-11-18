@@ -16,17 +16,34 @@ interface WeeklyReward {
   rewardAmount: number;
 }
 
+interface WeeklyBidder {
+  _id: string;
+  userId: string;
+  wallet: string;
+  username?: string;
+  display_name?: string;
+  pfp_url?: string;
+  totalSpentUSD: number;
+  bidCount: number;
+  weekStartDate: string;
+  weekEndDate: string;
+}
+
 export default function EarnPage() {
   const { data: session, status } = useSession();
   const [weeklyRewards, setWeeklyRewards] = useState<WeeklyReward[]>([]);
+  const [weeklyBidders, setWeeklyBidders] = useState<WeeklyBidder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(true);
   const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'authenticated') {
       fetchWeeklyRewards();
+      fetchWeeklyBidders();
     } else if (status === 'unauthenticated') {
       setLoading(false);
+      setLoadingLeaderboard(false);
     }
   }, [status]);
 
@@ -41,6 +58,20 @@ export default function EarnPage() {
       console.error('Error fetching weekly rewards:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWeeklyBidders = async () => {
+    try {
+      const response = await fetch('/api/leaderboard/weekly-bidders');
+      const result = await response.json();
+      if (result.success) {
+        setWeeklyBidders(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching weekly bidders:', error);
+    } finally {
+      setLoadingLeaderboard(false);
     }
   };
 
@@ -83,6 +114,11 @@ export default function EarnPage() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(num);
+  };
+
+  const formatWallet = (wallet: string) => {
+    if (!wallet) return 'N/A';
+    return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
   };
 
   const isWeekEnded = (weekEndDate: string) => {
@@ -261,6 +297,84 @@ export default function EarnPage() {
                 </div>
               </div>
             )}
+
+            {/* Weekly Leaderboard */}
+            <div>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <span>📅</span> Weekly Top Bidders Leaderboard
+              </h2>
+              {loadingLeaderboard ? (
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+                  <p className="text-caption">Loading leaderboard...</p>
+                </div>
+              ) : weeklyBidders.length === 0 ? (
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+                  <p className="text-caption">No qualifying bids this week (minimum $10 USD)</p>
+                </div>
+              ) : (
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-white/5">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-caption uppercase tracking-wider">
+                            Rank
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-caption uppercase tracking-wider">
+                            User
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-caption uppercase tracking-wider">
+                            Total Spent ($)
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-caption uppercase tracking-wider">
+                            Bids
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {weeklyBidders.map((bidder, index) => (
+                          <tr key={bidder._id} className="hover:bg-white/5 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                {index === 0 && <span className="text-2xl">🥇</span>}
+                                {index === 1 && <span className="text-2xl">🥈</span>}
+                                {index === 2 && <span className="text-2xl">🥉</span>}
+                                {index > 2 && <span className="text-caption font-medium">#{index + 1}</span>}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3 min-w-0">
+                                {bidder.pfp_url && (
+                                  <img
+                                    src={bidder.pfp_url}
+                                    alt={bidder.display_name || bidder.username || 'User'}
+                                    className="w-8 h-8 rounded-full flex-shrink-0"
+                                  />
+                                )}
+                                <div className="min-w-0">
+                                  <div className="font-medium truncate">
+                                    {bidder.display_name || bidder.username || formatWallet(bidder.wallet)}
+                                  </div>
+                                  {bidder.username && bidder.display_name && (
+                                    <div className="text-xs text-caption truncate">@{bidder.username}</div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <span className="font-semibold text-primary">${formatNumber(bidder.totalSpentUSD)}</span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <span className="text-caption">{bidder.bidCount}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
