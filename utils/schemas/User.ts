@@ -16,6 +16,11 @@ export interface IUser extends Document {
     name: string;
     profileImageUrl?: string;
   };
+  notificationDetails?: {
+    url: string;
+    token: string;
+    appFid: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -71,6 +76,20 @@ const UserSchema: Schema = new Schema(
         trim: true,
       },
       profileImageUrl: {
+        type: String,
+        trim: true,
+      },
+    },
+    notificationDetails: {
+      url: {
+        type: String,
+        trim: true,
+      },
+      token: {
+        type: String,
+        trim: true,
+      },
+      appFid: {
         type: String,
         trim: true,
       },
