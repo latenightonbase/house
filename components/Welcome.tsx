@@ -40,8 +40,11 @@ export default function Welcome() {
             const response = await sdk.actions.addMiniApp();
             
             if (response.notificationDetails) {
+                console.log("MiniApp added with notification details:", response.notificationDetails);
+                console.log("User wallet:", user?.wallet);
+                
                 // Save notification details to user
-                await fetch('/api/miniapp/notifications/save', {
+                const saveResponse = await fetch('/api/miniapp/notifications/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -51,6 +54,13 @@ export default function Welcome() {
                         notificationDetails: response.notificationDetails
                     })
                 });
+
+                const saveResult = await saveResponse.json();
+                console.log("Save response:", saveResult);
+
+                if (!saveResponse.ok) {
+                    throw new Error(saveResult.error || "Failed to save notification details");
+                }
 
                 toast.success("Notifications enabled and miniapp added successfully.", {
                     duration: 4000,
