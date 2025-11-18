@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const user = await User.findOneAndUpdate(
-      { wallet: wallet.toLowerCase() },
+      { wallet: wallet },
       { 
         $set: { 
           notificationDetails: {
