@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
     // Find auctions that are currently running (started but not ended)
     // Sort by endDate ascending (soonest ending first) and implement pagination
     const runningAuctions = await Auction.find({
+      status: 'ongoing',
+      enabled: true,
       startDate: { $lte: currentDate },
       endDate: { $gte: currentDate },
       ...currencyQuery
