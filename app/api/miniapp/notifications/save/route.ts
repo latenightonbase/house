@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { wallet, notificationDetails } = body;
 
+    console.log("Received data:", body);
+
     if (!wallet || !notificationDetails) {
       return NextResponse.json(
         { error: "Missing wallet or notificationDetails" },

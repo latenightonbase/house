@@ -20,6 +20,7 @@ import {
   DrawerTrigger,
 } from "@/components/UI/Drawer";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { useSession } from "next-auth/react";
 
 export default function Welcome() {
 
@@ -27,6 +28,8 @@ export default function Welcome() {
     const navigate = useNavigateWithLoader();
     const [isAddingMiniApp, setIsAddingMiniApp] = useState(false);
     const {context} = useMiniKit()
+
+    const {data:session} = useSession()
 
     // Check if user has already enabled notifications
     const hasNotifications = user?.notificationDetails?.token;
@@ -41,7 +44,7 @@ export default function Welcome() {
             
             if (response.notificationDetails) {
                 console.log("MiniApp added with notification details:", response.notificationDetails);
-                console.log("User wallet:", user?.wallet);
+                console.log("User wallet:", session?.wallet);
                 
                 // Save notification details to user
                 const saveResponse = await fetch('/api/miniapp/notifications/save', {
@@ -50,7 +53,7 @@ export default function Welcome() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        wallet: user?.wallet,
+                        wallet: session?.wallet,
                         notificationDetails: response.notificationDetails
                     })
                 });
