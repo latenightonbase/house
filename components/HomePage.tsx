@@ -56,7 +56,7 @@ export default function HomePage() {
       className="min-h-screen flex flex-col items-start justify-start"
     >
       {/* <UsernameManager /> */}
-      {/* <Welcome/> */}
+      <Welcome/>
       <InfoCarousel/>
       <LandingAuctions/>
      
