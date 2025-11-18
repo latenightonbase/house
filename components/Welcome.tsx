@@ -40,16 +40,24 @@ export default function Welcome() {
             const response = await sdk.actions.addMiniApp();
             
             if (response.notificationDetails) {
-                toast.success("Notifications enabled! You'll receive updates on your auctions.", {
+                // Save notification details to user
+                await fetch('/api/miniapp/notifications/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        wallet: user?.wallet,
+                        notificationDetails: response.notificationDetails
+                    })
+                });
+
+                toast.success("Notifications enabled and miniapp added successfully.", {
                     duration: 4000,
                 });
                 setDrawerOpen(false);
-            } else {
-                toast.success("Mini App added successfully!", {
-                    duration: 3000,
-                });
-                setDrawerOpen(false);
             }
+            
         } catch (error: any) {
             console.error("Error adding MiniApp:", error);
             toast.error(error?.message || "Failed to enable notifications. Please try again.", {
@@ -58,7 +66,7 @@ export default function Welcome() {
         } finally {
             setIsAddingMiniApp(false);
         }
-    }, []);
+    }, [user?.wallet]);
 
     if(context)
     return (
