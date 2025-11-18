@@ -121,10 +121,25 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
       let user: any = null;
 
       if (context?.client) {
+        // Fetch user data from database to get notificationDetails
+        let notificationDetails = null;
+        if (context?.user?.fid) {
+          try {
+            const dbResponse = await fetch(`/api/users/${context.user.fid}`);
+            if (dbResponse.ok) {
+              const dbUser = await dbResponse.json();
+              notificationDetails = dbUser.user?.notificationDetails;
+            }
+          } catch (error) {
+            console.error("Error fetching notification details:", error);
+          }
+        }
+        
         user = {
           username: context?.user.displayName,
           pfp_url: context?.user.pfpUrl,
           fid: context?.user.fid,
+          notificationDetails,
         };
       } else if (session?.wallet) {
 
@@ -149,6 +164,8 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
                 username: dbUser.user.username,
                 pfp_url: dbUser.user.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`,
                 fid: dbUser.user.fid || walletAddress,
+                wallet: dbUser.user.wallet,
+                notificationDetails: dbUser.user.notificationDetails,
               };
               setUser(user);
               return;

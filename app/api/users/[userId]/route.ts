@@ -13,13 +13,13 @@ export async function GET(
 
     // Try to find user by wallet address first, then by ID
     let user: any = await User.findOne({ wallet: userId })
-      .select('wallet fid username twitterProfile')
+      .select('wallet fid username twitterProfile notificationDetails')
       .lean();
 
     if (!user) {
       // If not found by wallet, try by MongoDB ID
       user = await User.findById(userId)
-        .select('wallet fid username twitterProfile')
+        .select('wallet fid username twitterProfile notificationDetails')
         .lean();
     }
 
