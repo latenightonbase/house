@@ -11,17 +11,15 @@ export async function GET(
 
     const { userId } = await params;
 
-    // Try to find user by wallet address first, then by ID
-    let user: any = await User.findOne({ wallet: userId })
+    // Try to find user by wallet address, fid, or ID
+    let user: any = await User.findOne({ 
+      $or: [
+        { wallet: userId },
+        { fid: userId }
+      ]
+    })
       .select('wallet fid username twitterProfile notificationDetails')
       .lean();
-
-    if (!user) {
-      // If not found by wallet, try by MongoDB ID
-      user = await User.findById(userId)
-        .select('wallet fid username twitterProfile notificationDetails')
-        .lean();
-    }
 
     if (!user) {
       return NextResponse.json(
