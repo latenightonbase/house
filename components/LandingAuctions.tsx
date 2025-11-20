@@ -347,6 +347,12 @@ const LandingAuctions: React.FC = () => {
 
         await approveTx?.wait();
 
+          if(!approveTx){
+          toast.error("Approval transaction failed", { id: toastId });
+          setIsLoading(false);
+          return;
+          }
+
         toast.success("Approval successful!", { id: toastId });
 
         toast.loading("Sending bid transaction", { id: toastId });
@@ -365,6 +371,12 @@ const LandingAuctions: React.FC = () => {
         toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
         
         await txHash?.wait();
+
+        if(!txHash){
+          toast.error("Transaction failed", { id: toastId });
+          setIsLoading(false);
+          return;
+        }
 
         toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
 
