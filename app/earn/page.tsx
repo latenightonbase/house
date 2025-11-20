@@ -133,7 +133,7 @@ export default function EarnPage() {
     return (
       <PageLayout className="min-h-screen flex flex-col items-start justify-start">
         <div className="w-full max-w-6xl max-lg:mx-auto mt-8">
-          <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
                 <RiTrophyLine className="w-8 h-8 text-white" />
@@ -165,11 +165,11 @@ export default function EarnPage() {
         </div>
 
         {loading ? (
-          <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
             <p className="text-caption">Loading your rewards...</p>
           </div>
         ) : weeklyRewards.length === 0 ? (
-          <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
                 <RiQrScanLine className="w-8 h-8 text-white" />
@@ -237,7 +237,7 @@ export default function EarnPage() {
                   {currentWeekRewards.map((reward) => (
                     <div
                       key={reward._id}
-                      className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6"
+                      className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-6"
                     >
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex-1 min-w-0">
@@ -248,7 +248,7 @@ export default function EarnPage() {
                             <span>{reward.bidCount} Bids</span>
                           </div>
                         </div>
-                        <span className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-caption rounded-lg text-sm">
+                        <span className="px-4 py-2 bg-gray-700 text-caption rounded-lg text-sm">
                           In Progress
                         </span>
                       </div>
@@ -268,7 +268,7 @@ export default function EarnPage() {
                   {claimedRewards.map((reward) => (
                     <div
                       key={reward._id}
-                      className="bg-white/5 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-6 opacity-75"
+                      className="bg-white/5 rounded-lg shadow-md border border-gray-700 p-6 opacity-75"
                     >
                       <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex-1 min-w-0">
@@ -304,15 +304,15 @@ export default function EarnPage() {
                 <span>📅</span> Weekly Top Bidders Leaderboard
               </h2>
               {loadingLeaderboard ? (
-                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
                   <p className="text-caption">Loading leaderboard...</p>
                 </div>
               ) : weeklyBidders.length === 0 ? (
-                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
                   <p className="text-caption">No qualifying bids this week (minimum $10 USD)</p>
                 </div>
               ) : (
-                <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-white/5">
@@ -331,7 +331,7 @@ export default function EarnPage() {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <tbody className="divide-y divide-gray-700">
                         {weeklyBidders.map((bidder, index) => (
                           <tr key={bidder._id} className="hover:bg-white/5 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">

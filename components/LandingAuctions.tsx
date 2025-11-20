@@ -623,40 +623,40 @@ const LandingAuctions: React.FC = () => {
   const SkeletonCard = () => (
     <div className="bg-gray-400/10 w-full border border-gray-300 rounded-xl shadow-sm overflow-hidden animate-pulse">
       {/* Header */}
-      <div className="bg-gray-300 dark:bg-gray-700 p-4">
+      <div className="bg-gray-700 p-4">
         <div className="flex items-center justify-between">
-          <div className="bg-gray-400 dark:bg-gray-600 h-6 w-12 rounded-full"></div>
-          <div className="bg-gray-400 dark:bg-gray-600 h-4 w-24 rounded"></div>
+          <div className="bg-gray-600 h-6 w-12 rounded-full"></div>
+          <div className="bg-gray-600 h-4 w-24 rounded"></div>
         </div>
       </div>
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        <div className="bg-gray-300 dark:bg-gray-700 h-6 w-3/4 rounded"></div>
-        <div className="bg-gray-300 dark:bg-gray-700 h-4 w-full rounded"></div>
-        <div className="bg-gray-300 dark:bg-gray-700 h-4 w-5/6 rounded"></div>
+        <div className="bg-gray-700 h-6 w-3/4 rounded"></div>
+        <div className="bg-gray-700 h-4 w-full rounded"></div>
+        <div className="bg-gray-700 h-4 w-5/6 rounded"></div>
         
         <div className="space-y-3">
           <div className="flex justify-between items-center">
-            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-16 rounded"></div>
-            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-20 rounded"></div>
+            <div className="bg-gray-700 h-4 w-16 rounded"></div>
+            <div className="bg-gray-700 h-4 w-20 rounded"></div>
           </div>
           
           <div className="flex justify-between items-center">
-            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-20 rounded"></div>
-            <div className="bg-gray-300 dark:bg-gray-700 h-4 w-8 rounded"></div>
+            <div className="bg-gray-700 h-4 w-20 rounded"></div>
+            <div className="bg-gray-700 h-4 w-8 rounded"></div>
           </div>
 
           <div className="border-t pt-3">
             <div className="flex items-center justify-between">
-              <div className="bg-gray-300 dark:bg-gray-700 h-4 w-16 rounded"></div>
-              <div className="bg-gray-300 dark:bg-gray-700 h-4 w-24 rounded"></div>
+              <div className="bg-gray-700 h-4 w-16 rounded"></div>
+              <div className="bg-gray-700 h-4 w-24 rounded"></div>
             </div>
           </div>
 
           <div className="flex justify-center gap-2 px-1">
-            <div className="bg-gray-300 dark:bg-gray-700 h-12 w-[70%] rounded"></div>
-            <div className="bg-gray-300 dark:bg-gray-700 h-12 w-[30%] rounded"></div>
+            <div className="bg-gray-700 h-12 w-[70%] rounded"></div>
+            <div className="bg-gray-700 h-12 w-[30%] rounded"></div>
           </div>
         </div>
       </div>
@@ -666,7 +666,7 @@ const LandingAuctions: React.FC = () => {
   if (loading) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <RiLoader5Fill className="animate-spin text-4xl text-primary" />
             <div>
@@ -682,11 +682,11 @@ const LandingAuctions: React.FC = () => {
   if (error) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center">
               <svg 
-                className="w-8 h-8 text-red-500 dark:text-red-400" 
+                className="w-8 h-8 text-red-400" 
                 fill="none" 
                 stroke="currentColor" 
                 viewBox="0 0 24 24"
@@ -715,7 +715,7 @@ const LandingAuctions: React.FC = () => {
   if (auctions.length === 0) {
     return (
       <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -788,7 +788,7 @@ const LandingAuctions: React.FC = () => {
           </button>
         </div>
 
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 

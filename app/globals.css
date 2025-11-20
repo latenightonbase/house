@@ -9,9 +9,9 @@
   --button-hover: #4ab17d;
   --disabled: #bce5ce;
 
-  /* Background */
-  --background: #ffffff;
-  --foreground: var(--primary);
+  /* Background - Dark mode by default */
+  --background: #0a0a0a;
+  --foreground: #f0f9f4;
   
   /* Viewport height fallback for older browsers */
   --vh: 1vh;
@@ -27,13 +27,6 @@
   --color-button-hover: var(--button-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #f0f9f4;
-  }
 }
 
 body {

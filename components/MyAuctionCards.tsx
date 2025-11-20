@@ -368,7 +368,7 @@ export default function MyAuctionCards() {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">My Auctions</h1>
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -444,8 +444,8 @@ export default function MyAuctionCards() {
       <h1 className="text-2xl font-bold gradient-text">My Auctions</h1>
       {/* Success Message */}
       {successMessage && (
-        <div className="mb-4 p-4 bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 rounded-lg">
-          <p className="text-green-800 dark:text-green-200">{successMessage}</p>
+        <div className="mb-4 p-4 bg-green-900 border border-green-700 rounded-lg">
+          <p className="text-green-200">{successMessage}</p>
         </div>
       )}
 
@@ -470,7 +470,7 @@ export default function MyAuctionCards() {
       {/* Auctions Grid */}
       {filteredAuctions.length === 0 ? (
         <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -501,7 +501,7 @@ export default function MyAuctionCards() {
           {filteredAuctions.map((auction) => (
             <div
               key={auction._id}
-              className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow w-full"
+              className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-4 hover:shadow-lg transition-shadow w-full"
             >
               <div className="flex justify-between items-start mb-4 w-full">
                 <h3 className="text-lg font-semibold truncate flex-1 pr-2 min-w-0">

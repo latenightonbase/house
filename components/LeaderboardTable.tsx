@@ -48,7 +48,7 @@ export default function LeaderboardTable({
     return (
       <div className="w-full">
         <h2 className="text-xl lg:text-2xl font-bold mb-4 gradient-text">{title}</h2>
-        <div className="bg-white/10 rounded-lg border border-gray-200 dark:border-gray-700 p-8">
+        <div className="bg-white/10 rounded-lg border border-gray-700 p-8">
           <div className="flex items-center justify-center">
             <RiLoader5Fill className='text-primary animate-spin text-xl' />
           </div>

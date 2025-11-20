@@ -100,7 +100,7 @@ export default function WonBidsPage() {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">Won Auctions</h1>
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -167,7 +167,7 @@ export default function WonBidsPage() {
       {/* Auctions Grid */}
       {auctions.length === 0 ? (
         <div className="w-full max-w-6xl mx-auto mt-8">
-          <div className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-8 text-center">
+          <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
             <div className="flex flex-col items-center gap-4">
               <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
                 <RiTrophyFill className="w-8 h-8 text-white" />
@@ -192,7 +192,7 @@ export default function WonBidsPage() {
           {auctions.map((auction) => (
             <div
               key={auction._id}
-              className="bg-white/10 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow w-full relative"
+              className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-4 hover:shadow-lg transition-shadow w-full relative"
             >
               {/* Winner Badge */}
               <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full p-2 shadow-lg">
