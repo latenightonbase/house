@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
   console.log("Authentication token:", token);
   
   // If user is not authenticated and not already at root or bid pages, redirect to root
-  if (!token && pathname !== '/' && !pathname.startsWith('/bid/')) {
+  if (!token && pathname !== '/' && !pathname.startsWith('/bid/') && !pathname.startsWith('/.well-known')) {
     return NextResponse.redirect(new URL('/', request.url));
   }
   
