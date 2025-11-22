@@ -116,8 +116,8 @@ export default function ProfilePage() {
               unoptimized
                 alt="Profile Picture"
                 src={profileData?.twitterProfile?.profileImageUrl || user.pfp_url}
-                width={120}
-                height={120}
+                width={540}
+                height={540}
                 className="w-16 h-16 lg:w-32 lg:h-32 aspect-square border-2 border-primary rounded-xl"
               />
             ) : (
