@@ -21,6 +21,8 @@ export async function GET(
       .select('wallet fid username twitterProfile notificationDetails')
       .lean();
 
+      console.log('Fetched user:', user);
+
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -30,7 +32,7 @@ export async function GET(
 
     return NextResponse.json({
       user
-    });
+    }, {status: 200});
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json(

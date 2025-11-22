@@ -8,6 +8,12 @@ interface ContractBidder {
   bidder: string;
   bidAmount: string;
   fid: string;
+  twitterProfile?: {
+    id: string;
+    username: string;
+    name: string;
+    profileImageUrl?: string;
+  };
 }
 
 interface ProcessedBidder {
@@ -49,8 +55,8 @@ export async function POST(
 
     // Find auction in database
     const auction = await Auction.findOne({ blockchainAuctionId })
-      .populate('bidders.user', 'wallet username fid')
-      .populate('hostedBy')
+      .populate('bidders.user', 'wallet username fid twitterProfile')
+      .populate('hostedBy', 'wallet username fid twitterProfile')
       .lean() as any | null;
 
       console.log('Fetched auction from DB:', auction);
@@ -97,15 +103,33 @@ export async function POST(
 
     const bidders: ContractBidder[] = contractBidders;
 
+    // Create a map of wallet addresses to user data from auction.bidders for quick lookup
+    const walletToUserMap: Record<string, any> = {};
+    if (auction.bidders && auction.bidders.length > 0) {
+      auction.bidders.forEach((bidder: any) => {
+        if (bidder.user && bidder.user.wallet) {
+          walletToUserMap[bidder.user.wallet.toLowerCase()] = bidder.user;
+        }
+      });
+    }
+
+    console.log("Wallet to User Map:", walletToUserMap);
+
     // Process bidders - separate numeric FIDs from wallet address FIDs
     const numericFids: string[] = [];
     const processedBidders: ProcessedBidder[] = [];
 
     for (let i = 0; i < bidders.length; i++) {
       const bidder = bidders[i];
-      const fidValue = bidder.fid;
 
-      console.log(bidder.bidAmount, bidder, "Details of each bid")
+      console.log("Processing bidder:", bidder);
+
+      const fidValue = bidder.fid;
+      
+      // Get user data from the populated auction.bidders
+      const userData = walletToUserMap[bidder.bidder.toLowerCase()];
+
+      console.log(bidder.bidAmount, bidder, "Details of each bid", "User data:", userData)
       
       // Calculate USD value
       let usdValue: number | undefined = undefined;
@@ -123,9 +147,21 @@ export async function POST(
       if (fidValue.startsWith('0x')) {
         // Use wallet address for identicon
         const truncatedAddress = `${fidValue.slice(0, 6)}...${fidValue.slice(-4)}`;
+        const twitterProfile = userData?.twitterProfile;
         processedBidders.push({
-          displayName: truncatedAddress,
-          image: `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
+          displayName: twitterProfile?.username || truncatedAddress,
+          image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
+          bidAmount: bidder.bidAmount,
+          usdValue,
+          walletAddress: bidder.bidder
+        });
+      } else if (fidValue.startsWith('none')) {
+        // FID starts with "none" - use Twitter profile if available
+        const twitterProfile = userData?.twitterProfile;
+        const truncatedAddress = `${bidder.bidder.slice(0, 6)}...${bidder.bidder.slice(-4)}`;
+        processedBidders.push({
+          displayName: twitterProfile?.name || twitterProfile?.username || truncatedAddress,
+          image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
           bidAmount: bidder.bidAmount,
           usdValue,
           walletAddress: bidder.bidder
@@ -196,7 +232,7 @@ export async function POST(
       ? Math.max(...bidders.map(b => Number(b.bidAmount)))
       : 0;
 
-    // Process hostedBy to add enhanced user data from Neynar
+    // Process hostedBy to add enhanced user data from Neynar or Twitter
     let enhancedHostedBy = { ...(auction.hostedBy as any) };
     const hostFid = (auction.hostedBy as any)?.fid;
     
@@ -224,9 +260,14 @@ export async function POST(
       } catch (error) {
         console.error('Error fetching host data from Neynar:', error);
       }
+    } else if (hostFid && hostFid.startsWith('none') && enhancedHostedBy.twitterProfile?.username) {
+      // Use Twitter profile for "none" FID hosts
+      enhancedHostedBy.username = enhancedHostedBy.twitterProfile.username;
+      enhancedHostedBy.display_name = enhancedHostedBy.twitterProfile.name;
+      enhancedHostedBy.pfp_url = enhancedHostedBy.twitterProfile.profileImageUrl;
     }
 
-    // If no valid FID or Neynar fetch failed, use fallback data
+    // If no valid FID or Neynar/Twitter fetch failed, use fallback data
     if (!enhancedHostedBy.username || enhancedHostedBy.username === '') {
       const wallet = enhancedHostedBy.wallet;
       enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);

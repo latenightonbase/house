@@ -115,7 +115,7 @@ export default function ProfilePage() {
               <Image
               unoptimized
                 alt="Profile Picture"
-                src={user.pfp_url}
+                src={profileData?.twitterProfile?.profileImageUrl || user.pfp_url}
                 width={120}
                 height={120}
                 className="w-16 h-16 lg:w-32 lg:h-32 aspect-square border-2 border-primary rounded-xl"
@@ -128,7 +128,7 @@ export default function ProfilePage() {
             
             <div className="flex-1 max-lg:text-center">
               <h1 className="text-2xl font-bold text-white mb-2">
-                {user?.display_name || user?.username || 'Anonymous User'}
+                {profileData?.twitterProfile?.username  || 'Anonymous User'}
               </h1>
               <p className="text-caption text-sm lg:text-base mb-4">
                 Wallet: {profileData?.wallet ? `${profileData.wallet.slice(0, 8)}...${profileData.wallet.slice(-6)}` : 'Not connected'}
