@@ -22,6 +22,7 @@ interface ProcessedBidder {
   bidAmount: string;
   usdValue?: number;
   walletAddress: string;
+  userId?: string;
 }
 
 // POST handler - processes bidders data from contract
@@ -108,7 +109,10 @@ export async function POST(
     if (auction.bidders && auction.bidders.length > 0) {
       auction.bidders.forEach((bidder: any) => {
         if (bidder.user && bidder.user.wallet) {
-          walletToUserMap[bidder.user.wallet.toLowerCase()] = bidder.user;
+          walletToUserMap[bidder.user.wallet.toLowerCase()] = {
+            ...bidder.user,
+            userId: bidder.user._id?.toString() || bidder.user._id
+          };
         }
       });
     }
@@ -153,7 +157,8 @@ export async function POST(
           image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
           bidAmount: bidder.bidAmount,
           usdValue,
-          walletAddress: bidder.bidder
+          walletAddress: bidder.bidder,
+          userId: userData?.userId
         });
       } else if (fidValue.startsWith('none')) {
         // FID starts with "none" - use Twitter profile if available
@@ -164,7 +169,8 @@ export async function POST(
           image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
           bidAmount: bidder.bidAmount,
           usdValue,
-          walletAddress: bidder.bidder
+          walletAddress: bidder.bidder,
+          userId: userData?.userId
         });
       } else {
         // Numeric FID - collect for batch processing
@@ -175,7 +181,8 @@ export async function POST(
           image: '',
           bidAmount: bidder.bidAmount,
           usdValue,
-          walletAddress: bidder.bidder
+          walletAddress: bidder.bidder,
+          userId: userData?.userId
         });
       }
     }

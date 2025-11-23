@@ -9,13 +9,13 @@ export async function GET(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const session = await getServerSession(); // Ensure session is initialized if needed in future
-    if(!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // const session = await getServerSession(); // Ensure session is initialized if needed in future
+    // if(!session) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
     await connectDB();
 
     const { userId } = await params;

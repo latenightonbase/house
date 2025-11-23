@@ -141,7 +141,7 @@ export default function UserPage() {
                     
                     </div>
                     {userData.user.bio && (
-                <p className="text-white/80 text-xs my-3 line-clamp-2">{userData.user.bio}</p>
+                <p className="text-white/80 text-sm my-3 line-clamp-2">{userData.user.bio}</p>
               )}
               <div className='flex gap-2 w-full items-center justify-center'>
                 {userData.user.x_username && (

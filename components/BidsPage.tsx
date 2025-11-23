@@ -47,6 +47,7 @@ interface Bidder {
   bidAmount: string;
   usdValue?: number;
   walletAddress: string;
+  userId?: string;
 }
 
 interface ContractBidder {
@@ -924,7 +925,11 @@ export default function BidPage() {
               {auctionData.bidders
                 .sort((a, b) => parseFloat(b.bidAmount) - parseFloat(a.bidAmount))
                 .map((bidder, index) => (
-                <div key={index} className={`flex justify-between max-lg:gap-2 lg:p-4 p-2 ${index == 0 ? "border border-primary bg-primary/10" : "bg-white/10"} rounded-lg hover:bg-white/20 duration-200`}>
+                <div 
+                  key={index} 
+                  className={`flex justify-between max-lg:gap-2 lg:p-4 p-2 ${index == 0 ? "border border-primary bg-primary/10" : "bg-white/10"} rounded-lg hover:bg-white/20 duration-200 ${bidder.userId ? 'cursor-pointer' : ''}`}
+                  onClick={() => bidder.userId && navigate(`/user/${bidder.userId}`)}
+                >
                   <div className="flex items-center lg:space-x-4 space-x-2">
                     <img 
                       src={bidder.image} 
