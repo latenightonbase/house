@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { getServerSession } from 'next-auth';
+import { getPrivyUser } from '@/lib/privy-server';
 
 export async function POST(req: NextRequest) {
-
-    const session = await getServerSession();
-
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
   try {
+    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const verifiedClaims = await getPrivyUser(authToken);
+    
+    if (!verifiedClaims) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = await req.json();
     const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash } = body;
 

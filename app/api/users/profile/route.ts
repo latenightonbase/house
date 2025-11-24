@@ -1,21 +1,26 @@
-import { authOptions } from "@/utils/auth";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from '@/utils/db';
 import User from "@/utils/schemas/User";
+import { getPrivyUser } from '@/lib/privy-server';
 
 export async function GET(request: NextRequest) {
     try{
-        const session = await getServerSession(authOptions);
+        const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
+        
+        if (!authToken) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-        if(!session){
+        const verifiedClaims = await getPrivyUser(authToken);
+        
+        if (!verifiedClaims) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         await connectDB()
 
         const dbUser = await User.findOne({
-            wallet: session.user?.wallet
+            privyId: verifiedClaims.userId
         });
 
         console.log('DB User', dbUser);

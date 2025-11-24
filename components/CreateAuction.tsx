@@ -11,7 +11,7 @@ import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
 import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
-import { useSession } from "next-auth/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import { randomUUID } from "crypto";
 import { WalletConnect } from "./Web3/walletConnect";
@@ -52,7 +52,8 @@ export default function CreateAuction() {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [minBidAmount, setMinBidAmount] = useState("5"); // Made the minimum bid amount optional and default to 0
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session } = useSession();
+  const { authenticated, ready } = usePrivy();
+  const { wallets } = useWallets();
   const [genAuctionId, setGenAuctionId] = useState("");
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
@@ -188,10 +189,10 @@ setIsLoading(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    //check if address and session exist
-      if (!address || !session) {
+    //check if address and authenticated
+      if (!address || !authenticated) {
         toast.error("Please connect your wallet");
-        // return;
+        return;
       }
     setIsLoading(true);
 
@@ -404,7 +405,7 @@ setIsLoading(false);
   };
 
   const isFormValid =
-    session?.user &&
+    authenticated &&
     auctionTitle.trim() &&
     selectedCurrency &&
     endTime &&
@@ -442,7 +443,7 @@ setIsLoading(false);
     }
   };
 
-  if (!session)
+  if (!ready || !authenticated)
     return (
       <div className=" max-lg:mx-auto mt-4">
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
@@ -477,7 +478,7 @@ setIsLoading(false);
       </div>
     );
 
-  if (session?.user !== undefined)
+  if (ready && authenticated)
     return (
       <div className="max-w-2xl max-lg:mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">

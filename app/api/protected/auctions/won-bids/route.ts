@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { authOptions } from '@/utils/auth';
+import { getPrivyUser } from '@/lib/privy-server';
 
 export async function GET(req: NextRequest) {
   try {
-    // Check if user is authenticated
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const verifiedClaims = await getPrivyUser(authToken);
+    
+    if (!verifiedClaims) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

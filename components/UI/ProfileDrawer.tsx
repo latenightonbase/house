@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from './Drawer'
 import { useGlobalContext } from '@/utils/providers/globalContext'
-import { signOut } from 'next-auth/react'
+import { usePrivy } from '@privy-io/react-auth'
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
 import Image from 'next/image'
 import { RiUserLine, RiLogoutBoxLine, RiCloseLine } from 'react-icons/ri'
@@ -16,6 +16,7 @@ interface ProfileDrawerProps {
 
 export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
   const { user } = useGlobalContext()
+  const { logout } = usePrivy()
   const navigateWithLoader = useNavigateWithLoader()
 
   const handleVisitProfile = () => {
@@ -25,7 +26,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
 
   const handleLogout = () => {
     onClose()
-    signOut()
+    logout()
   }
 
   return (

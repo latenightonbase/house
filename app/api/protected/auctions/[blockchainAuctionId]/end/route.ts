@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import dbConnect from '@/utils/db';
 import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { authOptions } from '@/utils/auth';
+import { getPrivyUser } from '@/lib/privy-server';
 import { ethers } from 'ethers';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is authenticated with NextAuth configuration
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const verifiedClaims = await getPrivyUser(authToken);
+    
+    if (!verifiedClaims) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -36,17 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Auction not found' }, { status: 404 });
     }
 
-    // Get the wallet address from session
-    // @ts-ignore
-    const walletAddress = session.wallet;
-
-    console.log(session)
-
-    console.log('Authenticated wallet:', walletAddress);
-
-    if (!walletAddress) {
-      return NextResponse.json({ error: 'Wallet address not found in session' }, { status: 400 });
-    }
+    console.log('Authenticated user:', verifiedClaims.userId);
 
     // Find the user to verify ownership
     const user = await User.findOne({ wallet: walletAddress });

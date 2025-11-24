@@ -30,7 +30,7 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
-import { useSession } from "next-auth/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
 import Image from "next/image";
 import { checkStatus } from "@/utils/checkStatus";
@@ -125,6 +125,9 @@ const LandingAuctions: React.FC = () => {
 
   const { user } = useGlobalContext();
 
+  const { authenticated } = usePrivy();
+  const { wallets } = useWallets();
+
   const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
     try {
       if (pageNum === 1) {
@@ -137,11 +140,7 @@ const LandingAuctions: React.FC = () => {
       const response = await fetch(`/api/auctions/getTopFive?page=${pageNum}&limit=3&currency=${currencyFilter}`);
       const data: ApiResponse = await response.json();
 
-      console.log("API Response:", data);
-
       if (data.success) {
-        console.log("Auctions", data.auctions);
-        console.log("HasMore:", data.hasMore, "Page:", data.page);
         if (append) {
           setAuctions(prev => [...prev, ...data.auctions]);
         } else {
@@ -161,14 +160,10 @@ const LandingAuctions: React.FC = () => {
   };
 
   const loadMoreAuctions = useCallback(() => {
-    console.log("loadMoreAuctions called:", { loadingMore, hasMore, page });
     if (!loadingMore && hasMore) {
-      console.log("Fetching page:", page + 1);
       fetchTopAuctions(page + 1, true);
     }
   }, [page, hasMore, loadingMore]);
-
-  const { data: session } = useSession();
 
   useEffect(() => {
     // Fetch auctions for all users (both authenticated and unauthenticated)
@@ -179,9 +174,7 @@ const LandingAuctions: React.FC = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        console.log("Observer triggered:", entries[0].isIntersecting, "hasMore:", hasMore, "loadingMore:", loadingMore);
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          console.log("Loading more auctions via observer");
           loadMoreAuctions();
         }
       },
@@ -226,8 +219,6 @@ const LandingAuctions: React.FC = () => {
 
   const processSuccess = async (auctionId: string, bidAmount: number) => {
     try {
-      console.log("Starting processSuccess with:", { auctionId, bidAmount, address });
-      
       // Call the API to save bid details in the database
       const response = await fetch(`/api/protected/auctions/${auctionId}/bid`, {
         method: 'POST',
@@ -240,9 +231,7 @@ const LandingAuctions: React.FC = () => {
         }),
       });
 
-      console.log("API Response status:", response.status);
       const data = await response.json();
-      console.log("API Response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || `API request failed with status ${response.status}`);
@@ -254,8 +243,6 @@ const LandingAuctions: React.FC = () => {
 
       // Refresh the auctions to show updated bid data
       await fetchTopAuctions(1, false);
-      
-      console.log("Successfully completed processSuccess");
       
     } catch (error) {
       console.error("Error in processSuccess:", error);
@@ -313,11 +300,9 @@ const LandingAuctions: React.FC = () => {
       try {
         toast.loading("Fetching token information...", { id: toastId });
         tokenDecimals = await getTokenDecimals(auction.tokenAddress);
-        console.log(`Token decimals for ${auction.tokenAddress}:`, tokenDecimals);
         
         // Convert bid amount to proper decimal format
         bidAmountInWei = convertBidAmountToWei(bidAmount, tokenDecimals);
-        console.log(`Bid amount ${bidAmount} converted to ${bidAmountInWei} with ${tokenDecimals} decimals`);
       } catch (error) {
         console.error("Error fetching token decimals, using default 18:", error);
         // Fallback to 18 decimals if fetching fails
@@ -328,7 +313,7 @@ const LandingAuctions: React.FC = () => {
       const contract = await readContractSetup(auction.tokenAddress, erc20Abi);
       const balanceResult = await contract?.balanceOf(address as `0x${string}`);
 
-      const formattedBalance = parseFloat(ethers.utils.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
+      const formattedBalance = parseFloat(ethers.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
       if(formattedBalance < bidAmount){
         toast.error("Insufficient token balance to place bid", { id: toastId });
         setIsLoading(false);
@@ -592,8 +577,8 @@ const LandingAuctions: React.FC = () => {
   };
 
   const handleConfirmBid = () => {
-    //check if address and session exist
-          if (!address || !session) {
+    //check if address and authenticated
+          if (!address || !authenticated) {
             toast.error("Please connect your wallet");
             return;
           }
@@ -1136,7 +1121,7 @@ const LandingAuctions: React.FC = () => {
             </div>
           </DrawerHeader>
           
-          {!session || !address ? (
+          {!authenticated || !address ? (
             <div className="px-4 pb-4">
               <div className="text-center mb-4">
                 <p className="text-caption mb-4">Please connect your wallet to place a bid</p>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { usePrivy } from "@privy-io/react-auth"
 import PageLayout from "@/components/UI/PageLayout"
 import { RiQrScanLine, RiTrophyLine, RiCheckLine } from "react-icons/ri"
 
@@ -30,7 +30,7 @@ interface WeeklyBidder {
 }
 
 export default function EarnPage() {
-  const { data: session, status } = useSession();
+  const { authenticated, ready } = usePrivy();
   const [weeklyRewards, setWeeklyRewards] = useState<WeeklyReward[]>([]);
   const [weeklyBidders, setWeeklyBidders] = useState<WeeklyBidder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,14 +38,16 @@ export default function EarnPage() {
   const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (authenticated) {
       fetchWeeklyRewards();
       fetchWeeklyBidders();
-    } else if (status === 'unauthenticated') {
+    } else if (!ready) {
+      // Still loading
+    } else {
       setLoading(false);
       setLoadingLeaderboard(false);
     }
-  }, [status]);
+  }, [authenticated, ready]);
 
   const fetchWeeklyRewards = async () => {
     try {

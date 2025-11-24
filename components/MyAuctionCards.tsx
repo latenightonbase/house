@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { Button } from "./UI/button";
+import { useGlobalContext } from "@/utils/providers/globalContext";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
@@ -13,7 +14,6 @@ import toast from "react-hot-toast";
 import { useAccount, useSendCalls } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
-import { useGlobalContext } from "@/utils/providers/globalContext";
 import {
   base,
   createBaseAccountSDK,
@@ -66,7 +66,9 @@ interface AuctionsResponse {
 }
 
 export default function MyAuctionCards() {
-  const { data: session, status } = useSession();
+  const { authenticated, ready } = usePrivy();
+  const { wallets } = useWallets();
+  const { user } = useGlobalContext();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +85,6 @@ export default function MyAuctionCards() {
   const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
   const { context } = useMiniKit();
   const { address } = useAccount();
-  const { user } = useGlobalContext();
 
   useEffect(() => {
     // When transaction succeeds
@@ -167,14 +168,14 @@ export default function MyAuctionCards() {
   };
 
   const fetchAuctions = async () => {
-    if (!session?.wallet) return;
+    if (!user?.wallet) return;
 
     try {
       setLoading(true);
       setError(null);
 
       const response = await fetch(
-        `/api/protected/auctions/my-auctions?wallet=${session.wallet}`,
+        `/api/protected/auctions/my-auctions?wallet=${user.wallet}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -203,8 +204,8 @@ export default function MyAuctionCards() {
 
   const endAuction = async (blockchainAuctionId: string) => {
     try {
-      //check if address and session exist
-      if (!address || !session) {
+      //check if address and authenticated
+      if (!address || !authenticated) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -353,12 +354,12 @@ export default function MyAuctionCards() {
   };
 
   useEffect(() => {
-    if (status === "authenticated" && session?.wallet) {
+    if (authenticated && user?.wallet) {
       fetchAuctions();
     }
-  }, [session?.wallet, status]);
+  }, [user?.wallet, authenticated]);
 
-  if (status === "loading") {
+  if (!ready) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col gap-2">
@@ -369,7 +370,7 @@ export default function MyAuctionCards() {
     );
   }
 
-  if (status === "unauthenticated" || !session?.wallet) {
+  if (!authenticated || !user?.wallet) {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">My Auctions</h1>

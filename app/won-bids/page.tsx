@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useGlobalContext } from "@/utils/providers/globalContext";
 import { Button } from "@/components/UI/button";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
@@ -34,21 +35,23 @@ interface WonBidsResponse {
 }
 
 export default function WonBidsPage() {
-  const { data: session, status } = useSession();
+  const { authenticated, ready } = usePrivy();
+  const { wallets } = useWallets();
+  const { user } = useGlobalContext();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigateWithLoader();
 
   const fetchWonBids = async () => {
-    if (!session?.wallet) return;
+    if (!user?.wallet) return;
 
     try {
       setLoading(true);
       setError(null);
 
       const response = await fetch(
-        `/api/protected/auctions/won-bids?wallet=${session.wallet}`,
+        `/api/protected/auctions/won-bids?wallet=${user.wallet}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -80,10 +83,10 @@ export default function WonBidsPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated" && session?.wallet) {
+    if (authenticated && user?.wallet) {
       fetchWonBids();
     }
-  }, [session?.wallet, status]);
+  }, [user?.wallet, authenticated]);
 
   if (status === "loading") {
     return (
@@ -96,7 +99,7 @@ export default function WonBidsPage() {
     );
   }
 
-  if (status === "unauthenticated" || !session?.wallet) {
+  if (!authenticated || !user?.wallet) {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">Won Auctions</h1>

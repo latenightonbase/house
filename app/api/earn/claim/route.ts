@@ -2,26 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
 import User from '@/utils/schemas/User';
-import { getServerSession } from 'next-auth';
+import { getPrivyUser } from '@/lib/privy-server';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check for authentication
-    const session = await getServerSession();
-    if (!session) {
+    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
+    
+    if (!authToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const verifiedClaims = await getPrivyUser(authToken);
+    
+    if (!verifiedClaims) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
 
-    // Get user wallet from session
-    const userWallet = (session as any).user?.name;
-    if (!userWallet) {
-      return NextResponse.json({ error: 'User wallet not found in session' }, { status: 400 });
-    }
-
-    // Find user
-    const user = await User.findOne({ wallet: userWallet });
+    // Find user by Privy ID
+    const user = await User.findOne({ privyId: verifiedClaims.userId });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
