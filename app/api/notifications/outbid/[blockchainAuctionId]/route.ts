@@ -5,12 +5,10 @@ import connectToDB from '@/utils/db';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { blockchainAuctionId: string } }
 ) {
   try {
     await connectToDB();
-
-    const { blockchainAuctionId } = params;
+    const blockchainAuctionId = req.nextUrl.pathname.split('/').pop();
 
     if (!blockchainAuctionId) {
       return NextResponse.json(
