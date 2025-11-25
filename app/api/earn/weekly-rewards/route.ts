@@ -21,6 +21,11 @@ export async function GET() {
       return NextResponse.json({ error: 'User wallet not found in session' }, { status: 400 });
     }
 
+    const user = await User.findOne({ wallet: userWallet });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     // Get all weekly entries for this user, ordered by week (newest first)
     const weeklyRewards = await WeeklyBidderLeaderboard.find({
       user: user._id,
