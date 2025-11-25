@@ -103,7 +103,7 @@ export async function POST(
 
     const notificationTitle = "You've been outbid!";
     const notificationBody = `${highestBidderUsername} outbid you in "${auction.auctionName}"`;
-    const targetUrl = `${process.env.NEXT_PUBLIC_MINIAPP_URL || 'https://farcaster-miniapp-liart.vercel.app'}/bid/${blockchainAuctionId}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/bid/${blockchainAuctionId}`;
 
     console.log('[Outbid Notification] Notification details:');
     console.log('[Outbid Notification] Title:', notificationTitle);
