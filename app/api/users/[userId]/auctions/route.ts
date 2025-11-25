@@ -2,14 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
 import Auction from '@/utils/schemas/Auction';
-import { getPrivyUser } from '@/lib/privy-server';
+import { getServerSession } from 'next-auth';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-
+    // const session = await getServerSession(); // Ensure session is initialized if needed in future
+    // if(!session) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
     await connectDB();
 
     const { userId } = await params;

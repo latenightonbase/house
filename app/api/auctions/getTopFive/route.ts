@@ -86,9 +86,11 @@ export async function GET(req: NextRequest) {
 
     // Fetch display names from Neynar API for valid FIDs
     let neynarUsers: Record<string, any> = {};
+    console.log('Unique FIDs collected:', Array.from(uniqueFids));
     if (uniqueFids.size > 0) {
       try {
         const fidsArray = Array.from(uniqueFids);
+        console.log('Fetching user data for FIDs:', fidsArray);
         const res = await fetch(
           `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
           {
@@ -100,11 +102,13 @@ export async function GET(req: NextRequest) {
         
         if (res.ok) {
           const jsonRes = await res.json();
+          console.log('Neynar API response:', jsonRes);
           if (jsonRes.users) {
             // Create a map of fid -> user data
             jsonRes.users.forEach((user: any) => {
               neynarUsers[user.fid] = user;
             });
+            console.log('Neynar users mapped:', Object.keys(neynarUsers));
           }
         } else {
           console.error('Neynar API error:', res.status, await res.text());
@@ -116,6 +120,9 @@ export async function GET(req: NextRequest) {
 
     // Calculate additional fields for each auction
     const auctionsWithStats = runningAuctions.map(auction => {
+
+      console.log("Auction Stats", auction)
+
       // Calculate highest bid
       const highestBid = auction.bidders.length > 0 
         ? Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount))
@@ -126,6 +133,9 @@ export async function GET(req: NextRequest) {
       if (auction.bidders.length > 0) {
         const topBidderData = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
         if (topBidderData) {
+
+          console.log("Top bidder data exists", topBidderData);
+
           topBidder = {
             ...topBidderData.user,
             bidAmount: topBidderData.bidAmount,
@@ -153,6 +163,8 @@ export async function GET(req: NextRequest) {
         }
       }
 
+      console.log("Auction's Top Bidder:", topBidder);
+
       // Calculate participant count
       const participantCount = auction.bidders.length;
 
@@ -168,10 +180,22 @@ export async function GET(req: NextRequest) {
         const fallbackWallet = auction.hostedBy.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         
+        console.log(`Processing host ${auction.hostedBy.fid}:`, {
+          neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
+          originalUsername: auction.hostedBy.username,
+          fallback: truncatedWallet
+        });
+        
         // Set both username, display_name, and profile picture
         enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
         enhancedHostedBy.display_name = neynarUser?.display_name || null;
         enhancedHostedBy.pfp_url = neynarUser?.pfp_url || auction.hostedBy.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
+        
+        console.log(`Enhanced host data:`, {
+          username: enhancedHostedBy.username,
+          display_name: enhancedHostedBy.display_name,
+          pfp_url: enhancedHostedBy.pfp_url
+        });
       } else if (auction.hostedBy?.twitterProfile?.username) {
         // No valid FID, use Twitter profile username
         enhancedHostedBy.username = auction.hostedBy.twitterProfile.username;

@@ -9,7 +9,7 @@ import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
 import { RiSearchLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiUserLine } from "react-icons/ri"
-import { usePrivy } from "@privy-io/react-auth"
+import { useSession } from "next-auth/react"
 import { GoDotFill } from "react-icons/go";
 
 
@@ -45,13 +45,14 @@ export default function Navbar(){
         navigateWithLoader(path)
     }
 
-    const router = useRouter();
-    const { authenticated } = usePrivy();
+    const router = useRouter()
+
+    const {data:session} = useSession()
 
     return (
         <>
             {/* Search Bar Overlay */}
-            {authenticated && <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
+            {session && <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
 
             {/* Mobile Navbar */}
             <div className="relative z-50 lg:hidden" ref={mobileMenuRef}>
@@ -60,7 +61,7 @@ export default function Navbar(){
                     
                     <div className="flex items-center gap-4">
                         {/* Search Button */}
-                       {authenticated && <button 
+                       {session && <button 
                             onClick={() => setIsSearchOpen(true)}
                             className="text-primary hover:text-white transition-colors"
                         >
@@ -69,7 +70,7 @@ export default function Navbar(){
 
                         {/* WalletConnect or Hamburger Menu */}
                         <WalletConnect />
-                        {authenticated && (
+                        {session && (
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                                 className="flex flex-col gap-1 w-6 h-6 justify-center items-center"
@@ -83,7 +84,7 @@ export default function Navbar(){
                 </div>
 
                 {/* Mobile Dropdown Menu */}
-                {authenticated && (
+                {session && (
                     <ul className={`fixed w-full top-12 ${isMenuOpen ? "" : "opacity-0 pointer-events-none"} duration-200 shadow-primary/30 bg-black/80 backdrop-blur-3xl rounded-b-lg shadow-lg overflow-hidden z-50`}>
                         <li className="border-b border-primary/50">
                             <a 
@@ -170,7 +171,7 @@ export default function Navbar(){
                 </div>
 
                 {/* Search Button */}
-                {authenticated && <div className="px-4 mb-4">
+                {session && <div className="px-4 mb-4">
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 transition-colors text-caption hover:text-white"

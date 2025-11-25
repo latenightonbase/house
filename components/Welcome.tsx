@@ -20,17 +20,16 @@ import {
   DrawerTrigger,
 } from "@/components/UI/Drawer";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 
 export default function Welcome() {
 
     const {user} = useGlobalContext();
     const navigate = useNavigateWithLoader();
     const [isAddingMiniApp, setIsAddingMiniApp] = useState(false);
-    const {context} = useMiniKit();
-    const { authenticated } = usePrivy();
-    const { wallets } = useWallets();
-    const walletAddress = wallets[0]?.address;
+    const {context} = useMiniKit()
+
+    const {data:session} = useSession()
 
     // Check if user has already enabled notifications
     const hasNotifications = user?.notificationDetails?.token;
@@ -44,6 +43,9 @@ export default function Welcome() {
             const response = await sdk.actions.addMiniApp();
             
             if (response.notificationDetails) {
+                console.log("MiniApp added with notification details:", response.notificationDetails);
+                console.log("User wallet:", session?.wallet);
+                
                 // Save notification details to user
                 const saveResponse = await fetch('/api/miniapp/notifications/save', {
                     method: 'POST',
@@ -51,12 +53,13 @@ export default function Welcome() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        wallet: walletAddress,
+                        wallet: session?.wallet,
                         notificationDetails: response.notificationDetails
                     })
                 });
 
                 const saveResult = await saveResponse.json();
+                console.log("Save response:", saveResult);
 
                 if (!saveResponse.ok) {
                     throw new Error(saveResult.error || "Failed to save notification details");
@@ -76,7 +79,7 @@ export default function Welcome() {
         } finally {
             setIsAddingMiniApp(false);
         }
-    }, [walletAddress]);
+    }, [user?.wallet]);
 
     
     return (
@@ -90,9 +93,7 @@ export default function Welcome() {
                     <FaPlus/> Create Auction
                 </button>
 
-
-                {!hasNotifications && authenticated && context && (
-
+                {!hasNotifications && session && (
                     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                         <DrawerContent>
                             <DrawerHeader>

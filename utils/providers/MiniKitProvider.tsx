@@ -3,12 +3,14 @@
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
 import { ReactNode } from "react";
 import { base } from "wagmi/chains";
-import PrivyWagmiProvider from "./rainbow";
+import Rainbow from "./rainbow";
 import { GlobalProvider } from "./globalContext";
+import { SessionProvider } from "next-auth/react";
 import { PrivyProvider } from "@privy-io/react-auth";
 
 export function MiniKitContextProvider({ children }: { children: ReactNode }) {
   return (
+    // <MiniAppProvider>
     <MiniKitProvider
       apiKey={process.env.NEXT_PUBLIC_CDP_CLIENT_API_KEY}
       chain={base}
@@ -25,20 +27,25 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
       <PrivyProvider 
         appId={`cmggt86he00kmjy0crv42kfso`}
         config={{
-          loginMethods: ['farcaster', 'twitter', 'wallet'],
+          loginMethods: ['twitter'],
           appearance: {
             theme: 'dark',
             accentColor: '#676FFF',
           },
-          // Embedded wallet auto-creation disabled for Farcaster Mini Apps
-          // Wallets will be created manually or use injected wallets from Farcaster/Base App
-          // External wallet connections handled by Privy
+          embeddedWallets: {
+            ethereum: {
+              createOnLogin: 'users-without-wallets',
+            },
+          },
         }}
       >
-        <GlobalProvider>
-          <PrivyWagmiProvider>{children}</PrivyWagmiProvider>
-        </GlobalProvider>
+        <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
+          <GlobalProvider>
+            <Rainbow>{children}</Rainbow>
+          </GlobalProvider>
+        </SessionProvider>
       </PrivyProvider>
     </MiniKitProvider>
+    // </MiniAppProvider>
   );
 }

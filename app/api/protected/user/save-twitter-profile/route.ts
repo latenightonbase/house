@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/utils/auth';
 import User from '@/utils/schemas/User';
 import dbConnect from '@/utils/db';
-import { getPrivyUser } from '@/lib/privy-server';
 
 export async function POST(request: NextRequest) {
   try {
-    const authToken = request.headers.get('authorization')?.replace('Bearer ', '');
+    const session = await getServerSession(authOptions);
     
-    if (!authToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const verifiedClaims = await getPrivyUser(authToken);
-    
-    if (!verifiedClaims) {
+    if (!session?.wallet) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -26,7 +21,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const user = await User.findOneAndUpdate(
-      { privyId: verifiedClaims.userId },
+      { wallet: session.wallet },
       {
         $set: {
           username: twitterProfile.username,

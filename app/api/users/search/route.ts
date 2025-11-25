@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
-import { getPrivyUser } from '@/lib/privy-server';
+import { getServerSession } from 'next-auth';
+import { signOut } from 'next-auth/react';
 
 export async function GET(req: NextRequest) {
   try {
-    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
-    
-    if (!authToken) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const verifiedClaims = await getPrivyUser(authToken);
-    
-    if (!verifiedClaims) {
+    const session = await getServerSession(); // Ensure session is initialized if needed in future
+    if(!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

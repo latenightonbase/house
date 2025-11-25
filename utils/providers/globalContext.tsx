@@ -3,64 +3,67 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 import { useLoginToMiniApp } from "@privy-io/react-auth/farcaster";
-import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { useAuthenticate, useMiniKit } from "@coinbase/onchainkit/minikit";
+import { generateNonce } from "siwe";
+import { signOut, useSession } from "next-auth/react";
+import { ethers } from "ethers";
+import { useAccount } from "wagmi";
 import toast from "react-hot-toast";
-import miniappSdk from '@farcaster/miniapp-sdk';
+
+// Custom session interface to include wallet and fid
+interface CustomSession {
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    wallet?: string;
+    fid?: string;
+    token?: string;
+    username?: string;
+  };
+  wallet?: string;
+  fid?: string;
+  token?: string;
+  expires: string;
+}
 
 interface GlobalContextProps {
   user: any;
   authenticatedUser: any;
   isAuthenticated: boolean;
   isDesktopWallet: boolean;
-  isFarcasterContext: boolean;
   hasTwitterProfile: boolean;
   authenticateWithTwitter: () => Promise<void>;
   refreshTwitterProfile: () => Promise<void>;
-  connectWallet: () => Promise<void>;
 }
 
 // Create a context with a default value matching the expected structure
 const GlobalContext = createContext<GlobalContextProps | null>(null);
 
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
+  const { data: session } = useSession() as { data: CustomSession | null };
   const { context } = useMiniKit();
-  const { ready, authenticated, login, logout, user: privyUser } = usePrivy();
-  const { wallets } = useWallets();
-  const { initLoginToMiniApp, loginToMiniApp } = useLoginToMiniApp();
+  const { signIn } = useAuthenticate();
+  const { login } = usePrivy();
   const [user, setUser] = useState<any | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
   const [hasTwitterProfile, setHasTwitterProfile] = useState<boolean>(false);
+  const {address, isDisconnected} = useAccount()
 
-  // Check if user is in Farcaster/Base App context
-  const isFarcasterContext = !!context?.client;
   // Check if user is using desktop wallet (no MiniKit context)
   const isDesktopWallet = !context?.client;
 
-  // Get wallet address from Privy wallets
-  const walletAddress = wallets[0]?.address;
-
   const authenticateWithTwitter = async (): Promise<void> => {
     try {
-      // On browser, Twitter login is the first step
       await login();
-      toast.success('Twitter connected! Now connect your wallet.');
     } catch (error) {
       console.error('Twitter authentication error:', error);
       toast.error('Failed to authenticate with Twitter');
-    }
-  };
-
-  const connectWallet = async (): Promise<void> => {
-    try {
-      // After Twitter authentication, user connects wallet via Privy
-      await login();
-      toast.success('Wallet connected successfully!');
-    } catch (error) {
-      console.error('Wallet connection error:', error);
-      toast.error('Failed to connect wallet');
     }
   };
 
@@ -69,12 +72,15 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const checkTwitterProfile = async () => {
-    if (walletAddress) {
+    if (session?.wallet) {
       try {
-        const response = await fetch(`/api/users/${walletAddress}`);
+        console.log('Checking Twitter profile for wallet:', session.wallet);
+        const response = await fetch(`/api/users/${session.wallet}`);
         if (response.ok) {
           const userData = await response.json();
+          console.log('User data:', userData);
           const hasTwitter = !!userData.user?.twitterProfile?.id;
+          console.log('Has Twitter profile:', hasTwitter);
           setHasTwitterProfile(hasTwitter);
         }
       } catch (error) {
@@ -85,14 +91,15 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateUserFid = async () => {
     try {
-      if (walletAddress && context?.user?.fid) {
+      
+      if (session?.fid && session.fid.startsWith('none') && address && context?.user?.fid) {
         const response = await fetch('/api/protected/user/update-fid', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            wallet: walletAddress,
+            wallet: address,
             fid: context.user.fid,
           }),
         });
@@ -111,93 +118,98 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleUserDetails = async (): Promise<void> => {
     try {
-      let userData: any = null;
+      let user: any = null;
 
-      // Check Farcaster account from Privy
-      const farcasterAccount = privyUser?.linkedAccounts?.find(
-        (account: any) => account.type === 'farcaster'
-      ) as any;
-
-      if (farcasterAccount) {
-        // User has Farcaster - use Farcaster profile
-        userData = {
-          username: farcasterAccount.username || farcasterAccount.displayName || farcasterAccount.fid,
-          pfp_url: farcasterAccount.pfp || farcasterAccount.pfpUrl,
-          fid: farcasterAccount.fid,
+      if (context?.client) {
+        // Fetch user data from database to get notificationDetails
+        let notificationDetails = null;
+        if (context?.user?.fid) {
+          try {
+            const dbResponse = await fetch(`/api/users/${context.user.fid}`);
+            if (dbResponse.ok) {
+              const dbUser = await dbResponse.json();
+              notificationDetails = dbUser.user?.notificationDetails;
+            }
+          } catch (error) {
+            console.error("Error fetching notification details:", error);
+          }
+        }
+        
+        user = {
+          username: context?.user.displayName,
+          pfp_url: context?.user.pfpUrl,
+          fid: context?.user.fid,
+          notificationDetails,
         };
-      } else if (walletAddress) {
-        // Try to fetch user from database (single call combines both checks)
+      } else if (session?.wallet) {
+
+        console.log("Session wallet:", session.wallet);
+
+        const walletAddress = session.wallet;
+
+        // First, try to fetch user from database
         try {
           const dbResponse = await fetch(`/api/users/${walletAddress}`);
+
+          console.log("Database response status:", dbResponse);
+
           if (dbResponse.ok) {
             const dbUser = await dbResponse.json();
+
+            console.log("Database user fetched:", dbUser);
+
             if (dbUser.user && dbUser.user.username) {
-              userData = {
+              // Use database username and profile data
+              user = {
                 username: dbUser.user.username,
                 pfp_url: dbUser.user.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`,
                 fid: dbUser.user.fid || walletAddress,
                 wallet: dbUser.user.wallet,
                 notificationDetails: dbUser.user.notificationDetails,
               };
-              // Set Twitter profile state from the same response
-              setHasTwitterProfile(!!dbUser.user?.twitterProfile?.id);
+              setUser(user);
+              return;
             }
           }
         } catch (error) {
           console.error("Error fetching user from database:", error);
         }
 
-        // Fallback to wallet address display
-        if (!userData) {
-          userData = {
-            username: `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`,
-            pfp_url: `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`,
-            fid: walletAddress,
-          };
+        // Fallback to ENS/wallet display if no database user found
+        const provider = new ethers.providers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
+
+        // Fetch ENS name
+        let ensName = await provider.lookupAddress(walletAddress);
+        if (!ensName) {
+          ensName = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
         }
+
+        // Fetch ENS image
+        let ensImage = null;
+        try {
+          const resolver = await provider.getResolver(walletAddress);
+          ensImage = await resolver?.getText("avatar");
+        } catch (error) {
+          console.error("Error fetching ENS image:", error);
+        }
+
+        // Fallback image generation
+        if (!ensImage) {
+          ensImage = `https://api.dicebear.com/5.x/identicon/svg?seed=${walletAddress}`;
+        }
+
+        user = {
+          username: ensName,
+          pfp_url: ensImage,
+          fid: walletAddress,
+        };
       }
 
-      setUser(userData);
+      setUser(user);
     } catch (error) {
-      console.error("Error loading user details:", error);
+      console.error("Sign in error:", error);
     }
   };
-
-  // Clear user state when Privy authentication is lost
-  useEffect(() => {
-    if (ready && !authenticated) {
-      setUser(null);
-      setHasTwitterProfile(false);
-    }
-  }, [ready, authenticated]);
-
-  // Automatic Farcaster authentication for Mini Apps
-  useEffect(() => {
-    if (ready && !authenticated && isFarcasterContext) {
-      const loginWithFarcaster = async () => {
-        try {
-          // Initialize a new login attempt to get a nonce for the Farcaster wallet to sign
-          const { nonce } = await initLoginToMiniApp();
-          
-          // Request a signature from Farcaster
-          const result = await miniappSdk.actions.signIn({ nonce });
-          
-          // Send the received signature from Farcaster to Privy for authentication
-          await loginToMiniApp({
-            message: result.message,
-            signature: result.signature,
-          });
-          
-          toast.success('Authenticated with Farcaster!');
-        } catch (error) {
-          console.error('Farcaster authentication error:', error);
-          // Silently fail for automatic authentication
-        }
-      };
-      
-      loginWithFarcaster();
-    }
-  }, [ready, authenticated, isFarcasterContext, initLoginToMiniApp, loginToMiniApp]);
 
   useEffect(() => {
     (async () => {
@@ -205,31 +217,28 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         sdk.actions.ready();
       }
 
-      // Only handle user details if Privy is ready and authenticated
-      if (ready && authenticated) {
-        // handleUserDetails now combines both user fetch and Twitter check
-        await handleUserDetails();
+      if (session) {
+        handleUserDetails();
+        checkTwitterProfile();
         
         // Check and update FID if conditions are met
-        if (walletAddress && context?.user) {
+        if (session && address && context?.user) {
           await updateUserFid();
         }
       }
     })();
-  }, [context, walletAddress, ready, authenticated, privyUser]);
+  }, [context, session, address]);
 
   return (
     <GlobalContext.Provider
       value={{
         user,
-        authenticatedUser: privyUser,
-        isAuthenticated: authenticated,
+        authenticatedUser,
+        isAuthenticated: !!authenticatedUser,
         isDesktopWallet,
-        isFarcasterContext,
         hasTwitterProfile,
         authenticateWithTwitter,
         refreshTwitterProfile,
-        connectWallet,
       }}
     >
       {children}
@@ -243,4 +252,11 @@ export function useGlobalContext() {
     throw new Error("useGlobalContext must be used within a GlobalProvider");
   }
   return context;
+}
+
+// Extend the Session type from next-auth to include an optional wallet property
+declare module "next-auth" {
+  interface Session {
+    wallet?: string;
+  }
 }

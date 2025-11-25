@@ -1,28 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { getPrivyUser } from '@/lib/privy-server';
 
 export async function GET(req: NextRequest) {
   try {
-    const authToken = req.headers.get('authorization')?.replace('Bearer ', '');
-    
-    if (!authToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const verifiedClaims = await getPrivyUser(authToken);
-    
-    if (!verifiedClaims) {
+    // Check if user is authenticated
+    const session = await getServerSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
-    // Get the wallet address from query params
+    // Get the wallet address from session or query params
     const { searchParams } = new URL(req.url);
-    const walletAddress = searchParams.get('wallet');
+    // @ts-ignore
+    const walletAddress = searchParams.get('wallet') || session.wallet;
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address not found' }, { status: 400 });

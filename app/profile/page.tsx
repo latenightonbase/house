@@ -1,7 +1,7 @@
 'use client'
 
 import { useGlobalContext } from '@/utils/providers/globalContext'
-import { usePrivy } from '@privy-io/react-auth'
+import { useSession } from 'next-auth/react'
 import Image from 'next/image'
 import { MdWallet } from 'react-icons/md'
 import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
@@ -40,7 +40,7 @@ interface ProfileStatistics {
 
 export default function ProfilePage() {
   const { user } = useGlobalContext()
-  const { authenticated } = usePrivy()
+  const { data: session } = useSession()
   const navigateWithLoader = useNavigateWithLoader()
   const [profileData, setProfileData] = useState<UserProfile | null>(null)
   const [statistics, setStatistics] = useState<ProfileStatistics | null>(null)
@@ -51,7 +51,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!user) return
+      if (!session) return
       
       try {
         setLoading(true)
@@ -71,9 +71,9 @@ export default function ProfilePage() {
     }
 
     fetchProfileData()
-  }, [authenticated])
+  }, [session])
 
-  if (!user) {
+  if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

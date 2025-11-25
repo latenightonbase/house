@@ -32,7 +32,7 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
@@ -120,8 +120,7 @@ export default function BidPage() {
   const { context } = useMiniKit();
   const { user } = useGlobalContext();
   const {address} = useAccount()
-  const { authenticated } = usePrivy();
-  const { wallets } = useWallets();
+  const { data: session } = useSession();
 
 
   // Debounced token price fetching
@@ -464,8 +463,8 @@ export default function BidPage() {
  async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
     try {
 
-      //check if address and authenticated
-      if (!address || !authenticated) {
+      //check if address and session exist
+      if (!address || !session) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -528,7 +527,7 @@ export default function BidPage() {
 
       console.log("User balance:", balanceResult ? balanceResult.toString() : "N/A");
 
-      const formattedBalance = parseFloat(ethers.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
+      const formattedBalance = parseFloat(ethers.utils.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
       if(formattedBalance < bidAmount){
         toast.error("Insufficient token balance to place bid", { id: toastId });
         setIsLoading(false);
@@ -1008,7 +1007,7 @@ export default function BidPage() {
               </div>
             </DrawerHeader>
             
-            {!authenticated || !address ? (
+            {!session || !address ? (
               <div className="px-4 pb-4">
                 <div className="text-center mb-4">
                   <p className="text-caption mb-4">You must be logged in</p>

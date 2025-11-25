@@ -22,7 +22,7 @@ if (!global.mongoose) {
 }
 
 async function dbConnect(): Promise<typeof mongoose> {
-  // If we have a cached connection, return it immediately
+  // If we have a cached connection, return it
   if (cached.conn) {
     return cached.conn;
   }
@@ -34,18 +34,13 @@ async function dbConnect(): Promise<typeof mongoose> {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      family: 4, // Use IPv4, skip trying IPv6
-      minPoolSize: 2, // Keep minimum connections ready
+      family: 4 // Use IPv4, skip trying IPv6
     };
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Connecting to MongoDB...');
-    }
+    console.log('Connecting to MongoDB...');
     
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('MongoDB connected successfully');
-      }
+      console.log('MongoDB connected successfully');
       return mongoose;
     }).catch((error) => {
       console.error('MongoDB connection error:', error);

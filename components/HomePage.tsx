@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useSession } from "next-auth/react";
 import NProgress from "nprogress";
 import LandingAuctions from "@/components/LandingAuctions";
 import PageLayout from "@/components/UI/PageLayout";
@@ -12,12 +12,12 @@ import InfoCarousel from "@/components/InfoCarousel";
 NProgress.configure({ showSpinner: false });
 
 export default function HomePage() {
-  const { authenticated, ready } = usePrivy();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (!ready) {
+    if (status === "loading") {
       // Simulate progress bar loading
       const interval = setInterval(() => {
         setProgress(prev => {
@@ -34,9 +34,9 @@ export default function HomePage() {
         setLoading(false);
       }, 300);
     }
-  }, [ready]);
+  }, [status]);
 
-  if (loading || !ready) {
+  if (loading || status === "loading") {
     return (
       <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
         <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></h1>

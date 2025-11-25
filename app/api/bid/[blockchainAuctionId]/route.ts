@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
 import connectToDB from '@/utils/db';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
+import { getServerSession } from 'next-auth';
 
 interface ContractBidder {
   bidder: string;
@@ -278,6 +279,14 @@ export async function POST(
       const wallet = enhancedHostedBy.wallet;
       enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);
     }
+
+    // Trigger outbid notification asynchronously (fire and forget)
+    fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/notifications/outbid/${blockchainAuctionId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).catch(error => console.error('Error sending outbid notification:', error));
 
     // Prepare response with auction info and processed bidders
     const response = {
