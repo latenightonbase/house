@@ -7,8 +7,10 @@ export async function POST(
   req: NextRequest,
 ) {
   try {
+    console.log('[Outbid Notification] Starting outbid notification process');
     await connectToDB();
     const blockchainAuctionId = req.nextUrl.pathname.split('/').pop();
+    console.log('[Outbid Notification] blockchainAuctionId:', blockchainAuctionId);
 
     if (!blockchainAuctionId) {
       return NextResponse.json(
@@ -21,6 +23,9 @@ export async function POST(
     const auction = await Auction.findOne({ blockchainAuctionId })
       .populate('bidders.user', 'wallet username fid notificationDetails')
       .lean() as any | null;
+
+    console.log('[Outbid Notification] Auction found:', !!auction);
+    console.log('[Outbid Notification] Number of bidders:', auction?.bidders?.length || 0);
 
     if (!auction) {
       return NextResponse.json(
@@ -43,9 +48,15 @@ export async function POST(
     const highestBidder = sortedBidders[0];
     const secondHighestBidder = sortedBidders[1];
 
+    console.log('[Outbid Notification] Highest bidder:', highestBidder.user.wallet);
+    console.log('[Outbid Notification] Second highest bidder:', secondHighestBidder.user.wallet);
+
     // Fetch the highest bidder's username (could be from Farcaster or Twitter)
     const highestBidderUser = highestBidder.user;
     let highestBidderUsername = highestBidderUser.username || highestBidderUser.wallet;
+
+    console.log('[Outbid Notification] Initial highest bidder username:', highestBidderUsername);
+    console.log('[Outbid Notification] Highest bidder FID:', highestBidderUser.fid);
 
     // Fetch from Neynar if FID exists and is numeric
     if (highestBidderUser.fid && !highestBidderUser.fid.startsWith('0x') && !highestBidderUser.fid.startsWith('none')) {
@@ -64,7 +75,12 @@ export async function POST(
           const neynarUser = neynarData.users?.[0];
           if (neynarUser) {
             highestBidderUsername = neynarUser.username || neynarUser.display_name || highestBidderUsername;
+            console.log('[Outbid Notification] Fetched username from Neynar:', highestBidderUsername);
+          } else {
+            console.log('[Outbid Notification] No user found in Neynar response');
           }
+        } else {
+          console.log('[Outbid Notification] Neynar response not OK:', neynarResponse.status);
         }
       } catch (error) {
         console.error('Error fetching highest bidder from Neynar:', error);
@@ -73,6 +89,8 @@ export async function POST(
 
     // Get notification details for second highest bidder
     const secondHighestBidderUser = secondHighestBidder.user;
+    
+    console.log('[Outbid Notification] Second highest bidder has notification details:', !!secondHighestBidderUser.notificationDetails);
     
     if (!secondHighestBidderUser.notificationDetails) {
       return NextResponse.json(
@@ -86,6 +104,12 @@ export async function POST(
     const notificationTitle = "You've been outbid!";
     const notificationBody = `${highestBidderUsername} outbid you in "${auction.auctionName}"`;
     const targetUrl = `${process.env.NEXT_PUBLIC_MINIAPP_URL || 'https://farcaster-miniapp-liart.vercel.app'}/bid/${blockchainAuctionId}`;
+
+    console.log('[Outbid Notification] Notification details:');
+    console.log('[Outbid Notification] Title:', notificationTitle);
+    console.log('[Outbid Notification] Body:', notificationBody);
+    console.log('[Outbid Notification] Target URL:', targetUrl);
+    console.log('[Outbid Notification] Notification URL:', url);
 
     // Send notification
     const res = await fetch(url, {
@@ -102,8 +126,11 @@ export async function POST(
       }),
     });
 
+    console.log('[Outbid Notification] Notification response status:', res.status);
+
     if (!res.ok) {
       const errorData = await res.json();
+      console.error('[Outbid Notification] Failed to send notification:', errorData);
       return NextResponse.json(
         { error: 'Failed to send notification', details: errorData },
         { status: res.status }
@@ -111,6 +138,7 @@ export async function POST(
     }
 
     const responseData = await res.json();
+    console.log('[Outbid Notification] Notification sent successfully:', responseData);
 
     return NextResponse.json({
       success: true,
