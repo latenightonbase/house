@@ -3,13 +3,27 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/utils/auth';
 import User from '@/utils/schemas/User';
 import dbConnect from '@/utils/db';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+    }
+
+    try {
+      await verifyAccessToken(token);
+    } catch (error) {
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.wallet) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized - No wallet' }, { status: 401 });
     }
 
     const { twitterProfile } = await request.json();

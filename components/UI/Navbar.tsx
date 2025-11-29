@@ -4,13 +4,13 @@ import { useGlobalContext } from "@/utils/providers/globalContext"
 import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { WalletConnect } from "../Web3/walletConnect"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
 import SearchBar from "./SearchBar"
 import { RiSearchLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiUserLine } from "react-icons/ri"
 import { useSession } from "next-auth/react"
 import { GoDotFill } from "react-icons/go";
+import LoginWithOAuth from "../utils/twitterConnect"
 
 
 export default function Navbar(){
@@ -69,7 +69,7 @@ export default function Navbar(){
                         </button>}
 
                         {/* WalletConnect or Hamburger Menu */}
-                        <WalletConnect />
+                        <LoginWithOAuth />
                         {session && (
                             <button 
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -267,7 +267,7 @@ export default function Navbar(){
 
                 {/* Sidebar Footer - Profile */}
                 <div className="p-4 border-t border-secondary/20">
-                    <WalletConnect/>
+                    <LoginWithOAuth/>
                 </div>
             </div>
         </>

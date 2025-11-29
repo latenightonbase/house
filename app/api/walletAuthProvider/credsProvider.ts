@@ -18,7 +18,7 @@ async function verifySmartContractSignature(
 ) {
   try {
     const contract = new ethers.Contract(address, EIP1271_ABI, provider);
-    const messageHash = ethers.utils.hashMessage(message);
+    const messageHash = ethers.hashMessage(message);
     const result = await contract.isValidSignature(messageHash, signature);
     const isValid = result?.toLowerCase() === EIP1271_MAGICVALUE;
     console.log(
@@ -38,7 +38,7 @@ async function verifySignature(
   signature: string,
   address: string
 ): Promise<string | null> {
-  const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+  const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 
   try {
     // Detect contract account
@@ -59,7 +59,7 @@ async function verifySignature(
 
     // EOA path (standard recover)
     console.log("Verifying EOA signature...");
-    const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+    const recoveredAddress = ethers.verifyMessage(message, signature);
     console.log("Recovered address:", recoveredAddress);
     return recoveredAddress;
   } catch (error) {

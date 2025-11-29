@@ -42,10 +42,9 @@ export async function POST(req: NextRequest) {
 
         // Create provider with skipFetchSetup to avoid network detection issues
         console.log('Setting up blockchain provider...');
-        const provider = new ethers.providers.JsonRpcProvider({
-            url: "https://base-mainnet.g.alchemy.com/v2/CA4eh0FjTxMenSW3QxTpJ7D-vWMSHVjq",
-            skipFetchSetup: true
-        });
+        const provider = new ethers.JsonRpcProvider(
+            "https://base-mainnet.g.alchemy.com/v2/CA4eh0FjTxMenSW3QxTpJ7D-vWMSHVjq"
+        );
         
         // Set network manually to avoid detection
         (provider as any)._network = {
@@ -78,9 +77,9 @@ export async function POST(req: NextRequest) {
             
             const usdcBalance = await usdcContract.balanceOf(wallet.address);
             console.log('✅ USDC balance retrieved:', usdcBalance.toString());
-            console.log('✅ USDC balance (human readable):', ethers.utils.formatUnits(usdcBalance, 6), 'USDC');
+            console.log('✅ USDC balance (human readable):', ethers.formatUnits(usdcBalance, 6), 'USDC');
             
-            if (usdcBalance.isZero()) {
+            if (usdcBalance === 0n) {
                 console.error('❌ No USDC to distribute - balance is zero');
                 return NextResponse.json({ success: false, message: 'No USDC to distribute' }, { status: 400 });
             }
@@ -105,7 +104,7 @@ export async function POST(req: NextRequest) {
                 balance = await tokenContract.balanceOf(wallet.address);
                 console.log('✅ Token balance retrieved:', balance.toString());
                 
-                if (balance.isZero()) {
+                if (balance === 0n) {
                     console.error('❌ No tokens to sell - balance is zero');
                     return NextResponse.json({ success: false, message: 'No tokens to sell' }, { status: 400 });
                 }
@@ -158,7 +157,7 @@ export async function POST(req: NextRequest) {
 
                 const approveTx = await tokenContract.approve(
                     priceData.issues.allowance.spender,
-                    ethers.constants.MaxUint256
+                    ethers.MaxUint256
                 );
                 await approveTx.wait();
                 console.log('✅ Token allowance approved for spender:', priceData.issues.allowance.spender);
@@ -190,45 +189,49 @@ export async function POST(req: NextRequest) {
             // console.log('🔄 Executing token to USDC swap...');
             
             // Get current gas price and set a reasonable gas limit
-            const currentGasPrice = await provider.getGasPrice();
-            console.log('Current network gas price:', ethers.utils.formatUnits(currentGasPrice, 'gwei'), 'gwei');
+            const feeData = await provider.getFeeData();
+            const currentGasPrice = feeData.gasPrice || 0n;
+            console.log('Current network gas price:', ethers.formatUnits(currentGasPrice, 'gwei'), 'gwei');
             
             // Use a more conservative gas price multiplier based on current conditions
-            const gasPriceGwei = parseFloat(ethers.utils.formatUnits(currentGasPrice, 'gwei'));
-            const multiplier = gasPriceGwei > 20 ? 105 : 110; // Lower multiplier if gas is already high
-            const swapOptimizedGasPrice = currentGasPrice.mul(multiplier).div(100);
+            const gasPriceGwei = parseFloat(ethers.formatUnits(currentGasPrice, 'gwei'));
+            const multiplier = BigInt(gasPriceGwei > 20 ? 105 : 110); // Lower multiplier if gas is already high
+            const swapOptimizedGasPrice = (currentGasPrice * multiplier) / 100n;
             
-            console.log('Optimized gas price:', ethers.utils.formatUnits(swapOptimizedGasPrice, 'gwei'), 'gwei');
+            console.log('Optimized gas price:', ethers.formatUnits(swapOptimizedGasPrice, 'gwei'), 'gwei');
             
             // Estimate gas limit with buffer
             const swapEstimatedGas = quoteData.transaction.gas ? 
-                ethers.BigNumber.from(quoteData.transaction.gas).mul(120).div(100) : // 20% buffer
-                ethers.BigNumber.from("250000"); // fallback gas limit for token swaps
+                (BigInt(quoteData.transaction.gas) * 120n) / 100n : // 20% buffer
+                250000n; // fallback gas limit for token swaps
             
             const swapTx = await wallet.sendTransaction({
                 to: quoteData.transaction.to,
                 data: quoteData.transaction.data,
-                value: quoteData.transaction.value ? ethers.BigNumber.from(quoteData.transaction.value) : undefined,
+                value: quoteData.transaction.value ? BigInt(quoteData.transaction.value) : undefined,
                 gasLimit: swapEstimatedGas,
                 gasPrice: swapOptimizedGasPrice,
             });
 
             const receipt = await swapTx.wait();
+            if (!receipt) {
+                throw new Error('Transaction receipt is null');
+            }
             console.log('✅ Swap completed successfully!');
-            console.log('Transaction hash:', receipt.transactionHash);
+            console.log('Transaction hash:', receipt.hash);
             console.log('Gas used:', receipt.gasUsed.toString());
             console.log('Gas price used:', swapOptimizedGasPrice.toString());
-            console.log('Total gas cost (ETH):', ethers.utils.formatEther(receipt.gasUsed.mul(swapOptimizedGasPrice)));
+            console.log('Total gas cost (ETH):', ethers.formatEther(receipt.gasUsed * swapOptimizedGasPrice));
             
-            totalUSDC = ethers.BigNumber.from(quoteData.buyAmount);
-            swapTxHash = receipt.transactionHash;
+            totalUSDC = BigInt(quoteData.buyAmount);
+            swapTxHash = receipt.hash;
         }
 
         // // Calculate distribution amounts (3:3:2 ratio)
         // console.log('📊 Calculating distribution amounts (3:3:2 ratio)...');
-        const firstThree = totalUSDC.mul(3).div(8);  // 3/8 of total
-        const secondThree = totalUSDC.mul(3).div(8); // 3/8 of total
-        const lastTwo = totalUSDC.sub(firstThree).sub(secondThree); // remainder
+        const firstThree = (totalUSDC * 3n) / 8n;  // 3/8 of total
+        const secondThree = (totalUSDC * 3n) / 8n; // 3/8 of total
+        const lastTwo = totalUSDC - firstThree - secondThree; // remainder
 
         // console.log('✅ Distribution calculated:', {
         //     total: totalUSDC.toString(),
@@ -250,14 +253,14 @@ export async function POST(req: NextRequest) {
         const actualUSDCBalance = await usdcContract.balanceOf(wallet.address);
         // console.log('✅ Actual USDC balance in wallet:', actualUSDCBalance.toString());
         
-        if (actualUSDCBalance.lt(totalUSDC)) {
+        if (actualUSDCBalance < totalUSDC) {
             console.warn('⚠️ Warning: Actual balance is less than expected USDC amount');
         }
 
         // // PART 1: Distribute first 3 parts in 1:2 ratio
         // console.log('💰 PART 1: Distributing first 3 parts (1:2 ratio)...');
-        const billAmount = firstThree.div(3); // 1/3 of first part
-        const devAmount = firstThree.sub(billAmount); // 2/3 of first part
+        const billAmount = firstThree / 3n; // 1/3 of first part
+        const devAmount = firstThree - billAmount; // 2/3 of first part
 
         // console.log('Distribution breakdown:', {
         //     billAmount: billAmount.toString(),
@@ -317,7 +320,7 @@ export async function POST(req: NextRequest) {
 
             const usdcApproveTx = await usdcApproveContract.approve(
                 tokenPriceData.issues.allowance.spender,
-                ethers.constants.MaxUint256
+                ethers.MaxUint256
             );
             await usdcApproveTx.wait();
             console.log('✅ USDC allowance granted for spender:', tokenPriceData.issues.allowance.spender);
@@ -340,35 +343,39 @@ export async function POST(req: NextRequest) {
         const tokenQuoteData = await tokenQuoteResponse.json();
         
         // Get current gas price and set a reasonable gas limit
-        const tokenSwapGasPrice = await provider.getGasPrice();
-        console.log('Current network gas price for token swap:', ethers.utils.formatUnits(tokenSwapGasPrice, 'gwei'), 'gwei');
+        const tokenFeeData = await provider.getFeeData();
+        const tokenSwapGasPrice = tokenFeeData.gasPrice || 0n;
+        console.log('Current network gas price for token swap:', ethers.formatUnits(tokenSwapGasPrice, 'gwei'), 'gwei');
         
         // Use a more conservative gas price multiplier based on current conditions
-        const tokenGasPriceGwei = parseFloat(ethers.utils.formatUnits(tokenSwapGasPrice, 'gwei'));
-        const tokenMultiplier = tokenGasPriceGwei > 20 ? 105 : 110; // Lower multiplier if gas is already high
-        const tokenOptimizedGasPrice = tokenSwapGasPrice.mul(tokenMultiplier).div(100);
+        const tokenGasPriceGwei = parseFloat(ethers.formatUnits(tokenSwapGasPrice, 'gwei'));
+        const tokenMultiplier = BigInt(tokenGasPriceGwei > 20 ? 105 : 110); // Lower multiplier if gas is already high
+        const tokenOptimizedGasPrice = (tokenSwapGasPrice * tokenMultiplier) / 100n;
         
-        console.log('Optimized token swap gas price:', ethers.utils.formatUnits(tokenOptimizedGasPrice, 'gwei'), 'gwei');
+        console.log('Optimized token swap gas price:', ethers.formatUnits(tokenOptimizedGasPrice, 'gwei'), 'gwei');
         
         // Estimate gas limit (0x API provides estimate, but we can optimize)
         const tokenEstimatedGas = tokenQuoteData.transaction.gas ? 
-            ethers.BigNumber.from(tokenQuoteData.transaction.gas).mul(120).div(100) : // 20% buffer
-            ethers.BigNumber.from("200000"); // fallback gas limit
+            (BigInt(tokenQuoteData.transaction.gas) * 120n) / 100n : // 20% buffer
+            200000n; // fallback gas limit
         
         const tokenBuyTx = await wallet.sendTransaction({
             to: tokenQuoteData.transaction.to,
             data: tokenQuoteData.transaction.data,
-            value: tokenQuoteData.transaction.value ? ethers.BigNumber.from(tokenQuoteData.transaction.value) : undefined,
+            value: tokenQuoteData.transaction.value ? BigInt(tokenQuoteData.transaction.value) : undefined,
             gasLimit: tokenEstimatedGas,
             gasPrice: tokenOptimizedGasPrice,
         });
 
         const tokenBuyReceipt = await tokenBuyTx.wait();
+        if (!tokenBuyReceipt) {
+            throw new Error('Token buy transaction receipt is null');
+        }
         console.log('✅ Token purchase completed successfully!');
-        console.log('Transaction hash:', tokenBuyReceipt.transactionHash);
+        console.log('Transaction hash:', tokenBuyReceipt.hash);
         console.log('Gas used:', tokenBuyReceipt.gasUsed.toString());
         console.log('Gas price used:', tokenOptimizedGasPrice.toString());
-        console.log('Total gas cost (ETH):', ethers.utils.formatEther(tokenBuyReceipt.gasUsed.mul(tokenOptimizedGasPrice)));
+        console.log('Total gas cost (ETH):', ethers.formatEther(tokenBuyReceipt.gasUsed * tokenOptimizedGasPrice));
 
         // // Burn the purchased tokens
         // console.log('🔥 Starting token burn process...');
@@ -386,7 +393,7 @@ export async function POST(req: NextRequest) {
 
         console.log('Token balance available for burning:', tokenBalance.toString());
 
-        if (!tokenBalance.isZero()) {
+        if (tokenBalance !== 0n) {
             console.log('🔥 Burning tokens by sending to zero address...');
             // Burn by sending to zero address
             const burnTx = await targetTokenContract.burn(tokenBalance);
@@ -405,7 +412,7 @@ export async function POST(req: NextRequest) {
         console.log('Amount to send:', lastTwo.toString());
         console.log('Staking contract address:', process.env.STAKING_CONTRACT);
 
-        const stakingTx = await usdcContract.transfer(process.env.BILL_WALLET, lastTwo.add(billAmount));
+        const stakingTx = await usdcContract.transfer(process.env.BILL_WALLET, lastTwo + billAmount);
         await stakingTx.wait();
         // console.log('✅ Successfully sent to STAKING_CONTRACT!');
         // // console.log('Amount sent:', lastTwo.toString());
@@ -430,7 +437,7 @@ export async function POST(req: NextRequest) {
             success: true, 
             executionTimeMs: executionTime,
             swapTxHash: swapTxHash,
-            tokenBuyTxHash: tokenBuyReceipt.transactionHash,
+            tokenBuyTxHash: tokenBuyReceipt.hash,
             distribution: {
                 billWallet: billAmount.toString(),
                 devWallet: devAmount.toString(),

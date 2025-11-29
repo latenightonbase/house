@@ -27,7 +27,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
       <PrivyProvider 
         appId={`cmggt86he00kmjy0crv42kfso`}
         config={{
-          loginMethods: ['twitter'],
+          loginMethods: ['twitter', 'wallet'],
           appearance: {
             theme: 'dark',
             accentColor: '#676FFF',

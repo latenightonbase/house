@@ -7,8 +7,8 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
         // @ts-ignore
         await window.ethereum.request({ method: "eth_requestAccounts" });
         // @ts-ignore
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
         const auctionContract = new ethers.Contract(
           contractAddress,
           abi,
@@ -27,7 +27,7 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
 export async function readContractSetup(contractAddress:string, abi:any) {
     try {
         // @ts-ignore
-        const provider = new ethers.providers.JsonRpcProvider(
+        const provider = new ethers.JsonRpcProvider(
         "https://base-mainnet.g.alchemy.com/v2/CA4eh0FjTxMenSW3QxTpJ7D-vWMSHVjq"
       );
 

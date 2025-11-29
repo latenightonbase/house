@@ -36,9 +36,10 @@ import Image from "next/image";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
-import { WalletConnect } from "./Web3/walletConnect";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from "react-icons/fa";
+import LoginWithOAuth from "./utils/twitterConnect";
+import { getAccessToken, usePrivy } from '@privy-io/react-auth';
 
 interface Bidder {
   user: string;
@@ -229,10 +230,12 @@ const LandingAuctions: React.FC = () => {
       console.log("Starting processSuccess with:", { auctionId, bidAmount, address });
       
       // Call the API to save bid details in the database
+      const accessToken = await getAccessToken();
       const response = await fetch(`/api/protected/auctions/${auctionId}/bid`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           bidAmount: bidAmount,
@@ -328,7 +331,7 @@ const LandingAuctions: React.FC = () => {
       const contract = await readContractSetup(auction.tokenAddress, erc20Abi);
       const balanceResult = await contract?.balanceOf(address as `0x${string}`);
 
-      const formattedBalance = parseFloat(ethers.utils.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
+      const formattedBalance = parseFloat(ethers.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
       if(formattedBalance < bidAmount){
         toast.error("Insufficient token balance to place bid", { id: toastId });
         setIsLoading(false);
@@ -1140,7 +1143,7 @@ const LandingAuctions: React.FC = () => {
             <div className="px-4 pb-4">
               <div className="text-center mb-4">
                 <p className="text-caption mb-4">Please connect your wallet to place a bid</p>
-                <WalletConnect />
+                <LoginWithOAuth />
               </div>
             </div>
           ) : (

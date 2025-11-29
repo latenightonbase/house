@@ -49,7 +49,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session } = useSession() as { data: CustomSession | null };
   const { context } = useMiniKit();
   const { signIn } = useAuthenticate();
-  const { login } = usePrivy();
+  const { login, getAccessToken } = usePrivy();
   const [user, setUser] = useState<any | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
   const [hasTwitterProfile, setHasTwitterProfile] = useState<boolean>(false);
@@ -93,10 +93,12 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       
       if (session?.fid && session.fid.startsWith('none') && address && context?.user?.fid) {
+        const accessToken = await getAccessToken();
         const response = await fetch('/api/protected/user/update-fid', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             wallet: address,
@@ -176,7 +178,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Fallback to ENS/wallet display if no database user found
-        const provider = new ethers.providers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
+        const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL);
 
         // Fetch ENS name
         let ensName = await provider.lookupAddress(walletAddress);

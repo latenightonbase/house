@@ -20,6 +20,7 @@ import {
   getCryptoKeyAccount,
 } from "@base-org/account";
 import { checkStatus } from "@/utils/checkStatus";
+import { usePrivy } from '@privy-io/react-auth';
 
 interface Bidder {
   user: string;
@@ -84,6 +85,7 @@ export default function MyAuctionCards() {
   const { context } = useMiniKit();
   const { address } = useAccount();
   const { user } = useGlobalContext();
+  const { getAccessToken } = usePrivy();
 
   useEffect(() => {
     // When transaction succeeds
@@ -113,12 +115,14 @@ export default function MyAuctionCards() {
   const processEndAuctionSuccess = async (auctionId: string, bidders: any[]) => {
     try {
       // Call the API to end the auction with bidders data
+      const accessToken = await getAccessToken();
       const response = await fetch(
         `/api/protected/auctions/${auctionId}/end`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             bidders: bidders,
@@ -173,11 +177,13 @@ export default function MyAuctionCards() {
       setLoading(true);
       setError(null);
 
+      const accessToken = await getAccessToken();
       const response = await fetch(
         `/api/protected/auctions/my-auctions?wallet=${session.wallet}`,
         {
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
           },
         }
       );

@@ -3,13 +3,20 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { getServerSession } from 'next-auth';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(req: NextRequest) {
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
 
-    const session = await getServerSession();
+    if (!token) {
+        return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+    }
 
-    if (!session) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    try {
+        await verifyAccessToken(token);
+    } catch (error) {
+        return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
   try {
     const body = await req.json();

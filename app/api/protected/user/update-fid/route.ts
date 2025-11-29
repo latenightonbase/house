@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '../../../../../utils/schemas/User';
 import connectToDB from '@/utils/db';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(req: NextRequest) {
 	try {
+		const authHeader = req.headers.get('authorization');
+		const token = authHeader?.replace('Bearer ', '');
+
+		if (!token) {
+			return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+		}
+
+		try {
+			await verifyAccessToken(token);
+		} catch (error) {
+			return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+		}
+
 		await connectToDB();
 		
 		// Get the request body

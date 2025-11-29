@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useLoginWithOAuth } from "@privy-io/react-auth";
+import { useLoginWithOAuth, usePrivy } from "@privy-io/react-auth";
 import { motion } from "framer-motion";
 import { FaTwitter } from "react-icons/fa";
 import { RiLoader5Fill } from "react-icons/ri";
@@ -18,6 +18,7 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
   const [isLoading, setIsLoading] = useState(false);
   const hasProcessedRef = useRef(false);
   const { refreshTwitterProfile } = useGlobalContext();
+  const { getAccessToken } = usePrivy();
 
   const { initOAuth } = useLoginWithOAuth({
     onComplete: async ({ user, isNewUser }) => {
@@ -41,10 +42,12 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
 
         try {
           // Save Twitter profile to database
+          const accessToken = await getAccessToken();
           const response = await fetch('/api/protected/user/save-twitter-profile', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({ twitterProfile }),
           });

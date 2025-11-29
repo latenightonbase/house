@@ -6,6 +6,7 @@ import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
 import { getServerSession } from 'next-auth';
 import { fetchTokenPrice } from '@/utils/tokenPrice';
 import { getWeekBoundaries } from '@/utils/weekHelpers';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(req: NextRequest) {
   console.log("=== BID API ROUTE STARTED ===");
@@ -13,12 +14,21 @@ export async function POST(req: NextRequest) {
   try {
     // Check for authentication
     console.log("Checking authentication...");
-    const session = await getServerSession();
-    if (!session) {
-      console.log("❌ Authentication failed - no session");
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) {
+      console.log("❌ Authentication failed - no token");
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
-    console.log("✅ Authentication successful:", session.user?.email || 'Unknown user');
+
+    try {
+      const claims = await verifyAccessToken(token);
+      console.log("✅ Authentication successful:", claims.userId);
+    } catch (error) {
+      console.log("❌ Authentication failed - invalid token");
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
 
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[4];
     console.log("📋 Extracted blockchainAuctionId from URL:", blockchainAuctionId);

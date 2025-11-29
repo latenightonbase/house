@@ -6,14 +6,25 @@ import User from '@/utils/schemas/User';
 import { authOptions } from '@/utils/auth';
 import { ethers } from 'ethers';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check if user is authenticated with NextAuth configuration
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check if user is authenticated
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
+
+    try {
+      await verifyAccessToken(token);
+    } catch (error) {
+      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    }
+
+    const session = await getServerSession(authOptions);
 
     // Extract blockchainAuctionId from the URL
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[4];
@@ -108,9 +119,9 @@ export async function POST(req: NextRequest) {
         }
 
         console.log("BIG NUMBER",contractBidder.bidAmount)
-        console.log("NORMAL",ethers.utils.formatUnits(contractBidder.bidAmount, decimals))
+        console.log("NORMAL",ethers.formatUnits(contractBidder.bidAmount, decimals))
 
-        const formattedBidAmount = Number(ethers.utils.formatUnits(contractBidder.bidAmount, decimals));
+        const formattedBidAmount = Number(ethers.formatUnits(contractBidder.bidAmount, decimals));
         
         // Calculate USD value
         let usdValue = null;

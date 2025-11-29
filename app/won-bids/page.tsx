@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { usePrivy } from '@privy-io/react-auth';
 import { Button } from "@/components/UI/button";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
@@ -39,6 +40,7 @@ export default function WonBidsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigateWithLoader();
+  const { getAccessToken } = usePrivy();
 
   const fetchWonBids = async () => {
     if (!session?.wallet) return;
@@ -47,11 +49,13 @@ export default function WonBidsPage() {
       setLoading(true);
       setError(null);
 
+      const accessToken = await getAccessToken();
       const response = await fetch(
         `/api/protected/auctions/won-bids?wallet=${session.wallet}`,
         {
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`,
           },
         }
       );
