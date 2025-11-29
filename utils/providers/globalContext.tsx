@@ -113,22 +113,13 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   //   }
   // };
 
-  // useEffect(() => {
-  //   (async () => {
-  //     if (process.env.NEXT_PUBLIC_ENV !== "DEV") {
-  //       sdk.actions.ready();
-  //     }
-
-  //     // if (session) {
-  //       handleUserDetails();
-        
-  //       // Check and update FID if conditions are met
-  //     //   if (session && address && context?.user) {
-  //     //     await updateUserFid();
-  //     //   }
-  //     // }
-  //   })();
-  // }, [context, address]);
+  useEffect(() => {
+    (async () => {
+      if (process.env.NEXT_PUBLIC_ENV !== "DEV") {
+        sdk.actions.ready();
+      }
+    })();
+  }, []);
 
   return (
     <GlobalContext.Provider
