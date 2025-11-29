@@ -17,7 +17,6 @@ interface TwitterAuthModalProps {
 export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: TwitterAuthModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const hasProcessedRef = useRef(false);
-  const { refreshTwitterProfile } = useGlobalContext();
   const { getAccessToken } = usePrivy();
 
   const { initOAuth } = useLoginWithOAuth({
@@ -54,8 +53,6 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
 
           if (response.ok) {
             toast.success('Twitter profile linked successfully!');
-            // Refresh the Twitter profile status in global context
-            await refreshTwitterProfile();
             // Don't call onSuccess immediately to prevent context refresh loops
             setTimeout(() => {
               onSuccess();

@@ -17,7 +17,6 @@ interface UserProfile {
   fid?: string
   pfp_url: string
   display_name: string
-  hasTwitterProfile: boolean
   twitterProfile?: {
     id: string
     username: string

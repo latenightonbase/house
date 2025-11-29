@@ -45,7 +45,6 @@ type CurrencySelectionMode = "search" | "contract";
 export default function CreateAuction() {
 
   const { address, isConnected } = useAccount();
-  const { isDesktopWallet, hasTwitterProfile } = useGlobalContext();
   const { getAccessToken } = usePrivy();
   const [auctionTitle, setAuctionTitle] = useState("");
   const [description, setDescription] = useState("");
