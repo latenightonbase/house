@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
     }
 
+    console.log('Verifying token in auction creation route', token);
+
     try {
         await verifyAccessToken(token);
     } catch (error) {
