@@ -8,18 +8,16 @@ import { usePrivy } from "@privy-io/react-auth";
 
 export default function AggregateConnector() {
     const {context} = useMiniKit();
-    const {user} = useGlobalContext()
+    const {user} = usePrivy()
 
     const navigate = useNavigateWithLoader();
 
-    const {login} = usePrivy()
 
     if(context){
-        login()
         return (
     <>
-        <button onClick={() => navigate(`/profile/${user?._id}`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
-            <Image unoptimized src={user?.pfp_url} alt="Coinbase Logo" className="border-2 border-primary rounded-full w-8 h-8 aspect-square" />
+        <button onClick={() => navigate(`/user/${user?.farcaster?.fid}`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
+            <Image unoptimized src={user?.farcaster?.pfp as string} alt="Coinbase Logo" className="border-2 border-primary rounded-full w-8 h-8 aspect-square" />
         </button>
     </>)
     }

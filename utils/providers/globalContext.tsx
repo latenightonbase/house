@@ -36,7 +36,6 @@ interface GlobalContextProps {
   user: any;
   authenticatedUser: any;
   isAuthenticated: boolean;
-  isDesktopWallet: boolean;
 }
 
 // Create a context with a default value matching the expected structure
@@ -45,23 +44,44 @@ const GlobalContext = createContext<GlobalContextProps | null>(null);
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { context } = useMiniKit();
   const { signIn } = useAuthenticate();
-  const { login, getAccessToken } = usePrivy();
   const [user, setUser] = useState<any | null>(null);
   const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
   const [hasTwitterProfile, setHasTwitterProfile] = useState<boolean>(false);
   const {address, isDisconnected} = useAccount()
 
-  // Check if user is using desktop wallet (no MiniKit context)
-  const isDesktopWallet = !context?.client;
+  const {ready, authenticated} = usePrivy();
+  const {initLoginToMiniApp, loginToMiniApp} = useLoginToMiniApp();
 
-  const authenticateWithTwitter = async (): Promise<void> => {
-    try {
-      await login();
-    } catch (error) {
-      console.error('Twitter authentication error:', error);
-      toast.error('Failed to authenticate with Twitter');
-    }
-  };
+
+  useEffect(() => {
+  if (ready && !authenticated) {
+    const login = async () => {
+      // Initialize a new login attempt to get a nonce for the Farcaster wallet to sign
+      const { nonce } = await initLoginToMiniApp();
+      // Request a signature from Farcaster
+      const result = await sdk.actions.signIn({nonce});
+      // Send the received signature from Farcaster to Privy for authentication
+      // or pass a SIWF message signed by an auth address
+      await loginToMiniApp({
+        message: result.message,
+        signature: result.signature,
+      });
+    };
+    login();
+  }
+}, [ready, authenticated]);
+
+  // Check if user is using desktop wallet (no MiniKit context)
+  // const isDesktopWallet = !context?.client;
+
+  // const authenticateWithTwitter = async (): Promise<void> => {
+  //   try {
+  //     await login();
+  //   } catch (error) {
+  //     console.error('Twitter authentication error:', error);
+  //     toast.error('Failed to authenticate with Twitter');
+  //   }
+  // };
 
 
   // const updateUserFid = async () => {
@@ -93,55 +113,22 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   //   }
   // };
 
-  const handleUserDetails = async (): Promise<void> => {
-    try {
-      let user: any = null;
+  // useEffect(() => {
+  //   (async () => {
+  //     if (process.env.NEXT_PUBLIC_ENV !== "DEV") {
+  //       sdk.actions.ready();
+  //     }
 
-      if (context?.client) {
-        // Fetch user data from database to get notificationDetails
-        let notificationDetails = null;
-        if (context?.user?.fid) {
-          try {
-            const dbResponse = await fetch(`/api/users/${context.user.fid}`);
-            if (dbResponse.ok) {
-              const dbUser = await dbResponse.json();
-              notificationDetails = dbUser.user?.notificationDetails;
-            }
-          } catch (error) {
-            console.error("Error fetching notification details:", error);
-          }
-        }
+  //     // if (session) {
+  //       handleUserDetails();
         
-        user = {
-          username: context?.user.displayName,
-          pfp_url: context?.user.pfpUrl,
-          fid: context?.user.fid,
-          notificationDetails,
-        };
-      }
-
-      setUser(user);
-    } catch (error) {
-      console.error("Sign in error:", error);
-    }
-  };
-
-  useEffect(() => {
-    (async () => {
-      if (process.env.NEXT_PUBLIC_ENV !== "DEV") {
-        sdk.actions.ready();
-      }
-
-      // if (session) {
-        handleUserDetails();
-        
-        // Check and update FID if conditions are met
-      //   if (session && address && context?.user) {
-      //     await updateUserFid();
-      //   }
-      // }
-    })();
-  }, [context, address]);
+  //       // Check and update FID if conditions are met
+  //     //   if (session && address && context?.user) {
+  //     //     await updateUserFid();
+  //     //   }
+  //     // }
+  //   })();
+  // }, [context, address]);
 
   return (
     <GlobalContext.Provider
@@ -149,7 +136,6 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         authenticatedUser,
         isAuthenticated: !!authenticatedUser,
-        isDesktopWallet
       }}
     >
       {children}
