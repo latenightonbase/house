@@ -25,7 +25,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
       }}
     >
       <PrivyProvider 
-        appId={`cmggt86he00kmjy0crv42kfso`}
+        appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID as string}
         config={{
           // Only Twitter for authentication - wallets are connectors
           loginMethods: ['twitter', 'farcaster'],

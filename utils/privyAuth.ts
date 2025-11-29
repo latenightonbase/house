@@ -1,6 +1,6 @@
 import * as jose from 'jose';
 
-const PRIVY_APP_ID = 'cmggt86he00kmjy0crv42kfso';
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
 const PRIVY_VERIFICATION_KEY = process.env.PRIVY_VERIFICATION_KEY;
 
 export interface AccessTokenClaims {
