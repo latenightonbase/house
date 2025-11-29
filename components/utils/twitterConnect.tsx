@@ -1,12 +1,14 @@
-import { useLogin, usePrivy, useWallets } from '@privy-io/react-auth';
+import { useLogin, usePrivy, useWallets, useConnectWallet } from '@privy-io/react-auth';
 import Image from 'next/image';
-import { MdWallet, MdLogout, MdClose } from 'react-icons/md';
+import { MdWallet, MdLogout, MdMoreVert } from 'react-icons/md';
 import { useState } from 'react';
 
 export default function LoginWithOAuth() {
-  const { user, authenticated, connectWallet, linkWallet, logout, unlinkWallet, getAccessToken } = usePrivy();
-  const { wallets } = useWallets();
-  const [showDisconnectMenu, setShowDisconnectMenu] = useState(false);
+  const { user, authenticated, logout, getAccessToken } = usePrivy();
+  const { wallets, ready: walletsReady } = useWallets();
+  const { connectWallet } = useConnectWallet();
+  const [menuOpen, setMenuOpen] = useState(false);
+
   
   const { login } = useLogin({
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated, loginMethod, loginAccount }) => {
@@ -52,124 +54,138 @@ export default function LoginWithOAuth() {
 
   const handleTwitterLogin = () => {
     // Opens Privy's login modal with Twitter as the login method
-    login({disableSignup:true, loginMethods: ['twitter']});
-  };
-
-  const handleConnectWallet = async () => {
-    try {
-      // If user is authenticated, link wallet; otherwise connect wallet
-      if (authenticated) {
-        await linkWallet();
-      } else {
-        await connectWallet();
-      }
-    } catch (err) {
-      console.error('Wallet connection failed', err);
-    }
+    login({ loginMethods: ['twitter']});
   };
 
   const handleLogout = async () => {
     try {
       await logout();
-      setShowDisconnectMenu(false);
     } catch (err) {
       console.error('Logout failed', err);
     }
   };
 
-  const handleUnlinkWallet = async () => {
-    try {
-      const connectedWallet = wallets.length > 0 ? wallets[0] : (user?.wallet ? { address: user.wallet.address } : null);
-      if (connectedWallet) {
-        await unlinkWallet(connectedWallet.address);
-      }
-    } catch (err) {
-      console.error('Unlink wallet failed', err);
-    }
-  };
-
   // Check if user is authenticated and has Twitter profile
   const twitterAccount = user?.twitter;
-  const connectedWallet = wallets.length > 0 ? wallets[0] : (user?.wallet ? { address: user.wallet.address } : null);
-  const hasWallet = !!connectedWallet;
+  
+  // Get connected external wallets (not embedded wallets)
+  const externalWallets = wallets.filter(
+    wallet => wallet.walletClientType !== 'privy'
+  );
 
   return (
       <div className="flex flex-col gap-3 relative">
           {authenticated && twitterAccount ? (
               <>
-                <div className="flex items-center justify-between gap-2 bg-white/10 px-3 py-2 rounded-full">
-                    <div className="flex items-center gap-2">
-                      {twitterAccount.profilePictureUrl && (
-                          <Image
-                          unoptimized
-                              src={twitterAccount.profilePictureUrl}
-                              alt={twitterAccount.username || 'Twitter Profile'}
-                              width={32}
-                              height={32}
-                              className="rounded-full w-11 aspect-square bg-primary/50 border-2 border-primary"
-                          />
-                      )}
-                      <span className="text-sm font-medium">
+                {/* Twitter Account Display */}
+                <div className="relative">
+                  <div 
+                    className="flex items-center justify-between gap-2 bg-white/10 px-3 py-2 max-lg:p-1 rounded-full cursor-pointer hover:bg-white/20 transition-colors"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                  >
+                      <div className="flex items-center gap-2">
+                        {twitterAccount.profilePictureUrl && (
+                            <Image
+                            unoptimized
+                                src={twitterAccount.profilePictureUrl}
+                                alt={twitterAccount.username || 'Twitter Profile'}
+                                width={32}
+                                height={32}
+                                className="rounded-full w-11 max-lg:w-8 aspect-square bg-primary/50 border-2 border-primary"
+                            />
+                        )}
+                        <div className="max-lg:hidden">
+                          <span className="text-sm font-medium">
+                            @{twitterAccount.username}
+                        </span>
+                          {externalWallets.map((wallet) => (
+                      <div 
+                        key={wallet.address}
+                        className="flex items-center justify-between gap-2  rounded-full"
+                      >
+                        <div className="flex items-center gap-2">
+                        
+                          <span className="text-sm font-medium text-green-500">
+                            {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                        </div>
+                        
+                      </div>
+                      <button
+                        className="p-1 hover:bg-white/10 rounded-full max-lg:hidden transition-colors"
+                        title="More options"
+                      >
+                        <MdMoreVert className="text-lg" />
+                      </button>
+                  </div>
+
+                  {/* Dropdown Menu */}
+                  {menuOpen && (
+                    <div className="absolute right-0 bottom-full max-lg:top-full max-lg:bottom-auto mb-2 max-lg:mt-2 bg-black/90 border border-primary/20 backdrop-blur-md rounded-lg shadow-lg overflow-hidden z-50 min-w-[200px]">
+                      {/* User Info - Mobile Only */}
+                      <div className="lg:hidden px-4 py-3 border-b border-white/10">
+                        <div className="text-sm font-medium mb-1">
                           @{twitterAccount.username}
-                      </span>
+                        </div>
+                        {externalWallets.map((wallet) => (
+                          <div key={wallet.address} className="text-sm text-green-500">
+                            {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {externalWallets.length > 0 ? (
+                        externalWallets.map((wallet) => (
+                          <button
+                            key={wallet.address}
+                            onClick={() => {
+                              wallet.disconnect();
+                              setMenuOpen(false);
+                            }}
+                            className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
+                          >
+                            <MdWallet className="text-lg" />
+                            <span>Disconnect Wallet</span>
+                          </button>
+                        ))
+                      ) : (
+                        <button
+                          onClick={() => {
+                            connectWallet();
+                            setMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
+                        >
+                          <MdWallet className="text-lg" />
+                          <span>Connect Wallet</span>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setMenuOpen(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm border-t border-white/10"
+                      >
+                        <MdLogout className="text-lg" />
+                        <span>Logout</span>
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setShowDisconnectMenu(!showDisconnectMenu)}
-                      className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                      title="Disconnect"
-                    >
-                      <MdLogout className="text-lg" />
-                    </button>
+                  )}
                 </div>
 
-                {/* Disconnect Menu */}
-                {showDisconnectMenu && (
-                  <div className="absolute top-full mt-1 right-0 bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-2 z-10 min-w-[200px]">
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 rounded transition-colors flex items-center gap-2"
-                    >
-                      <MdLogout />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                )}
+                {/* Wallet Connection Section - Shows all connected wallets */}
                 
-                {/* Wallet Connection Section */}
-                {hasWallet && connectedWallet ? (
-                  <div className="flex items-center justify-between gap-2 bg-green-500/10 px-3 py-2 rounded-full border border-green-500/20">
-                    <div className="flex items-center gap-2">
-                      <MdWallet className="text-green-500 text-xl" />
-                      <span className="text-sm font-medium text-green-500">
-                        {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
-                      </span>
-                    </div>
-                    <button
-                      onClick={handleUnlinkWallet}
-                      className="p-1 hover:bg-red-500/10 rounded-full transition-colors"
-                      title="Disconnect Wallet"
-                    >
-                      <MdClose className="text-lg text-red-400" />
-                    </button>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={handleConnectWallet} 
-                    className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/80 px-4 py-2 rounded-full transition-colors"
-                  >
-                    <MdWallet className="text-xl" />
-                    <span className="text-sm font-medium">
-                      Connect Wallet
-                    </span>
-                  </button>
-                )}
               </>
           ) : (
               <button 
                 onClick={handleTwitterLogin} 
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-full transition-colors"
+                className="px-4 py-2 gradient-button transition-colors rounded-md font-bold h-10"
               >
-                Log in with Twitter
+                Log in
               </button>
           )}
       </div>

@@ -27,16 +27,19 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
       <PrivyProvider 
         appId={`cmggt86he00kmjy0crv42kfso`}
         config={{
-          loginMethods: ['twitter', 'wallet'],
+          // Only Twitter for authentication - wallets are connectors
+          loginMethods: ['twitter', 'farcaster'],
           appearance: {
             theme: 'dark',
             accentColor: '#676FFF',
           },
           embeddedWallets: {
             ethereum: {
-              createOnLogin: 'users-without-wallets',
+              createOnLogin: 'off',
             },
           },
+          // Allow external wallet connections without affecting authentication
+          
         }}
       >
         <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>

@@ -40,6 +40,7 @@ import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from "react-icons/fa";
 import LoginWithOAuth from "./utils/twitterConnect";
 import { getAccessToken, usePrivy } from '@privy-io/react-auth';
+import AggregateConnector from "./utils/aggregateConnector";
 
 interface Bidder {
   user: string;
@@ -1143,7 +1144,7 @@ const LandingAuctions: React.FC = () => {
             <div className="px-4 pb-4">
               <div className="text-center mb-4">
                 <p className="text-caption mb-4">Please connect your wallet to place a bid</p>
-                <LoginWithOAuth />
+                <AggregateConnector />
               </div>
             </div>
           ) : (

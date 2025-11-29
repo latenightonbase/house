@@ -40,8 +40,8 @@ import { checkUsdc } from "@/utils/checkUsdc";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from 'react-icons/fa';
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader';
-import LoginWithOAuth from './utils/twitterConnect';
 import { usePrivy } from '@privy-io/react-auth';
+import AggregateConnector from './utils/aggregateConnector';
 
 interface Bidder {
   displayName: string;
@@ -1016,7 +1016,7 @@ export default function BidPage() {
               <div className="px-4 pb-4">
                 <div className="text-center mb-4">
                   <p className="text-caption mb-4">You must be logged in</p>
-                  <LoginWithOAuth />
+                  <AggregateConnector />
                 </div>
               </div>
             ) : (

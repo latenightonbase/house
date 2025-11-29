@@ -11,7 +11,6 @@ import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
 import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
-import { useSession } from "next-auth/react";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import { randomUUID } from "crypto";
 // import { WalletConnect } from "./Web3/walletConnect";
@@ -32,6 +31,7 @@ import { useGlobalContext } from "@/utils/providers/globalContext";
 import TwitterAuthModal from "./UI/TwitterAuthModal";
 import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy } from '@privy-io/react-auth';
+import AggregateConnector from "./utils/aggregateConnector";
 
 
 interface CurrencyOption {
@@ -55,7 +55,6 @@ export default function CreateAuction() {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [minBidAmount, setMinBidAmount] = useState("5"); // Made the minimum bid amount optional and default to 0
   const [isLoading, setIsLoading] = useState(false);
-  const { data: session } = useSession();
   const [genAuctionId, setGenAuctionId] = useState("");
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
@@ -114,6 +113,7 @@ export default function CreateAuction() {
 
       const now = new Date();
       const accessToken = await getAccessToken();
+      console.log("Access Token:", accessToken);
       const response = await fetch("/api/protected/auctions/create", {
         method: "POST",
         headers: {
@@ -193,10 +193,10 @@ setIsLoading(false);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    //check if address and session exist
-      if (!address || !session) {
+    //check if address exists
+      if (!address) {
         toast.error("Please connect your wallet");
-        // return;
+        return;
       }
     setIsLoading(true);
 
@@ -409,7 +409,7 @@ setIsLoading(false);
   };
 
   const isFormValid =
-    session?.user &&
+    address &&
     auctionTitle.trim() &&
     selectedCurrency &&
     endTime &&
@@ -432,12 +432,6 @@ setIsLoading(false);
   const handleNext = () => {
     if (!canGoNext() || currentStep >= 3) return;
     
-    // Check Twitter auth after auction name is entered (step 0)
-    if (currentStep === 0 && isDesktopWallet && !hasTwitterProfile) {
-      setShowTwitterModal(true);
-      return;
-    }
-    
     setCurrentStep(currentStep + 1);
   };
 
@@ -447,7 +441,7 @@ setIsLoading(false);
     }
   };
 
-  if (!session)
+  if (!address)
     return (
       <div className=" max-lg:mx-auto mt-4">
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
@@ -476,14 +470,13 @@ setIsLoading(false);
                 Once connected, you'll be able to set up auctions with custom tokens, durations, and minimum bids.
               </p>
             </div>
-            <LoginWithOAuth />
+            <AggregateConnector />
           </div>
         </div>
       </div>
     );
 
-  if (session?.user !== undefined)
-    return (
+  return (
       <div className="max-w-2xl max-lg:mx-auto">
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
           <div className="min-h-[400px] flex flex-col justify-between">

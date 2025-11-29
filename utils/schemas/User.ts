@@ -1,12 +1,18 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+enum SocialConnected {
+  NONE = 'none',
+  TWITTER = 'twitter',
+  FARCASTER = 'farcaster',
+}
+
 // Interface for the User document
 export interface IUser extends Document {
   token: string;
-  fid: string;
-  wallet: string;
+  socialId: string;
+  socialConnected: SocialConnected;
+  wallets: string[];
   username?: string;
-  whitelisted: boolean;
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
@@ -19,7 +25,6 @@ export interface IUser extends Document {
   notificationDetails?: {
     url: string;
     token: string;
-    appFid: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -34,15 +39,17 @@ const UserSchema: Schema = new Schema(
       default: null,
       
     },
-    fid: {
+    socialId: {
       type: String,
       trim: true,
     },
-    wallet: {
+    wallets: [{
       type: String,
-      required: true,
-      unique: true,
       trim: true,
+    }],
+    socialConnected: {
+      type: String,
+      enum: Object.values(SocialConnected),
     },
     username: {
       type: String,

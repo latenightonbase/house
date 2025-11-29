@@ -35,31 +35,6 @@ export default function InfoCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      paginate(1)
-    }, 10000)
-    
-    return () => clearInterval(interval)
-  }, [currentIndex])
-
-  const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
-      opacity: 0
-    }),
-    center: {
-      zIndex: 1,
-      x: 0,
-      opacity: 1
-    },
-    exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
-      opacity: 0
-    })
-  }
-
   const swipeConfidenceThreshold = 10000
   const swipePower = (offset: number, velocity: number) => {
     return Math.abs(offset) * velocity
@@ -109,7 +84,7 @@ export default function InfoCarousel() {
               <motion.div
                 key={currentIndex}
                 custom={direction}
-                variants={slideVariants}
+                // variants={slideVariants}
                 initial="enter"
                 animate="center"
                 exit="exit"
