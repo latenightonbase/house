@@ -10,7 +10,7 @@ import { contractAdds } from "@/utils/contracts/contractAdds";
 import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
-import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
+import { readContractSetup, writeContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
@@ -288,7 +288,7 @@ setIsLoading(false);
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
         
-        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
+        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
         toast.loading("Waiting for transaction...", { id: toastId });
         
