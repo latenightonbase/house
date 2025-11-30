@@ -120,7 +120,11 @@ export default function MyAuctionCards() {
   const processEndAuctionSuccess = async (auctionId: string, bidders: any[]) => {
     try {
       // Call the API to end the auction with bidders data
+       toast.loading("Transaction confirmed! Ending auction...");
       const accessToken = await getAccessToken();
+
+      toast.loading(`Finalizing auction end... ${accessToken} `);
+
       const response = await fetch(
         `/api/protected/auctions/${auctionId}/end`,
         {
@@ -274,8 +278,6 @@ export default function MyAuctionCards() {
           setEndingAuction(null);
           return;
         }
-
-        toast.loading("Transaction confirmed! Ending auction...", { id: toastId });
 
         await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
       } else {
