@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     // Get the wallet address from session
     // @ts-ignore
-    const walletAddress = session.wallet;
+    const walletAddress = req.headers.get('x-user-wallet');
 
     console.log('Authenticated wallet:', walletAddress);
 
