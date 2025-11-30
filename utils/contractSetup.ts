@@ -6,7 +6,7 @@ export async function writeNewContractSetup(contractAddress:string, abi:any, wal
     // @ts-ignore
     // if (window && typeof window?.ethereum !== "undefined") {
       try {
-        await wallet.switchChain({ chainId: base.id }); // Base Mainnet chain ID
+        await wallet.switchChain(base.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
 
         const ethersProvider = new ethers.BrowserProvider(provider);
