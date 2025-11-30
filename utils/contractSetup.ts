@@ -1,4 +1,5 @@
 import {ethers} from 'ethers';
+import toast from 'react-hot-toast';
 
 export async function writeContractSetup(contractAddress:string, abi:any) {
     // @ts-ignore
@@ -20,6 +21,7 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
         console.error("Error setting up contract:", error);
       }
     } else {
+      toast.error("Wallet not detected. ");
       console.error("MetaMask is not installed");
     }
 }

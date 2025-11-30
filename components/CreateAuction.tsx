@@ -176,10 +176,21 @@ setIsLoading(false);
   // Function to get token decimals from ERC20 contract
   const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
     try {
-      // Use contract setup for reading decimals
-      const contract = await readContractSetup(tokenAddress, erc20Abi);
-      const decimalsResult = await contract?.decimals();
-      return Number(decimalsResult) || 18; // Default to 18 if failed
+      // Use contract setup for reading decimals with timeout
+      const timeoutPromise = new Promise<number>((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout fetching decimals')), 5000)
+      );
+      
+      const fetchPromise = (async () => {
+        const contract = await readContractSetup(tokenAddress, erc20Abi);
+        if (!contract) {
+          throw new Error('Contract setup failed');
+        }
+        const decimalsResult = await contract.decimals();
+        return Number(decimalsResult) || 18;
+      })();
+
+      return await Promise.race([fetchPromise, timeoutPromise]);
     } catch (error) {
       console.error("Error fetching token decimals:", error);
       // Default to 18 decimals if we can't fetch (most common for ERC20)
@@ -209,7 +220,7 @@ setIsLoading(false);
     //first check if the user is whitelisted, if not, show error toast and return
     if (!whitelisted) {
       toast.error("You are not whitelisted to create an auction");
-      
+      setIsLoading(false);
       return;
     }
 
@@ -260,11 +271,14 @@ setIsLoading(false);
         const minBidFloat = parseFloat(minBidAmount || "0");
         minBidAmountWei = convertBidAmountToWei(minBidFloat, tokenDecimals);
         console.log(`Minimum bid ${minBidFloat} converted to ${minBidAmountWei} with ${tokenDecimals} decimals`);
+        
+        toast.loading("Token information retrieved successfully", { id: toastId });
       } catch (error) {
         console.error("Error fetching token decimals, using default 18:", error);
         // Fallback to 18 decimals if fetching fails
         const minBidFloat = parseFloat(minBidAmount || "0");
         minBidAmountWei = convertBidAmountToWei(minBidFloat, 18);
+        console.log(`Using default 18 decimals. Minimum bid ${minBidFloat} converted to ${minBidAmountWei}`);
         toast.loading("Using default token configuration...", { id: toastId });
       }
 
@@ -394,9 +408,13 @@ setIsLoading(false);
       }
 
       // Update the loading toast with error message
-      
-        toast.error(errorMessage);
-      
+      toast.error(errorMessage, { id: toastId });
+      setIsLoading(false);
+    } finally {
+      // Ensure loading state is always reset
+      if (isLoading && status !== 'pending') {
+        setIsLoading(false);
+      }
     }
   };
 
