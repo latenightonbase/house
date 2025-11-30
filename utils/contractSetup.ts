@@ -7,8 +7,11 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
       try {
         // @ts-ignore
         const provider = await wallet.getEthereumProvider();
-const ethersProvider = new ethers.BrowserProvider(provider);
-const signer = await ethersProvider.getSigner();
+        toast.success("Wallet done");
+        const ethersProvider = new ethers.BrowserProvider(provider);
+        toast.success("Provider done");
+        const signer = await ethersProvider.getSigner();
+        toast.success("Signer done");
         const auctionContract = new ethers.Contract(
           contractAddress,
           abi,
