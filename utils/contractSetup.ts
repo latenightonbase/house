@@ -1,7 +1,7 @@
 import {ethers} from 'ethers';
 import toast from 'react-hot-toast';
 
-export async function writeContractSetup(contractAddress:string, abi:any) {
+export async function writeContractSetup(contractAddress:string, abi:any, wallet:any) {
     // @ts-ignore
     // if (window && typeof window?.ethereum !== "undefined") {
       try {

@@ -288,7 +288,7 @@ setIsLoading(false);
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
         
-        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
+        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
         toast.loading("Waiting for transaction...", { id: toastId });
         
