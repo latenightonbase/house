@@ -3,13 +3,12 @@ import toast from 'react-hot-toast';
 
 export async function writeContractSetup(contractAddress:string, abi:any) {
     // @ts-ignore
-    if (window && typeof window?.ethereum !== "undefined") {
+    // if (window && typeof window?.ethereum !== "undefined") {
       try {
         // @ts-ignore
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        // @ts-ignore
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
+        const provider = await wallet.getEthereumProvider();
+const ethersProvider = new ethers.BrowserProvider(provider);
+const signer = await ethersProvider.getSigner();
         const auctionContract = new ethers.Contract(
           contractAddress,
           abi,
@@ -20,10 +19,10 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
       } catch (error) {
         console.error("Error setting up contract:", error);
       }
-    } else {
-      toast.error("Wallet not detected. ");
-      console.error("MetaMask is not installed");
-    }
+    // } else {
+    //   toast.error("Wallet not detected. ");
+    //   console.error("MetaMask is not installed");
+    // }
 }
 
 export async function readContractSetup(contractAddress:string, abi:any) {
