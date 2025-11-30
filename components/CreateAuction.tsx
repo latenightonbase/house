@@ -30,7 +30,7 @@ import { checkStatus } from "@/utils/checkStatus";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import TwitterAuthModal from "./UI/TwitterAuthModal";
 import LoginWithOAuth from "./utils/twitterConnect";
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import AggregateConnector from "./utils/aggregateConnector";
 
 
@@ -44,7 +44,13 @@ type CurrencySelectionMode = "search" | "contract";
 
 export default function CreateAuction() {
 
-  const { address, isConnected } = useAccount();
+  // const { address, isConnected } = useAccount();
+  const {wallets} = useWallets();
+  const externalWallets = wallets.filter(
+    wallet => wallet.walletClientType !== 'privy'
+  );
+
+  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
   const { getAccessToken } = usePrivy();
   const [auctionTitle, setAuctionTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -222,7 +228,7 @@ setIsLoading(false);
       return;
     }
 
-    if (!isConnected || !address) {
+    if (!address) {
       toast.error("Please connect your wallet to create an auction");
       setIsLoading(false);
       return;
