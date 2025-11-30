@@ -269,7 +269,7 @@ setIsLoading(false);
         toast.loading("Using default token configuration...", { id: toastId });
       }
 
-      const auctionId = crypto.randomUUID();
+      const auctionId = Date.now();
 
       //PC flow
       if (!context) {
