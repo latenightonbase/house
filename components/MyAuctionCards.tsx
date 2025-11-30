@@ -123,8 +123,6 @@ export default function MyAuctionCards() {
        toast.loading("Transaction confirmed! Ending auction...");
       const accessToken = await getAccessToken();
 
-      toast.loading(`Finalizing auction end... ${accessToken} `);
-
       const response = await fetch(
         `/api/protected/auctions/${auctionId}/end`,
         {
