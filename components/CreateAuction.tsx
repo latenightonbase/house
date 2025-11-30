@@ -32,6 +32,7 @@ import TwitterAuthModal from "./UI/TwitterAuthModal";
 import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import AggregateConnector from "./utils/aggregateConnector";
+import { isWhitelisted } from "@/utils/whitelist";
 
 
 interface CurrencyOption {
@@ -205,11 +206,9 @@ setIsLoading(false);
       }
     setIsLoading(true);
 
-    const res = await fetch(`/api/users/${address}/checkWhitelist`);
-    const user = await res.json();
-    console.log("Whitelist check result:", user);
+    const whitelisted = isWhitelisted(address);
     //first check if the user is whitelisted, if not, show error toast and return
-    if (!user?.whitelisted) {
+    if (!whitelisted) {
       toast.error("You are not whitelisted to create an auction");
       
       return;
@@ -294,7 +293,7 @@ setIsLoading(false);
         await txHash?.wait();
 
         if(!txHash){
-          toast.error("Transaction failed to send", { id: toastId });
+          toast.error("Failed to submit transaction", { id: toastId });
           setIsLoading(false);
           return;
         }
@@ -396,11 +395,9 @@ setIsLoading(false);
       }
 
       // Update the loading toast with error message
-      if (loadingToastId) {
-        toast.error(errorMessage, { id: loadingToastId });
-      } else {
+      
         toast.error(errorMessage);
-      }
+      
     }
   };
 
