@@ -12,7 +12,6 @@ import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
 import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
-import { randomUUID } from "crypto";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
@@ -269,7 +268,7 @@ setIsLoading(false);
         toast.loading("Using default token configuration...", { id: toastId });
       }
 
-      const auctionId = Date.now();
+      const auctionId = String(Date.now());
 
       //PC flow
       if (!context) {
