@@ -6,7 +6,7 @@ import { Button } from "./UI/button";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
-import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
+import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import toast from "react-hot-toast";
@@ -20,7 +20,7 @@ import {
   getCryptoKeyAccount,
 } from "@base-org/account";
 import { checkStatus } from "@/utils/checkStatus";
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 
 interface Bidder {
   user: string;
@@ -83,7 +83,13 @@ export default function MyAuctionCards() {
   const navigate = useNavigateWithLoader();
   const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
   const { context } = useMiniKit();
-  const { address } = useAccount();
+  const {wallets} = useWallets();
+  const externalWallets = wallets.filter(
+    wallet => wallet.walletClientType !== 'privy'
+  );
+  
+  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
+
   const { user } = useGlobalContext();
   const { getAccessToken } = usePrivy();
 
@@ -248,9 +254,10 @@ export default function MyAuctionCards() {
       if (!context) {
         toast.loading("Sending end auction transaction...", { id: toastId });
         
-        const writeContract = await writeContractSetup(
+        const writeContract = await writeNewContractSetup(
           contractAdds.auctions,
-          auctionAbi
+          auctionAbi,
+          externalWallets[0]
         );
 
         if (!writeContract) {

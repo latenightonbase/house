@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { readContractSetup, writeContractSetup } from '@/utils/contractSetup';
+import { readContractSetup, writeNewContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
 import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
 import { contractAdds } from '@/utils/contracts/contractAdds';
@@ -40,7 +40,7 @@ import { checkUsdc } from "@/utils/checkUsdc";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from 'react-icons/fa';
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import AggregateConnector from './utils/aggregateConnector';
 
 interface Bidder {
@@ -121,10 +121,16 @@ export default function BidPage() {
   const { sendCalls, isSuccess, status } = useSendCalls();
   const { context } = useMiniKit();
   const { user } = useGlobalContext();
-  const {address} = useAccount()
+  
   const { data: session } = useSession();
   const { getAccessToken } = usePrivy();
 
+  const {wallets} = useWallets();
+  const externalWallets = wallets.filter(
+    wallet => wallet.walletClientType !== 'privy'
+  );
+  
+  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
 
   // Debounced token price fetching
   useEffect(() => {
@@ -541,7 +547,7 @@ export default function BidPage() {
 
       if (!context) {
         toast.loading("Sending approval transaction", { id: toastId });
-        const erc20Contract = await writeContractSetup(auction.tokenAddress, erc20Abi);
+        const erc20Contract = await writeNewContractSetup(auction.tokenAddress, erc20Abi, externalWallets[0]);
 
         // approve transaction
         const approveTx = await erc20Contract?.approve(
@@ -561,7 +567,7 @@ export default function BidPage() {
 
         toast.loading("Sending bid transaction", { id: toastId });
 
-        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
+        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
         toast.loading("Waiting for transaction...", { id: toastId });
         

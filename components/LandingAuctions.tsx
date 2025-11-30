@@ -23,7 +23,7 @@ import { contractAdds } from "@/utils/contracts/contractAdds";
 import { encodeFunctionData, numberToHex } from "viem";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
-import { readContractSetup, writeContractSetup } from "@/utils/contractSetup";
+import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import {
   base,
@@ -39,7 +39,7 @@ import { checkUsdc } from "@/utils/checkUsdc";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from "react-icons/fa";
 import LoginWithOAuth from "./utils/twitterConnect";
-import { getAccessToken, usePrivy } from '@privy-io/react-auth';
+import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth';
 import AggregateConnector from "./utils/aggregateConnector";
 
 interface Bidder {
@@ -123,7 +123,13 @@ const LandingAuctions: React.FC = () => {
 
   const { context } = useMiniKit();
 
-  const { address } = useAccount();
+  const {wallets} = useWallets();
+  const externalWallets = wallets.filter(
+    wallet => wallet.walletClientType !== 'privy'
+  );
+  
+  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
+
 
   const { user } = useGlobalContext();
 
@@ -341,7 +347,7 @@ const LandingAuctions: React.FC = () => {
 
       if (!context) {
         toast.loading("Sending approval transaction", { id: toastId });
-        const erc20Contract = await writeContractSetup(auction.tokenAddress, erc20Abi);
+        const erc20Contract = await writeNewContractSetup(auction.tokenAddress, erc20Abi, externalWallets[0]);
 
         // approve transaction
         const approveTx = await erc20Contract?.approve(
@@ -361,7 +367,7 @@ const LandingAuctions: React.FC = () => {
 
         toast.loading("Sending bid transaction", { id: toastId });
 
-        const contract = await writeContractSetup(contractAdds.auctions, auctionAbi);
+        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
         toast.loading("Waiting for transaction...", { id: toastId });
         

@@ -10,7 +10,7 @@ import { contractAdds } from "@/utils/contracts/contractAdds";
 import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
-import { readContractSetup, writeContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
+import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
