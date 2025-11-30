@@ -10,7 +10,6 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useLoginToMiniApp } from "@privy-io/react-auth/farcaster";
 import { useAuthenticate, useMiniKit } from "@coinbase/onchainkit/minikit";
 import { generateNonce } from "siwe";
-import { signOut, useSession } from "next-auth/react";
 import { ethers } from "ethers";
 import { useAccount } from "wagmi";
 import toast from "react-hot-toast";

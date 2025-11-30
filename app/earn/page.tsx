@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import PageLayout from "@/components/UI/PageLayout"
 import { RiQrScanLine, RiTrophyLine, RiCheckLine } from "react-icons/ri"
 
@@ -30,7 +30,9 @@ interface WeeklyBidder {
 }
 
 export default function EarnPage() {
-  const { data: session, status } = useSession();
+  const { authenticated } = usePrivy();
+  const { wallets } = useWallets();
+  const address = wallets.length > 0 ? wallets[0].address : null;
   const [weeklyRewards, setWeeklyRewards] = useState<WeeklyReward[]>([]);
   const [weeklyBidders, setWeeklyBidders] = useState<WeeklyBidder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,14 +40,14 @@ export default function EarnPage() {
   const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (authenticated && address) {
       fetchWeeklyRewards();
       fetchWeeklyBidders();
-    } else if (status === 'unauthenticated') {
+    } else {
       setLoading(false);
       setLoadingLeaderboard(false);
     }
-  }, [status]);
+  }, [authenticated, address]);
 
   const fetchWeeklyRewards = async () => {
     try {
@@ -129,7 +131,7 @@ export default function EarnPage() {
   const claimedRewards = weeklyRewards.filter(r => r.claimed);
   const currentWeekRewards = weeklyRewards.filter(r => !isWeekEnded(r.weekEndDate));
 
-  if (status === 'unauthenticated') {
+  if (!authenticated || !address) {
     return (
       <PageLayout className="min-h-screen flex flex-col items-start justify-start">
         <div className="w-full max-w-6xl max-lg:mx-auto mt-8">

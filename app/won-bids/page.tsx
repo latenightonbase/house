@@ -1,8 +1,7 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { usePrivy } from '@privy-io/react-auth';
+import { useEffect, useState } from "react"
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from "@/components/UI/button";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
@@ -34,16 +33,20 @@ interface WonBidsResponse {
   total: number;
 }
 
+interface WonAuction extends Auction {}
+
 export default function WonBidsPage() {
-  const { data: session, status } = useSession();
-  const [auctions, setAuctions] = useState<Auction[]>([]);
+  const { authenticated } = usePrivy();
+  const { wallets } = useWallets();
+  const address = wallets.length > 0 ? wallets[0].address : null;
+  const [auctions, setAuctions] = useState<WonAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigateWithLoader();
   const { getAccessToken } = usePrivy();
 
   const fetchWonBids = async () => {
-    if (!session?.wallet) return;
+    if (!address) return;
 
     try {
       setLoading(true);
@@ -51,7 +54,7 @@ export default function WonBidsPage() {
 
       const accessToken = await getAccessToken();
       const response = await fetch(
-        `/api/protected/auctions/won-bids?wallet=${session.wallet}`,
+        `/api/protected/auctions/won-bids?wallet=${address}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -84,23 +87,14 @@ export default function WonBidsPage() {
   };
 
   useEffect(() => {
-    if (status === "authenticated" && session?.wallet) {
+    if (authenticated && address) {
       fetchWonBids();
+    } else {
+      setLoading(false);
     }
-  }, [session?.wallet, status]);
+  }, [authenticated, address]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="flex flex-col gap-2">
-          <RiLoader5Fill className="animate-spin h-8 w-8 text-primary mx-auto" />
-          <span className="ml-2 text-caption">Loading your won auctions...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "unauthenticated" || !session?.wallet) {
+  if (!authenticated || !address) {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">Won Auctions</h1>

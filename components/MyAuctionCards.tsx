@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { Button } from "./UI/button";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
@@ -67,10 +66,10 @@ interface AuctionsResponse {
 }
 
 export default function MyAuctionCards() {
-  const { data: session, status } = useSession();
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
   const [endingAuction, setEndingAuction] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"active" | "upcoming" | "ended">(
     "active"
@@ -177,7 +176,7 @@ export default function MyAuctionCards() {
   };
 
   const fetchAuctions = async () => {
-    if (!session?.wallet) return;
+    if (!address) return;
 
     try {
       setLoading(true);
@@ -185,7 +184,7 @@ export default function MyAuctionCards() {
 
       const accessToken = await getAccessToken();
       const response = await fetch(
-        `/api/protected/auctions/my-auctions?wallet=${session.wallet}`,
+        `/api/protected/auctions/my-auctions?wallet=${address}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -215,8 +214,8 @@ export default function MyAuctionCards() {
 
   const endAuction = async (blockchainAuctionId: string) => {
     try {
-      //check if address and session exist
-      if (!address || !session) {
+      //check if address exists
+      if (!address) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -366,12 +365,12 @@ export default function MyAuctionCards() {
   };
 
   useEffect(() => {
-    if (status === "authenticated" && session?.wallet) {
+    if (address) {
       fetchAuctions();
     }
-  }, [session?.wallet, status]);
+  }, [address]);
 
-  if (status === "loading") {
+  if (loading && !auctions.length) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col gap-2">
@@ -382,7 +381,7 @@ export default function MyAuctionCards() {
     );
   }
 
-  if (status === "unauthenticated" || !session?.wallet) {
+  if (!address) {
     return (
       <div className="w-full overflow-hidden p-4">
         <h1 className="text-2xl font-bold gradient-text mb-6">My Auctions</h1>

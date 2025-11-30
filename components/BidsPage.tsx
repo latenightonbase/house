@@ -32,7 +32,6 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
-import { useSession } from "next-auth/react";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
@@ -121,15 +120,13 @@ export default function BidPage() {
   const { sendCalls, isSuccess, status } = useSendCalls();
   const { context } = useMiniKit();
   const { user } = useGlobalContext();
-  
-  const { data: session } = useSession();
   const { getAccessToken } = usePrivy();
 
   const {wallets} = useWallets();
   const externalWallets = wallets.filter(
     wallet => wallet.walletClientType !== 'privy'
   );
-  
+
   const address = externalWallets.length > 0 ? externalWallets[0].address : null;
 
   // Debounced token price fetching
@@ -474,8 +471,8 @@ export default function BidPage() {
  async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
     try {
 
-      //check if address and session exist
-      if (!address || !session) {
+      //check if address exists
+      if (!address) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -1018,10 +1015,10 @@ export default function BidPage() {
               </div>
             </DrawerHeader>
             
-            {!session || !address ? (
+            {!address ? (
               <div className="px-4 pb-4">
                 <div className="text-center mb-4">
-                  <p className="text-caption mb-4">You must be logged in</p>
+                  <p className="text-caption mb-4">Please connect your wallet to place a bid</p>
                   <AggregateConnector />
                 </div>
               </div>

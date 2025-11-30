@@ -30,7 +30,6 @@ import {
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
-import { useSession } from "next-auth/react";
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
 import Image from "next/image";
 import { checkStatus } from "@/utils/checkStatus";
@@ -39,7 +38,7 @@ import { checkUsdc } from "@/utils/checkUsdc";
 import sdk from '@farcaster/miniapp-sdk';
 import { FaShare } from "react-icons/fa";
 import LoginWithOAuth from "./utils/twitterConnect";
-import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import AggregateConnector from "./utils/aggregateConnector";
 
 interface Bidder {
@@ -132,6 +131,7 @@ const LandingAuctions: React.FC = () => {
 
 
   const { user } = useGlobalContext();
+  const { getAccessToken } = usePrivy();
 
   const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
     try {
@@ -175,8 +175,6 @@ const LandingAuctions: React.FC = () => {
       fetchTopAuctions(page + 1, true);
     }
   }, [page, hasMore, loadingMore]);
-
-  const { data: session } = useSession();
 
   useEffect(() => {
     // Fetch auctions for all users (both authenticated and unauthenticated)
@@ -602,11 +600,11 @@ const LandingAuctions: React.FC = () => {
   };
 
   const handleConfirmBid = () => {
-    //check if address and session exist
-          if (!address || !session) {
-            toast.error("Please connect your wallet");
-            return;
-          }
+    //check if address exists
+    if (!address) {
+      toast.error("Please connect your wallet");
+      return;
+    }
     if (!selectedAuction || !validateBidAmount()) return;
     
     const amount = parseFloat(bidAmount);
@@ -1146,7 +1144,7 @@ const LandingAuctions: React.FC = () => {
             </div>
           </DrawerHeader>
           
-          {!session || !address ? (
+          {!address ? (
             <div className="px-4 pb-4">
               <div className="text-center mb-4">
                 <p className="text-caption mb-4">Please connect your wallet to place a bid</p>

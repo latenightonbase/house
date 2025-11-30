@@ -20,16 +20,16 @@ import {
   DrawerTrigger,
 } from "@/components/UI/Drawer";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useSession } from "next-auth/react";
+import { useWallets } from '@privy-io/react-auth';
 
 export default function Welcome() {
 
     const {user} = useGlobalContext();
     const navigate = useNavigateWithLoader();
     const [isAddingMiniApp, setIsAddingMiniApp] = useState(false);
-    const {context} = useMiniKit()
-
-    const {data:session} = useSession()
+    const {context} = useMiniKit();
+    const {wallets} = useWallets();
+    const address = wallets.length > 0 ? wallets[0].address : null;
 
     // Check if user has already enabled notifications
     const hasNotifications = user?.notificationDetails?.token;
@@ -44,7 +44,7 @@ export default function Welcome() {
             
             if (response.notificationDetails) {
                 console.log("MiniApp added with notification details:", response.notificationDetails);
-                console.log("User wallet:", session?.wallet);
+                console.log("User wallet:", address);
                 
                 // Save notification details to user
                 const saveResponse = await fetch('/api/miniapp/notifications/save', {
@@ -53,7 +53,7 @@ export default function Welcome() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        wallet: session?.wallet,
+                        wallet: address,
                         notificationDetails: response.notificationDetails
                     })
                 });
@@ -79,7 +79,7 @@ export default function Welcome() {
         } finally {
             setIsAddingMiniApp(false);
         }
-    }, [user?.wallet]);
+    }, [address]);
 
     
     return (
@@ -93,7 +93,7 @@ export default function Welcome() {
                     <FaPlus/> Create Auction
                 </button>
 
-                {!hasNotifications && session && (
+                {!hasNotifications && address && (
                     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                         <DrawerContent>
                             <DrawerHeader>
