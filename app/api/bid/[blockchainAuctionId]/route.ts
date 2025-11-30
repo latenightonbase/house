@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
 import connectToDB from '@/utils/db';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
-import { getServerSession } from 'next-auth';
 
 interface ContractBidder {
   bidder: string;

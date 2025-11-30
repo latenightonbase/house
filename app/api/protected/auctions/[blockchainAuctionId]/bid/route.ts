@@ -3,7 +3,6 @@ import dbConnect from '@/utils/db';
 import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
-import { getServerSession } from 'next-auth';
 import { fetchTokenPrice } from '@/utils/tokenPrice';
 import { getWeekBoundaries } from '@/utils/weekHelpers';
 import { verifyAccessToken } from '@/utils/privyAuth';

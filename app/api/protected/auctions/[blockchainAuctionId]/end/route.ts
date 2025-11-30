@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import dbConnect from '@/utils/db';
 import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
@@ -23,8 +22,6 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
     }
-
-    const session = await getServerSession(authOptions);
 
     // Extract blockchainAuctionId from the URL
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[4];
@@ -50,8 +47,6 @@ export async function POST(req: NextRequest) {
     // Get the wallet address from session
     // @ts-ignore
     const walletAddress = session.wallet;
-
-    console.log(session)
 
     console.log('Authenticated wallet:', walletAddress);
 

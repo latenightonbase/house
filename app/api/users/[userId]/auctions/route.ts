@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
 import Auction from '@/utils/schemas/Auction';
-import { getServerSession } from 'next-auth';
 
 export async function GET(
   req: NextRequest,

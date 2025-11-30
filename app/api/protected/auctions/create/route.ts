@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { getServerSession } from 'next-auth';
 import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function POST(req: NextRequest) {

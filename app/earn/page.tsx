@@ -51,7 +51,11 @@ export default function EarnPage() {
 
   const fetchWeeklyRewards = async () => {
     try {
-      const response = await fetch('/api/earn/weekly-rewards');
+      const response = await fetch('/api/earn/weekly-rewards', {
+        headers: {
+          'x-user-wallet': address || ''
+        }
+      });
       const result = await response.json();
       if (result.success) {
         setWeeklyRewards(result.data);
@@ -84,6 +88,7 @@ export default function EarnPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-user-wallet': address || ''
         },
         body: JSON.stringify({ entryId }),
       });

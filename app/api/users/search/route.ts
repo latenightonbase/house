@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
-import { getServerSession } from 'next-auth';
 import { signOut } from 'next-auth/react';
+import { verifyAccessToken } from '@/utils/privyAuth';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(); // Ensure session is initialized if needed in future
-    if(!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+     const authHeader = req.headers.get('authorization');
+        const token = authHeader?.replace('Bearer ', '');
+    
+        if (!token) {
+          return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+        }
+    
+        try {
+          await verifyAccessToken(token);
+        } catch (error) {
+          return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+        }
     await connectDB();
 
     const searchParams = req.nextUrl.searchParams;
