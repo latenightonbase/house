@@ -7,6 +7,13 @@ export async function writeContractSetup(contractAddress:string, abi:any) {
       try {
         // @ts-ignore
         const provider = await wallet.getEthereumProvider();
+
+        if(!provider) {
+          toast.error("Wallet provider not found.");
+          console.error("Wallet provider not found.");
+          return;
+        }
+
         toast.success("Wallet done");
         const ethersProvider = new ethers.BrowserProvider(provider);
         toast.success("Provider done");
