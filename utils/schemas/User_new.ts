@@ -1,22 +1,10 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
-enum SocialPlatform {
-  TWITTER = 'TWITTER',
-  FARCASTER = 'FARCASTER',
-}
-
 // Interface for the User document
 export interface IUser extends Document {
   token: string;
-  //redundant
   fid: string;
   wallet: string;
-  //new--start
-  socialId?: string;
-  socialPlatform?: SocialPlatform;
-  wallets: string[];
-  privyId?: string;
-  //new--end
   username?: string;
   whitelisted: boolean;
   hostedAuctions: Types.ObjectId[];
@@ -56,24 +44,6 @@ const UserSchema: Schema = new Schema(
       unique: true,
       trim: true,
     },
-    socialId: {
-      type: String,
-      trim: true
-    },
-    socialPlatform: {
-      type: String,
-      enum: Object.values(SocialPlatform),
-      trim: true
-    },
-    privyId: {
-      type: String,
-      unique: true,
-      trim: true,
-    },
-    wallets: [{
-      type: String,
-      trim: true
-    }],
     username: {
       type: String,
       trim: true,

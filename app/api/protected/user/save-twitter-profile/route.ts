@@ -3,29 +3,17 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/utils/auth';
 import User from '@/utils/schemas/User';
 import dbConnect from '@/utils/db';
-import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from '@/utils/authService';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
 
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
+    console.log('Request received to save Twitter profile');
+    const authResult = await authenticateRequest(request);
+    if (!authResult.success) {
+      return authResult.response;
     }
-
-    try {
-      await verifyAccessToken(token);
-    } catch (error) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
-    }
-
-    const session = await getServerSession(authOptions);
     
-    if (!session?.wallet) {
-      return NextResponse.json({ error: 'Unauthorized - No wallet' }, { status: 401 });
-    }
-
     const { twitterProfile } = await request.json();
 
     if (!twitterProfile || !twitterProfile.id || !twitterProfile.username) {
@@ -34,8 +22,10 @@ export async function POST(request: NextRequest) {
 
     await dbConnect();
 
+    console.log('Updating Twitter profile for socialId:', twitterProfile.id);
+
     const user = await User.findOneAndUpdate(
-      { wallet: session.wallet },
+      { socialId: twitterProfile.id },
       {
         $set: {
           username: twitterProfile.username,
@@ -49,6 +39,8 @@ export async function POST(request: NextRequest) {
       },
       { new: true, upsert: true }
     );
+
+    console.log('Twitter profile updated:', user);
 
     return NextResponse.json({ 
       success: true, 

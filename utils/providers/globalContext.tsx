@@ -33,8 +33,6 @@ interface CustomSession {
 
 interface GlobalContextProps {
   user: any;
-  authenticatedUser: any;
-  isAuthenticated: boolean;
 }
 
 // Create a context with a default value matching the expected structure
@@ -42,13 +40,9 @@ const GlobalContext = createContext<GlobalContextProps | null>(null);
 
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { context } = useMiniKit();
-  const { signIn } = useAuthenticate();
   const [user, setUser] = useState<any | null>(null);
-  const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
-  const [hasTwitterProfile, setHasTwitterProfile] = useState<boolean>(false);
-  const {address, isDisconnected} = useAccount()
 
-  const {ready, authenticated} = usePrivy();
+  const {ready, authenticated, user:privyUser} = usePrivy();
   const {initLoginToMiniApp, loginToMiniApp} = useLoginToMiniApp();
 
 
@@ -69,6 +63,24 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     login();
   }
 }, [ready, authenticated]);
+
+useEffect(() => {
+  if(context){
+    setUser({
+      socialId: context.user?.fid,
+      username: context.user?.username,
+      pfp_url: context.user?.pfpUrl
+    })
+  }
+  else if(!context && privyUser){
+    console.log('Setting user from Privy:', privyUser);
+    setUser({
+      socialId: privyUser?.twitter?.subject,
+      username: privyUser?.twitter?.username,
+      pfp_url: privyUser?.twitter?.profilePictureUrl
+    })
+  }
+},[context, privyUser])
 
   // Check if user is using desktop wallet (no MiniKit context)
   // const isDesktopWallet = !context?.client;
@@ -123,9 +135,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   return (
     <GlobalContext.Provider
       value={{
-        user,
-        authenticatedUser,
-        isAuthenticated: !!authenticatedUser,
+        user
       }}
     >
       {children}

@@ -3,19 +3,28 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from '@/utils/db';
 import User from "@/utils/schemas/User";
+import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from "@/utils/authService";
 
 export async function GET(request: NextRequest) {
     try{
-        const session = await getServerSession(authOptions);
 
-        if(!session){
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        console.log('Profile fetch request received');
 
+        const authResult = await authenticateRequest(request);
+            if (!authResult.success) {
+              return authResult.response;
+            }
+
+        //get socialId from query params
+        const socialId = request.nextUrl.searchParams.get("socialId");
+
+        console.log('Fetching profile for socialId:', socialId);
+        
         await connectDB()
 
         const dbUser = await User.findOne({
-            wallet: session.user?.wallet
+            socialId: socialId
         });
 
         console.log('DB User', dbUser);

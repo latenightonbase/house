@@ -3,22 +3,13 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authOptions } from '@/utils/auth';
-import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from '@/utils/authService';
 
 export async function GET(req: NextRequest) {
   try {
-    // Check if user is authenticated
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
-    }
-
-    try {
-      await verifyAccessToken(token);
-    } catch (error) {
-      return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    const authResult = await authenticateRequest(req);
+    if (!authResult.success) {
+      return authResult.response;
     }
 
     // Get wallet address from query params

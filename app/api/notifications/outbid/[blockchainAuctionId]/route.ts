@@ -56,13 +56,13 @@ export async function POST(
     let highestBidderUsername = highestBidderUser.username || highestBidderUser.wallet;
 
     console.log('[Outbid Notification] Initial highest bidder username:', highestBidderUsername);
-    console.log('[Outbid Notification] Highest bidder FID:', highestBidderUser.fid);
+    console.log('[Outbid Notification] Highest bidder FID:', highestBidderUser.socialId);
 
     // Fetch from Neynar if FID exists and is numeric
-    if (highestBidderUser.fid && !highestBidderUser.fid.startsWith('0x') && !highestBidderUser.fid.startsWith('none')) {
+    if (highestBidderUser.socialId && !highestBidderUser.socialId.startsWith('0x') && !highestBidderUser.socialId.startsWith('none')) {
       try {
         const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${highestBidderUser.fid}`,
+          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${highestBidderUser.socialId}`,
           {
             headers: {
               'x-api-key': process.env.NEYNAR_API_KEY as string,

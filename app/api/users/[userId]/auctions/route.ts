@@ -42,11 +42,11 @@ export async function GET(
       x_username: null as string | null
     };
 
-    if (user.fid && !user.fid.toLowerCase().startsWith('none')) {
+    if (user.socialId && user.socialPlatform !== "TWITTER") {
       // FID is a valid number, fetch from Neynar
       try {
         const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.fid}`,
+          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.socialId}`,
           {
             headers: {
               'x-api-key': process.env.NEYNAR_API_KEY || '',
@@ -56,10 +56,7 @@ export async function GET(
 
         if (neynarResponse.ok) {
           const neynarData = await neynarResponse.json();
-          console.log('Neynar data for user profile extraction:', {
-            fid: user.fid,
-            verified_accounts: neynarData.users?.[0]?.verified_accounts
-          });
+          
           if (neynarData.users && neynarData.users.length > 0) {
             const neynarUser = neynarData.users[0];
             userProfile.username = neynarUser.username || user.username;
@@ -138,7 +135,7 @@ export async function GET(
       user: {
         _id: user._id,
         wallet: user.wallet,
-        fid: user.fid,
+        fid: user.socialId,
         username: userProfile.username,
         pfp_url: userProfile.pfp_url,
         display_name: userProfile.display_name,

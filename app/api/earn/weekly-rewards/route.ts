@@ -3,26 +3,14 @@ import connectDB from '@/utils/db';
 import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
 import User from '@/utils/schemas/User';
 import { formatWeekRange } from '@/utils/weekHelpers';
-import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from '@/utils/authService';
 
 export async function GET(req:any) {
   try {
-    // Check for authentication
-    const authHeader = req.headers.get('authorization');
-            const token = authHeader?.replace('Bearer ', '');
-        
-            if (!token) {
-              console.log("❌ Authentication failed - no token");
-              return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
-            }
-        
-            try {
-              const claims = await verifyAccessToken(token);
-              console.log("✅ Authentication successful:", claims.userId);
-            } catch (error) {
-              console.log("❌ Authentication failed - invalid token");
-              return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
-            }
+    const authResult = await authenticateRequest(req);
+    if (!authResult.success) {
+      return authResult.response;
+    }
     await connectDB();
 
     // Get user wallet from session

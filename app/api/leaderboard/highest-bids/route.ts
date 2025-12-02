@@ -128,7 +128,8 @@ export async function GET() {
           userId: '$userDetails._id',
           wallet: '$userDetails.wallet',
           username: '$userDetails.username',
-          fid: '$userDetails.fid',
+          socialId: '$userDetails.socialId',
+          socialPlatform: '$userDetails.socialPlatform',
           twitterProfile: '$userDetails.twitterProfile',
           auctionName: '$auctionName',
           currency: '$currency'
@@ -141,8 +142,8 @@ export async function GET() {
     // Collect unique FIDs that are valid
     const uniqueFids = new Set<string>();
     highestBids.forEach(bid => {
-      if (bid.fid && bid.fid !== '' && !bid.fid.startsWith('none')) {
-        uniqueFids.add(bid.fid);
+      if (bid.socialId && bid.socialId !== '' && bid.socialPlatform !== "TWITTER") {
+        uniqueFids.add(bid.socialId);
       }
     });
 
@@ -164,6 +165,7 @@ export async function GET() {
           const jsonRes = await res.json();
           if (jsonRes.users) {
             jsonRes.users.forEach((user: any) => {
+              console.log('Neynar user fetched in highest bid:', user);
               neynarUsers[user.fid] = user;
             });
           }
@@ -180,9 +182,9 @@ export async function GET() {
         _id: `${bid.auctionId}-${bid.userId}-${bid.bidTimestamp}-${index}` // Create unique ID
       };
       
-      if (bid.fid && bid.fid !== '' && !bid.fid.startsWith('none')) {
+      if (bid.socialId && bid.socialId !== '' && bid.socialPlatform !== "TWITTER") {
         // For valid FIDs, use data from Neynar API
-        const neynarUser = neynarUsers[bid.fid];
+        const neynarUser = neynarUsers[bid.socialId];
         const fallbackWallet = bid.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         

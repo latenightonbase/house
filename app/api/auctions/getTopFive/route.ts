@@ -70,16 +70,17 @@ export async function GET(req: NextRequest) {
     // Collect unique FIDs that don't start with "none" from hosts and top bidders
     runningAuctions.forEach(auction => {
       // Add host FID
-      if (auction.hostedBy?.fid && auction.hostedBy.fid !== '' && !auction.hostedBy.fid.startsWith('none')) {
-        uniqueFids.add(auction.hostedBy.fid);
+      if (auction.hostedBy?.socialId && auction.hostedBy.socialId !== '' && auction.hostedBy.socialPlatform !== "TWITTER") {
+        console.log('Adding host FID:', auction.hostedBy.socialId);
+        uniqueFids.add(auction.hostedBy.socialId);
       }
       
       // Add top bidder FID if there are bidders
       if (auction.bidders.length > 0) {
         const highestBid = Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount));
         const topBidder = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
-        if (topBidder?.user?.fid && topBidder.user.fid !== '' && !topBidder.user.fid.startsWith('none')) {
-          uniqueFids.add(topBidder.user.fid);
+        if (topBidder?.user?.socialId && topBidder.user.socialId !== '' && topBidder.user.socialPlatform !== "TWITTER") {
+          uniqueFids.add(topBidder.user.socialId);
         }
       }
     });
@@ -143,9 +144,9 @@ export async function GET(req: NextRequest) {
           };
 
           // Enhance top bidder with Neynar data
-          if (topBidder.fid && topBidder.fid !== '' && !topBidder.fid.startsWith('none')) {
+          if (topBidder.socialId && topBidder.socialId !== '' && topBidder.socialPlatform !== "TWITTER") {
             // For valid FIDs, use data from Neynar API
-            const neynarUser = neynarUsers[topBidder.fid];
+            const neynarUser = neynarUsers[topBidder.socialId];
             const fallbackWallet = topBidder.wallet;
             const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
             topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
@@ -174,13 +175,13 @@ export async function GET(req: NextRequest) {
 
       // Process hostedBy to add username and display_name fields
       let enhancedHostedBy = { ...auction.hostedBy };
-      if (auction.hostedBy?.fid && auction.hostedBy.fid !== '' && !auction.hostedBy.fid.startsWith('none')) {
+      if (auction.hostedBy?.socialId && auction.hostedBy.socialId !== '' && auction.hostedBy.socialPlatform !== "TWITTER") {
         // For valid FIDs, use data from Neynar API
-        const neynarUser = neynarUsers[auction.hostedBy.fid];
+        const neynarUser = neynarUsers[auction.hostedBy.socialId];
         const fallbackWallet = auction.hostedBy.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         
-        console.log(`Processing host ${auction.hostedBy.fid}:`, {
+        console.log(`Processing host ${auction.hostedBy.socialId}:`, {
           neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
           originalUsername: auction.hostedBy.username,
           fallback: truncatedWallet

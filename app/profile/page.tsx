@@ -1,7 +1,7 @@
 'use client'
 
 import { useGlobalContext } from '@/utils/providers/globalContext'
-import { usePrivy, useWallets } from '@privy-io/react-auth'
+import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth'
 import Image from 'next/image'
 import { MdWallet } from 'react-icons/md'
 import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
@@ -12,8 +12,10 @@ import { useMiniKit } from '@coinbase/onchainkit/minikit'
 
 interface UserProfile {
   _id: string
-  wallet: string
+  wallets: string[]
   username?: string
+  socialId?: string
+  socialPlatform?: string
   fid?: string
   pfp_url: string
   display_name: string
@@ -41,7 +43,6 @@ export default function ProfilePage() {
   const { user } = useGlobalContext()
   const { authenticated } = usePrivy()
   const { wallets } = useWallets()
-  const address = wallets.length > 0 ? wallets[0].address : null
   const navigateWithLoader = useNavigateWithLoader()
   const [profileData, setProfileData] = useState<UserProfile | null>(null)
   const [statistics, setStatistics] = useState<ProfileStatistics | null>(null)
@@ -52,12 +53,23 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (!authenticated || !address) return
+      if (!authenticated) {
+        console.log('User not authenticated, skipping profile data fetch');
+        return;
+      }
       
       try {
         setLoading(true)
-        const response = await fetch('/api/users/profile')
+        const accessToken = await getAccessToken();
+        console.log("Fetching profile data with user socialId", user.socialId);
+        const response = await fetch('/api/users/profile?socialId=' + (user?.socialId),{
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        })
         const data = await response.json()
+
+        console.log('Profile data fetched:', data)
 
         if (data.success) {
           console.log('Profile data received:', data.user)
@@ -72,9 +84,9 @@ export default function ProfilePage() {
     }
 
     fetchProfileData()
-  }, [authenticated, address])
+  }, [authenticated, user])
 
-  if (!authenticated || !address) {
+  if (!authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -117,22 +129,28 @@ export default function ProfilePage() {
               unoptimized
                 alt="Profile Picture"
                 src={profileData?.twitterProfile?.profileImageUrl || user.pfp_url}
-                width={540}
-                height={540}
-                className="w-16 h-16 lg:w-32 lg:h-32 aspect-square border-2 border-primary rounded-xl"
+                width={1080}
+                height={1080}
+                className="w-16 h-16 aspect-square border-2 border-primary rounded-xl"
               />
             ) : (
-              <div className="w-24 h-24 lg:w-32 lg:h-32 aspect-square border-2 border-primary rounded-xl bg-gray-600 flex items-center justify-center">
+              <div className="w-16 h-24 lg:w-32 lg:h-32 aspect-square border-2 border-primary rounded-xl bg-gray-600 flex items-center justify-center">
                 <MdWallet className="text-4xl text-primary" />
               </div>
             )}
             
             <div className="flex-1 max-lg:text-center">
               <h1 className="text-2xl font-bold text-white mb-2">
-                {profileData?.twitterProfile?.username  || 'Anonymous User'}
+                {profileData?.twitterProfile?.username || user.username  || 'Anonymous User'}
               </h1>
-              <p className="text-caption text-sm lg:text-base mb-4">
-                Wallet: {profileData?.wallet ? `${profileData.wallet.slice(0, 8)}...${profileData.wallet.slice(-6)}` : 'Not connected'}
+              <p className="text-caption text-sm lg:text-base mb-4 text-caption font-bold">
+                Wallets: {profileData?.wallets.length ? <div className='flex flex-wrap gap-1 max-lg:justify-center mt-1'>
+                  {profileData.wallets.map((wallet, index) => (
+                    <a href={`https://basescan.org/address/${wallet}`} key={wallet} className='p-1 text-xs text-primary font-semibold  bg-primary/10 rounded-md border border-primary'>
+                      {wallet.slice(0, 4)}...{wallet.slice(-2)}{index < profileData.wallets.length - 1 ? ', ' : ''}
+                    </a>
+                  ))}
+                </div> : 'Not connected'}
               </p>
               
               {/* Twitter Profile Section */}
@@ -145,20 +163,12 @@ export default function ProfilePage() {
               
               {/* Twitter Status */}
               {!context && <div className="flex items-center gap-4">
-                {profileData?.twitterProfile?.id ? (
-                  <div className="flex items-center gap-2 text-green-400">
+                {profileData?.twitterProfile?.id && (
+                  <div className="flex items-center gap-2 text-primary">
                     <RiTwitterLine />
                     <span className="text-sm">Twitter linked: @{profileData.twitterProfile?.username}</span>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => setShowTwitterModal(true)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 hover:text-blue-300 transition-colors text-sm"
-                  >
-                    <RiTwitterLine />
-                    <span>Link Twitter</span>
-                  </button>
-                )}
+                ) }
               </div>}
             </div>
           </div>

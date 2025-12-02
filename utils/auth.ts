@@ -101,7 +101,7 @@ export const authOptions = {
 
         if(dbUser) {
           token.wallet = dbUser.wallet;
-          token.fid = dbUser.fid;
+          token.fid = dbUser.socialId;
           token.token = dbUser.token;
           token.username = dbUser.username;
         } else {

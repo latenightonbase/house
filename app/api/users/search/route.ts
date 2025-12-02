@@ -2,22 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
 import { signOut } from 'next-auth/react';
-import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from '@/utils/authService';
 
 export async function GET(req: NextRequest) {
   try {
-     const authHeader = req.headers.get('authorization');
-        const token = authHeader?.replace('Bearer ', '');
-    
-        if (!token) {
-          return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
-        }
-    
-        try {
-          await verifyAccessToken(token);
-        } catch (error) {
-          return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
-        }
+    const authResult = await authenticateRequest(req);
+    if (!authResult.success) {
+      return authResult.response;
+    }
     await connectDB();
 
     const searchParams = req.nextUrl.searchParams;
@@ -45,11 +37,11 @@ export async function GET(req: NextRequest) {
         let pfp_url = null;
         let displayUsername = user.username;
 
-        if (user.fid && !user.fid.toLowerCase().startsWith('none')) {
+        if (user.socialId && user.socialPlatform !== "TWITTER") {
           // Fetch from Neynar
           try {
             const neynarResponse = await fetch(
-              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.fid}`,
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.socialId}`,
               {
                 headers: {
                   'api_key': process.env.NEYNAR_API_KEY || '',
@@ -77,7 +69,7 @@ export async function GET(req: NextRequest) {
         return {
           _id: user._id,
           wallet: user.wallet,
-          fid: user.fid,
+          fid: user.socialId,
           username: displayUsername,
           pfp_url
         };

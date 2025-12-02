@@ -2,22 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { verifyAccessToken } from '@/utils/privyAuth';
+import { authenticateRequest } from '@/utils/authService';
 
 export async function POST(req: NextRequest) {
-    const authHeader = req.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    console.log('Verifying token in auction creation route');
 
-    if (!token) {
-        return NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 });
-    }
-
-    console.log('Verifying token in auction creation route', token);
-
-    try {
-        await verifyAccessToken(token);
-    } catch (error) {
-        return NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 });
+    const authResult = await authenticateRequest(req);
+    if (!authResult.success) {
+        return authResult.response;
     }
   try {
     const body = await req.json();

@@ -6,19 +6,81 @@ import { useState } from 'react';
 export default function LoginWithOAuth() {
   const { user, authenticated, logout, getAccessToken } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
-  const { connectWallet } = useConnectWallet();
+  const { connectWallet } = useConnectWallet({
+    onSuccess: async ({ wallet }) => {
+      if (wallet?.address && user) {
+        await handleAddWallet(wallet.address);
+      }
+    }
+  });
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const handleAddWallet = async (walletAddress: string) => {
+    try {
+      const accessToken = await getAccessToken();
+      const response = await fetch('/api/protected/user/add-wallet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          socialId: user?.twitter?.subject,
+          walletAddress,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to add wallet to database');
+      } else {
+        console.log('Wallet added successfully');
+      }
+    } catch (error) {
+      console.error('Error adding wallet:', error);
+    }
+  };
 
   
   const { login } = useLogin({
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated, loginMethod, loginAccount }) => {
       console.log('User logged in successfully', user);
       if (isNewUser) {
-        console.log('New user created');
+        console.log('New user detected, creating user in database');
+        try {
+          const accessToken = await getAccessToken();
+          const response = await fetch('/api/protected/user/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              privyId: user.id,
+              socialId: user.twitter?.subject,
+              socialPlatform: 'twitter',
+              walletAddress: user.wallet?.address,
+              twitterProfile: user.twitter ? {
+                id: user.twitter.subject,
+                username: user.twitter.username,
+                name: user.twitter.name,
+                profileImageUrl: user.twitter.profilePictureUrl,
+              } : undefined,
+            }),
+          });
+
+          if (!response.ok) {
+            console.error('Failed to create user');
+          } else {
+            const data = await response.json();
+            console.log('User created successfully:', data);
+          }
+        } catch (error) {
+          console.error('Error creating user:', error);
+        }
       }
       
       // Save Twitter profile to database if Twitter was linked
-      if (user?.twitter && user?.wallet) {
+      if (user?.twitter && !wasAlreadyAuthenticated) {
         try {
           const accessToken = await getAccessToken();
           const response = await fetch('/api/protected/user/save-twitter-profile', {
@@ -98,19 +160,35 @@ export default function LoginWithOAuth() {
                           <span className="text-sm font-medium">
                             @{twitterAccount.username}
                         </span>
-                          {externalWallets.map((wallet) => (
+                        {externalWallets.length > 0 ? (<>
+                       
+{externalWallets.map((wallet:any) => (
                       <div 
                         key={wallet.address}
                         className="flex items-center justify-between gap-2  rounded-full"
                       >
                         <div className="flex items-center gap-2">
                         
-                          <span className="text-sm font-medium text-green-500">
+                          <span className="text-sm font-medium text-primary">
                             {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
                           </span>
                         </div>
                       </div>
-                    ))}
+                    ))}</>
+                        ) : (<>
+                          <div 
+                        
+                        className="flex items-center justify-between gap-2  rounded-full"
+                      >
+                        <div className="flex items-center gap-2">
+                        
+                          <span className="text-sm font-medium text-red-500">
+                            Not Connected
+                          </span>
+                        </div>
+                      </div>
+                        </>)}
+                          
                         </div>
                         
                       </div>

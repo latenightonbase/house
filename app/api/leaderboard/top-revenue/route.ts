@@ -141,17 +141,21 @@ export async function GET() {
           auctionCount: 1,
           wallet: '$userDetails.wallet',
           username: '$userDetails.username',
-          fid: '$userDetails.fid',
+          socialId: '$userDetails.socialId',
+          socialPlatform: '$userDetails.socialPlatform',
           twitterProfile: '$userDetails.twitterProfile'
         }
       }
     ]);
 
+
     // Collect unique FIDs that are valid
     const uniqueFids = new Set<string>();
     topRevenueUsers.forEach(user => {
-      if (user.fid && user.fid !== '' && !user.fid.startsWith('none')) {
-        uniqueFids.add(user.fid);
+    
+      if (user.socialId && user.socialId !== '' && user.socialPlatform !== "TWITTER") {
+        console.log('Adding unique FID:', user.socialId);
+        uniqueFids.add(user.socialId);
       }
     });
 
@@ -162,6 +166,7 @@ export async function GET() {
     if (uniqueFids.size > 0) {
       try {
         const fidsArray = Array.from(uniqueFids);
+        console.log('Fetching Neynar data for FIDs:', fidsArray);
         const res = await fetch(
           `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
           {
@@ -173,8 +178,10 @@ export async function GET() {
         
         if (res.ok) {
           const jsonRes = await res.json();
+          console.log('Neynar API response:', jsonRes);
           if (jsonRes.users) {
             jsonRes.users.forEach((user: any) => {
+              console.log('Neynar user fetched:', user);
               neynarUsers[user.fid] = user;
             });
           }
@@ -186,11 +193,15 @@ export async function GET() {
 
     // Enhance users with Neynar data
     const enhancedUsers = topRevenueUsers.map(user => {
+
+      console.log('Processing top rev earner:', user);
+
       let enhancedUser = { ...user };
       
-      if (user.fid && user.fid !== '' && !user.fid.startsWith('none')) {
+      if (user.socialId && user.socialId !== '' && user.socialPlatform !== "TWITTER") {
         // For valid FIDs, use data from Neynar API
-        const neynarUser = neynarUsers[user.fid];
+        const neynarUser = neynarUsers[user.socialId];
+        console.log('Neynar user data:', neynarUser);
         const fallbackWallet = user.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         

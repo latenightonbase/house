@@ -28,8 +28,8 @@ export async function GET() {
     const uniqueFids = new Set<string>();
     weeklyBidders.forEach(entry => {
       const user = entry.user as any;
-      if (user.fid && user.fid !== '' && !user.fid.startsWith('none')) {
-        uniqueFids.add(user.fid);
+      if (user.socialId && user.socialId !== '' && user.socialPlatform !== "TWITTER") {
+        uniqueFids.add(user.socialId);
       }
     });
 
@@ -70,12 +70,12 @@ export async function GET() {
         userId: user._id,
         wallet: user.wallet,
         username: user.username,
-        fid: user.fid,
+        socialId: user.socialId,
       };
       
-      if (user.fid && user.fid !== '' && !user.fid.startsWith('none')) {
+      if (user.socialId && user.socialId !== '' && user.socialPlatform !== "TWITTER") {
         // For valid FIDs, use data from Neynar API
-        const neynarUser = neynarUsers[user.fid];
+        const neynarUser = neynarUsers[user.socialId];
         const fallbackWallet = user.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         
