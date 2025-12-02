@@ -101,7 +101,7 @@ export async function GET(
     }
 
     // Get all auctions hosted by this user
-    const auctions = await Auction.find({ hostedBy: userId })
+    const auctions = await Auction.find({ hostedBy: user._id })
       .select('auctionName endDate startDate currency blockchainAuctionId minimumBid bidders')
       .sort({ createdAt: -1 })
       .lean();
