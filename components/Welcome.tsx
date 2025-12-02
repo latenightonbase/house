@@ -20,7 +20,7 @@ import {
   DrawerTrigger,
 } from "@/components/UI/Drawer";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useWallets } from '@privy-io/react-auth';
+import { getAccessToken, useWallets } from '@privy-io/react-auth';
 
 export default function Welcome() {
 
@@ -32,7 +32,22 @@ export default function Welcome() {
     const address = wallets.length > 0 ? wallets[0].address : null;
 
     // Check if user has already enabled notifications
-    const hasNotifications = user?.notificationDetails?.token;
+    const hasNotifications = async () => {
+        if(!context) return false;
+
+        const accessToken = await getAccessToken();
+        
+        const response = await fetch('/api/users/profile?socialId=' + (user?.socialId),{
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        })
+        const data = await response.json()
+
+        if(data.user.notificationDetails){
+            return true;
+        }
+    };
     
     // Open drawer by default if user doesn't have notifications enabled
     const [drawerOpen, setDrawerOpen] = useState(!hasNotifications && !!user);
