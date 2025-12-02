@@ -21,8 +21,7 @@ export async function GET(
 
     // Find user and their auctions
     const userDoc = await User.find({socialId: userId})
-      .select('wallet fid username hostedAuctions twitterProfile socialId socialPlatform')
-      .lean();
+      .select('wallet fid username hostedAuctions twitterProfile socialId socialPlatform');
 
     if (!userDoc) {
       return NextResponse.json(
@@ -30,6 +29,8 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    console.log('Fetched user document:', userDoc);
 
     const user: any = userDoc;
 
