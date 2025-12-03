@@ -50,6 +50,7 @@ export default function CreateAuction() {
     wallet => wallet.walletClientType !== 'privy'
   );
 
+  const { user } = useGlobalContext();
   const address = externalWallets.length > 0 ? externalWallets[0].address : null;
   const { getAccessToken } = usePrivy();
   const [auctionTitle, setAuctionTitle] = useState("");
@@ -133,7 +134,8 @@ export default function CreateAuction() {
           endDate: endTime,
           currency: selectedCurrency?.symbol,
           startDate: now,
-          hostedBy: address,
+          hostedBy: user.socialId,
+          startingWallet: address,
           minimumBid: parseFloat(minBidAmount),
         }),
       });

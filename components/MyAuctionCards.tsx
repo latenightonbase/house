@@ -39,6 +39,7 @@ interface Auction {
   minimumBid: number;
   blockchainAuctionId: string;
   tokenAddress: string;
+  startingWallet: string;
   hostedBy: {
     _id: string;
     wallet: string;
@@ -463,7 +464,7 @@ export default function MyAuctionCards() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "text-green-500";
+        return "text-primary";
       case "upcoming":
         return "text-yellow-500";
       case "ended":
@@ -550,6 +551,15 @@ export default function MyAuctionCards() {
                   {auction.status}
                 </span>
               </div>
+
+               <div className="flex justify-between items-center w-full mb-1">
+                  <span className="text-caption text-sm flex-shrink-0">
+                    Started By:
+                  </span>
+                  <a href={`https://basescan.org/address/${auction.startingWallet}`} className="font-medium text-sm truncate ml-2 text-right text-primary bg-primary/10 p-1 rounded-sm">
+                    {auction.startingWallet.slice(0, 6)}...{auction.startingWallet.slice(-4)}
+                  </a>
+                </div>
 
               <div className="space-y-2 mb-4 w-full">
                 <div className="flex justify-between items-center w-full">

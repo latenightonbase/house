@@ -26,6 +26,7 @@ export interface IAuction extends Document {
   updatedAt: Date;
   tokenAddress: string;
   enabled: boolean;
+  startingWallet: string;
   status: 'ongoing' | 'ended' | 'paused';
 }
 
@@ -62,6 +63,10 @@ const AuctionSchema: Schema = new Schema(
       required: true,
       trim: true,
       maxlength: 200,
+    },
+    startingWallet: {
+      type: String,
+      default: '',
     },
     description: {
       type: String,

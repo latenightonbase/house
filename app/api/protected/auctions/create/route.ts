@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
   try {
     const body = await req.json();
-    const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash } = body;
+    const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet } = body;
 
     console.log('Creating auction with data:', body);
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     await dbConnect();
 
-    var user = await User.findOne({ wallet: hostedBy });
+    var user = await User.findOne({ socialId: hostedBy });
 
     console.log('Hosting user:', user);
 
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       endDate,
       hostedBy: user._id,
       minimumBid,
+      startingWallet: startingWallet
     });
 
     await newAuction.save();
