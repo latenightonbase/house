@@ -271,29 +271,29 @@ export default function MyAuctionCards() {
       }));
 
       if (!context) {
-        // toast.loading("Sending end auction transaction...", { id: toastId });
+        toast.loading("Sending end auction transaction...", { id: toastId });
         
-        // const writeContract = await writeNewContractSetup(
-        //   contractAdds.auctions,
-        //   auctionAbi,
-        //   externalWallets[0]
-        // );
+        const writeContract = await writeNewContractSetup(
+          contractAdds.auctions,
+          auctionAbi,
+          externalWallets[0]
+        );
 
-        // if (!writeContract) {
-        //   throw new Error("Failed to setup write contract");
-        // }
+        if (!writeContract) {
+          throw new Error("Failed to setup write contract");
+        }
 
-        // toast.loading("Waiting for transaction...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
         
-        // const tx = await writeContract.endAuction(blockchainAuctionId);
-        // await tx.wait(); // Wait for transaction confirmation
+        const tx = await writeContract.endAuction(blockchainAuctionId);
+        await tx.wait(); // Wait for transaction confirmation
 
-        // if(!tx){
-        //   toast.error("Transaction failed", { id: toastId });
-        //   setIsLoading(false);
-        //   setEndingAuction(null);
-        //   return;
-        // }
+        if(!tx){
+          toast.error("Transaction failed", { id: toastId });
+          setIsLoading(false);
+          setEndingAuction(null);
+          return;
+        }
 
         await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
       } else {
