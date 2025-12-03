@@ -52,7 +52,7 @@ interface HostInfo {
   wallet: string;
   username?: string;
   display_name?: string;
-  fid?: string;
+  socialId?: string;
   pfp_url?: string;
 }
 
@@ -148,8 +148,7 @@ const LandingAuctions: React.FC = () => {
       console.log("API Response:", data);
 
       if (data.success) {
-        console.log("Auctions", data.auctions);
-        console.log("HasMore:", data.hasMore, "Page:", data.page);
+        
         if (append) {
           setAuctions(prev => [...prev, ...data.auctions]);
         } else {
@@ -1033,7 +1032,7 @@ const LandingAuctions: React.FC = () => {
                     <span className="text-caption">Hosted by:</span>
                     <div 
                       className="flex items-center gap-2 text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200"
-                      onClick={() => navigate(`/user/${auction.hostedBy._id}`)}
+                      onClick={() => navigate(`/user/${auction.hostedBy.socialId}`)}
                     >
                       <Image 
                         unoptimized 

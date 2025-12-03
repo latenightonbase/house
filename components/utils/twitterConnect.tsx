@@ -1,7 +1,7 @@
 import { useLogin, usePrivy, useWallets, useConnectWallet } from '@privy-io/react-auth';
 import Image from 'next/image';
 import { MdWallet, MdLogout, MdMoreVert } from 'react-icons/md';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function LoginWithOAuth() {
   const { user, authenticated, logout, getAccessToken } = usePrivy();
@@ -14,6 +14,24 @@ export default function LoginWithOAuth() {
     }
   });
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const handleAddWallet = async (walletAddress: string) => {
     try {
@@ -140,12 +158,12 @@ export default function LoginWithOAuth() {
           {authenticated && twitterAccount ? (
               <>
                 {/* Twitter Account Display */}
-                <div className="relative">
+                <div className="relative" ref={menuRef}>
                   <div 
                     className="flex items-center justify-between gap-2 bg-white/10 px-3 py-2 max-lg:p-1 rounded-full cursor-pointer hover:bg-white/20 transition-colors"
                     onClick={() => setMenuOpen(!menuOpen)}
                   >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center lg:gap-2 relative">
                         {twitterAccount.profilePictureUrl && (
                             <Image
                             unoptimized
@@ -156,8 +174,8 @@ export default function LoginWithOAuth() {
                                 className="rounded-full w-11 max-lg:w-8 aspect-square bg-primary/50 border-2 border-primary"
                             />
                         )}
-                        <div className="max-lg:hidden">
-                          <span className="text-sm font-medium">
+                        <div className=" max-lg:w-0">
+                          <span className="text-sm font-medium max-lg:hidden">
                             @{twitterAccount.username}
                         </span>
                         {externalWallets.length > 0 ? (<>
@@ -165,7 +183,7 @@ export default function LoginWithOAuth() {
 {externalWallets.map((wallet:any) => (
                       <div 
                         key={wallet.address}
-                        className="flex items-center justify-between gap-2  rounded-full"
+                        className="flex items-center justify-between gap-2 rounded-full max-lg:hidden"
                       >
                         <div className="flex items-center gap-2">
                         
@@ -176,17 +194,14 @@ export default function LoginWithOAuth() {
                       </div>
                     ))}</>
                         ) : (<>
-                          <div 
+                          
+                        <div className="flex items-center gap-2 bg-red-500/80 text-nowrap text-xs px-2 py-1 absolute max-lg:-left-12 left-10 -top-8 animate-bounce max-lg:top-full mt-2 rounded-full">
                         
-                        className="flex items-center justify-between gap-2  rounded-full"
-                      >
-                        <div className="flex items-center gap-2">
-                        
-                          <span className="text-sm font-medium text-red-500">
+                          <MdWallet className="text-sm" />
                             Not Connected
-                          </span>
+                          
                         </div>
-                      </div>
+                    
                         </>)}
                           
                         </div>
