@@ -46,12 +46,6 @@ export async function POST(req: NextRequest) {
             "https://base-mainnet.g.alchemy.com/v2/CA4eh0FjTxMenSW3QxTpJ7D-vWMSHVjq"
         );
         
-        // Set network manually to avoid detection
-        (provider as any)._network = {
-            name: "base",
-            chainId: 8453
-        };
-        
         // console.log('✅ Provider setup complete');
 
         const wallet = new ethers.Wallet(process.env.PRIVATE_KEY as string, provider);

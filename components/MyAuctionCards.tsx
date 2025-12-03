@@ -20,6 +20,8 @@ import {
 } from "@base-org/account";
 import { checkStatus } from "@/utils/checkStatus";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { ethers } from "ethers";
+import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 
 interface Bidder {
   user: string;
@@ -123,6 +125,7 @@ export default function MyAuctionCards() {
        toast.loading("Transaction confirmed! Ending auction...");
       const accessToken = await getAccessToken();
 
+      console.log("Ending auction via API:", auctionId, bidders);
       const response = await fetch(
         `/api/protected/auctions/${auctionId}/end`,
         {
@@ -137,6 +140,8 @@ export default function MyAuctionCards() {
           }),
         }
       );
+
+      console.log("API response:", response);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -247,36 +252,48 @@ export default function MyAuctionCards() {
       const contractBidders = await contract?.getBidders(blockchainAuctionId);
       console.log("Contract Bidders:", contractBidders);
 
+      const auctionMeta = await contract?.getAuctionMeta(blockchainAuctionId);
+      console.log("Contract Meta:", auctionMeta);
+
+      const localErc20Contract = await readContractSetup(auctionMeta.caInUse, erc20Abi);
+      if (!localErc20Contract) {
+        console.log("ERC20 Contract not found!")
+        throw new Error("Failed to setup ERC20 contract connection");
+      }
+
+      const decimals = await localErc20Contract.decimals();
+      console.log("Token Decimals:", decimals);
+
       const formattedBidders = contractBidders.map((item: any) => ({
         bidder: item[0], 
-        bidAmount: item[1], 
+        bidAmount: ethers.formatUnits(item[1],  decimals), 
         fid: item[2]
       }));
 
       if (!context) {
-        toast.loading("Sending end auction transaction...", { id: toastId });
+        // toast.loading("Sending end auction transaction...", { id: toastId });
         
-        const writeContract = await writeNewContractSetup(
-          contractAdds.auctions,
-          auctionAbi,
-          externalWallets[0]
-        );
+        // const writeContract = await writeNewContractSetup(
+        //   contractAdds.auctions,
+        //   auctionAbi,
+        //   externalWallets[0]
+        // );
 
-        if (!writeContract) {
-          throw new Error("Failed to setup write contract");
-        }
+        // if (!writeContract) {
+        //   throw new Error("Failed to setup write contract");
+        // }
 
-        toast.loading("Waiting for transaction...", { id: toastId });
+        // toast.loading("Waiting for transaction...", { id: toastId });
         
-        const tx = await writeContract.endAuction(blockchainAuctionId);
-        await tx.wait(); // Wait for transaction confirmation
+        // const tx = await writeContract.endAuction(blockchainAuctionId);
+        // await tx.wait(); // Wait for transaction confirmation
 
-        if(!tx){
-          toast.error("Transaction failed", { id: toastId });
-          setIsLoading(false);
-          setEndingAuction(null);
-          return;
-        }
+        // if(!tx){
+        //   toast.error("Transaction failed", { id: toastId });
+        //   setIsLoading(false);
+        //   setEndingAuction(null);
+        //   return;
+        // }
 
         await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
       } else {
@@ -328,7 +345,6 @@ export default function MyAuctionCards() {
           const result = await checkStatus(callsId);
 
           if (result) {
-            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
             await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
           } else {
             toast.error("Transaction failed or timed out", { id: toastId });
