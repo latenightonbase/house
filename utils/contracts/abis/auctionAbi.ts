@@ -148,6 +148,19 @@ export const auctionAbi = [
 		"type": "event"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_auctionId",
+				"type": "string"
+			}
+		],
+		"name": "endAuction",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -191,9 +204,103 @@ export const auctionAbi = [
 				"internalType": "string",
 				"name": "_auctionId",
 				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "fid",
+				"type": "string"
 			}
 		],
-		"name": "endAuction",
+		"name": "placeBid",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_wallet",
+				"type": "address"
+			}
+		],
+		"name": "setProgEnder",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_auctionId",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "_token",
+				"type": "address"
+			},
+			{
+				"internalType": "string",
+				"name": "_tokenName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "durationHours",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_minBidAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "startAuction",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_newReceiver",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_newPercent",
+				"type": "uint256"
+			}
+		],
+		"name": "updateFeeSettings",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -451,97 +558,16 @@ export const auctionAbi = [
 		"type": "function"
 	},
 	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_auctionId",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "fid",
-				"type": "string"
-			}
-		],
-		"name": "placeBid",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
 		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_auctionId",
-				"type": "string"
-			},
+		"name": "prog_ender",
+		"outputs": [
 			{
 				"internalType": "address",
-				"name": "_token",
-				"type": "address"
-			},
-			{
-				"internalType": "string",
-				"name": "_tokenName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "durationHours",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_minBidAmount",
-				"type": "uint256"
-			}
-		],
-		"name": "startAuction",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
+				"name": "",
 				"type": "address"
 			}
 		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "_newReceiver",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_newPercent",
-				"type": "uint256"
-			}
-		],
-		"name": "updateFeeSettings",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"stateMutability": "view",
 		"type": "function"
 	}
 ]
