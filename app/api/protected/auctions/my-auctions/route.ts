@@ -16,14 +16,14 @@ export async function GET(req: NextRequest) {
     // Get the wallet address from session or query params
     const { searchParams } = new URL(req.url);
     // @ts-ignore
-    const walletAddress = searchParams.get('wallet') || session.wallet;
+    const id = searchParams.get('id') || session.wallet;
 
-    if (!walletAddress) {
+    if (!id) {
       return NextResponse.json({ error: 'Wallet address not found' }, { status: 400 });
     }
 
     // Find user by wallet address
-    const user = await User.findOne({ wallet: walletAddress });
+    const user = await User.findOne({ socialId: id });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

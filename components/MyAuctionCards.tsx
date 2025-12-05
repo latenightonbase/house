@@ -193,7 +193,7 @@ export default function MyAuctionCards() {
 
       const accessToken = await getAccessToken();
       const response = await fetch(
-        `/api/protected/auctions/my-auctions?wallet=${address}`,
+        `/api/protected/auctions/my-auctions?id=${user?.socialId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -202,14 +202,18 @@ export default function MyAuctionCards() {
         }
       );
 
+      console.log("Fetch auctions response:", response);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data: AuctionsResponse = await response.json();
 
+      console.log("Fetched auctions:", data);
+
       if (data.success) {
-        setAuctions(data.auctions);
+        setAuctions(data.auctions || []);
       } else {
         throw new Error("Failed to fetch auctions");
       }
@@ -383,10 +387,10 @@ export default function MyAuctionCards() {
   };
 
   useEffect(() => {
-    if (address) {
+    if (user) {
       fetchAuctions();
     }
-  }, [address]);
+  }, [user]);
 
   if (loading && !auctions.length) {
     return (
@@ -458,7 +462,7 @@ export default function MyAuctionCards() {
   }
 
   const filteredAuctions = auctions.filter(
-    (auction) => auction.status === activeTab
+    (auction) => auction?.status === activeTab
   );
 
   const getStatusColor = (status: string) => {
@@ -533,7 +537,7 @@ export default function MyAuctionCards() {
       </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {filteredAuctions.map((auction) => (
+          {filteredAuctions.map((auction) => auction ? (
             <div
               key={auction._id}
               className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-4 hover:shadow-lg transition-shadow w-full"
@@ -552,14 +556,14 @@ export default function MyAuctionCards() {
                 </span>
               </div>
 
-               <div className="flex justify-between items-center w-full mb-1">
+               {auction.startingWallet && <div className="flex justify-between items-center w-full mb-1">
                   <span className="text-caption text-sm flex-shrink-0">
                     Started By:
                   </span>
                   <a href={`https://basescan.org/address/${auction.startingWallet}`} className="font-medium text-sm truncate ml-2 text-right text-primary bg-primary/10 p-1 rounded-sm">
                     {auction.startingWallet.slice(0, 6)}...{auction.startingWallet.slice(-4)}
                   </a>
-                </div>
+                </div>}
 
               <div className="space-y-2 mb-4 w-full">
                 <div className="flex justify-between items-center w-full">
@@ -653,7 +657,7 @@ export default function MyAuctionCards() {
                 </div>
               )}
             </div>
-          ))}
+          ) : null)}
         </div>
       )}
     </div>
