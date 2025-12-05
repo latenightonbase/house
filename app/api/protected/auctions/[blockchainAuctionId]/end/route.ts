@@ -63,19 +63,19 @@ export async function POST(req: NextRequest) {
     // Get the wallet address from session
     console.log('👛 [WALLET] Extracting wallet address from headers...');
     // @ts-ignore
-    const walletAddress = req.headers.get('x-user-wallet');
+    const socialId = req.headers.get('x-user-wallet');
 
-    console.log('👛 [WALLET] Authenticated wallet:', walletAddress);
+    console.log('👛 [WALLET] Authenticated wallet:', socialId);
 
-    if (!walletAddress) {
+    if (!socialId) {
       console.error('❌ [WALLET] Wallet address not found in request headers');
       return NextResponse.json({ error: 'Wallet address not found in session' }, { status: 400 });
     }
     console.log('✅ [WALLET] Wallet address extracted successfully');
 
     // Find the user to verify ownership
-    console.log('👤 [USER LOOKUP] Searching for user with wallet:', walletAddress);
-    const user = await User.findOne({ wallet: walletAddress });
+    console.log('👤 [USER LOOKUP] Searching for user with wallet:', socialId);
+    const user = await User.findOne({ socialId: socialId });
     if (!user) {
       console.error('❌ [USER LOOKUP] User not found in database');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });

@@ -134,7 +134,7 @@ export default function MyAuctionCards() {
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${accessToken}`,
-            "x-user-wallet": address || ''
+            "x-user-wallet": user.socialId
           },
           body: JSON.stringify({
             bidders: bidders,
