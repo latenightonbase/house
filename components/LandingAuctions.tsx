@@ -412,7 +412,7 @@ const LandingAuctions: React.FC = () => {
               args: [
                 auctionId,
                 bidAmountInWei,
-                String(user.fid) || address
+                String(user.socialId) || address
               ],
             }),
           },

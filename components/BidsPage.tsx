@@ -612,7 +612,7 @@ export default function BidPage() {
               args: [
                 auctionId,
                 bidAmountInWei,
-                String(user.fid) || address
+                String(user.socialId) || address
               ],
             }),
           },
