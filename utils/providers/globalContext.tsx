@@ -80,6 +80,7 @@ useEffect(() => {
                 socialId: privyUser?.farcaster?.fid,
                 socialPlatform: 'FARCASTER',
                 twitterProfile: undefined,
+                wallet: privyUser?.wallet?.address ? privyUser?.wallet?.address : undefined,
               }),
             });
 

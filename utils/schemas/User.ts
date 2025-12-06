@@ -51,10 +51,7 @@ const UserSchema: Schema = new Schema(
       trim: true,
     },
     wallet: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
+      type: String
     },
     socialId: {
       type: String,
