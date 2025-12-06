@@ -53,7 +53,7 @@ const UserSchema: Schema = new Schema(
     },
     wallet: {
       type: String,
-      unique:false
+      sparse: true
     },
     socialId: {
       type: String,
@@ -129,7 +129,6 @@ const UserSchema: Schema = new Schema(
   }
 );
 
-UserSchema.index({ wallet: 1 });
 UserSchema.index({ username: 1 });
 
 // Export the model
