@@ -12,9 +12,14 @@ export async function POST(request: NextRequest) {
 
     const { privyId, socialId, socialPlatform, walletAddress, twitterProfile } = await request.json();
 
+
+    console.log('Request data:', { privyId, socialId, socialPlatform, walletAddress, twitterProfile });
+
     if (!privyId || !socialId || !socialPlatform) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    
 
     await dbConnect();
 
@@ -26,6 +31,8 @@ export async function POST(request: NextRequest) {
         { wallet: walletAddress }
       ]
     });
+
+    console.log('Existing user check:', existingUser);
 
     if (existingUser) {
       return NextResponse.json({ 
