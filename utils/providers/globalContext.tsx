@@ -60,25 +60,34 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         signature: result.signature,
       });
 
-      const accessToken = await getAccessToken();
-          const response = await fetch('/api/protected/user/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              privyId: loggedInUser?.id,
-              socialId: loggedInUser?.farcaster?.fid,
-              socialPlatform: 'FARCASTER',
-              twitterProfile: undefined,
-            }),
-          });
-
     };
     login();
   }
 }, [ready, authenticated, context]);
+
+useEffect(() => {
+  const createUser = async () => {
+    if(privyUser && privyUser.farcaster){
+      const accessToken = await getAccessToken();
+            const response = await fetch('/api/protected/user/create', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                privyId: privyUser?.id,
+                socialId: privyUser?.farcaster?.fid,
+                socialPlatform: 'FARCASTER',
+                twitterProfile: undefined,
+              }),
+            });
+
+    }
+  };
+  
+  createUser();
+},[privyUser])
 
 useEffect(() => {
   if(context){
