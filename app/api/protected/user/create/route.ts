@@ -46,8 +46,10 @@ export async function POST(request: NextRequest) {
       privyId,
       socialId,
       socialPlatform,
-      wallet: walletAddress || undefined,
-      wallets: walletAddress ? [walletAddress] : [],
+      ...(walletAddress && {
+        wallet: walletAddress,
+        wallets: [walletAddress]
+      }),
       username: twitterProfile?.username,
       twitterProfile: twitterProfile ? {
         id: twitterProfile.id,
