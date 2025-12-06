@@ -62,7 +62,7 @@ export default function LoginWithOAuth() {
   const { login } = useLogin({
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated, loginMethod, loginAccount }) => {
       console.log('User logged in successfully', user);
-      if (isNewUser) {
+      if (isNewUser && user.twitter?.subject) {
         console.log('New user detected, creating user in database');
         try {
           const accessToken = await getAccessToken();
@@ -75,7 +75,7 @@ export default function LoginWithOAuth() {
             body: JSON.stringify({
               privyId: user.id,
               socialId: user.twitter?.subject,
-              socialPlatform: 'twitter',
+              socialPlatform: 'TWITTER',
               walletAddress: user.wallet?.address,
               twitterProfile: user.twitter ? {
                 id: user.twitter.subject,

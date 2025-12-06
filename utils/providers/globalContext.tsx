@@ -42,7 +42,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { context } = useMiniKit();
   const [user, setUser] = useState<any | null>(null);
 
-  const {ready, authenticated, user:privyUser} = usePrivy();
+  const {ready, authenticated, user:privyUser, getAccessToken} = usePrivy();
   const {initLoginToMiniApp, loginToMiniApp} = useLoginToMiniApp();
 
 
@@ -55,14 +55,30 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
       const result = await sdk.actions.signIn({nonce});
       // Send the received signature from Farcaster to Privy for authentication
       // or pass a SIWF message signed by an auth address
-      await loginToMiniApp({
+      const loggedInUser = await loginToMiniApp({
         message: result.message,
         signature: result.signature,
       });
+
+      const accessToken = await getAccessToken();
+          const response = await fetch('/api/protected/user/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              privyId: loggedInUser?.id,
+              socialId: loggedInUser?.farcaster?.fid,
+              socialPlatform: 'FARCASTER',
+              twitterProfile: undefined,
+            }),
+          });
+
     };
     login();
   }
-}, [ready, authenticated]);
+}, [ready, authenticated, context]);
 
 useEffect(() => {
   if(context){
