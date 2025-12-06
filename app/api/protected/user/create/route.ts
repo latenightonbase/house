@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
     const existingUser = await User.findOne({
       $or: [
         { privyId },
-        { socialId },
-        { wallet: walletAddress }
+        { socialId }
       ]
     });
 
