@@ -43,6 +43,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
 
   const {ready, authenticated, user:privyUser, getAccessToken} = usePrivy();
+  const {address} = useAccount();
   const {initLoginToMiniApp, loginToMiniApp} = useLoginToMiniApp();
 
 
@@ -80,7 +81,7 @@ useEffect(() => {
                 socialId: privyUser?.farcaster?.fid,
                 socialPlatform: 'FARCASTER',
                 twitterProfile: undefined,
-                wallet: privyUser?.wallet?.address ? privyUser?.wallet?.address : undefined,
+                wallet: address,
               }),
             });
 
@@ -88,7 +89,7 @@ useEffect(() => {
   };
   
   createUser();
-},[privyUser])
+},[privyUser, address])
 
 useEffect(() => {
   if(context){
