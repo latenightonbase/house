@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import { unique } from 'next/dist/build/utils';
 
 enum SocialPlatform {
   TWITTER = 'TWITTER',
@@ -51,7 +52,8 @@ const UserSchema: Schema = new Schema(
       trim: true,
     },
     wallet: {
-      type: String
+      type: String,
+      unique:false
     },
     socialId: {
       type: String,
