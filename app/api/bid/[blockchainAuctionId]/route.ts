@@ -220,7 +220,7 @@ export async function POST(
       
       if (!bidder.fid.startsWith('0x')) {
         // This is a numeric FID
-        const neynarUser = neynarUsers.find(user => user.socialId.toString() === bidder.fid);
+        const neynarUser = neynarUsers.find(user => user.fid.toString() === bidder.fid);
         
         if (neynarUser) {
           processedBidders[i].displayName = neynarUser.display_name || neynarUser.username || `User ${bidder.fid}`;

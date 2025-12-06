@@ -146,6 +146,7 @@ export async function GET(req: NextRequest) {
           // Enhance top bidder with Neynar data
           if (topBidder.socialId && topBidder.socialId !== '' && topBidder.socialPlatform !== "TWITTER") {
             // For valid FIDs, use data from Neynar API
+            console.log(`Processing top bidder ${topBidder.socialId}:`, { neynarUser: neynarUsers[topBidder.socialId] });
             const neynarUser = neynarUsers[topBidder.socialId];
             const fallbackWallet = topBidder.wallet;
             const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
