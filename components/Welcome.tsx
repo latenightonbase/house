@@ -83,7 +83,7 @@ export default function Welcome() {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        wallet: address,
+                        socialId: user.socialId,
                         notificationDetails: response.notificationDetails
                     })
                 });

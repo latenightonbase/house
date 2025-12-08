@@ -5,24 +5,24 @@ import dbConnect from "@/utils/db";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { wallet, notificationDetails } = body;
+    const { socialId, notificationDetails } = body;
 
     console.log("Received data:", body);
 
-    if (!wallet || !notificationDetails) {
+    if (!socialId || !notificationDetails) {
       return NextResponse.json(
-        { error: "Missing wallet or notificationDetails" },
+        { error: "Missing socialId or notificationDetails" },
         { status: 400 }
       );
     }
 
-    console.log("Saving notification details for wallet:", wallet);
+    console.log("Saving notification details for socialId:", socialId);
     console.log("Notification details:", notificationDetails);
 
     await dbConnect();
 
     const user = await User.findOneAndUpdate(
-      { wallet: wallet },
+      { socialId: socialId },
       { 
         $set: { 
           notificationDetails: {
