@@ -138,13 +138,15 @@ export async function POST(req: NextRequest) {
           { $addToSet: { bidsWon: auction._id } }
         );
 
+        console.log('[AUCTION END] Winning bid determined:', highestBid);
+
         const {token, url} = highestBid.bidderUser.notificationDetails || {};
 
         if(token && url){
           // Send notification to winner
           const notificationTitle = `🎉 You won the auction for ${auction.title}!`;
           const notificationBody = `You were the highest bidder. Click to view the auction.`;
-          const targetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/bid/${auction.blockchainAuctionId}`;
+          const targetUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/bid/${auction.blockchainAuctionId}`;
 
           await sendNotification(url, token, notificationTitle, notificationBody, targetUrl);
         }

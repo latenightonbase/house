@@ -15,8 +15,11 @@ export async function sendNotification(url:string, token:string, notificationTit
     });
 
     if(res.ok){
+        console.log("Notification sent successfully", await res.json());
         return { ok: true, status: res.status};
     }
+
+    console.log("Notification failed to send", await res.json());
 
     return { ok: false, status: res.status, error: await res.json() };
 

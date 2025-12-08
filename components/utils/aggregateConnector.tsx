@@ -16,7 +16,7 @@ export default function AggregateConnector() {
     if(context && user){
         return (
     <>
-        <button onClick={() => navigate(`/user/${user?.pfp_url}`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
+        <button onClick={() => navigate(`/user/${user?.socialId}`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
             <Image unoptimized src={user?.pfp_url as string} alt="Coinbase Logo" className="border-2 border-primary rounded-full w-8 h-8 aspect-square" />
         </button>
     </>)
