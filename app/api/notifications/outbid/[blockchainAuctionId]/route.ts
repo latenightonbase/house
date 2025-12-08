@@ -9,6 +9,10 @@ export async function POST(
   try {
     console.log('[Outbid Notification] Starting outbid notification process');
     await connectToDB();
+    
+    // Ensure User model is registered
+    User;
+    
     const blockchainAuctionId = req.nextUrl.pathname.split('/').pop();
     console.log('[Outbid Notification] blockchainAuctionId:', blockchainAuctionId);
 
@@ -21,7 +25,7 @@ export async function POST(
 
     // Fetch auction with populated bidders
     const auction = await Auction.findOne({ blockchainAuctionId })
-      .populate('bidders.user', 'wallet username fid notificationDetails')
+      .populate('bidders.user', 'wallet username socialId notificationDetails')
       .lean() as any | null;
 
     console.log('[Outbid Notification] Auction found:', !!auction);
