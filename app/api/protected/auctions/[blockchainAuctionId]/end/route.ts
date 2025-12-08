@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
         if(token && url){
           // Send notification to winner
           const notificationTitle = `🎉 You won the auction for ${auction.title}!`;
-          const notificationBody = `Congratulations! You are the highest bidder with a bid of ${ethers.formatUnits(highestBid.bidAmount, isUSDC ? 6 : 18)} ${auction.tokenSymbol || 'TOKEN'}. Click to view the auction.`;
+          const notificationBody = `You were the highest bidder. Click to view the auction.`;
           const targetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/bid/${auction.blockchainAuctionId}`;
 
           await sendNotification(url, token, notificationTitle, notificationBody, targetUrl);
