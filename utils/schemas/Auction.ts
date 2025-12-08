@@ -142,7 +142,6 @@ AuctionSchema.index({ hostedBy: 1 });
 AuctionSchema.index({ endDate: 1 });
 AuctionSchema.index({ startDate: 1 });
 AuctionSchema.index({ currency: 1 });
-AuctionSchema.index({ 'bidders.user': 1 });
 AuctionSchema.index({ winningBid: 1 });
 AuctionSchema.index({ minimumBid: 1 });
 AuctionSchema.index({ totalRevenue: 1 });
