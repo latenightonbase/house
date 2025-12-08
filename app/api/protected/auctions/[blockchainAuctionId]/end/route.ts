@@ -144,8 +144,8 @@ export async function POST(req: NextRequest) {
 
         if(token && url){
           // Send notification to winner
-          const notificationTitle = `🎉 You won the auction for ${auction.title}!`;
-          const notificationBody = `You were the highest bidder. Click to view the auction.`;
+          const notificationTitle = `🎉 You won the ${auction.title}!`;
+          const notificationBody = `You were the highest bidder.`;
           const targetUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/bid/${auction.blockchainAuctionId}`;
 
           await sendNotification(url, token, notificationTitle, notificationBody, targetUrl);
