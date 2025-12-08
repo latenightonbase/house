@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import connectToDB from '@/utils/db';
+import { sendNotification } from '@/utils/notification/sendNotification';
 
 export async function POST(
   req: NextRequest,
@@ -116,38 +117,20 @@ export async function POST(
     console.log('[Outbid Notification] Notification URL:', url);
 
     // Send notification
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        notificationId: crypto.randomUUID(),
-        title: notificationTitle,
-        body: notificationBody,
-        targetUrl: targetUrl,
-        tokens: [token],
-      }),
-    });
+    const res = await sendNotification(url, token, notificationTitle, notificationBody, targetUrl);
 
     console.log('[Outbid Notification] Notification response status:', res.status);
 
     if (!res.ok) {
-      const errorData = await res.json();
-      console.error('[Outbid Notification] Failed to send notification:', errorData);
+      console.error('[Outbid Notification] Failed to send notification:', res.error);
       return NextResponse.json(
-        { error: 'Failed to send notification', details: errorData },
+        { error: 'Failed to send notification', details: res.error },
         { status: res.status }
       );
     }
-
-    const responseData = await res.json();
-    console.log('[Outbid Notification] Notification sent successfully:', responseData);
-
     return NextResponse.json({
       success: true,
       message: 'Notification sent to second highest bidder',
-      response: responseData,
     });
   } catch (error: any) {
     console.error('Error sending outbid notification:', error);
