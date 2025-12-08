@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaPlus } from "react-icons/fa";
 import { IoMdNotifications } from "react-icons/io";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import sdk from "@farcaster/miniapp-sdk";
 import { toast } from "react-hot-toast";
 import {
@@ -30,27 +30,42 @@ export default function Welcome() {
     const {context} = useMiniKit();
     const {wallets} = useWallets();
     const address = wallets.length > 0 ? wallets[0].address : null;
+    const [hasNotifications, setHasNotifications] = useState<boolean | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     // Check if user has already enabled notifications
-    const hasNotifications = async () => {
-        if(!context) return false;
+    useEffect(() => {
+        const checkNotifications = async () => {
+            if(!context || !user?.socialId) {
+                setHasNotifications(false);
+                return;
+            }
 
-        const accessToken = await getAccessToken();
-        
-        const response = await fetch('/api/users/profile?socialId=' + (user?.socialId),{
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        })
-        const data = await response.json()
+            try {
+                const accessToken = await getAccessToken();
+                
+                const response = await fetch('/api/users/profile?socialId=' + user.socialId, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+                const data = await response.json();
 
-        if(data.user.notificationDetails){
-            return true;
-        }
-    };
-    
-    // Open drawer by default if user doesn't have notifications enabled
-    const [drawerOpen, setDrawerOpen] = useState(!hasNotifications && !!user);
+                const hasNotifs = !!(data.user?.notificationDetails);
+                setHasNotifications(hasNotifs);
+                
+                // Open drawer if user doesn't have notifications enabled
+                if (!hasNotifs) {
+                    setDrawerOpen(true);
+                }
+            } catch (error) {
+                console.error("Error checking notifications:", error);
+                setHasNotifications(false);
+            }
+        };
+
+        checkNotifications();
+    }, [context, user?.socialId]);
 
     const handleAddMiniApp = useCallback(async () => {
         setIsAddingMiniApp(true);
@@ -80,6 +95,9 @@ export default function Welcome() {
                     throw new Error(saveResult.error || "Failed to save notification details");
                 }
 
+                // Update the state to reflect notifications are now enabled
+                setHasNotifications(true);
+                
                 toast.success("Notifications enabled and miniapp added successfully.", {
                     duration: 4000,
                 });
@@ -108,7 +126,7 @@ export default function Welcome() {
                     <FaPlus/> Create Auction
                 </button>
 
-                {!hasNotifications && context && (
+                {hasNotifications === false && context && (
                     <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
                         <DrawerContent>
                             <DrawerHeader>
