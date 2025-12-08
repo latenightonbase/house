@@ -382,7 +382,7 @@ export default function BidPage() {
         },
         body: JSON.stringify({
           bidAmount: bidAmount,
-          userWallet: address,
+          socialId: user?.socialId,
         }),
       });
 

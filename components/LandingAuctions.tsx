@@ -131,7 +131,7 @@ const LandingAuctions: React.FC = () => {
 
 
   const { user } = useGlobalContext();
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, user:privyUser } = usePrivy();
 
   const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
     try {
@@ -243,7 +243,7 @@ const LandingAuctions: React.FC = () => {
         },
         body: JSON.stringify({
           bidAmount: bidAmount,
-          userWallet: address,
+          socialId: user?.socialId,
         }),
       });
 

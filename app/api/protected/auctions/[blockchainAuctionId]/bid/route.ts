@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
 
     console.log("📥 Parsing request body...");
     const body = await req.json();
-    const { bidAmount, userWallet } = body;
-    console.log("📋 Request data:", { bidAmount, userWallet, blockchainAuctionId });
+    const { bidAmount, socialId } = body;
+    console.log("📋 Request data:", { bidAmount, socialId, blockchainAuctionId });
 
     // Validate required fields
-    if (!bidAmount || !userWallet) {
+    if (!bidAmount || !socialId) {
       console.log("❌ Validation failed - missing required fields");
-      return NextResponse.json({ error: 'Missing required fields: bidAmount and userWallet' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields: bidAmount and socialId' }, { status: 400 });
     }
 
     if (typeof bidAmount !== 'number' || bidAmount <= 0) {
@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Find or create the user
-    let user = await User.findOne({ wallet: userWallet });
+    let user = await User.findOne({ socialId: socialId });
     if (!user) {
       console.log("👤 User not found, creating new user...");
       user = new User({
-        wallet: userWallet,
+        socialId: socialId,
         participatedAuctions: []
       });
       await user.save();

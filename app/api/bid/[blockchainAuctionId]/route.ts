@@ -55,8 +55,8 @@ export async function POST(
 
     // Find auction in database
     const auction = await Auction.findOne({ blockchainAuctionId })
-      .populate('bidders.user', 'wallet username fid twitterProfile')
-      .populate('hostedBy', 'wallet username fid twitterProfile')
+      .populate('bidders.user', 'wallet username socialId twitterProfile')
+      .populate('hostedBy', 'wallet username socialId twitterProfile')
       .lean() as any | null;
 
       console.log('Fetched auction from DB:', auction);
