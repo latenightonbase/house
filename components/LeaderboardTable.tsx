@@ -11,6 +11,7 @@ import {
 } from '@/components/UI/table';
 import { useRouter } from 'next/navigation';
 import { RiLoader5Fill } from 'react-icons/ri';
+import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader';
 
 interface LeaderboardColumn {
   key: string;
@@ -34,14 +35,12 @@ export default function LeaderboardTable({
   loading = false,
   emptyMessage = 'No data available'
 }: LeaderboardTableProps) {
-  const router = useRouter();
+  const navigate = useNavigateWithLoader()
 
   const handleRowClick = (row: any) => {
-    if (row.userId) {
-      router.push(`/user/${row.userId}`);
-    } else if (row._id) {
-      router.push(`/user/${row._id}`);
-    }
+      if(!row.socialId) return;
+      navigate(`/user/${row.socialId}`);
+    
   };
 
   if (loading) {
