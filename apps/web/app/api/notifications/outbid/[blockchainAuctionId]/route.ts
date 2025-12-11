@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import connectToDB from '@/utils/db';
-import { sendNotification } from '@/utils/notification/sendNotification';
+import { sendNotification } from '@repo/queue';
 
 export async function POST(
   req: NextRequest,

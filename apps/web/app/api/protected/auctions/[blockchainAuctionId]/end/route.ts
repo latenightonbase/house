@@ -6,7 +6,7 @@ import { authOptions } from '@/utils/auth';
 import { ethers } from 'ethers';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 import { authenticateRequest } from '@/utils/authService';
-import { sendNotification } from '@/utils/notification/sendNotification';
+import { sendNotification } from '@repo/queue';
 
 export async function POST(req: NextRequest) {
   try {

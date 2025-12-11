@@ -3,6 +3,7 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authenticateRequest } from '@/utils/authService';
+import { scheduleAuctionReminders } from '@repo/queue';
 
 export async function POST(req: NextRequest) {
     console.log('Verifying token in auction creation route');
@@ -56,7 +57,21 @@ export async function POST(req: NextRequest) {
 
     user.hostedAuctions.push(newAuction._id);
 
-    await user.save()
+    await user.save();
+
+    // Schedule reminder notifications (50% and 10% before end)
+    try {
+      const reminderResult = await scheduleAuctionReminders(
+        newAuction._id.toString(),
+        blockchainAuctionId,
+        auctionName,
+        new Date(startDate),
+        new Date(endDate)
+      );
+      console.log('Reminder scheduling result:', reminderResult);
+    } catch (err) {
+      console.error('Failed to schedule reminders (non-blocking):', err);
+    }
 
     return NextResponse.json(
       { message: 'Auction created successfully', auction: newAuction },

@@ -13,7 +13,11 @@ export default function AggregateConnector() {
     const navigate = useNavigateWithLoader();
 
 
-    if(context && user){
+    if(context){
+        if(!user){
+            return null
+        }
+
         return (
     <>
         <button onClick={() => navigate(`/profile`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
@@ -21,7 +25,9 @@ export default function AggregateConnector() {
         </button>
     </>)
     }
-    else if(!context && user)
-        return (
+    else{
+return (
     <LoginWithOAuth/>)
+    }
+        
 }
