@@ -3,7 +3,22 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+       "NEYNAR_API_KEY", 
+"NEXTAUTH_URL", 
+"NEXTAUTH_SECRET", 
+"MONGO_URI", 
+"PRIVATE_KEY", 
+"RPC_URL", 
+"ZERO_X_API_KEY", 
+"BILL_WALLET", 
+"RISAV_WALLET", 
+"STAKING_CONTRACT", 
+"PRIVY_APP_SECRET", 
+"PRIVY_VERIFICATION_KEY", 
+"REDIS_URL"
+      ]
     },
     "dev": {
       "cache": false,
