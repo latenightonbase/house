@@ -80,7 +80,7 @@ export function getAuctionLifecycleQueue() {
 }
 
 // Helper to schedule reminder jobs for an auction
-const MIN_AUCTION_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const MIN_AUCTION_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function scheduleAuctionReminders(
   auctionId: string,
@@ -94,9 +94,9 @@ export async function scheduleAuctionReminders(
   const end = new Date(endTime).getTime();
   const duration = end - start;
 
-  // Skip if auction is less than 5 mins
+  // Skip if auction is less than 30 mins
   if (duration < MIN_AUCTION_DURATION_MS) {
-    console.log(`Auction ${blockchainAuctionId} is < 5 mins, skipping reminders`);
+    console.log(`Auction ${blockchainAuctionId} is < 30 mins, skipping reminders`);
     return { scheduled: false, reason: 'duration_too_short' };
   }
 
