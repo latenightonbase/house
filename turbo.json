@@ -9,7 +9,6 @@
         "NEXTAUTH_URL",
         "NEXTAUTH_SECRET",
         "MONGO_URI",
-        "PRIVATE_KEY",
         "RPC_URL",
         "ZERO_X_API_KEY",
         "BILL_WALLET",
@@ -18,10 +17,14 @@
         "PRIVY_APP_SECRET",
         "PRIVY_VERIFICATION_KEY",
         "REDIS_URL",
-        "WORKER_SECRET"
+        "WORKER_SECRET",
+        "NEXT_PUBLIC_PRIVY_APP_ID",
+        "NEXT_PUBLIC_DOMAIN",
+        "NEXT_PUBLIC_MINIAPP_URL"
       ]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     }
