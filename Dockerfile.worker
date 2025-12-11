@@ -14,14 +14,12 @@ RUN npm ci
 COPY packages/queue ./packages/queue
 COPY apps/worker ./apps/worker
 
-# Build queue package first
+# Build queue package (worker imports from here via npm workspaces)
 WORKDIR /app/packages/queue
 RUN npx tsc
 
-# Build worker
 WORKDIR /app/apps/worker
-RUN npx tsc
 
-# Run
-CMD ["node", "dist/index.js"]
+# Run directly with tsx (handles TypeScript + path resolution)
+CMD ["npx", "tsx", "src/index.ts"]
 

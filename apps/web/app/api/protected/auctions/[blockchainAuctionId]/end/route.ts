@@ -10,10 +10,19 @@ import { sendNotification } from '@repo/queue';
 
 export async function POST(req: NextRequest) {
   try {
-    const authResult = await authenticateRequest(req);
-    if (!authResult.success) {
-      console.error('❌ [AUTH] Authentication failed');
-      return authResult.response;
+    // Check for worker secret first (for automated worker requests)
+    const workerSecret = req.headers.get('x-worker-secret');
+    const isWorkerRequest = workerSecret && workerSecret === process.env.WORKER_SECRET;
+
+    // If not a worker request, authenticate with Privy
+    if (!isWorkerRequest) {
+      const authResult = await authenticateRequest(req);
+      if (!authResult.success) {
+        console.error('❌ [AUTH] Authentication failed');
+        return authResult.response;
+      }
+    } else {
+      console.log('✅ [AUTH] Worker request authenticated');
     }
 
     // Extract blockchainAuctionId from the URL
@@ -37,26 +46,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Auction not found' }, { status: 404 });
     }
 
-    // Get the wallet address from session
-    // @ts-ignore
-    const socialId = req.headers.get('x-user-wallet');
+    // Skip ownership check for worker requests (contract already validated)
+    if (!isWorkerRequest) {
+      // Get the wallet address from session
+      // @ts-ignore
+      const socialId = req.headers.get('x-user-wallet');
 
-    if (!socialId) {
-      console.error('❌ [WALLET] Wallet address not found in request headers');
-      return NextResponse.json({ error: 'Wallet address not found in session' }, { status: 400 });
-    }
+      if (!socialId) {
+        console.error('❌ [WALLET] Wallet address not found in request headers');
+        return NextResponse.json({ error: 'Wallet address not found in session' }, { status: 400 });
+      }
 
-    // Find the user to verify ownership
-    const user = await User.findOne({ socialId: socialId });
-    if (!user) {
-      console.error('❌ [USER LOOKUP] User not found in database');
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+      // Find the user to verify ownership
+      const user = await User.findOne({ socialId: socialId });
+      if (!user) {
+        console.error('❌ [USER LOOKUP] User not found in database');
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      }
 
-    // Check if the user is the host of the auction
-    if (auction.hostedBy.toString() !== user._id.toString()) {
-      console.error('❌ [OWNERSHIP] User is not the auction host');
-      return NextResponse.json({ error: 'Only the auction host can end the auction' }, { status: 403 });
+      // Check if the user is the host of the auction
+      if (auction.hostedBy.toString() !== user._id.toString()) {
+        console.error('❌ [OWNERSHIP] User is not the auction host');
+        return NextResponse.json({ error: 'Only the auction host can end the auction' }, { status: 403 });
+      }
     }
 
     // Check if auction is currently active

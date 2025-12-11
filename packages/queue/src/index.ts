@@ -39,6 +39,7 @@ export const redisConnection = REDIS_URL
 // Queue names
 export const QUEUES = {
   AUCTION_REMINDER: 'auction-reminder',
+  AUCTION_LIFECYCLE: 'auction-lifecycle',
 } as const;
 
 // Job data types
@@ -49,8 +50,16 @@ export interface AuctionReminderJobData {
   reminderType: 'halfway' | 'near-end'; // 50% or 10% of duration
 }
 
-// Queue instance
+export interface AuctionLifecycleJobData {
+  auctionId: string;
+  blockchainAuctionId: string;
+  auctionName: string;
+  event: 'ended'; // Add more events as needed
+}
+
+// Queue instances
 let _auctionReminderQueue: Queue<AuctionReminderJobData> | null = null;
+let _auctionLifecycleQueue: Queue<AuctionLifecycleJobData> | null = null;
 
 export function getAuctionReminderQueue() {
   if (!_auctionReminderQueue) {
@@ -59,6 +68,15 @@ export function getAuctionReminderQueue() {
     });
   }
   return _auctionReminderQueue;
+}
+
+export function getAuctionLifecycleQueue() {
+  if (!_auctionLifecycleQueue) {
+    _auctionLifecycleQueue = new Queue<AuctionLifecycleJobData>(QUEUES.AUCTION_LIFECYCLE, {
+      connection: redisConnection,
+    });
+  }
+  return _auctionLifecycleQueue;
 }
 
 // Helper to schedule reminder jobs for an auction
@@ -76,9 +94,9 @@ export async function scheduleAuctionReminders(
   const end = new Date(endTime).getTime();
   const duration = end - start;
 
-  // Skip if auction is less than 30 mins
+  // Skip if auction is less than 5 mins
   if (duration < MIN_AUCTION_DURATION_MS) {
-    console.log(`Auction ${blockchainAuctionId} is < 30 mins, skipping reminders`);
+    console.log(`Auction ${blockchainAuctionId} is < 5 mins, skipping reminders`);
     return { scheduled: false, reason: 'duration_too_short' };
   }
 
@@ -119,6 +137,35 @@ export async function scheduleAuctionReminders(
     scheduled: true,
     halfwayIn: halfwayDelay > 0 ? Math.round(halfwayDelay / 1000 / 60) + ' mins' : 'skipped',
     nearEndIn: nearEndDelay > 0 ? Math.round(nearEndDelay / 1000 / 60) + ' mins' : 'skipped',
+  };
+}
+
+// Schedule auction lifecycle event at end time
+export async function scheduleAuctionEnd(
+  auctionId: string,
+  blockchainAuctionId: string,
+  auctionName: string,
+  endTime: Date
+) {
+  const now = Date.now();
+  const end = new Date(endTime).getTime();
+  const delay = Math.max(0, end - now);
+
+  if (delay === 0) {
+    console.log(`Auction ${blockchainAuctionId} already ended, skipping`);
+    return { scheduled: false, reason: 'already_ended' };
+  }
+
+  const queue = getAuctionLifecycleQueue();
+  await queue.add(
+    `auction-ended-${blockchainAuctionId}`,
+    { auctionId, blockchainAuctionId, auctionName, event: 'ended' },
+    { delay, removeOnComplete: true, attempts: 3 }
+  );
+
+  return {
+    scheduled: true,
+    triggersIn: Math.round(delay / 1000 / 60) + ' mins',
   };
 }
 

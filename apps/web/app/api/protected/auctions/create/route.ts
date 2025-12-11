@@ -3,15 +3,15 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authenticateRequest } from '@/utils/authService';
-import { scheduleAuctionReminders } from '@repo/queue';
+import { scheduleAuctionReminders, scheduleAuctionEnd } from '@repo/queue';
 
 export async function POST(req: NextRequest) {
-    console.log('Verifying token in auction creation route');
+  console.log('Verifying token in auction creation route');
 
-    const authResult = await authenticateRequest(req);
-    if (!authResult.success) {
-        return authResult.response;
-    }
+  const authResult = await authenticateRequest(req);
+  if (!authResult.success) {
+    return authResult.response;
+  }
   try {
     const body = await req.json();
     const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet } = body;
@@ -59,18 +59,27 @@ export async function POST(req: NextRequest) {
 
     await user.save();
 
-    // Schedule reminder notifications (50% and 10% before end)
+    // Schedule jobs (non-blocking)
     try {
-      const reminderResult = await scheduleAuctionReminders(
-        newAuction._id.toString(),
-        blockchainAuctionId,
-        auctionName,
-        new Date(startDate),
-        new Date(endDate)
-      );
+      const [reminderResult, endResult] = await Promise.all([
+        scheduleAuctionReminders(
+          newAuction._id.toString(),
+          blockchainAuctionId,
+          auctionName,
+          new Date(startDate),
+          new Date(endDate)
+        ),
+        scheduleAuctionEnd(
+          newAuction._id.toString(),
+          blockchainAuctionId,
+          auctionName,
+          new Date(endDate)
+        ),
+      ]);
       console.log('Reminder scheduling result:', reminderResult);
+      console.log('End job scheduling result:', endResult);
     } catch (err) {
-      console.error('Failed to schedule reminders (non-blocking):', err);
+      console.error('Failed to schedule jobs (non-blocking):', err);
     }
 
     return NextResponse.json(
