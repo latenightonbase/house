@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import NProgress from "nprogress";
 import LandingAuctions from "@/components/LandingAuctions";
 import PageLayout from "@/components/UI/PageLayout";
+import Heading from "@/components/UI/Heading";
 import Welcome from "@/components/Welcome";
 import InfoCarousel from "@/components/InfoCarousel";
 // import { UsernameManager } from "@/components/UI/UsernameManager";
@@ -39,7 +40,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
-        <h1 className="text-3xl text-center font-bold gradient-text">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></h1>
+        <Heading className="text-center">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></Heading>
         <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden my-3">
           <div 
             className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out" 

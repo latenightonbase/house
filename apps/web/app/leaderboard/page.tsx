@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import PageLayout from "@/components/UI/PageLayout"
+import Heading from "@/components/UI/Heading"
 import LeaderboardTable from "@/components/LeaderboardTable"
 import { RiTrophyLine } from "react-icons/ri"
 import { cn } from "@/lib/utils"
@@ -210,7 +211,7 @@ export default function LeaderboardPage() {
             <RiTrophyLine className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold">Leaderboard</h1>
+            <Heading size="lg" gradient={false}>Leaderboard</Heading>
           </div>
         </div>
 

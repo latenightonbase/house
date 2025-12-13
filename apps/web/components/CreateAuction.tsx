@@ -360,6 +360,7 @@ setIsLoading(false);
               {
                 version: "1.0",
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
                 from: fromAddress,
                 calls: calls
               },
@@ -384,6 +385,7 @@ setIsLoading(false);
           sendCalls({
             // @ts-ignore
             calls: calls,
+            capabilities: {}
           });
         }
       }

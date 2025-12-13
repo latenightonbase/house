@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePrivy, useWallets } from '@privy-io/react-auth'
 import PageLayout from "@/components/UI/PageLayout"
+import Heading from "@/components/UI/Heading"
 import { RiQrScanLine, RiTrophyLine, RiCheckLine } from "react-icons/ri"
 
 interface WeeklyReward {
@@ -166,7 +167,7 @@ export default function EarnPage() {
             <RiTrophyLine className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold">Earn Rewards</h1>
+            <Heading size="lg" gradient={false}>Earn Rewards</Heading>
             <p className="text-caption">Claim rewards for your weekly bidding activity</p>
           </div>
         </div>

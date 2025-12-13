@@ -444,6 +444,7 @@ const LandingAuctions: React.FC = () => {
                 version: "1.0",
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
                 calls: sendingCalls
               },
             ],
@@ -467,6 +468,7 @@ const LandingAuctions: React.FC = () => {
           sendCalls({
             // @ts-ignore
             calls: sendingCalls,
+            capabilities: {}
           });
         }
         

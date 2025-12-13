@@ -3,6 +3,7 @@
 import { useGlobalContext } from '@/utils/providers/globalContext'
 import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth'
 import Image from 'next/image'
+import Heading from '@/components/UI/Heading'
 import { MdWallet } from 'react-icons/md'
 import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
@@ -90,7 +91,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
+          <Heading size="md" gradient={false} className="text-white mb-4">Access Denied</Heading>
           <p className="text-caption">Please login to view your profile.</p>
         </div>
       </div>
@@ -140,7 +141,7 @@ export default function ProfilePage() {
             )}
             
             <div className="flex-1 max-lg:text-center">
-              <h1 className="text-2xl font-bold text-white mb-2">
+              <Heading size="md" gradient={false} className="text-white mb-2">
                 {profileData?.twitterProfile?.username || user.username  || 'Anonymous User'}
               </h1>
               <p className="text-caption text-sm lg:text-base mb-4 text-caption font-bold">

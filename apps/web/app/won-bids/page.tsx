@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { Button } from "@/components/UI/button";
+import Heading from "@/components/UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
@@ -97,7 +98,7 @@ export default function WonBidsPage() {
   if (!authenticated || !address) {
     return (
       <div className="w-full overflow-hidden p-4">
-        <h1 className="text-2xl font-bold gradient-text mb-6">Won Auctions</h1>
+        <Heading size="md" className="mb-6">Won Auctions</Heading>
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
@@ -144,7 +145,7 @@ export default function WonBidsPage() {
   if (error) {
     return (
       <div className="w-full overflow-hidden p-4">
-        <h1 className="text-2xl font-bold gradient-text mb-6">Won Auctions</h1>
+        <Heading size="md" className="mb-6">Won Auctions</Heading>
         <div className="text-center py-8">
           <p className="text-red-500 mb-4">{error}</p>
           <Button onClick={fetchWonBids} variant="outline">
@@ -159,7 +160,7 @@ export default function WonBidsPage() {
     <div className="w-full overflow-hidden p-4">
       <div className="flex items-center gap-2 mb-6">
         <RiTrophyFill className="text-2xl text-primary" />
-        <h1 className="text-2xl font-bold gradient-text">Won Auctions</h1>
+        <Heading size="md">Won Auctions</Heading>
       </div>
 
       {/* Auctions Grid */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { RiLoader5Fill, RiArrowLeftLine, RiUserLine } from 'react-icons/ri'
+import Heading from '@/components/UI/Heading'
 import UserAuctions from '@/components/UserAuctions'
 import { useMiniKit } from '@coinbase/onchainkit/minikit'
 import { sdk } from '@farcaster/miniapp-sdk'
@@ -135,9 +136,9 @@ export default function UserPage() {
                     className="w-10 h-10 aspect-square rounded-full border-2 border-primary/30"
                 />
                 )}
-                    <h1 className="text-xl lg:text-2xl font-bold gradient-text max-lg:w-36 truncate">
+                    <Heading size="sm" className="max-lg:w-36 truncate">
                         {userData.user.display_name || (userData.user.username ? `@${userData.user.username}` : 'User Profile')}
-                    </h1>
+                    </Heading>
                     
                     </div>
                     {userData.user.bio && (

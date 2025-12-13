@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Heading from './UI/Heading';
 import { readContractSetup, writeNewContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
 import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
@@ -644,6 +645,7 @@ export default function BidPage() {
                 version: "1.0",
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
                 calls: sendingCalls
               },
             ],
@@ -667,6 +669,7 @@ export default function BidPage() {
           sendCalls({
             // @ts-ignore
             calls: sendingCalls,
+            capabilities: {}
           });
         }
         
@@ -734,7 +737,7 @@ export default function BidPage() {
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
-              <h1 className="text-2xl font-bold gradient-text">{auctionData.auctionName}</h1>
+              <Heading size="md">{auctionData.auctionName}</Heading>
               {auctionData.description && (
                 <p className="text-caption text-sm mt-2">{auctionData.description}</p>
               )}
