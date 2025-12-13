@@ -300,7 +300,7 @@ setIsLoading(false);
           selectedCurrency.contractAddress as `0x${string}`,
           auctionTitle,
           BigInt(Math.round(durationHours)),
-          minBidAmountWei
+          minBidAmountWei, { gasLimit: BigInt(8000000) }
         );
 
         toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
