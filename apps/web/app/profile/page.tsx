@@ -143,7 +143,7 @@ export default function ProfilePage() {
             <div className="flex-1 max-lg:text-center">
               <Heading size="md" gradient={false} className="text-white mb-2">
                 {profileData?.twitterProfile?.username || user.username  || 'Anonymous User'}
-              </h1>
+              </Heading>
               <p className="text-caption text-sm lg:text-base mb-4 text-caption font-bold">
                 Wallets: {profileData?.wallets.length ? <div className='flex flex-wrap gap-1 max-lg:justify-center mt-1'>
                   {profileData.wallets.map((wallet, index) => (
