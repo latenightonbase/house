@@ -118,14 +118,13 @@ export default function CreateAuction() {
   }, [selectedCurrency]);
 
   const processSuccess = async (auctionId: string) => {
+    const saveToastId = toast.loading("Saving auction details...");
+    
     try {
-      // Call the API to save auction details in the database
-
-      toast.loading("Saving auction details...");
-
       const now = new Date();
       const accessToken = await getAccessToken();
       console.log("Access Token:", accessToken);
+      
       const response = await fetch("/api/protected/auctions/create", {
         method: "POST",
         headers: {
@@ -147,24 +146,33 @@ export default function CreateAuction() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save auction details in the database");
+        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        console.error("API Error Response:", errorData);
+        throw new Error(errorData.error || "Failed to save auction details");
       }
 
-      toast.success("Auction created successfully! Redirecting...");
+      toast.success("Auction created successfully! Redirecting...", { id: saveToastId });
 
       setIsLoading(false);
       // Small delay to show success message before navigation
       setTimeout(() => {
         navigate("/");
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving auction details:", error);
-      if (loadingToastId) {
-        toast.error("Failed to save auction details. Please try again.", {
-          id: loadingToastId,
-        });
+      
+      let errorMessage = "Failed to save auction details. Please try again.";
+      
+      // Handle specific error types
+      if (error.code === 'ECONNREFUSED') {
+        errorMessage = "Cannot connect to server. Please ensure the development server is running.";
+      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = "Network error. Please check your connection and ensure the server is running.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
-      toast.error("Failed to save auction details. Please try again.");
+      
+      toast.error(errorMessage, { id: saveToastId });
       setIsLoading(false);
     } finally {
       setIsLoading(false);

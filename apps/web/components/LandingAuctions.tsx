@@ -401,6 +401,11 @@ const LandingAuctions: React.FC = () => {
               functionName: "approve",
               args: [contractAdds.auctions, bidAmountInWei],
             }),
+            capabilities: {
+            gasLimitOverride: {
+              value: "0x7a1200", // 8,000,000 in hex
+            },
+          },
           },
           {
             to: contractAdds.auctions as `0x${string}`,
@@ -415,6 +420,11 @@ const LandingAuctions: React.FC = () => {
                 String(user.socialId) || address
               ],
             }),
+            capabilities: {
+            gasLimitOverride: {
+              value: "0x7a1200", // 8,000,000 in hex
+            },
+          },
           },
         ];
         
@@ -466,9 +476,9 @@ const LandingAuctions: React.FC = () => {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
           sendCalls({
+            account: address as `0x${string}`,
             // @ts-ignore
             calls: sendingCalls,
-            capabilities: {}
           });
         }
         

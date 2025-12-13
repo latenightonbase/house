@@ -313,6 +313,11 @@ export default function MyAuctionCards() {
               functionName: "endAuction",
               args: [blockchainAuctionId],
             }),
+            capabilities: {
+            gasLimitOverride: {
+              value: "0x7a1200", // 8,000,000 in hex
+            },
+          },
           },
           
         ];
@@ -361,9 +366,9 @@ export default function MyAuctionCards() {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
           sendCalls({
+            account: address as `0x${string}`,
             //@ts-ignore
             calls: calls,
-            capabilities: {}
           });
         }
         

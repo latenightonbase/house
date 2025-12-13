@@ -616,6 +616,11 @@ export default function BidPage() {
                 String(user.socialId) || address
               ],
             }),
+            capabilities: {
+            gasLimitOverride: {
+              value: "0x7a1200", // 8,000,000 in hex
+            },
+          },
           },
         ];
         
@@ -667,9 +672,9 @@ export default function BidPage() {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
           
           sendCalls({
+            account: address as `0x${string}`,
             // @ts-ignore
             calls: sendingCalls,
-            capabilities: {}
           });
         }
         
