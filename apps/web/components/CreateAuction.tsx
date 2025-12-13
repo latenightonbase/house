@@ -413,6 +413,7 @@ export default function CreateAuction() {
         toast.loading("Waiting for wallet confirmation...", { id: toastId });
 
         sendCalls({
+          account: address as `0x${string}`,
           // @ts-ignore
           calls: calls,
         });
