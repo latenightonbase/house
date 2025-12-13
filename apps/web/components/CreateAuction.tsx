@@ -10,7 +10,10 @@ import { contractAdds } from "@/utils/contracts/contractAdds";
 import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
-import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
+import {
+  readContractSetup,
+  writeNewContractSetup,
+} from "@/utils/contractSetup";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
@@ -22,17 +25,20 @@ import {
 } from "@base-org/account";
 import { RiLoader5Fill } from "react-icons/ri";
 import toast from "react-hot-toast";
-import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
+import {
+  fetchTokenPrice,
+  calculateUSDValue,
+  formatUSDAmount,
+} from "@/utils/tokenPrice";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { checkStatus } from "@/utils/checkStatus";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import TwitterAuthModal from "./UI/TwitterAuthModal";
 import LoginWithOAuth from "./utils/twitterConnect";
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
 import { isWhitelisted } from "@/utils/whitelist";
-
 
 interface CurrencyOption {
   name: string;
@@ -43,15 +49,15 @@ interface CurrencyOption {
 type CurrencySelectionMode = "search" | "contract";
 
 export default function CreateAuction() {
-
   // const { address, isConnected } = useAccount();
-  const {wallets} = useWallets();
+  const { wallets } = useWallets();
   const externalWallets = wallets.filter(
-    wallet => wallet.walletClientType !== 'privy'
+    (wallet) => wallet.walletClientType !== "privy"
   );
 
   const { user } = useGlobalContext();
-  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
+  const address =
+    externalWallets.length > 0 ? externalWallets[0].address : null;
   const { getAccessToken } = usePrivy();
   const [auctionTitle, setAuctionTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -65,7 +71,7 @@ export default function CreateAuction() {
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
   const [showTwitterModal, setShowTwitterModal] = useState(false);
-  
+
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
@@ -102,8 +108,8 @@ export default function CreateAuction() {
     if (selectedCurrency?.contractAddress) {
       setLoadingPrice(true);
       fetchTokenPrice(selectedCurrency.contractAddress)
-        .then(price => setTokenPrice(price))
-        .catch(err => {
+        .then((price) => setTokenPrice(price))
+        .catch((err) => {
           console.error("Failed to fetch token price:", err);
           setTokenPrice(null);
         })
@@ -124,7 +130,7 @@ export default function CreateAuction() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           auctionName: auctionTitle,
@@ -144,10 +150,9 @@ export default function CreateAuction() {
         throw new Error("Failed to save auction details in the database");
       }
 
-      
-        toast.success("Auction created successfully! Redirecting...");
-      
-setIsLoading(false);
+      toast.success("Auction created successfully! Redirecting...");
+
+      setIsLoading(false);
       // Small delay to show success message before navigation
       setTimeout(() => {
         navigate("/");
@@ -161,8 +166,7 @@ setIsLoading(false);
       }
       toast.error("Failed to save auction details. Please try again.");
       setIsLoading(false);
-    }
-    finally{
+    } finally {
       setIsLoading(false);
     }
   };
@@ -179,14 +183,14 @@ setIsLoading(false);
   const getTokenDecimals = async (tokenAddress: string): Promise<number> => {
     try {
       // Use contract setup for reading decimals with timeout
-      const timeoutPromise = new Promise<number>((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout fetching decimals')), 5000)
+      const timeoutPromise = new Promise<number>((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout fetching decimals")), 5000)
       );
-      
+
       const fetchPromise = (async () => {
         const contract = await readContractSetup(tokenAddress, erc20Abi);
         if (!contract) {
-          throw new Error('Contract setup failed');
+          throw new Error("Contract setup failed");
         }
         const decimalsResult = await contract.decimals();
         return Number(decimalsResult) || 18;
@@ -201,7 +205,10 @@ setIsLoading(false);
   };
 
   // Function to convert bid amount to proper decimal format
-  const convertBidAmountToWei = (bidAmount: number, decimals: number): bigint => {
+  const convertBidAmountToWei = (
+    bidAmount: number,
+    decimals: number
+  ): bigint => {
     // Convert the bid amount to the token's decimal representation
     const factor = Math.pow(10, decimals);
     const amountInWei = Math.floor(bidAmount * factor);
@@ -212,10 +219,10 @@ setIsLoading(false);
     e.preventDefault();
 
     //check if address exists
-      if (!address) {
-        toast.error("Please connect your wallet");
-        return;
-      }
+    if (!address) {
+      toast.error("Please connect your wallet");
+      return;
+    }
     setIsLoading(true);
 
     const whitelisted = isWhitelisted(address);
@@ -252,35 +259,49 @@ setIsLoading(false);
       setIsLoading(false);
       return;
     }
-    
+
     // Start loading toast
     const toastId = toast.loading("Creating auction...");
     setLoadingToastId(toastId);
-    
+
     try {
       const durationHours = calculateDurationHours(endTime);
-      
+
       // Get token decimals for proper conversion
       let tokenDecimals = 18; // Default to 18
       let minBidAmountWei: bigint;
 
       try {
         toast.loading("Fetching token information...", { id: toastId });
-        tokenDecimals = await getTokenDecimals(selectedCurrency.contractAddress);
-        console.log(`Token decimals for ${selectedCurrency.contractAddress}:`, tokenDecimals);
-        
+        tokenDecimals = await getTokenDecimals(
+          selectedCurrency.contractAddress
+        );
+        console.log(
+          `Token decimals for ${selectedCurrency.contractAddress}:`,
+          tokenDecimals
+        );
+
         // Convert minimum bid amount to proper decimal format
         const minBidFloat = parseFloat(minBidAmount || "0");
         minBidAmountWei = convertBidAmountToWei(minBidFloat, tokenDecimals);
-        console.log(`Minimum bid ${minBidFloat} converted to ${minBidAmountWei} with ${tokenDecimals} decimals`);
-        
-        toast.loading("Token information retrieved successfully", { id: toastId });
+        console.log(
+          `Minimum bid ${minBidFloat} converted to ${minBidAmountWei} with ${tokenDecimals} decimals`
+        );
+
+        toast.loading("Token information retrieved successfully", {
+          id: toastId,
+        });
       } catch (error) {
-        console.error("Error fetching token decimals, using default 18:", error);
+        console.error(
+          "Error fetching token decimals, using default 18:",
+          error
+        );
         // Fallback to 18 decimals if fetching fails
         const minBidFloat = parseFloat(minBidAmount || "0");
         minBidAmountWei = convertBidAmountToWei(minBidFloat, 18);
-        console.log(`Using default 18 decimals. Minimum bid ${minBidFloat} converted to ${minBidAmountWei}`);
+        console.log(
+          `Using default 18 decimals. Minimum bid ${minBidFloat} converted to ${minBidAmountWei}`
+        );
         toast.loading("Using default token configuration...", { id: toastId });
       }
 
@@ -289,11 +310,11 @@ setIsLoading(false);
       //PC flow
       // if (!context) {
       //   toast.loading("Preparing transaction...", { id: toastId });
-        
+
       //   const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
       //   toast.loading("Waiting for transaction...", { id: toastId });
-        
+
       //   // Call the smart contract
       //   const txHash = await contract?.startAuction(
       //     auctionId,
@@ -304,7 +325,7 @@ setIsLoading(false);
       //   );
 
       //   toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
-        
+
       //   await txHash?.wait();
 
       //   if(!txHash){
@@ -316,82 +337,86 @@ setIsLoading(false);
       //   toast.loading("Transaction confirmed!", { id: toastId });
 
       //   await processSuccess(auctionId);
-      // } 
+      // }
       // // Farcaster/Base App Flow
       // else {
-        toast.loading("Preparing transaction for mobile wallet...", { id: toastId });
-        
-        setGenAuctionId(auctionId);
-        const calls = [
-          {
-            to: contractAdds.auctions,
-            value: context?.client.clientFid !== 309857 ? BigInt(0) : "0x0",
-            data: encodeFunctionData({
-              abi: auctionAbi,
-              functionName: "startAuction",
-              args: [
-                auctionId,
-                selectedCurrency.contractAddress as `0x${string}`,
-                selectedCurrency.symbol,
-                BigInt(durationHours),
-                minBidAmountWei
-              ],
-            }),
-            capabilities: {
-          gasLimitOverride: {
-            value: "0x7a1200", // 8,000,000 in hex
-          }
-        }
-          },
-        ];
+      toast.loading("Preparing transaction for mobile wallet...", {
+        id: toastId,
+      });
 
-        if (context?.client.clientFid === 309857) {
-          toast.loading("Connecting to Base SDK...", { id: toastId });
-          
-          const provider = createBaseAccountSDK({
-            appName: "Bill test app",
-            appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
-            appChainIds: [base.constants.CHAIN_IDS.base],
-          }).getProvider();
-
-          const cryptoAccount = await getCryptoKeyAccount();
-          const fromAddress = cryptoAccount?.account?.address;
-
-          toast.loading("Submitting transaction...", { id: toastId });
-
-          const callsId:any = await provider.request({
-            method: "wallet_sendCalls",
-            params: [
-              {
-                version: "1.0",
-                chainId: numberToHex(base.constants.CHAIN_IDS.base),
-                atomicRequired: true,
-                from: fromAddress,
-                calls: calls,
-              },
+      setGenAuctionId(auctionId);
+      const calls = [
+        {
+          to: contractAdds.auctions,
+          value:
+            context && context.client.clientFid == 309857 ? "0x0" : BigInt(0),
+          data: encodeFunctionData({
+            abi: auctionAbi,
+            functionName: "startAuction",
+            args: [
+              auctionId,
+              selectedCurrency.contractAddress as `0x${string}`,
+              selectedCurrency.symbol,
+              BigInt(durationHours),
+              minBidAmountWei,
             ],
-          });
+          }),
+          capabilities: {
+            gasLimitOverride: {
+              value: "0x7a1200", // 8,000,000 in hex
+            },
+          },
+        },
+      ];
 
-          toast.loading("Transaction submitted, checking status...", { id: toastId });
+      if (context?.client.clientFid === 309857) {
+        toast.loading("Connecting to Base SDK...", { id: toastId });
 
-          const result = await checkStatus(callsId);
+        const provider = createBaseAccountSDK({
+          appName: "Bill test app",
+          appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
+          appChainIds: [base.constants.CHAIN_IDS.base],
+        }).getProvider();
 
-          if (result == true) {
-            toast.loading("Transaction confirmed!", { id: toastId });
-            await processSuccess(auctionId);
-          } else {
-            toast.error("Transaction failed or timed out", { id: toastId });
-            setIsLoading(false);
-          }
+        const cryptoAccount = await getCryptoKeyAccount();
+        const fromAddress = cryptoAccount?.account?.address;
 
+        toast.loading("Submitting transaction...", { id: toastId });
+
+        const callsId: any = await provider.request({
+          method: "wallet_sendCalls",
+          params: [
+            {
+              version: "1.0",
+              chainId: numberToHex(base.constants.CHAIN_IDS.base),
+              atomicRequired: true,
+              from: fromAddress,
+              calls: calls,
+            },
+          ],
+        });
+
+        toast.loading("Transaction submitted, checking status...", {
+          id: toastId,
+        });
+
+        const result = await checkStatus(callsId);
+
+        if (result == true) {
+          toast.loading("Transaction confirmed!", { id: toastId });
+          await processSuccess(auctionId);
         } else {
-          toast.loading("Waiting for wallet confirmation...", { id: toastId });
-          
-          sendCalls({
-            // @ts-ignore
-            calls: calls
-          });
+          toast.error("Transaction failed or timed out", { id: toastId });
+          setIsLoading(false);
         }
+      } else {
+        toast.loading("Waiting for wallet confirmation...", { id: toastId });
+
+        sendCalls({
+          // @ts-ignore
+          calls: calls,
+        });
+      }
       // }
     } catch (error: any) {
       console.error("Error creating auction:", error);
@@ -420,7 +445,7 @@ setIsLoading(false);
       setIsLoading(false);
     } finally {
       // Ensure loading state is always reset
-      if (isLoading && status !== 'pending') {
+      if (isLoading && status !== "pending") {
         setIsLoading(false);
       }
     }
@@ -440,7 +465,7 @@ setIsLoading(false);
     auctionTitle.trim() &&
     selectedCurrency &&
     endTime &&
-    minBidAmount.trim() !== "" && 
+    minBidAmount.trim() !== "" &&
     !isNaN(parseFloat(minBidAmount));
 
   const canGoNext = () => {
@@ -448,7 +473,9 @@ setIsLoading(false);
       case 0:
         return auctionTitle.trim().length > 0;
       case 1:
-        return selectedCurrency !== null && selectedCurrency.name && !loadingPrice;
+        return (
+          selectedCurrency !== null && selectedCurrency.name && !loadingPrice
+        );
       case 2:
         return minBidAmount.trim() !== "" && !isNaN(parseFloat(minBidAmount));
       default:
@@ -458,7 +485,7 @@ setIsLoading(false);
 
   const handleNext = () => {
     if (!canGoNext() || currentStep >= 3) return;
-    
+
     setCurrentStep(currentStep + 1);
   };
 
@@ -474,27 +501,31 @@ setIsLoading(false);
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
-              <svg 
-                className="w-8 h-8 text-white" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                 />
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">Create Your First Auction</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Create Your First Auction
+              </h3>
               <p className="text-caption mb-4">
-                Connect your wallet to start creating and managing auctions on the platform.
+                Connect your wallet to start creating and managing auctions on
+                the platform.
               </p>
               <p className="text-sm text-caption">
-                Once connected, you'll be able to set up auctions with custom tokens, durations, and minimum bids.
+                Once connected, you'll be able to set up auctions with custom
+                tokens, durations, and minimum bids.
               </p>
             </div>
             <AggregateConnector />
@@ -504,227 +535,234 @@ setIsLoading(false);
     );
 
   return (
-      <div className="max-w-2xl max-lg:mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          <div className="min-h-[400px] flex flex-col justify-between">
-            <AnimatePresence mode="wait">
-              {currentStep === 0 && (
-                <motion.div
-                  key="step-0"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <Input
-                    label="Auction Title"
-                    value={auctionTitle}
-                    onChange={(value) => {
-                      if (value.length <= 30) {
-                        setAuctionTitle(value);
-                      }
-                    }}
-                    placeholder="Enter a title for your auction (max 30 chars)"
-                    required
-                  />
-                  <div className="text-xs text-gray-400 text-right">
-                    {auctionTitle.length}/30 characters
+    <div className="max-w-2xl max-lg:mx-auto">
+      <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+        <div className="min-h-[400px] flex flex-col justify-between">
+          <AnimatePresence mode="wait">
+            {currentStep === 0 && (
+              <motion.div
+                key="step-0"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <Input
+                  label="Auction Title"
+                  value={auctionTitle}
+                  onChange={(value) => {
+                    if (value.length <= 30) {
+                      setAuctionTitle(value);
+                    }
+                  }}
+                  placeholder="Enter a title for your auction (max 30 chars)"
+                  required
+                />
+                <div className="text-xs text-gray-400 text-right">
+                  {auctionTitle.length}/30 characters
+                </div>
+                <Input
+                  label="Description (Optional)"
+                  value={description}
+                  onChange={(value) => {
+                    if (value.length <= 200) {
+                      setDescription(value);
+                    }
+                  }}
+                  placeholder="Enter a description for your auction (max 200 chars)"
+                  multiline
+                  rows={3}
+                />
+                <div className="text-xs text-gray-400 text-right">
+                  {description.length}/200 characters
+                </div>
+              </motion.div>
+            )}
+
+            {currentStep === 1 && (
+              <motion.div
+                key="step-1"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <CurrencySearch
+                  onSelect={handleCurrencySelect}
+                  selectedCurrency={selectedCurrency}
+                />
+                {selectedCurrency && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm text-blue-700">
+                      <strong>Selected Token:</strong> {selectedCurrency.name} (
+                      {selectedCurrency.symbol})
+                    </div>
                   </div>
-                  <Input
-                    label="Description (Optional)"
-                    value={description}
-                    onChange={(value) => {
-                      if (value.length <= 200) {
-                        setDescription(value);
-                      }
-                    }}
-                    placeholder="Enter a description for your auction (max 200 chars)"
-                    multiline
-                    rows={3}
-                  />
-                  <div className="text-xs text-gray-400 text-right">
-                    {description.length}/200 characters
+                )}
+              </motion.div>
+            )}
+
+            {currentStep === 2 && (
+              <motion.div
+                key="step-2"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <Input
+                  label="Minimum Bid Amount"
+                  value={minBidAmount}
+                  onChange={setMinBidAmount}
+                  placeholder="Enter the minimum bid amount (default: 0)"
+                  type="number"
+                />
+                {minBidAmount && tokenPrice !== null && !loadingPrice && (
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-sm text-green-700">
+                      <strong>USD Value:</strong>{" "}
+                      {formatUSDAmount(
+                        calculateUSDValue(parseFloat(minBidAmount), tokenPrice)
+                      )}
+                    </div>
                   </div>
-                </motion.div>
-              )}
-
-              {currentStep === 1 && (
-                <motion.div
-                  key="step-1"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <CurrencySearch
-                    onSelect={handleCurrencySelect}
-                    selectedCurrency={selectedCurrency}
-                  />
-                  {selectedCurrency && (
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-sm text-blue-700">
-                        <strong>Selected Token:</strong> {selectedCurrency.name} ({selectedCurrency.symbol})
-                      </div>
+                )}
+                {loadingPrice && (
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="text-sm text-gray-700 flex items-center gap-2">
+                      <RiLoader5Fill className="animate-spin" />
+                      Fetching token price...
                     </div>
-                  )}
-                </motion.div>
-              )}
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-              {currentStep === 2 && (
-                <motion.div
-                  key="step-2"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <Input
-                    label="Minimum Bid Amount"
-                    value={minBidAmount}
-                    onChange={setMinBidAmount}
-                    placeholder="Enter the minimum bid amount (default: 0)"
-                    type="number"
-                  />
-                  {minBidAmount && tokenPrice !== null && !loadingPrice && (
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="text-sm text-green-700">
-                        <strong>USD Value:</strong>{" "}
-                        {formatUSDAmount(calculateUSDValue(parseFloat(minBidAmount), tokenPrice))}
-                      </div>
-                    </div>
-                  )}
-                  {loadingPrice && (
-                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="text-sm text-gray-700 flex items-center gap-2">
-                        <RiLoader5Fill className="animate-spin" />
-                        Fetching token price...
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              )}
+            {currentStep === 3 && (
+              <motion.div
+                key="step-3"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
+                <DateTimePicker
+                  label="Auction End Time (Local Time)"
+                  value={endTime}
+                  onChange={setEndTime}
+                  placeholder=""
+                  required
+                  minDate={new Date()}
+                />
+                {endTime && (
+                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm text-blue-700">
+                      <strong>Auction Duration:</strong>{" "}
+                      {(() => {
+                        const now = new Date();
+                        const diff = endTime.getTime() - now.getTime();
+                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor(
+                          (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+                        );
+                        const minutes = Math.floor(
+                          (diff % (1000 * 60 * 60)) / (1000 * 60)
+                        );
 
-              {currentStep === 3 && (
-                <motion.div
-                  key="step-3"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-4"
-                >
-                  <DateTimePicker
-                    label="Auction End Time (Local Time)"
-                    value={endTime}
-                    onChange={setEndTime}
-                    placeholder=""
-                    required
-                    minDate={new Date()}
-                  />
-                  {endTime && (
-                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="text-sm text-blue-700">
-                        <strong>Auction Duration:</strong>{" "}
-                        {(() => {
-                          const now = new Date();
-                          const diff = endTime.getTime() - now.getTime();
-                          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                          const hours = Math.floor(
-                            (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-                          );
-                          const minutes = Math.floor(
-                            (diff % (1000 * 60 * 60)) / (1000 * 60)
+                        if (diff <= 0)
+                          return "Invalid time (must be in the future)";
+
+                        const parts = [];
+                        if (days > 0)
+                          parts.push(`${days} day${days > 1 ? "s" : ""}`);
+                        if (hours > 0)
+                          parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+                        if (minutes > 0 && days === 0)
+                          parts.push(
+                            `${minutes} minute${minutes > 1 ? "s" : ""}`
                           );
 
-                          if (diff <= 0) return "Invalid time (must be in the future)";
-
-                          const parts = [];
-                          if (days > 0) parts.push(`${days} day${days > 1 ? "s" : ""}`);
-                          if (hours > 0)
-                            parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-                          if (minutes > 0 && days === 0)
-                            parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
-
-                          return parts.join(", ");
-                        })()}
-                      </div>
+                        return parts.join(", ");
+                      })()}
                     </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
-              <div className="flex justify-between items-center gap-4">
+          <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
+            <div className="flex justify-between items-center gap-4">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={currentStep === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
+              >
+                <FaChevronLeft />
+                Previous
+              </button>
+
+              {currentStep < 3 ? (
                 <button
                   type="button"
-                  onClick={handlePrev}
-                  disabled={currentStep === 0}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
+                  onClick={handleNext}
+                  disabled={!canGoNext()}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
                 >
-                  <FaChevronLeft />
-                  Previous
+                  Next
+                  <FaChevronRight />
                 </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!isFormValid || isLoading}
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center text-black/50 justify-center gap-2">
+                      <RiLoader5Fill className="text-xl animate-spin" />
+                      Creating...
+                    </div>
+                  ) : (
+                    "Create"
+                  )}
+                </button>
+              )}
+            </div>
 
-                {currentStep < 3 ? (
-                  <button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!canGoNext()}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
-                  >
-                    Next
-                    <FaChevronRight />
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    disabled={!isFormValid || isLoading}
-                    className="px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center text-black/50 justify-center gap-2">
-                        <RiLoader5Fill className="text-xl animate-spin"/>
-                        Creating...
-                      </div>
-                    ) : (
-                      "Create"
-                    )}
-                  </button>
-                )}
-              </div>
-
-              {/* Progress Indicator */}
-              <div className="flex justify-center gap-2">
-                {[0, 1, 2, 3].map((step) => (
-                  <div
-                    key={step}
-                    className={`h-2 w-12 rounded-full transition-all ${
-                      step === currentStep
-                        ? "bg-primary"
-                        : step < currentStep
-                        ? "bg-primary/50"
-                        : "bg-primary/10"
-                    }`}
-                  />
-                ))}
-              </div>
+            {/* Progress Indicator */}
+            <div className="flex justify-center gap-2">
+              {[0, 1, 2, 3].map((step) => (
+                <div
+                  key={step}
+                  className={`h-2 w-12 rounded-full transition-all ${
+                    step === currentStep
+                      ? "bg-primary"
+                      : step < currentStep
+                      ? "bg-primary/50"
+                      : "bg-primary/10"
+                  }`}
+                />
+              ))}
             </div>
           </div>
-        </form>
+        </div>
+      </form>
 
-        <TwitterAuthModal 
-          isOpen={showTwitterModal}
-          onClose={() => setShowTwitterModal(false)}
-          onSuccess={() => {
-            // Close modal and proceed to next step after successful Twitter auth
-            setShowTwitterModal(false);
-            setCurrentStep(currentStep + 1);
-          }}
-        />
-      </div>
-    );
+      <TwitterAuthModal
+        isOpen={showTwitterModal}
+        onClose={() => setShowTwitterModal(false)}
+        onSuccess={() => {
+          // Close modal and proceed to next step after successful Twitter auth
+          setShowTwitterModal(false);
+          setCurrentStep(currentStep + 1);
+        }}
+      />
+    </div>
+  );
 }
