@@ -538,7 +538,7 @@ export default function CreateAuction() {
     );
 
   return (
-    <div className="max-w-2xl max-lg:mx-auto relative">
+    <div className="max-w-2xl max-lg:mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6 mt-4">
         <div className="min-h-[400px] flex flex-col justify-between">
           <AnimatePresence mode="wait">
@@ -699,7 +699,7 @@ export default function CreateAuction() {
           </AnimatePresence>
 
           <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex justify-between items-center ml-64 gap-4">
               <button
                 type="button"
                 onClick={handlePrev}
