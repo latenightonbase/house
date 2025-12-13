@@ -37,6 +37,9 @@ const BETA_ACCESS_WALLETS = [
   "0xbC6b6652F244Ff6B1C584503F558d3a152EB5a0E".toLowerCase(),
   "0xB1B21884afE6581F3C4997b0320465F18E9682C0".toLowerCase(),
   "0xC07f465Cb788De0088E33C03814E2c550dBe33db".toLowerCase(),
+  "0xBFe8923B45eF4C7B37A5d12f1f5cA538eb6884Bc".toLowerCase(),
+  "0xda0F9f916dB23D3C8C097376F60196483550869B".toLowerCase(),
+  "0xcb79fdA62bF05a63Bb48758A7da3C072D0BA929b".toLowerCase(),
 ];
 
 export function isWhitelisted(walletAddress: string): boolean {
