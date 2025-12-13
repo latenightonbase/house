@@ -307,42 +307,43 @@ export default function CreateAuction() {
 
       const auctionId = String(Date.now());
 
-      //PC flow
-      // if (!context) {
-      //   toast.loading("Preparing transaction...", { id: toastId });
+      // PC/Browser Wallet flow
+      if (!context) {
+        toast.loading("Preparing transaction...", { id: toastId });
 
-      //   const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
+        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
 
-      //   toast.loading("Waiting for transaction...", { id: toastId });
+        toast.loading("Waiting for transaction...", { id: toastId });
 
-      //   // Call the smart contract
-      //   const txHash = await contract?.startAuction(
-      //     auctionId,
-      //     selectedCurrency.contractAddress as `0x${string}`,
-      //     auctionTitle,
-      //     BigInt(Math.round(durationHours)),
-      //     minBidAmountWei, { gasLimit: BigInt(8000000) }
-      //   );
+        // Call the smart contract
+        const txHash = await contract?.startAuction(
+          auctionId,
+          selectedCurrency.contractAddress as `0x${string}`,
+          selectedCurrency.symbol,
+          BigInt(Math.round(durationHours)),
+          minBidAmountWei, 
+          { gasLimit: BigInt(8000000) }
+        );
 
-      //   toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+        toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
 
-      //   await txHash?.wait();
+        await txHash?.wait();
 
-      //   if(!txHash){
-      //     toast.error("Failed to submit transaction", { id: toastId });
-      //     setIsLoading(false);
-      //     return;
-      //   }
+        if(!txHash){
+          toast.error("Failed to submit transaction", { id: toastId });
+          setIsLoading(false);
+          return;
+        }
 
-      //   toast.loading("Transaction confirmed!", { id: toastId });
+        toast.loading("Transaction confirmed!", { id: toastId });
 
-      //   await processSuccess(auctionId);
-      // }
-      // // Farcaster/Base App Flow
-      // else {
-      toast.loading("Preparing transaction for mobile wallet...", {
-        id: toastId,
-      });
+        await processSuccess(auctionId);
+      }
+      // Farcaster/Base App Flow
+      else {
+        toast.loading("Preparing transaction for mobile wallet...", {
+          id: toastId,
+        });
 
       setGenAuctionId(auctionId);
       const calls = [
@@ -418,7 +419,7 @@ export default function CreateAuction() {
           calls: calls,
         });
       }
-      // }
+      }
     } catch (error: any) {
       console.error("Error creating auction:", error);
 
