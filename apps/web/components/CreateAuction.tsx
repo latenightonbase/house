@@ -337,6 +337,11 @@ setIsLoading(false);
                 minBidAmountWei
               ],
             }),
+            capabilities: {
+          gasLimitOverride: {
+            value: "0x7a1200", // 8,000,000 in hex
+          }
+        }
           },
         ];
 
@@ -362,7 +367,7 @@ setIsLoading(false);
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
                 atomicRequired: true,
                 from: fromAddress,
-                calls: calls
+                calls: calls,
               },
             ],
           });
@@ -384,8 +389,7 @@ setIsLoading(false);
           
           sendCalls({
             // @ts-ignore
-            calls: calls,
-            capabilities: {}
+            calls: calls
           });
         }
       }
