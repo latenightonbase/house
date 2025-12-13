@@ -321,8 +321,7 @@ export default function CreateAuction() {
           selectedCurrency.contractAddress as `0x${string}`,
           selectedCurrency.symbol,
           BigInt(Math.round(durationHours)),
-          minBidAmountWei, 
-          { gasLimit: BigInt(8000000) }
+          minBidAmountWei
         );
 
         toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
