@@ -3,7 +3,6 @@
 import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
 import { ReactNode } from "react";
 import { base } from "wagmi/chains";
-import Rainbow from "./rainbow";
 import { GlobalProvider } from "./globalContext";
 import { SessionProvider } from "next-auth/react";
 import { PrivyProvider } from "@privy-io/react-auth";
@@ -44,7 +43,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
       >
         <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
           <GlobalProvider>
-            <Rainbow>{children}</Rainbow>
+            {children}
           </GlobalProvider>
         </SessionProvider>
       </PrivyProvider>

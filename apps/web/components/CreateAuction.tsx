@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { writeContract } from "@wagmi/core";
 import { useAccount, useSendCalls } from "wagmi";
-import { config } from "@/utils/providers/rainbow";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
@@ -329,7 +328,7 @@ export default function CreateAuction() {
           selectedCurrency.contractAddress as `0x${string}`,
           selectedCurrency.symbol,
           BigInt(Math.round(durationHours)),
-          minBidAmountWei, {gasLimit: 8000000}
+          minBidAmountWei
         );
 
         toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
@@ -369,11 +368,6 @@ export default function CreateAuction() {
               minBidAmountWei,
             ],
           }),
-          capabilities: {
-            gasLimitOverride: {
-              value: "0x7a1200", // 8,000,000 in hex
-            },
-          },
         },
       ];
 
@@ -544,7 +538,7 @@ export default function CreateAuction() {
     );
 
   return (
-    <div className="max-w-2xl max-lg:mx-auto">
+    <div className="max-w-2xl max-lg:mx-auto relative">
       <form onSubmit={handleSubmit} className="space-y-6 mt-4">
         <div className="min-h-[400px] flex flex-col justify-between">
           <AnimatePresence mode="wait">

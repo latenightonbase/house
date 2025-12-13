@@ -16,6 +16,22 @@ export default function LoginWithOAuth() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Disconnect all external wallets before connecting a new one
+  const disconnectAllWallets = async () => {
+    const externalWallets = wallets.filter(
+      wallet => wallet.walletClientType !== 'privy'
+    );
+    for (const wallet of externalWallets) {
+      await wallet.disconnect();
+    }
+  };
+
+  const handleConnectWallet = async () => {
+    await disconnectAllWallets();
+    connectWallet();
+    setMenuOpen(false);
+  };
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -148,10 +164,11 @@ export default function LoginWithOAuth() {
   // Check if user is authenticated and has Twitter profile
   const twitterAccount = user?.twitter;
   
-  // Get connected external wallets (not embedded wallets)
+  // Get connected external wallets (not embedded wallets) - only use the first one
   const externalWallets = wallets.filter(
     wallet => wallet.walletClientType !== 'privy'
   );
+  const connectedWallet = externalWallets.length > 0 ? externalWallets[0] : null;
 
   return (
       <div className="flex flex-col gap-3 relative">
@@ -178,31 +195,20 @@ export default function LoginWithOAuth() {
                           <span className="text-sm font-medium max-lg:hidden">
                             @{twitterAccount.username}
                         </span>
-                        {externalWallets.length > 0 ? (<>
-                       
-{externalWallets.map((wallet:any) => (
-                      <div 
-                        key={wallet.address}
-                        className="flex items-center justify-between gap-2 rounded-full max-lg:hidden"
-                      >
-                        <div className="flex items-center gap-2">
-                        
-                          <span className="text-sm font-medium text-primary">
-                            {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}</>
-                        ) : (<>
-                          
-                        <div className="flex items-center gap-2 bg-red-500/80 text-nowrap text-xs px-2 py-1 absolute max-lg:-left-12 left-10 -top-8 animate-bounce max-lg:top-full mt-2 rounded-full">
-                        
-                          <MdWallet className="text-sm" />
+                        {connectedWallet ? (
+                          <div className="flex items-center justify-between gap-2 rounded-full max-lg:hidden">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-primary">
+                                {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-red-500/80 text-nowrap text-xs px-2 py-1 absolute max-lg:-left-12 left-10 -top-8 animate-bounce max-lg:top-full mt-2 rounded-full">
+                            <MdWallet className="text-sm" />
                             Not Connected
-                          
-                        </div>
-                    
-                        </>)}
+                          </div>
+                        )}
                           
                         </div>
                         
@@ -223,33 +229,27 @@ export default function LoginWithOAuth() {
                         <div className="text-sm font-medium mb-1">
                           @{twitterAccount.username}
                         </div>
-                        {externalWallets.map((wallet) => (
-                          <div key={wallet.address} className="text-sm text-green-500">
-                            {wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}
+                        {connectedWallet && (
+                          <div className="text-sm text-green-500">
+                            {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
                           </div>
-                        ))}
+                        )}
                       </div>
                       
-                      {externalWallets.length > 0 ? (
-                        externalWallets.map((wallet) => (
-                          <button
-                            key={wallet.address}
-                            onClick={() => {
-                              wallet.disconnect();
-                              setMenuOpen(false);
-                            }}
-                            className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
-                          >
-                            <MdWallet className="text-lg" />
-                            <span>Disconnect Wallet</span>
-                          </button>
-                        ))
-                      ) : (
+                      {connectedWallet ? (
                         <button
                           onClick={() => {
-                            connectWallet();
+                            connectedWallet.disconnect();
                             setMenuOpen(false);
                           }}
+                          className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
+                        >
+                          <MdWallet className="text-lg" />
+                          <span>Disconnect Wallet</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleConnectWallet}
                           className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm"
                         >
                           <MdWallet className="text-lg" />
