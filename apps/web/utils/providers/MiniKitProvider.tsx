@@ -20,7 +20,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
           theme: "mini-app-theme",
           name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
           logo: process.env.NEXT_PUBLIC_ICON_URL,
-        },
+        }
       }}
     >
       <PrivyProvider 
@@ -30,13 +30,32 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
           loginMethods: ['twitter', 'farcaster'],
           appearance: {
             theme: 'dark',
-            accentColor: '#676FFF',
+            accentColor: '#000000',
           },
           embeddedWallets: {
             ethereum: {
               createOnLogin: 'off',
             },
           },
+          externalWallets: {
+            walletConnect:{
+              enabled: true
+            },
+            coinbaseWallet: {
+              config: {
+                preference: {
+                  options: 'eoaOnly'
+                },
+              }
+            },
+            baseAccount: {
+              config: {
+                preference: {
+                  attribution: {auto: true},
+                }
+              }
+            }
+          }
           // Allow external wallet connections without affecting authentication
           
         }}
