@@ -50,7 +50,9 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
             },
             baseAccount: {
               config: {
+                
                 preference: {
+                  
                   attribution: {auto: true},
                 }
               }

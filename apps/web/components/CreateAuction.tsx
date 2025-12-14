@@ -325,74 +325,119 @@ export default function CreateAuction() {
 
       const auctionId = String(Date.now());
 
+      const startAuctionArgs: [
+        string,
+        `0x${string}`,
+        string,
+        bigint,
+        bigint
+      ] = [
+        auctionId,
+        selectedCurrency.contractAddress as `0x${string}`,
+        selectedCurrency.symbol,
+        BigInt(durationHours),
+        minBidAmountWei,
+      ];
+
+      const encodedStartAuctionData = encodeFunctionData({
+        abi: auctionAbi,
+        functionName: "startAuction",
+        args: startAuctionArgs,
+      });
+
       // PC/Browser Wallet flow
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
         const wallet = externalWallets[0];
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
-        const contract = await readContractSetup(contractAdds.auctions, auctionAbi);
 
-        // const ethersProvider = new ethers.BrowserProvider(provider);
+        const walletType = wallet.walletClientType?.toLowerCase() || "";
+        const isSmartWallet = walletType.includes("smart");
 
-        // const feeData = await ethersProvider.getFeeData();
+        if (isSmartWallet && typeof provider?.request === "function") {
+          toast.loading("Submitting smart wallet transaction...", {
+            id: toastId,
+          });
 
-        // const signer = await ethersProvider.getSigner();
-        // const contract = await readContractSetup(
-        //   contractAdds.auctions,
-        //   auctionAbi
-        // );
-        // toast.loading("Waiting for transaction...", { id: toastId });
+          const callsRequest = {
+            version: "1.0",
+            chainId: numberToHex(baseChain.id),
+            atomicRequired: true,
+            from: wallet.address,
+            calls: [
+              {
+                to: contractAdds.auctions as `0x${string}`,
+                data: encodedStartAuctionData,
+                value: "0x0",
+                capabilities:{
+                  gasLimitOverride: "0x7A120" // 500,000 in hex
+                }
+              },
+            ],
+          };
 
-        const iface = contract?.interface;
+          const callsResponse = await provider.request({
+            method: "wallet_sendCalls",
+            params: [callsRequest],
+          });
 
-        // const tx = await signer.sendTransaction({
-        //   to: contract?.target, // or contract.address (v6 alias)
-        //   data: iface?.encodeFunctionData("startAuction", [
-        //     auctionId,
-        //     selectedCurrency.contractAddress as `0x${string}`,
-        //     selectedCurrency.symbol,
-        //     BigInt(durationHours),
-        //     minBidAmountWei,
-        //   ]),
-        //   gasLimit: 500_000n,
+          const callsId =
+            typeof callsResponse === "string"
+              ? callsResponse
+              : (callsResponse as { callsId?: string; id?: string })?.callsId ??
+                (callsResponse as { callsId?: string; id?: string })?.id;
 
-        //   // 🔥 force legacy send path
-        //   maxFeePerGas: feeData.maxFeePerGas!,
-        //   maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-        // });
+          if (!callsId) {
+            throw new Error("Failed to retrieve smart wallet callsId");
+          }
 
-        // toast.loading("Transaction submitted, waiting for confirmation...", {
-        //   id: toastId,
-        // });
+          toast.loading("Transaction submitted, checking status...", {
+            id: toastId,
+          });
 
-        // await tx?.wait();
+          const confirmed = await checkStatus(callsId);
 
-        // if (!tx) {
-        //   toast.error("Failed to submit transaction", { id: toastId });
-        //   setIsLoading(false);
-        //   return;
-        // }
+          if (!confirmed) {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
+            return;
+          }
 
-        // toast.loading("Transaction confirmed!", { id: toastId });
+          toast.loading("Transaction confirmed!", { id: toastId });
+          await processSuccess(auctionId);
+        } else {
+          const ethersProvider = new ethers.BrowserProvider(provider);
+          const feeData = await ethersProvider.getFeeData();
+          const signer = await ethersProvider.getSigner();
 
-        await provider.request({
-  method: "eth_sendTransaction",
-  params: [{
-    from: wallet.address,
-    to: contractAdds.auctions,
-    data: iface?.encodeFunctionData("startAuction", [
-            auctionId,
-            selectedCurrency.contractAddress as `0x${string}`,
-            selectedCurrency.symbol,
-            BigInt(durationHours),
-            minBidAmountWei,
-          ]),
-    gas: "0x7A120", // hex 500000
-  }],
-});
+          toast.loading("Waiting for transaction...", { id: toastId });
 
-        await processSuccess(auctionId);
+          const tx = await signer.sendTransaction({
+            to: contractAdds.auctions as `0x${string}`,
+            data: encodedStartAuctionData,
+            gasLimit: 500_000n,
+            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+            maxPriorityFeePerGas:
+              feeData.maxPriorityFeePerGas ?? undefined,
+          });
+
+          toast.loading("Transaction submitted, waiting for confirmation...", {
+            id: toastId,
+          });
+
+          await tx?.wait();
+
+          if (!tx) {
+            toast.error("Failed to submit transaction", { id: toastId });
+            setIsLoading(false);
+            return;
+          }
+
+          toast.loading("Transaction confirmed!", { id: toastId });
+
+          await processSuccess(auctionId);
+        }
       }
       // Farcaster/Base App Flow
       else {
@@ -404,19 +449,9 @@ export default function CreateAuction() {
         const calls = [
           {
             to: contractAdds.auctions,
-            value:
-              context && context.client.clientFid == 309857 ? "0x0" : BigInt(0),
-            data: encodeFunctionData({
-              abi: auctionAbi,
-              functionName: "startAuction",
-              args: [
-                auctionId,
-                selectedCurrency.contractAddress as `0x${string}`,
-                selectedCurrency.symbol,
-                BigInt(durationHours),
-                minBidAmountWei,
-              ],
-            }),
+            value: context?.client.clientFid === 309857 ? "0x0" : BigInt(0),
+            data: encodedStartAuctionData,
+            
           },
         ];
 
