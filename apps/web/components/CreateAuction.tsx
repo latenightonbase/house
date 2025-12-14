@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { writeContract } from "@wagmi/core";
-import { useAccount, useSendCalls, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useSendCalls } from "wagmi";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
@@ -77,25 +77,9 @@ export default function CreateAuction() {
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
 
-  const { 
-    data: hash,
-    error,
-    isPending, 
-    writeContract 
-  } = useWriteContract() 
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = 
-    useWaitForTransactionReceipt({ 
-      hash 
-    }) 
-
-    useEffect(() => {
-    if (isConfirmed == true) {
-      processSuccess(genAuctionId);
-    }
-    }, [isConfirming, isConfirmed]);
-
   const { context } = useMiniKit();
+
+  const [myCallId, setMyCallId] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
 
@@ -340,51 +324,47 @@ export default function CreateAuction() {
       }
 
       const auctionId = String(Date.now());
-      setGenAuctionId(auctionId);
 
       // PC/Browser Wallet flow
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
-        // const wallet = externalWallets[0];
-        // await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
-        // const provider = await wallet.getEthereumProvider();
+        const wallet = externalWallets[0];
+        await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
+        const provider = await wallet.getEthereumProvider();
 
-        // const ethersProvider = new ethers.BrowserProvider(provider);
+        const ethersProvider = new ethers.BrowserProvider(provider);
 
-        // const signer = await ethersProvider.getSigner();
-        // const contract = await readContractSetup(
-        //   contractAdds.auctions,
-        //   auctionAbi
-        // );
-        // toast.loading("Waiting for transaction...", { id: toastId });
+        const signer = await ethersProvider.getSigner();
+        const contract = await readContractSetup(
+          contractAdds.auctions,
+          auctionAbi
+        );
+        toast.loading("Waiting for transaction...", { id: toastId });
 
-        // const iface = contract?.interface;
+        const iface = contract?.interface;
 
-        // const tx = await signer.sendTransaction({
-        //   to: contract?.target, // or contract.address (v6 alias)
-        //   data: iface?.encodeFunctionData("startAuction", [
-        //     auctionId,
-        //     selectedCurrency.contractAddress as `0x${string}`,
-        //     selectedCurrency.symbol,
-        //     BigInt(durationHours),
-        //     minBidAmountWei,
-        //   ])
-        // });
-
-         writeContract({
-      address: contractAdds.auctions as `0x${string}`,
-      abi: auctionAbi,
-      functionName: 'startAuction',
-      args: [auctionId,
+        const tx = await signer.sendTransaction({
+          to: contract?.target, // or contract.address (v6 alias)
+          data: iface?.encodeFunctionData("startAuction", [
+            auctionId,
             selectedCurrency.contractAddress as `0x${string}`,
             selectedCurrency.symbol,
             BigInt(durationHours),
-            minBidAmountWei],
-    })
+            minBidAmountWei,
+          ])
+        });
 
         toast.loading("Transaction submitted, waiting for confirmation...", {
           id: toastId,
         });
+
+        await tx?.wait();
+
+        if (!tx) {
+          toast.error("Failed to submit transaction", { id: toastId });
+          setIsLoading(false);
+          return;
+        }
 
         toast.loading("Transaction confirmed!", { id: toastId });
 
@@ -396,6 +376,7 @@ export default function CreateAuction() {
           id: toastId,
         });
 
+        setGenAuctionId(auctionId);
         const calls = [
           {
             to: contractAdds.auctions,
