@@ -334,6 +334,8 @@ export default function CreateAuction() {
 
         const ethersProvider = new ethers.BrowserProvider(provider);
 
+        const feeData = await ethersProvider.getFeeData();
+
         const signer = await ethersProvider.getSigner();
         const contract = await readContractSetup(
           contractAdds.auctions,
@@ -351,7 +353,12 @@ export default function CreateAuction() {
             selectedCurrency.symbol,
             BigInt(durationHours),
             minBidAmountWei,
-          ])
+          ]),
+           gasLimit: 500_000n,
+
+  // 🔥 force legacy send path
+  maxFeePerGas: feeData.maxFeePerGas!,
+  maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!
         });
 
         toast.loading("Transaction submitted, waiting for confirmation...", {
