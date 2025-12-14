@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Heading from './UI/Heading';
-import { readContractSetup, writeNewContractSetup } from '@/utils/contractSetup';
+import { readContractSetup } from '@/utils/contractSetup';
 import { auctionAbi } from '@/utils/contracts/abis/auctionAbi';
 import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
 import { contractAdds } from '@/utils/contracts/contractAdds';
@@ -24,9 +24,10 @@ import {
 } from '@/components/UI/Drawer';
 import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from '@/utils/tokenPrice';
 import toast from 'react-hot-toast';
-import { useAccount, useSendCalls } from "wagmi";
+import { useSendCalls } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
+import { base as baseChain } from "viem/chains";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import {
   base,
@@ -544,52 +545,125 @@ export default function BidPage() {
       }
 
       if (!context) {
-        toast.loading("Sending approval transaction", { id: toastId });
-        const erc20Contract = await writeNewContractSetup(auction.tokenAddress, erc20Abi, externalWallets[0]);
-
-        // approve transaction
-        const approveTx = await erc20Contract?.approve(
-          contractAdds.auctions as `0x${string}`,
-          bidAmountInWei
-        );
-
-        await approveTx?.wait();
-
-        if(!approveTx){
-          toast.error("Approval transaction failed", { id: toastId });
+        const wallet = externalWallets[0];
+        if (!wallet) {
+          toast.error("Unable to find a connected wallet", { id: toastId });
           setIsLoading(false);
           return;
         }
 
-        toast.success("Approval successful!", { id: toastId });
+        await wallet.switchChain(baseChain.id);
+        const provider = await wallet.getEthereumProvider();
+        const bidderIdentifier = user?.socialId ? String(user.socialId) : (address as string);
+        const approveData = encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [contractAdds.auctions as `0x${string}`, bidAmountInWei],
+        });
+        const bidData = encodeFunctionData({
+          abi: auctionAbi,
+          functionName: "placeBid",
+          args: [auctionId, bidAmountInWei, bidderIdentifier],
+        });
 
-        toast.loading("Sending bid transaction", { id: toastId });
+        const callsRequest = {
+          version: "1.0",
+          chainId: numberToHex(baseChain.id),
+          atomicRequired: true,
+          from: wallet.address,
+          calls: [
+            {
+              to: auction.tokenAddress as `0x${string}`,
+              data: approveData,
+              value: "0x0",
+              capabilities: {
+                gasLimitOverride: "0x186a0",
+              },
+            },
+            {
+              to: contractAdds.auctions as `0x${string}`,
+              data: bidData,
+              value: "0x0",
+              capabilities: {
+                gasLimitOverride: "0x7a120",
+              },
+            },
+          ],
+        } as const;
 
-        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
+        try {
+          const callsResponse = await provider.request({
+            method: "wallet_sendCalls",
+            params: [callsRequest],
+          });
 
-        toast.loading("Waiting for transaction...", { id: toastId });
-        
-        // Call the smart contract
-        const txHash = await contract?.placeBid(
-          auctionId,
-          bidAmountInWei,
-          address as `0x${string}`
-        );
+          const callsId =
+            typeof callsResponse === "string"
+              ? callsResponse
+              : (callsResponse as { callsId?: string; id?: string })?.callsId ??
+                (callsResponse as { callsId?: string; id?: string })?.id;
 
-        toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
-        
-        await txHash?.wait();
+          if (!callsId) {
+            throw new Error("Failed to retrieve smart wallet callsId");
+          }
 
-        if(!txHash){
-          toast.error("Transaction failed", { id: toastId });
-          setIsLoading(false);
+          toast.loading("Transaction submitted, checking status...", { id: toastId });
+
+          const confirmed = await checkStatus(callsId);
+
+          if (!confirmed) {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
+            return;
+          }
+
+          toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
+          await processSuccess(auctionId, bidAmount);
           return;
+        } catch (walletSendError) {
+          console.warn("wallet_sendCalls unavailable, falling back to direct transactions", walletSendError);
+
+          try {
+            const ethersProvider = new ethers.BrowserProvider(provider);
+            const feeData = await ethersProvider.getFeeData();
+            const signer = await ethersProvider.getSigner();
+
+            toast.loading("Waiting for approval confirmation...", { id: toastId });
+
+            const approveTx = await signer.sendTransaction({
+              to: auction.tokenAddress as `0x${string}`,
+              data: approveData,
+              value: 0n,
+              gasLimit: 200_000n,
+              maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+            });
+
+            await approveTx.wait();
+
+            toast.loading("Approval confirmed, submitting bid...", { id: toastId });
+
+            const bidTx = await signer.sendTransaction({
+              to: contractAdds.auctions as `0x${string}`,
+              data: bidData,
+              value: 0n,
+              gasLimit: 700_000n,
+              maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
+            });
+
+            toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+
+            await bidTx.wait();
+
+            toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
+            await processSuccess(auctionId, bidAmount);
+            return;
+          } catch (fallbackError) {
+            console.error("Fallback bid submission failed", fallbackError);
+            throw fallbackError;
+          }
         }
-
-        toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
-
-        // Directly call processSuccess for non-MiniKit flow
-        await processSuccess(auctionId, bidAmount);
       } else {
         toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, { id: toastId });
         const sendingCalls = [

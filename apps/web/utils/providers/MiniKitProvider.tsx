@@ -44,7 +44,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
             coinbaseWallet: {
               config: {
                 preference: {
-                  options: 'eoaOnly'
+                  options: "all"
                 },
               }
             },

@@ -325,19 +325,14 @@ export default function CreateAuction() {
 
       const auctionId = String(Date.now());
 
-      const startAuctionArgs: [
-        string,
-        `0x${string}`,
-        string,
-        bigint,
-        bigint
-      ] = [
-        auctionId,
-        selectedCurrency.contractAddress as `0x${string}`,
-        selectedCurrency.symbol,
-        BigInt(durationHours),
-        minBidAmountWei,
-      ];
+      const startAuctionArgs: [string, `0x${string}`, string, bigint, bigint] =
+        [
+          auctionId,
+          selectedCurrency.contractAddress as `0x${string}`,
+          selectedCurrency.symbol,
+          BigInt(durationHours),
+          minBidAmountWei,
+        ];
 
       const encodedStartAuctionData = encodeFunctionData({
         abi: auctionAbi,
@@ -352,33 +347,24 @@ export default function CreateAuction() {
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
 
-        console.log("WALLET TYPE:", wallet);
-
-        const walletType = wallet.walletClientType?.toLowerCase() || "";
-        const isSmartWallet = walletType.includes("base");
-
-        if (isSmartWallet && typeof provider?.request === "function") {
-          toast.loading("Submitting smart wallet transaction...", {
-            id: toastId,
-          });
-
-          const callsRequest = {
-            version: "1.0",
-            chainId: numberToHex(baseChain.id),
-            atomicRequired: true,
-            from: wallet.address,
-            calls: [
-              {
-                to: contractAdds.auctions as `0x${string}`,
-                data: encodedStartAuctionData,
-                value: "0x0",
-                capabilities:{
-                  gasLimitOverride: "0x7A120" // 500,000 in hex
-                }
+        const callsRequest = {
+          version: "1.0",
+          chainId: numberToHex(baseChain.id),
+          atomicRequired: true,
+          from: wallet.address,
+          calls: [
+            {
+              to: contractAdds.auctions as `0x${string}`,
+              data: encodedStartAuctionData,
+              value: "0x0",
+              capabilities: {
+                gasLimitOverride: "0x7A120", // 500,000 in hex
               },
-            ],
-          };
+            },
+          ],
+        };
 
+        try {
           const callsResponse = await provider.request({
             method: "wallet_sendCalls",
             params: [callsRequest],
@@ -408,7 +394,7 @@ export default function CreateAuction() {
 
           toast.loading("Transaction confirmed!", { id: toastId });
           await processSuccess(auctionId);
-        } else {
+        } catch (e) {
           const ethersProvider = new ethers.BrowserProvider(provider);
           const feeData = await ethersProvider.getFeeData();
           const signer = await ethersProvider.getSigner();
@@ -420,8 +406,7 @@ export default function CreateAuction() {
             data: encodedStartAuctionData,
             gasLimit: 500_000n,
             maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas:
-              feeData.maxPriorityFeePerGas ?? undefined,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
           });
 
           toast.loading("Transaction submitted, waiting for confirmation...", {
@@ -440,6 +425,7 @@ export default function CreateAuction() {
 
           await processSuccess(auctionId);
         }
+
       }
       // Farcaster/Base App Flow
       else {
@@ -453,7 +439,6 @@ export default function CreateAuction() {
             to: contractAdds.auctions,
             value: context?.client.clientFid === 309857 ? "0x0" : BigInt(0),
             data: encodedStartAuctionData,
-            
           },
         ];
 
