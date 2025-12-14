@@ -331,49 +331,66 @@ export default function CreateAuction() {
         const wallet = externalWallets[0];
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
+        const contract = await readContractSetup(contractAdds.auctions, auctionAbi);
 
-        const ethersProvider = new ethers.BrowserProvider(provider);
+        // const ethersProvider = new ethers.BrowserProvider(provider);
 
-        const feeData = await ethersProvider.getFeeData();
+        // const feeData = await ethersProvider.getFeeData();
 
-        const signer = await ethersProvider.getSigner();
-        const contract = await readContractSetup(
-          contractAdds.auctions,
-          auctionAbi
-        );
-        toast.loading("Waiting for transaction...", { id: toastId });
+        // const signer = await ethersProvider.getSigner();
+        // const contract = await readContractSetup(
+        //   contractAdds.auctions,
+        //   auctionAbi
+        // );
+        // toast.loading("Waiting for transaction...", { id: toastId });
 
         const iface = contract?.interface;
 
-        const tx = await signer.sendTransaction({
-          to: contract?.target, // or contract.address (v6 alias)
-          data: iface?.encodeFunctionData("startAuction", [
+        // const tx = await signer.sendTransaction({
+        //   to: contract?.target, // or contract.address (v6 alias)
+        //   data: iface?.encodeFunctionData("startAuction", [
+        //     auctionId,
+        //     selectedCurrency.contractAddress as `0x${string}`,
+        //     selectedCurrency.symbol,
+        //     BigInt(durationHours),
+        //     minBidAmountWei,
+        //   ]),
+        //   gasLimit: 500_000n,
+
+        //   // 🔥 force legacy send path
+        //   maxFeePerGas: feeData.maxFeePerGas!,
+        //   maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
+        // });
+
+        // toast.loading("Transaction submitted, waiting for confirmation...", {
+        //   id: toastId,
+        // });
+
+        // await tx?.wait();
+
+        // if (!tx) {
+        //   toast.error("Failed to submit transaction", { id: toastId });
+        //   setIsLoading(false);
+        //   return;
+        // }
+
+        // toast.loading("Transaction confirmed!", { id: toastId });
+
+        await provider.request({
+  method: "eth_sendTransaction",
+  params: [{
+    from: wallet.address,
+    to: contractAdds.auctions,
+    data: iface?.encodeFunctionData("startAuction", [
             auctionId,
             selectedCurrency.contractAddress as `0x${string}`,
             selectedCurrency.symbol,
             BigInt(durationHours),
             minBidAmountWei,
           ]),
-           gasLimit: 500_000n,
-
-  // 🔥 force legacy send path
-  maxFeePerGas: feeData.maxFeePerGas!,
-  maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!
-        });
-
-        toast.loading("Transaction submitted, waiting for confirmation...", {
-          id: toastId,
-        });
-
-        await tx?.wait();
-
-        if (!tx) {
-          toast.error("Failed to submit transaction", { id: toastId });
-          setIsLoading(false);
-          return;
-        }
-
-        toast.loading("Transaction confirmed!", { id: toastId });
+    gas: "0x7A120", // hex 500000
+  }],
+});
 
         await processSuccess(auctionId);
       }
