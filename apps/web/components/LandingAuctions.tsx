@@ -24,22 +24,29 @@ import { encodeFunctionData, numberToHex } from "viem";
 import { base as baseChain } from "viem/chains";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
-import { readContractSetup } from "@/utils/contractSetup";
+import {
+  readContractSetup,
+  writeNewContractSetup,
+} from "@/utils/contractSetup";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import {
   base,
   createBaseAccountSDK,
   getCryptoKeyAccount,
 } from "@base-org/account";
-import { fetchTokenPrice, calculateUSDValue, formatUSDAmount } from "@/utils/tokenPrice";
+import {
+  fetchTokenPrice,
+  calculateUSDValue,
+  formatUSDAmount,
+} from "@/utils/tokenPrice";
 import Image from "next/image";
 import { checkStatus } from "@/utils/checkStatus";
 import { ethers } from "ethers";
 import { checkUsdc } from "@/utils/checkUsdc";
-import sdk from '@farcaster/miniapp-sdk';
+import sdk from "@farcaster/miniapp-sdk";
 import { FaShare } from "react-icons/fa";
 import LoginWithOAuth from "./utils/twitterConnect";
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
 
 interface Bidder {
@@ -71,12 +78,12 @@ interface Auction {
   bidders: Bidder[];
   highestBid: number;
   topBidder: {
-    wallet: string,
-    username: string, // Enhanced with Neynar display_name
-    fid: string,
-    pfp_url: string | null, // Profile picture from Neynar
-    bidAmount: number,
-    bidTimestamp: Date
+    wallet: string;
+    username: string; // Enhanced with Neynar display_name
+    fid: string;
+    pfp_url: string | null; // Profile picture from Neynar
+    bidAmount: number;
+    bidTimestamp: Date;
   } | null;
   participantCount: number;
   hoursRemaining: number;
@@ -102,19 +109,26 @@ const LandingAuctions: React.FC = () => {
   const [page, setPage] = useState(1);
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentBid, setCurrentBid] = useState<{auctionId: string, amount: number} | null>(null);
-  const [shareDropdownOpen, setShareDropdownOpen] = useState<string | null>(null);
-  const [currencyFilter, setCurrencyFilter] = useState<'all' | 'usdc' | 'creator-coins'>('all');
-  
+  const [currentBid, setCurrentBid] = useState<{
+    auctionId: string;
+    amount: number;
+  } | null>(null);
+  const [shareDropdownOpen, setShareDropdownOpen] = useState<string | null>(
+    null
+  );
+  const [currencyFilter, setCurrencyFilter] = useState<
+    "all" | "usdc" | "creator-coins"
+  >("all");
+
   // Intersection Observer ref
   const observerRef = useRef<HTMLDivElement>(null);
-  
+
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedAuction, setSelectedAuction] = useState<Auction | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
-  
+
   // Token price state
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
@@ -123,18 +137,21 @@ const LandingAuctions: React.FC = () => {
 
   const { context } = useMiniKit();
 
-  const {wallets} = useWallets();
+  const { wallets } = useWallets();
   const externalWallets = wallets.filter(
-    wallet => wallet.walletClientType !== 'privy'
+    (wallet) => wallet.walletClientType !== "privy"
   );
-  
-  const address = externalWallets.length > 0 ? externalWallets[0].address : null;
 
+  const address =
+    externalWallets.length > 0 ? externalWallets[0].address : null;
 
   const { user } = useGlobalContext();
-  const { getAccessToken, user:privyUser } = usePrivy();
+  const { getAccessToken, user: privyUser } = usePrivy();
 
-  const fetchTopAuctions = async (pageNum: number = 1, append: boolean = false) => {
+  const fetchTopAuctions = async (
+    pageNum: number = 1,
+    append: boolean = false
+  ) => {
     try {
       if (pageNum === 1) {
         setLoading(true);
@@ -143,15 +160,16 @@ const LandingAuctions: React.FC = () => {
       }
       setError(null);
 
-      const response = await fetch(`/api/auctions/getTopFive?page=${pageNum}&limit=3&currency=${currencyFilter}`);
+      const response = await fetch(
+        `/api/auctions/getTopFive?page=${pageNum}&limit=3&currency=${currencyFilter}`
+      );
       const data: ApiResponse = await response.json();
 
       console.log("API Response:", data);
 
       if (data.success) {
-        
         if (append) {
-          setAuctions(prev => [...prev, ...data.auctions]);
+          setAuctions((prev) => [...prev, ...data.auctions]);
         } else {
           setAuctions(data.auctions);
         }
@@ -185,7 +203,14 @@ const LandingAuctions: React.FC = () => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        console.log("Observer triggered:", entries[0].isIntersecting, "hasMore:", hasMore, "loadingMore:", loadingMore);
+        console.log(
+          "Observer triggered:",
+          entries[0].isIntersecting,
+          "hasMore:",
+          hasMore,
+          "loadingMore:",
+          loadingMore
+        );
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
           console.log("Loading more auctions via observer");
           loadMoreAuctions();
@@ -232,15 +257,19 @@ const LandingAuctions: React.FC = () => {
 
   const processSuccess = async (auctionId: string, bidAmount: number) => {
     try {
-      console.log("Starting processSuccess with:", { auctionId, bidAmount, address });
-      
+      console.log("Starting processSuccess with:", {
+        auctionId,
+        bidAmount,
+        address,
+      });
+
       // Call the API to save bid details in the database
       const accessToken = await getAccessToken();
       const response = await fetch(`/api/protected/auctions/${auctionId}/bid`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           bidAmount: bidAmount,
@@ -253,24 +282,28 @@ const LandingAuctions: React.FC = () => {
       console.log("API Response data:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || `API request failed with status ${response.status}`);
+        throw new Error(
+          data.error || `API request failed with status ${response.status}`
+        );
       }
 
-      
-        toast.success("Bid placed successfully! Refreshing auctions...");
-     
+      toast.success("Bid placed successfully! Refreshing auctions...");
 
       // Refresh the auctions to show updated bid data
       await fetchTopAuctions(1, false);
-      
+
       console.log("Successfully completed processSuccess");
-      
     } catch (error) {
       console.error("Error in processSuccess:", error);
       if (loadingToastId) {
-        toast.error(`Failed to save bid details: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-          id: loadingToastId,
-        });
+        toast.error(
+          `Failed to save bid details: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          {
+            id: loadingToastId,
+          }
+        );
       }
     } finally {
       // Always clean up state regardless of success/failure
@@ -281,7 +314,11 @@ const LandingAuctions: React.FC = () => {
     }
   };
 
-  async function handleBid(auctionId: string, auction: Auction, bidAmountParam?: number) {
+  async function handleBid(
+    auctionId: string,
+    auction: Auction,
+    bidAmountParam?: number
+  ) {
     try {
       if (!address) {
         toast.error("Please connect your wallet");
@@ -290,14 +327,16 @@ const LandingAuctions: React.FC = () => {
       }
 
       let bidAmount: number;
-      
+
       if (bidAmountParam) {
         bidAmount = bidAmountParam;
       } else {
         // Fallback to prompt if called directly (though we should use drawer now)
-        const bidAmountStr = prompt(`Enter your bid amount (minimum: ${auction.minimumBid} ${auction.currency}):`);
+        const bidAmountStr = prompt(
+          `Enter your bid amount (minimum: ${auction.minimumBid} ${auction.currency}):`
+        );
         if (!bidAmountStr) return;
-        
+
         bidAmount = parseFloat(bidAmountStr);
         if (isNaN(bidAmount) || bidAmount <= 0) {
           toast.error("Invalid bid amount");
@@ -305,12 +344,16 @@ const LandingAuctions: React.FC = () => {
         }
 
         if (bidAmount < auction.minimumBid) {
-          toast.error(`Bid must be at least ${auction.minimumBid} ${auction.currency}`);
+          toast.error(
+            `Bid must be at least ${auction.minimumBid} ${auction.currency}`
+          );
           return;
         }
 
         if (bidAmount <= auction.highestBid) {
-          toast.error(`Bid must be higher than current highest bid of ${auction.highestBid} ${auction.currency}`);
+          toast.error(
+            `Bid must be higher than current highest bid of ${auction.highestBid} ${auction.currency}`
+          );
           return;
         }
       }
@@ -326,13 +369,21 @@ const LandingAuctions: React.FC = () => {
       try {
         toast.loading("Fetching token information...", { id: toastId });
         tokenDecimals = await getTokenDecimals(auction.tokenAddress);
-        console.log(`Token decimals for ${auction.tokenAddress}:`, tokenDecimals);
-        
+        console.log(
+          `Token decimals for ${auction.tokenAddress}:`,
+          tokenDecimals
+        );
+
         // Convert bid amount to proper decimal format
         bidAmountInWei = convertBidAmountToWei(bidAmount, tokenDecimals);
-        console.log(`Bid amount ${bidAmount} converted to ${bidAmountInWei} with ${tokenDecimals} decimals`);
+        console.log(
+          `Bid amount ${bidAmount} converted to ${bidAmountInWei} with ${tokenDecimals} decimals`
+        );
       } catch (error) {
-        console.error("Error fetching token decimals, using default 18:", error);
+        console.error(
+          "Error fetching token decimals, using default 18:",
+          error
+        );
         // Fallback to 18 decimals if fetching fails
         bidAmountInWei = convertBidAmountToWei(bidAmount, 18);
         toast.loading("Using default token configuration...", { id: toastId });
@@ -341,8 +392,13 @@ const LandingAuctions: React.FC = () => {
       const contract = await readContractSetup(auction.tokenAddress, erc20Abi);
       const balanceResult = await contract?.balanceOf(address as `0x${string}`);
 
-      const formattedBalance = parseFloat(ethers.formatUnits(balanceResult, checkUsdc(auction.tokenAddress) ? 6 : 18));
-      if(formattedBalance < bidAmount){
+      const formattedBalance = parseFloat(
+        ethers.formatUnits(
+          balanceResult,
+          checkUsdc(auction.tokenAddress) ? 6 : 18
+        )
+      );
+      if (formattedBalance < bidAmount) {
         toast.error("Insufficient token balance to place bid", { id: toastId });
         setIsLoading(false);
         return;
@@ -358,7 +414,9 @@ const LandingAuctions: React.FC = () => {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
-        const bidderIdentifier = user?.socialId ? String(user.socialId) : (address as string);
+        const bidderIdentifier = user?.socialId
+          ? String(user.socialId)
+          : (address as string);
         const approveData = encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
@@ -411,7 +469,9 @@ const LandingAuctions: React.FC = () => {
             throw new Error("Failed to retrieve smart wallet callsId");
           }
 
-          toast.loading("Transaction submitted, checking status...", { id: toastId });
+          toast.loading("Transaction submitted, checking status...", {
+            id: toastId,
+          });
 
           const confirmed = await checkStatus(callsId);
 
@@ -421,55 +481,75 @@ const LandingAuctions: React.FC = () => {
             return;
           }
 
-          toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
+          toast.loading("Transaction confirmed! Saving bid details...", {
+            id: toastId,
+          });
           await processSuccess(auctionId, bidAmount);
           return;
         } catch (walletSendError) {
-          console.warn("wallet_sendCalls unavailable, falling back to direct transactions", walletSendError);
+          toast.loading("Sending approval transaction", { id: toastId });
+          const erc20Contract = await writeNewContractSetup(
+            auction.tokenAddress,
+            erc20Abi,
+            externalWallets[0]
+          );
 
-          try {
-            const ethersProvider = new ethers.BrowserProvider(provider);
-            const feeData = await ethersProvider.getFeeData();
-            const signer = await ethersProvider.getSigner();
+          // approve transaction
+          const approveTx = await erc20Contract?.approve(
+            contractAdds.auctions as `0x${string}`,
+            bidAmountInWei
+          );
 
-            toast.loading("Waiting for approval confirmation...", { id: toastId });
+          await approveTx?.wait();
 
-            const approveTx = await signer.sendTransaction({
-              to: auction.tokenAddress as `0x${string}`,
-              data: approveData,
-              value: 0n,
-              gasLimit: 200_000n,
-              maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            });
-
-            await approveTx.wait();
-
-            toast.loading("Approval confirmed, submitting bid...", { id: toastId });
-
-            const bidTx = await signer.sendTransaction({
-              to: contractAdds.auctions as `0x${string}`,
-              data: bidData,
-              value: 0n,
-              gasLimit: 700_000n,
-              maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            });
-
-            toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
-
-            await bidTx.wait();
-
-            toast.loading("Transaction confirmed! Saving bid details...", { id: toastId });
-            await processSuccess(auctionId, bidAmount);
+          if (!approveTx) {
+            toast.error("Approval transaction failed", { id: toastId });
+            setIsLoading(false);
             return;
-          } catch (fallbackError) {
-            console.error("Fallback bid submission failed", fallbackError);
-            throw fallbackError;
           }
+
+          toast.success("Approval successful!", { id: toastId });
+
+          toast.loading("Sending bid transaction", { id: toastId });
+
+          const contract = await writeNewContractSetup(
+            contractAdds.auctions,
+            auctionAbi,
+            externalWallets[0]
+          );
+
+          toast.loading("Waiting for transaction...", { id: toastId });
+
+          // Call the smart contract
+          const txHash = await contract?.placeBid(
+            auctionId,
+            bidAmountInWei,
+            address as `0x${string}`
+          );
+
+          toast.loading("Transaction submitted, waiting for confirmation...", {
+            id: toastId,
+          });
+
+          await txHash?.wait();
+
+          if (!txHash) {
+            toast.error("Transaction failed", { id: toastId });
+            setIsLoading(false);
+            return;
+          }
+
+          toast.loading("Transaction confirmed! Saving bid details...", {
+            id: toastId,
+          });
+
+          // Directly call processSuccess for non-MiniKit flow
+          await processSuccess(auctionId, bidAmount);
         }
       } else {
-        toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, { id: toastId });
+        toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, {
+          id: toastId,
+        });
         const sendingCalls = [
           {
             //approve transaction
@@ -481,10 +561,10 @@ const LandingAuctions: React.FC = () => {
               args: [contractAdds.auctions, bidAmountInWei],
             }),
             capabilities: {
-            gasLimitOverride: {
-              value: "0x7a1200", // 8,000,000 in hex
+              gasLimitOverride: {
+                value: "0x7a1200", // 8,000,000 in hex
+              },
             },
-          },
           },
           {
             to: contractAdds.auctions as `0x${string}`,
@@ -496,23 +576,23 @@ const LandingAuctions: React.FC = () => {
               args: [
                 auctionId,
                 bidAmountInWei,
-                String(user.socialId) || address
+                String(user.socialId) || address,
               ],
             }),
             capabilities: {
-            gasLimitOverride: {
-              value: "0x7a1200", // 8,000,000 in hex
+              gasLimitOverride: {
+                value: "0x7a1200", // 8,000,000 in hex
+              },
             },
           },
-          },
         ];
-        
+
         // Store current bid info for useEffect to handle
         setCurrentBid({ auctionId, amount: bidAmount });
-        
-       if (context?.client.clientFid === 309857) {
+
+        if (context?.client.clientFid === 309857) {
           toast.loading("Connecting to Base SDK...", { id: toastId });
-          
+
           const provider = createBaseAccountSDK({
             appName: "Bill test app",
             appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
@@ -522,11 +602,9 @@ const LandingAuctions: React.FC = () => {
           const cryptoAccount = await getCryptoKeyAccount();
           const fromAddress = cryptoAccount?.account?.address;
 
-        
-
           toast.loading(`Submitting transaction...`, { id: toastId });
 
-          const callsId:any = await provider.request({
+          const callsId: any = await provider.request({
             method: "wallet_sendCalls",
             params: [
               {
@@ -534,45 +612,52 @@ const LandingAuctions: React.FC = () => {
                 from: fromAddress,
                 chainId: numberToHex(base.constants.CHAIN_IDS.base),
                 atomicRequired: true,
-                calls: sendingCalls
+                calls: sendingCalls,
               },
             ],
           });
 
-          toast.loading("Transaction submitted, checking status...", { id: toastId });
-          
+          toast.loading("Transaction submitted, checking status...", {
+            id: toastId,
+          });
+
           const result = await checkStatus(callsId);
 
           if (result) {
-            toast.loading("Transaction confirmed! Saving auction details...", { id: toastId });
+            toast.loading("Transaction confirmed! Saving auction details...", {
+              id: toastId,
+            });
             await processSuccess(auctionId, bidAmount);
           } else {
             toast.error("Transaction failed or timed out", { id: toastId });
             setIsLoading(false);
           }
-          
         } else {
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
-          
+
           sendCalls({
             account: address as `0x${string}`,
             // @ts-ignore
             calls: sendingCalls,
           });
         }
-        
-        
+
         // processSuccess will be called when transaction succeeds
       }
     } catch (error) {
       console.error("Bid error:", error);
-      
+
       if (loadingToastId) {
-        toast.error(`Failed to place bid: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-          id: loadingToastId,
-        });
+        toast.error(
+          `Failed to place bid: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+          {
+            id: loadingToastId,
+          }
+        );
       }
-      
+
       // Clean up state on error
       setIsLoading(false);
       setCurrentBid(null);
@@ -614,7 +699,10 @@ const LandingAuctions: React.FC = () => {
   };
 
   // Function to convert bid amount to proper decimal format
-  const convertBidAmountToWei = (bidAmount: number, decimals: number): bigint => {
+  const convertBidAmountToWei = (
+    bidAmount: number,
+    decimals: number
+  ): bigint => {
     // Convert the bid amount to the token's decimal representation
     const factor = Math.pow(10, decimals);
     const amountInWei = Math.floor(bidAmount * factor);
@@ -632,21 +720,25 @@ const LandingAuctions: React.FC = () => {
 
   const validateBidAmount = () => {
     if (!selectedAuction) return false;
-    
+
     const amount = parseFloat(bidAmount);
-    
+
     if (!bidAmount || isNaN(amount) || amount <= 0) {
       setBidError("Please enter a valid bid amount");
       return false;
     }
 
     if (amount < selectedAuction.minimumBid) {
-      setBidError(`Bid must be at least ${selectedAuction.minimumBid} ${selectedAuction.currency}`);
+      setBidError(
+        `Bid must be at least ${selectedAuction.minimumBid} ${selectedAuction.currency}`
+      );
       return false;
     }
 
     if (amount <= selectedAuction.highestBid) {
-      setBidError(`Bid must be higher than current highest bid of ${selectedAuction.highestBid} ${selectedAuction.currency}`);
+      setBidError(
+        `Bid must be higher than current highest bid of ${selectedAuction.highestBid} ${selectedAuction.currency}`
+      );
       return false;
     }
 
@@ -669,8 +761,8 @@ const LandingAuctions: React.FC = () => {
         const price = await fetchTokenPrice(selectedAuction.tokenAddress);
         setTokenPrice(price);
       } catch (error) {
-        console.error('Error fetching token price:', error);
-        setPriceError('Unable to fetch price');
+        console.error("Error fetching token price:", error);
+        setPriceError("Unable to fetch price");
         setTokenPrice(null);
       } finally {
         setTokenPriceLoading(false);
@@ -685,7 +777,7 @@ const LandingAuctions: React.FC = () => {
   const getUSDValue = () => {
     if (!bidAmount || !tokenPrice || parseFloat(bidAmount) <= 0) return null;
     const amount = parseFloat(bidAmount);
-    
+
     return calculateUSDValue(amount, tokenPrice);
   };
 
@@ -696,19 +788,22 @@ const LandingAuctions: React.FC = () => {
       return;
     }
     if (!selectedAuction || !validateBidAmount()) return;
-    
+
     const amount = parseFloat(bidAmount);
     // Don't close drawer here - let it close after processSuccess completes
     handleBid(selectedAuction.blockchainAuctionId, selectedAuction, amount);
   };
 
   const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      toast.success(`${type} copied to clipboard!`);
-      setShareDropdownOpen(null);
-    }).catch(() => {
-      toast.error('Failed to copy to clipboard');
-    });
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        toast.success(`${type} copied to clipboard!`);
+        setShareDropdownOpen(null);
+      })
+      .catch(() => {
+        toast.error("Failed to copy to clipboard");
+      });
   };
 
   const handleShareClick = (auctionId: string) => {
@@ -718,11 +813,18 @@ const LandingAuctions: React.FC = () => {
   const composeCast = async (auction: Auction) => {
     try {
       const url = `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`;
-      const hostName = auction.hostedBy.display_name || (auction.hostedBy.username ? `@${auction.hostedBy.username}` : 'Unknown Host');
+      const hostName =
+        auction.hostedBy.display_name ||
+        (auction.hostedBy.username
+          ? `@${auction.hostedBy.username}`
+          : "Unknown Host");
       const text = `Check out "${auction.auctionName}" hosted by ${hostName}! Bidding in ${auction.currency}. ${url}`;
-      
+
       await sdk.actions.composeCast({
-        text, embeds:[`https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`]
+        text,
+        embeds: [
+          `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${auction.blockchainAuctionId}`,
+        ],
       });
     } catch (e) {
       console.error("Error composing cast:", e);
@@ -745,13 +847,13 @@ const LandingAuctions: React.FC = () => {
         <div className="bg-gray-700 h-6 w-3/4 rounded"></div>
         <div className="bg-gray-700 h-4 w-full rounded"></div>
         <div className="bg-gray-700 h-4 w-5/6 rounded"></div>
-        
+
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <div className="bg-gray-700 h-4 w-16 rounded"></div>
             <div className="bg-gray-700 h-4 w-20 rounded"></div>
           </div>
-          
+
           <div className="flex justify-between items-center">
             <div className="bg-gray-700 h-4 w-20 rounded"></div>
             <div className="bg-gray-700 h-4 w-8 rounded"></div>
@@ -777,31 +879,31 @@ const LandingAuctions: React.FC = () => {
   const CurrencyFilterButtons = () => (
     <div className="flex mb-6 overflow-x-hidden">
       <button
-        onClick={() => setCurrencyFilter('all')}
+        onClick={() => setCurrencyFilter("all")}
         className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
-          currencyFilter === 'all'
-            ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
-            : 'text-caption hover:text-foreground'
+          currencyFilter === "all"
+            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+            : "text-caption hover:text-foreground"
         }`}
       >
         All
       </button>
       <button
-        onClick={() => setCurrencyFilter('usdc')}
+        onClick={() => setCurrencyFilter("usdc")}
         className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
-          currencyFilter === 'usdc'
-            ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
-            : 'text-caption hover:text-foreground'
+          currencyFilter === "usdc"
+            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+            : "text-caption hover:text-foreground"
         }`}
       >
         USDC
       </button>
       <button
-        onClick={() => setCurrencyFilter('creator-coins')}
+        onClick={() => setCurrencyFilter("creator-coins")}
         className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
-          currencyFilter === 'creator-coins'
-            ? 'text-primary border-b-2 border-primary bg-white/5 rounded-md'
-            : 'text-caption hover:text-foreground'
+          currencyFilter === "creator-coins"
+            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+            : "text-caption hover:text-foreground"
         }`}
       >
         Creator Coins
@@ -817,7 +919,9 @@ const LandingAuctions: React.FC = () => {
             <RiLoader5Fill className="animate-spin text-4xl text-primary" />
             <div>
               <h3 className="text-lg font-semibold mb-2">Loading Auctions</h3>
-              <p className="text-caption">Fetching the latest auction data...</p>
+              <p className="text-caption">
+                Fetching the latest auction data...
+              </p>
             </div>
           </div>
         </div>
@@ -831,24 +935,29 @@ const LandingAuctions: React.FC = () => {
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center">
-              <svg 
-                className="w-8 h-8 text-red-400" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-8 h-8 text-red-400"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
             </div>
             <div>
-              <h3 className="text-lg font-semibold mb-2">Unable to Load Auctions</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Unable to Load Auctions
+              </h3>
               <p className="text-caption mb-4">{error}</p>
-              <Button onClick={() => fetchTopAuctions(1, false)} variant="outline">
+              <Button
+                onClick={() => fetchTopAuctions(1, false)}
+                variant="outline"
+              >
                 Try Again
               </Button>
             </div>
@@ -874,30 +983,32 @@ const LandingAuctions: React.FC = () => {
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
-              <svg 
-                className="w-8 h-8 text-white" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                 />
               </svg>
             </div>
             <div>
               <h3 className="text-lg font-semibold mb-2">
-                {currencyFilter === 'all' ? 'No Active Auctions' : 'No auctions found'}
+                {currencyFilter === "all"
+                  ? "No Active Auctions"
+                  : "No auctions found"}
               </h3>
               <p className="text-caption mb-4">
-                {currencyFilter === 'all' 
-                  ? 'There are currently no active auctions available.'
-                  : 'No auctions match the selected filter. Try selecting a different filter.'}
+                {currencyFilter === "all"
+                  ? "There are currently no active auctions available."
+                  : "No auctions match the selected filter. Try selecting a different filter."}
               </p>
-              {currencyFilter === 'all' && (
+              {currencyFilter === "all" && (
                 <p className="text-sm text-caption">
                   Check back later or create your own auction to get started!
                 </p>
@@ -942,112 +1053,153 @@ const LandingAuctions: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-white hover:bg-white/20"
-                      onClick={() => handleShareClick(auction.blockchainAuctionId)}
+                      onClick={() =>
+                        handleShareClick(auction.blockchainAuctionId)
+                      }
                     >
                       <IoShareOutline className="h-4 w-4" />
                     </Button>
                     {shareDropdownOpen === auction.blockchainAuctionId && (
-                      <div 
+                      <div
                         style={{
-                          position: 'absolute',
-                          right: '10px',
-                          top: '40px',
-                          background: 'rgba(0, 0, 0, 0.8)',
-                          backdropFilter: 'blur(24px)',
-                          borderRadius: '8px',
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                          position: "absolute",
+                          right: "10px",
+                          top: "40px",
+                          background: "rgba(0, 0, 0, 0.8)",
+                          backdropFilter: "blur(24px)",
+                          borderRadius: "8px",
+                          boxShadow:
+                            "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
                           zIndex: 50,
-                          width: '180px',
-                          padding: '8px'
+                          width: "180px",
+                          padding: "8px",
                         }}
                       >
                         <button
                           style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            fontSize: '14px',
-                            color: 'hsl(var(--primary))',
-                            backgroundColor: 'transparent',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 12px",
+                            fontSize: "14px",
+                            color: "hsl(var(--primary))",
+                            backgroundColor: "transparent",
+                            borderRadius: "4px",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            whiteSpace: "nowrap",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                            e.currentTarget.style.backgroundColor =
+                              "rgba(255, 255, 255, 0.1)";
+                            e.currentTarget.style.color = "hsl(var(--primary))";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                            e.currentTarget.style.color = "hsl(var(--primary))";
                           }}
-                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_DOMAIN}/bid/${auction.blockchainAuctionId}`, 'Web URL')}
+                          onClick={() =>
+                            copyToClipboard(
+                              `${process.env.NEXT_PUBLIC_DOMAIN}/bid/${auction.blockchainAuctionId}`,
+                              "Web URL"
+                            )
+                          }
                         >
-                          <IoLinkOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                          <IoLinkOutline
+                            style={{
+                              height: "16px",
+                              width: "16px",
+                              flexShrink: 0,
+                            }}
+                          />
                           Web URL
                         </button>
                         <button
                           style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            fontSize: '14px',
-                            color: 'hsl(var(--primary))',
-                            backgroundColor: 'transparent',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            padding: "8px 12px",
+                            fontSize: "14px",
+                            color: "hsl(var(--primary))",
+                            backgroundColor: "transparent",
+                            borderRadius: "4px",
+                            border: "none",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            whiteSpace: "nowrap",
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                            e.currentTarget.style.backgroundColor =
+                              "rgba(255, 255, 255, 0.1)";
+                            e.currentTarget.style.color = "hsl(var(--primary))";
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                            e.currentTarget.style.color = "hsl(var(--primary))";
                           }}
-                          onClick={() => copyToClipboard(`${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${auction.blockchainAuctionId}`, 'Miniapp URL')}
+                          onClick={() =>
+                            copyToClipboard(
+                              `${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${auction.blockchainAuctionId}`,
+                              "Miniapp URL"
+                            )
+                          }
                         >
-                          <IoCopyOutline style={{ height: '16px', width: '16px', flexShrink: 0 }} />
+                          <IoCopyOutline
+                            style={{
+                              height: "16px",
+                              width: "16px",
+                              flexShrink: 0,
+                            }}
+                          />
                           Miniapp URL
                         </button>
-                        {context &&<button
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '8px 12px',
-                            fontSize: '14px',
-                            color: 'hsl(var(--primary))',
-                            backgroundColor: 'transparent',
-                            borderRadius: '4px',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            whiteSpace: 'nowrap'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.color = 'hsl(var(--primary))';
-                          }}
-                          onClick={() => composeCast(auction)}
-                        >
-                          <FaShare style={{ height: '16px', width: '16px', flexShrink: 0 }} />
-                          Share Cast
-                        </button>}
+                        {context && (
+                          <button
+                            style={{
+                              width: "100%",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              padding: "8px 12px",
+                              fontSize: "14px",
+                              color: "hsl(var(--primary))",
+                              backgroundColor: "transparent",
+                              borderRadius: "4px",
+                              border: "none",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                              whiteSpace: "nowrap",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "rgba(255, 255, 255, 0.1)";
+                              e.currentTarget.style.color =
+                                "hsl(var(--primary))";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
+                              e.currentTarget.style.color =
+                                "hsl(var(--primary))";
+                            }}
+                            onClick={() => composeCast(auction)}
+                          >
+                            <FaShare
+                              style={{
+                                height: "16px",
+                                width: "16px",
+                                flexShrink: 0,
+                              }}
+                            />
+                            Share Cast
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1060,7 +1212,7 @@ const LandingAuctions: React.FC = () => {
               <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
                 {auction.auctionName}
               </h3>
-              
+
               {auction.description && (
                 <p className="text-caption text-sm mb-3 line-clamp-2 min-h-[2.5rem]">
                   {auction.description}
@@ -1070,20 +1222,25 @@ const LandingAuctions: React.FC = () => {
               <div className="space-y-3 flex-grow flex flex-col">
                 {/* Highest bid */}
                 <div className="flex justify-between items-center">
-                  {auction.highestBid == 0 ? <>
-                  <span className="text-caption text-sm w-[30%]">Min Bid:</span>
-                  <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
-                    {formatBidAmount(
-                          auction.minimumBid,
-                          auction.currency
-                        )}
-                  </span>
-                  </> : <>
-                  <span className="text-caption text-sm w-[30%]">Highest Bid:</span>
-                  <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
+                  {auction.highestBid == 0 ? (
+                    <>
+                      <span className="text-caption text-sm w-[30%]">
+                        Min Bid:
+                      </span>
+                      <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
+                        {formatBidAmount(auction.minimumBid, auction.currency)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-caption text-sm w-[30%]">
+                        Highest Bid:
+                      </span>
+                      <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
                         {formatBidAmount(auction.highestBid, auction.currency)}
-                  </span>
-                  </>}
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 {/* Stats */}
@@ -1100,8 +1257,17 @@ const LandingAuctions: React.FC = () => {
                     <>
                       <div className="text-caption text-sm">Top Bidder</div>
                       <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
-                        <Image unoptimized alt="top bidder" src={auction.topBidder?.pfp_url || ""} width={100} height={100} className="rounded-full w-6 aspect-square"  />
-                        <h3 className="max-w-32 truncate text-md">{auction.topBidder?.username}</h3>
+                        <Image
+                          unoptimized
+                          alt="top bidder"
+                          src={auction.topBidder?.pfp_url || ""}
+                          width={100}
+                          height={100}
+                          className="rounded-full w-6 aspect-square"
+                        />
+                        <h3 className="max-w-32 truncate text-md">
+                          {auction.topBidder?.username}
+                        </h3>
                       </div>
                     </>
                   ) : (
@@ -1121,21 +1287,28 @@ const LandingAuctions: React.FC = () => {
                 <div className="border-t pt-3 mt-auto">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-caption">Hosted by:</span>
-                    <div 
+                    <div
                       className="flex items-center gap-2 text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200"
-                      onClick={() => navigate(`/user/${auction.hostedBy.socialId}`)}
+                      onClick={() =>
+                        navigate(`/user/${auction.hostedBy.socialId}`)
+                      }
                     >
-                      <Image 
-                        unoptimized 
-                        alt="host" 
-                        src={auction.hostedBy.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`} 
-                        width={24} 
-                        height={24} 
-                        className="rounded-full w-6 h-6 aspect-square object-cover"  
+                      <Image
+                        unoptimized
+                        alt="host"
+                        src={
+                          auction.hostedBy.pfp_url ||
+                          `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`
+                        }
+                        width={24}
+                        height={24}
+                        className="rounded-full w-6 h-6 aspect-square object-cover"
                       />
                       <span className="max-w-32 truncate">
-                        {auction.hostedBy.display_name || 
-                         (auction.hostedBy.username ? `@${auction.hostedBy.username}` : truncateAddress(auction.hostedBy.wallet))}
+                        {auction.hostedBy.display_name ||
+                          (auction.hostedBy.username
+                            ? `@${auction.hostedBy.username}`
+                            : truncateAddress(auction.hostedBy.wallet))}
                       </span>
                     </div>
                   </div>
@@ -1184,16 +1357,20 @@ const LandingAuctions: React.FC = () => {
       </div>
 
       {/* Debug info and manual load more */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === "development" && (
         <div className="mt-4 p-4 bg-gray-800 rounded">
-          <p>Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)}, page={page}, auctionsCount={auctions.length}, filter={currencyFilter}</p>
+          <p>
+            Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)},
+            page={page}, auctionsCount={auctions.length}, filter=
+            {currencyFilter}
+          </p>
           {hasMore && (
-            <Button 
-              onClick={loadMoreAuctions} 
+            <Button
+              onClick={loadMoreAuctions}
               disabled={loadingMore}
               className="mt-2"
             >
-              {loadingMore ? 'Loading...' : 'Load More (Manual)'}
+              {loadingMore ? "Loading..." : "Load More (Manual)"}
             </Button>
           )}
         </div>
@@ -1201,8 +1378,8 @@ const LandingAuctions: React.FC = () => {
 
       {/* Click outside to close share dropdown */}
       {shareDropdownOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShareDropdownOpen(null)}
         />
       )}
@@ -1216,28 +1393,45 @@ const LandingAuctions: React.FC = () => {
               {selectedAuction && (
                 <ul>
                   <li className="border-b border-b-white/10 py-2 flex ">
-                    <span className="text-left w-1/2">Bidding on:</span> <strong className="text-primary text-right w-1/2">{selectedAuction.auctionName}</strong>
+                    <span className="text-left w-1/2">Bidding on:</span>{" "}
+                    <strong className="text-primary text-right w-1/2">
+                      {selectedAuction.auctionName}
+                    </strong>
                   </li>
                   <li className="border-b border-b-white/10 py-2 flex ">
-                    <span className="text-left w-1/2">Minimum bid: </span><strong className="text-primary text-right w-1/2">{formatBidAmount(selectedAuction.minimumBid, selectedAuction.currency)}</strong>
+                    <span className="text-left w-1/2">Minimum bid: </span>
+                    <strong className="text-primary text-right w-1/2">
+                      {formatBidAmount(
+                        selectedAuction.minimumBid,
+                        selectedAuction.currency
+                      )}
+                    </strong>
                   </li>
-                  
-                  
-                  
+
                   {selectedAuction.highestBid > 0 && (
                     <li className="border-b border-b-white/10 py-2 flex ">
-                      <span className="text-left w-1/2">Current highest bid:</span> <strong className="text-primary text-right w-1/2">{formatBidAmount(selectedAuction.highestBid, selectedAuction.currency)}</strong>
+                      <span className="text-left w-1/2">
+                        Current highest bid:
+                      </span>{" "}
+                      <strong className="text-primary text-right w-1/2">
+                        {formatBidAmount(
+                          selectedAuction.highestBid,
+                          selectedAuction.currency
+                        )}
+                      </strong>
                     </li>
                   )}
                 </ul>
               )}
             </div>
           </DrawerHeader>
-          
+
           {!address ? (
             <div className="px-4 pb-4">
               <div className="text-center mb-4">
-                <p className="text-caption mb-4">Please connect your wallet to place a bid</p>
+                <p className="text-caption mb-4">
+                  Please connect your wallet to place a bid
+                </p>
                 <AggregateConnector />
               </div>
             </div>
@@ -1251,12 +1445,16 @@ const LandingAuctions: React.FC = () => {
                     setBidAmount(value);
                     if (bidError) setBidError(""); // Clear error when user types
                   }}
-                  placeholder={selectedAuction ? `Enter amount in ${selectedAuction.currency}` : "Enter bid amount"}
+                  placeholder={
+                    selectedAuction
+                      ? `Enter amount in ${selectedAuction.currency}`
+                      : "Enter bid amount"
+                  }
                   type="number"
                   required
                   className="mb-2"
                 />
-                
+
                 {/* USD Value Display */}
                 {bidAmount && parseFloat(bidAmount) > 0 && (
                   <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
@@ -1281,19 +1479,20 @@ const LandingAuctions: React.FC = () => {
                     </div>
                     {tokenPrice && !tokenPriceLoading && !priceError && (
                       <div className="text-xs text-caption mt-1">
-                        1 {selectedAuction?.currency} = {formatUSDAmount(tokenPrice)}
+                        1 {selectedAuction?.currency} ={" "}
+                        {formatUSDAmount(tokenPrice)}
                       </div>
                     )}
                   </div>
                 )}
-                
+
                 {bidError && (
                   <p className="text-red-500 text-sm mt-1">{bidError}</p>
                 )}
               </div>
 
               <DrawerFooter className="flex-shrink-0">
-                <Button 
+                <Button
                   onClick={handleConfirmBid}
                   disabled={isLoading || !bidAmount}
                   className="w-full h-12 text-lg font-bold"

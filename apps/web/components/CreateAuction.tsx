@@ -395,27 +395,26 @@ export default function CreateAuction() {
           toast.loading("Transaction confirmed!", { id: toastId });
           await processSuccess(auctionId);
         } catch (e) {
-          const ethersProvider = new ethers.BrowserProvider(provider);
-          const feeData = await ethersProvider.getFeeData();
-          const signer = await ethersProvider.getSigner();
+          const contract = await writeNewContractSetup(
+            contractAdds.auctions,
+            auctionAbi,
+            externalWallets[0]
+          );
 
           toast.loading("Waiting for transaction...", { id: toastId });
 
-          const tx = await signer.sendTransaction({
-            to: contractAdds.auctions as `0x${string}`,
-            data: encodedStartAuctionData,
-            gasLimit: 500_000n,
-            maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-          });
+          // Call the smart contract
+          const txHash = await contract?.startAuction(
+            auctionId,
+            selectedCurrency.contractAddress as `0x${string}`,
+            auctionTitle,
+            BigInt(Math.round(durationHours)),
+            minBidAmountWei
+          );
 
-          toast.loading("Transaction submitted, waiting for confirmation...", {
-            id: toastId,
-          });
+          await txHash?.wait();
 
-          await tx?.wait();
-
-          if (!tx) {
+          if (!txHash) {
             toast.error("Failed to submit transaction", { id: toastId });
             setIsLoading(false);
             return;
@@ -425,7 +424,6 @@ export default function CreateAuction() {
 
           await processSuccess(auctionId);
         }
-
       }
       // Farcaster/Base App Flow
       else {

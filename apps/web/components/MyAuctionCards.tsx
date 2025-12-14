@@ -6,7 +6,7 @@ import Heading from "./UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
-import { readContractSetup } from "@/utils/contractSetup";
+import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
 import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
 import { contractAdds } from "@/utils/contracts/contractAdds";
 import toast from "react-hot-toast";
@@ -344,32 +344,29 @@ export default function MyAuctionCards() {
         } catch (walletSendError) {
           console.warn("wallet_sendCalls unavailable, falling back to direct transaction", walletSendError);
 
-          try {
-            const ethersProvider = new ethers.BrowserProvider(provider);
-            const feeData = await ethersProvider.getFeeData();
-            const signer = await ethersProvider.getSigner();
+          const writeContract = await writeNewContractSetup(
+          contractAdds.auctions,
+          auctionAbi,
+          externalWallets[0]
+        );
 
-            toast.loading("Waiting for transaction confirmation...", { id: toastId });
+        if (!writeContract) {
+          throw new Error("Failed to setup write contract");
+        }
 
-            const tx = await signer.sendTransaction({
-              to: contractAdds.auctions as `0x${string}`,
-              data: endAuctionData,
-              value: 0n,
-              gasLimit: 700_000n,
-              maxFeePerGas: feeData.maxFeePerGas ?? undefined,
-              maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined,
-            });
+        toast.loading("Waiting for transaction...", { id: toastId });
+        
+        const tx = await writeContract.endAuction(blockchainAuctionId);
+        await tx.wait(); // Wait for transaction confirmation
 
-            toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+        if(!tx){
+          toast.error("Transaction failed", { id: toastId });
+          setIsLoading(false);
+          setEndingAuction(null);
+          return;
+        }
 
-            await tx.wait();
-
-            await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
-            return;
-          } catch (fallbackError) {
-            console.error("Fallback end auction transaction failed", fallbackError);
-            throw fallbackError;
-          }
+        await processEndAuctionSuccess(blockchainAuctionId, formattedBidders);
         }
       } else {
         const calls = [
