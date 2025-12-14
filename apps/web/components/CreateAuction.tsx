@@ -38,6 +38,8 @@ import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
 import { isWhitelisted } from "@/utils/whitelist";
+import { base as baseChain } from "viem/chains";
+import { ethers } from "ethers";
 
 interface CurrencyOption {
   name: string;
@@ -118,12 +120,12 @@ export default function CreateAuction() {
 
   const processSuccess = async (auctionId: string) => {
     const saveToastId = toast.loading("Saving auction details...");
-    
+
     try {
       const now = new Date();
       const accessToken = await getAccessToken();
       console.log("Access Token:", accessToken);
-      
+
       const response = await fetch("/api/protected/auctions/create", {
         method: "POST",
         headers: {
@@ -145,12 +147,16 @@ export default function CreateAuction() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        const errorData = await response
+          .json()
+          .catch(() => ({ error: "Unknown error" }));
         console.error("API Error Response:", errorData);
         throw new Error(errorData.error || "Failed to save auction details");
       }
 
-      toast.success("Auction created successfully! Redirecting...", { id: saveToastId });
+      toast.success("Auction created successfully! Redirecting...", {
+        id: saveToastId,
+      });
 
       setIsLoading(false);
       // Small delay to show success message before navigation
@@ -159,18 +165,23 @@ export default function CreateAuction() {
       }, 1500);
     } catch (error: any) {
       console.error("Error saving auction details:", error);
-      
+
       let errorMessage = "Failed to save auction details. Please try again.";
-      
+
       // Handle specific error types
-      if (error.code === 'ECONNREFUSED') {
-        errorMessage = "Cannot connect to server. Please ensure the development server is running.";
-      } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        errorMessage = "Network error. Please check your connection and ensure the server is running.";
+      if (error.code === "ECONNREFUSED") {
+        errorMessage =
+          "Cannot connect to server. Please ensure the development server is running.";
+      } else if (
+        error.name === "TypeError" &&
+        error.message.includes("fetch")
+      ) {
+        errorMessage =
+          "Network error. Please check your connection and ensure the server is running.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast.error(errorMessage, { id: saveToastId });
       setIsLoading(false);
     } finally {
@@ -317,25 +328,39 @@ export default function CreateAuction() {
       // PC/Browser Wallet flow
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
+        const wallet = externalWallets[0];
+        await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
+        const provider = await wallet.getEthereumProvider();
 
-        const contract = await writeNewContractSetup(contractAdds.auctions, auctionAbi, externalWallets[0]);
+        const ethersProvider = new ethers.BrowserProvider(provider);
 
+        const signer = await ethersProvider.getSigner();
+        const contract = await readContractSetup(
+          contractAdds.auctions,
+          auctionAbi
+        );
         toast.loading("Waiting for transaction...", { id: toastId });
 
-        // Call the smart contract
-        const txHash = await contract?.startAuction(
-          auctionId,
-          selectedCurrency.contractAddress as `0x${string}`,
-          selectedCurrency.symbol,
-          BigInt(Math.round(durationHours)),
-          minBidAmountWei
-        );
+        const iface = contract?.interface;
 
-        toast.loading("Transaction submitted, waiting for confirmation...", { id: toastId });
+        const tx = await signer.sendTransaction({
+          to: contract?.target, // or contract.address (v6 alias)
+          data: iface?.encodeFunctionData("startAuction", [
+            auctionId,
+            selectedCurrency.contractAddress as `0x${string}`,
+            selectedCurrency.symbol,
+            BigInt(durationHours),
+            minBidAmountWei,
+          ]),
+        });
 
-        await txHash?.wait();
+        toast.loading("Transaction submitted, waiting for confirmation...", {
+          id: toastId,
+        });
 
-        if(!txHash){
+        await tx?.wait();
+
+        if (!tx) {
           toast.error("Failed to submit transaction", { id: toastId });
           setIsLoading(false);
           return;
@@ -351,75 +376,75 @@ export default function CreateAuction() {
           id: toastId,
         });
 
-      setGenAuctionId(auctionId);
-      const calls = [
-        {
-          to: contractAdds.auctions,
-          value:
-            context && context.client.clientFid == 309857 ? "0x0" : BigInt(0),
-          data: encodeFunctionData({
-            abi: auctionAbi,
-            functionName: "startAuction",
-            args: [
-              auctionId,
-              selectedCurrency.contractAddress as `0x${string}`,
-              selectedCurrency.symbol,
-              BigInt(durationHours),
-              minBidAmountWei,
+        setGenAuctionId(auctionId);
+        const calls = [
+          {
+            to: contractAdds.auctions,
+            value:
+              context && context.client.clientFid == 309857 ? "0x0" : BigInt(0),
+            data: encodeFunctionData({
+              abi: auctionAbi,
+              functionName: "startAuction",
+              args: [
+                auctionId,
+                selectedCurrency.contractAddress as `0x${string}`,
+                selectedCurrency.symbol,
+                BigInt(durationHours),
+                minBidAmountWei,
+              ],
+            }),
+          },
+        ];
+
+        if (context?.client.clientFid === 309857) {
+          toast.loading("Connecting to Base SDK...", { id: toastId });
+
+          const provider = createBaseAccountSDK({
+            appName: "Bill test app",
+            appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
+            appChainIds: [base.constants.CHAIN_IDS.base],
+          }).getProvider();
+
+          const cryptoAccount = await getCryptoKeyAccount();
+          const fromAddress = cryptoAccount?.account?.address;
+
+          toast.loading("Submitting transaction...", { id: toastId });
+
+          const callsId: any = await provider.request({
+            method: "wallet_sendCalls",
+            params: [
+              {
+                version: "1.0",
+                chainId: numberToHex(base.constants.CHAIN_IDS.base),
+                atomicRequired: true,
+                from: fromAddress,
+                calls: calls,
+              },
             ],
-          }),
-        },
-      ];
+          });
 
-      if (context?.client.clientFid === 309857) {
-        toast.loading("Connecting to Base SDK...", { id: toastId });
+          toast.loading("Transaction submitted, checking status...", {
+            id: toastId,
+          });
 
-        const provider = createBaseAccountSDK({
-          appName: "Bill test app",
-          appLogoUrl: "https://www.houseproto.fun/pfp.jpg",
-          appChainIds: [base.constants.CHAIN_IDS.base],
-        }).getProvider();
+          const result = await checkStatus(callsId);
 
-        const cryptoAccount = await getCryptoKeyAccount();
-        const fromAddress = cryptoAccount?.account?.address;
-
-        toast.loading("Submitting transaction...", { id: toastId });
-
-        const callsId: any = await provider.request({
-          method: "wallet_sendCalls",
-          params: [
-            {
-              version: "1.0",
-              chainId: numberToHex(base.constants.CHAIN_IDS.base),
-              atomicRequired: true,
-              from: fromAddress,
-              calls: calls,
-            },
-          ],
-        });
-
-        toast.loading("Transaction submitted, checking status...", {
-          id: toastId,
-        });
-
-        const result = await checkStatus(callsId);
-
-        if (result == true) {
-          toast.loading("Transaction confirmed!", { id: toastId });
-          await processSuccess(auctionId);
+          if (result == true) {
+            toast.loading("Transaction confirmed!", { id: toastId });
+            await processSuccess(auctionId);
+          } else {
+            toast.error("Transaction failed or timed out", { id: toastId });
+            setIsLoading(false);
+          }
         } else {
-          toast.error("Transaction failed or timed out", { id: toastId });
-          setIsLoading(false);
-        }
-      } else {
-        toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          toast.loading("Waiting for wallet confirmation...", { id: toastId });
 
-        sendCalls({
-          account: address as `0x${string}`,
-          // @ts-ignore
-          calls: calls,
-        });
-      }
+          sendCalls({
+            account: address as `0x${string}`,
+            // @ts-ignore
+            calls: calls,
+          });
+        }
       }
     } catch (error: any) {
       console.error("Error creating auction:", error);
