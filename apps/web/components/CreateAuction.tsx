@@ -724,12 +724,12 @@ export default function CreateAuction() {
           </AnimatePresence>
 
           <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
-            <div className="flex justify-between items-center ml-64 gap-4">
+            <div className="flex justify-between items-center gap-4">
               <button
                 type="button"
                 onClick={handlePrev}
                 disabled={currentStep === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 lg:ml-64 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
               >
                 <FaChevronLeft />
                 Previous
