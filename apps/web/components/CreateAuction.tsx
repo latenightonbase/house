@@ -352,8 +352,10 @@ export default function CreateAuction() {
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
 
+        console.log("WALLET TYPE:", wallet);
+
         const walletType = wallet.walletClientType?.toLowerCase() || "";
-        const isSmartWallet = walletType.includes("smart");
+        const isSmartWallet = walletType.includes("base");
 
         if (isSmartWallet && typeof provider?.request === "function") {
           toast.loading("Submitting smart wallet transaction...", {
