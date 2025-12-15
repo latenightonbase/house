@@ -254,6 +254,8 @@ export async function POST(
         );
 
         if (neynarResponse.ok) {
+
+          console.log('Fetching host data from Neynar for FID:', hostFid);
           const neynarData = await neynarResponse.json();
           const neynarUser = neynarData.users?.[0];
           

@@ -326,6 +326,12 @@ const LandingAuctions: React.FC = () => {
         return;
       }
 
+      if(!user){
+        toast.error("Please log in to place a bid");
+        setIsLoading(false);
+        return;
+      }
+
       let bidAmount: number;
 
       if (bidAmountParam) {
@@ -524,7 +530,7 @@ const LandingAuctions: React.FC = () => {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            address as `0x${string}`
+            String(user.socialId) || address as `0x${string}`
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {

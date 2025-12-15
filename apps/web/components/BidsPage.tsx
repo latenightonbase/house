@@ -553,6 +553,12 @@ export default function BidPage() {
         return;
       }
 
+      if(!user){
+        toast.error("Please log in to place a bid");
+        setIsLoading(false);
+        return;
+      }
+
       let bidAmount: number;
 
       if (bidAmountParam) {
@@ -765,7 +771,7 @@ export default function BidPage() {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            address as `0x${string}`
+            String(user.socialId) || address
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {
