@@ -420,7 +420,7 @@ const LandingAuctions: React.FC = () => {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
-        const bidderIdentifier = user?.socialId
+        const bidderIdentifier = user?.platform == "FARCASTER"
           ? String(user.socialId)
           : (address as string);
         const approveData = encodeFunctionData({
@@ -530,7 +530,7 @@ const LandingAuctions: React.FC = () => {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            String(user.socialId) || address as `0x${string}`
+            user.platform == "FARCASTER" ? String(user.socialId) : address as `0x${string}`
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {
@@ -582,7 +582,7 @@ const LandingAuctions: React.FC = () => {
               args: [
                 auctionId,
                 bidAmountInWei,
-                String(user.socialId) || address,
+                user.platform == "FARCASTER" ? String(user.socialId) : address,
               ],
             }),
             capabilities: {

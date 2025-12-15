@@ -656,7 +656,7 @@ export default function BidPage() {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
-        const bidderIdentifier = user?.socialId
+        const bidderIdentifier = user?.platform == "FARCASTER"
           ? String(user.socialId)
           : (address as string);
         const approveData = encodeFunctionData({
@@ -771,7 +771,7 @@ export default function BidPage() {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            String(user.socialId) || address
+            user.platform == "FARCASTER" ? String(user.socialId) : address
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {
@@ -818,7 +818,7 @@ export default function BidPage() {
               args: [
                 auctionId,
                 bidAmountInWei,
-                String(user.socialId) || address,
+                user.platform == "FARCASTER" ? String(user.socialId) : address,
               ],
             }),
             capabilities: {
