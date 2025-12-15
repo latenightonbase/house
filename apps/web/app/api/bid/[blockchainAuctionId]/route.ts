@@ -24,6 +24,163 @@ interface ProcessedBidder {
   userId?: string;
 }
 
+// Helper function to handle ended auctions using database data
+async function handleEndedAuction(auction: any, auctionStatus: string) {
+  const dbBidders = auction.bidders || [];
+  
+  // Group bids by user and keep only the highest bid for each user
+  const userBidMap: Record<string, any> = {};
+  dbBidders.forEach((bidder: any) => {
+    const userId = bidder.user?._id?.toString() || bidder.user?._id;
+    if (userId) {
+      const existingBid = userBidMap[userId];
+      if (!existingBid || bidder.bidAmount > existingBid.bidAmount) {
+        userBidMap[userId] = bidder;
+      }
+    }
+  });
+
+  // Convert map back to array of highest bids per user
+  const uniqueBidders = Object.values(userBidMap);
+  
+  // Collect Farcaster FIDs for batch Neynar fetch
+  const farcasterFids: string[] = [];
+  const fidToIndexMap: Record<string, number[]> = {};
+
+  uniqueBidders.forEach((bidder: any, index: number) => {
+    if (bidder.user?.socialPlatform === 'FARCASTER' && bidder.user?.socialId && !bidder.user.socialId.startsWith('none') && !bidder.user.socialId.startsWith('0x')) {
+      farcasterFids.push(bidder.user.socialId);
+      if (!fidToIndexMap[bidder.user.socialId]) {
+        fidToIndexMap[bidder.user.socialId] = [];
+      }
+      fidToIndexMap[bidder.user.socialId].push(index);
+    }
+  });
+
+  // Fetch Neynar data for Farcaster users
+  let neynarUsers: any[] = [];
+  if (farcasterFids.length > 0) {
+    try {
+      const neynarResponse = await fetch(
+        `https://api.neynar.com/v2/farcaster/user/bulk?fids=${farcasterFids.join(',')}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEYNAR_API_KEY as string,
+          },
+        }
+      );
+      if (neynarResponse.ok) {
+        const neynarData = await neynarResponse.json();
+        neynarUsers = neynarData.users || [];
+      }
+    } catch (error) {
+      console.error('Error fetching Neynar data for ended auction:', error);
+    }
+  }
+
+  // Process bidders from database
+  const processedBidders: ProcessedBidder[] = uniqueBidders.map((bidder: any) => {
+    const user = bidder.user;
+    let displayName = '';
+    let image = '';
+
+    console.log('Processing ended auction bidder:', bidder);
+
+    if (user?.socialPlatform === 'FARCASTER') {
+      const neynarUser = neynarUsers.find(nu => nu.fid.toString() === user.socialId);
+      if (neynarUser) {
+        displayName = neynarUser.display_name || neynarUser.username || `User ${user.socialId}`;
+        image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet?.toLowerCase() || 'default'}`;
+      } else {
+        displayName = user.username || `User ${user.socialId}`;
+        image = `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet?.toLowerCase() || 'default'}`;
+      }
+    } else if (user?.socialPlatform === 'TWITTER' && user?.twitterProfile) {
+      displayName = user.twitterProfile.username || user.twitterProfile.name || user.username;
+      image = user.twitterProfile.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet?.toLowerCase() || 'default'}`;
+    } else {
+      const wallet = user?.wallet || '';
+      displayName = user?.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : 'Unknown');
+      image = `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet?.toLowerCase() || 'default'}`;
+    }
+
+    // Convert bidAmount to wei format (multiply by 10^decimals) to match contract format
+    const isUSDC = auction.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+    const decimals = isUSDC ? 6 : 18;
+    const bidAmountInWei = (BigInt(Math.floor(bidder.bidAmount * Math.pow(10, decimals)))).toString();
+
+    return {
+      displayName,
+      image,
+      bidAmount: bidAmountInWei,
+      usdValue: bidder.usdcValue,
+      walletAddress: user?.wallet || '',
+      userId: user?._id?.toString() || user?._id
+    };
+  });
+
+  // Process hostedBy
+  let enhancedHostedBy = { ...(auction.hostedBy as any) };
+  const hostSocialId = auction.hostedBy?.socialId;
+  const hostSocialPlatform = auction.hostedBy?.socialPlatform;
+
+  if (hostSocialPlatform === 'FARCASTER' && hostSocialId && !hostSocialId.startsWith('none') && !hostSocialId.startsWith('0x')) {
+    try {
+      const neynarResponse = await fetch(
+        `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostSocialId}`,
+        {
+          headers: {
+            "x-api-key": process.env.NEYNAR_API_KEY as string,
+          },
+        }
+      );
+      if (neynarResponse.ok) {
+        const neynarData = await neynarResponse.json();
+        const neynarUser = neynarData.users?.[0];
+        if (neynarUser) {
+          enhancedHostedBy.username = neynarUser.username || enhancedHostedBy.username;
+          enhancedHostedBy.display_name = neynarUser.display_name;
+          enhancedHostedBy.pfp_url = neynarUser.pfp_url;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching host Neynar data:', error);
+    }
+  } else if (hostSocialPlatform === 'TWITTER' && enhancedHostedBy.twitterProfile) {
+    enhancedHostedBy.username = enhancedHostedBy.twitterProfile.username;
+    enhancedHostedBy.display_name = enhancedHostedBy.twitterProfile.name;
+    enhancedHostedBy.pfp_url = enhancedHostedBy.twitterProfile.profileImageUrl;
+  }
+
+  if (!enhancedHostedBy.username || enhancedHostedBy.username === '') {
+    const wallet = enhancedHostedBy.wallet;
+    enhancedHostedBy.username = wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : 'Unknown';
+  }
+
+  // Calculate highest bid in wei format
+  const isUSDC = auction.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+  const decimals = isUSDC ? 6 : 18;
+  const highestBidValue = uniqueBidders.length > 0 
+    ? Math.max(...uniqueBidders.map((b: any) => Number(b.bidAmount)))
+    : 0;
+  const highestBid = (BigInt(Math.floor(highestBidValue * Math.pow(10, decimals)))).toString();
+
+  console.log('Ended auction processed bidders:', processedBidders);
+
+  return NextResponse.json({
+    auctionName: auction.auctionName,
+    description: auction.description,
+    auctionStatus,
+    endDate: auction.endDate,
+    currency: auction.currency,
+    tokenAddress: auction.tokenAddress,
+    highestBid: highestBid,
+    minimumBid: (BigInt(Math.floor(auction.minimumBid * Math.pow(10, decimals)))).toString(),
+    bidders: processedBidders,
+    hostedBy: enhancedHostedBy
+  });
+}
+
 // POST handler - processes bidders data from contract
 export async function POST(
   req: NextRequest
@@ -55,8 +212,8 @@ export async function POST(
 
     // Find auction in database
     const auction = await Auction.findOne({ blockchainAuctionId })
-      .populate('bidders.user', 'wallet username socialId twitterProfile')
-      .populate('hostedBy', 'wallet username socialId twitterProfile')
+      .populate('bidders.user', 'wallet username socialId socialPlatform twitterProfile')
+      .populate('hostedBy', 'wallet username socialId socialPlatform twitterProfile')
       .lean() as any | null;
 
       console.log('Fetched auction from DB:', auction);
@@ -70,8 +227,13 @@ export async function POST(
 
     // Get current time to determine auction status
     const now = new Date();
-    const isRunning = now <= auction.endDate;
+    const isRunning = now <= auction.endDate && auction.status !== 'ended';
     const auctionStatus = isRunning ? 'Running' : 'Ended';
+
+    // If auction has ended, use database bidders instead of contract bidders
+    if (!isRunning) {
+      return await handleEndedAuction(auction, auctionStatus);
+    }
 
     // Determine decimal places and fetch token price if needed
     const isUSDC = auction.tokenAddress?.toLowerCase() === '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
@@ -201,6 +363,8 @@ export async function POST(
           }
         );
 
+        console.log("Neynar response status:", neynarResponse);
+
         if (neynarResponse.ok) {
           const neynarData = await neynarResponse.json();
 
@@ -222,13 +386,15 @@ export async function POST(
         // This is a numeric FID
         const neynarUser = neynarUsers.find(user => user.fid.toString() === bidder.fid);
         
+        console.log(`Matching Neynar user for FID ${bidder.fid}:`, neynarUser);
+
         if (neynarUser) {
           processedBidders[i].displayName = neynarUser.display_name || neynarUser.username || `User ${bidder.fid}`;
           processedBidders[i].image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         } else {
           // Fallback if Neynar data not found
-          processedBidders[i].displayName = `User ${bidder.fid}`;
-          processedBidders[i].image = `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
+          processedBidders[i].displayName = bidder.twitterProfile?.username || `User ${bidder.fid}`;
+          processedBidders[i].image = bidder.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         }
       }
     }
@@ -240,7 +406,9 @@ export async function POST(
 
     // Process hostedBy to add enhanced user data from Neynar or Twitter
     let enhancedHostedBy = { ...(auction.hostedBy as any) };
-    const hostFid = (auction.hostedBy as any)?.fid;
+    const hostFid = (auction.hostedBy as any)?.socialId;
+
+    console.log('Processing hostedBy with FID:', hostFid);
     
     if (hostFid && hostFid !== '' && !hostFid.startsWith('none')) {
       try {

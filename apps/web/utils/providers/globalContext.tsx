@@ -96,7 +96,8 @@ useEffect(() => {
     setUser({
       socialId: context.user?.fid,
       username: context.user?.username,
-      pfp_url: context.user?.pfpUrl
+      pfp_url: context.user?.pfpUrl,
+      platform: 'FARCASTER'
     })
   }
   else if(!context && privyUser){
@@ -104,7 +105,8 @@ useEffect(() => {
     setUser({
       socialId: privyUser?.twitter?.subject,
       username: privyUser?.twitter?.username,
-      pfp_url: privyUser?.twitter?.profilePictureUrl
+      pfp_url: privyUser?.twitter?.profilePictureUrl,
+      platform: 'TWITTER'
     })
   }
 },[context, privyUser])
