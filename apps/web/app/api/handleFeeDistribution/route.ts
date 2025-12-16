@@ -1,4 +1,4 @@
-import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
+import { erc20Abi } from "@repo/contracts";
 import lnobAbi from "@/utils/contracts/abis/lnobAbi";
 import { ethers } from "ethers";
 import { NextRequest, NextResponse } from "next/server";

@@ -4,18 +4,24 @@ WORKDIR /app
 
 # Copy all package files
 COPY package.json package-lock.json ./
+COPY scripts ./scripts
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/queue/package.json ./packages/queue/
+COPY packages/contracts/package.json ./packages/contracts/
 
 # Install dependencies
 RUN npm ci
 
 # Copy source
 COPY packages/queue ./packages/queue
+COPY packages/contracts ./packages/contracts
 COPY apps/worker ./apps/worker
 
 # Build queue package (worker imports from here via npm workspaces)
 WORKDIR /app/packages/queue
+RUN npx tsc
+
+WORKDIR /app/packages/contracts
 RUN npx tsc
 
 WORKDIR /app/apps/worker

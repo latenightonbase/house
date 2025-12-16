@@ -6,15 +6,9 @@
     "esModuleInterop": true,
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "dist",
     "declaration": true,
-    "baseUrl": ".",
-    "paths": {
-      "@repo/contracts": ["../../packages/contracts/src"],
-      "@repo/queue": ["../../packages/queue/src"]
-    }
+    "outDir": "dist"
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
-

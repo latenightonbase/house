@@ -20,6 +20,7 @@
     ],
     "paths": {
       "@/*": ["./*"],
+      "@repo/contracts": ["../../packages/contracts/src"],
       "@repo/queue": ["../../packages/queue/src"]
     }
   },

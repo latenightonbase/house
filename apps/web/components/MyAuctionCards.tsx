@@ -6,9 +6,13 @@ import Heading from "./UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
-import { readContractSetup, writeNewContractSetup } from "@/utils/contractSetup";
-import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
-import { contractAdds } from "@/utils/contracts/contractAdds";
+import {
+  auctionAbi,
+  contractAdds,
+  erc20Abi,
+  readContractSetup,
+  writeNewContractSetup,
+} from "@repo/contracts";
 import toast from "react-hot-toast";
 import { useSendCalls } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
@@ -23,7 +27,6 @@ import {
 import { checkStatus } from "@/utils/checkStatus";
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from "ethers";
-import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 
 interface Bidder {
   user: string;

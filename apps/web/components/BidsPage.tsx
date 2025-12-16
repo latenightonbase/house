@@ -5,12 +5,12 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Heading from "./UI/Heading";
 import {
+  auctionAbi,
+  contractAdds,
+  erc20Abi,
   readContractSetup,
   writeNewContractSetup,
-} from "@/utils/contractSetup";
-import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
-import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
-import { contractAdds } from "@/utils/contracts/contractAdds";
+} from "@repo/contracts";
 import { RiLoader5Fill } from "react-icons/ri";
 import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
 import { Button } from "@/components/UI/button";

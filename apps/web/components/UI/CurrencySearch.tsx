@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { readContractSetup } from '@/utils/contractSetup';
-import { erc20Abi } from '@/utils/contracts/abis/erc20Abi';
+import { erc20Abi, readContractSetup } from '@repo/contracts';
 import Input from "../UI/Input"
 import { twMerge } from 'tailwind-merge'
 

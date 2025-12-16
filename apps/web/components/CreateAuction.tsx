@@ -3,16 +3,16 @@
 import { useEffect, useState } from "react";
 import { writeContract } from "@wagmi/core";
 import { useAccount, useSendCalls } from "wagmi";
-import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
-import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
-import { contractAdds } from "@/utils/contracts/contractAdds";
+import {
+  auctionAbi,
+  contractAdds,
+  erc20Abi,
+  readContractSetup,
+  writeNewContractSetup,
+} from "@repo/contracts";
 import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
-import {
-  readContractSetup,
-  writeNewContractSetup,
-} from "@/utils/contractSetup";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";

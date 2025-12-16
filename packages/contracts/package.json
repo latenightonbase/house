@@ -1,0 +1,26 @@
+{
+  "name": "@repo/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "peerDependencies": {
+    "ethers": "^6.0.0",
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "ethers": "^6.16.0",
+    "viem": "^2.38.0",
+    "typescript": "^5"
+  }
+}

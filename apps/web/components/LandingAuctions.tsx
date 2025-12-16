@@ -19,15 +19,15 @@ import { useAccount, useSendCalls, useReadContract } from "wagmi";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { RiLoader5Fill } from "react-icons/ri";
 import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
-import { contractAdds } from "@/utils/contracts/contractAdds";
-import { encodeFunctionData, numberToHex } from "viem";
-import { base as baseChain } from "viem/chains";
-import { auctionAbi } from "@/utils/contracts/abis/auctionAbi";
-import { erc20Abi } from "@/utils/contracts/abis/erc20Abi";
 import {
+  auctionAbi,
+  contractAdds,
+  erc20Abi,
   readContractSetup,
   writeNewContractSetup,
-} from "@/utils/contractSetup";
+} from "@repo/contracts";
+import { encodeFunctionData, numberToHex } from "viem";
+import { base as baseChain } from "viem/chains";
 import { useGlobalContext } from "@/utils/providers/globalContext";
 import {
   base,

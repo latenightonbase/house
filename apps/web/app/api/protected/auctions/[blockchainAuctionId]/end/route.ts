@@ -105,7 +105,15 @@ export async function POST(req: NextRequest) {
         const contractBidder = contractBidders[i];
         
         // Find or create user for each bidder
-        let bidderUser = await User.findOne({ socialId: contractBidder.fid });
+        let bidderUser = await User.findOne({
+          $or: [
+            { socialId: contractBidder.fid },
+            { 
+              socialPlatform: "TWITTER",
+              wallets: contractBidder.fid
+            }
+          ]
+        });
         
         if (!bidderUser) {
           return NextResponse.json(

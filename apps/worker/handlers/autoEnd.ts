@@ -1,6 +1,10 @@
 import { ethers } from "ethers";
-import {auctionAbi} from "../utils/contracts/abis/auctionAbi";
-import { contractAdds } from "../utils/contracts/contractAdds";
+import {
+  auctionAbi,
+  contractAdds,
+  erc20Abi,
+  readContractSetup,
+} from "@repo/contracts";
 
 export async function autoEnd(blockchainAuctionId: string) {
   try {
@@ -37,10 +41,23 @@ export async function autoEnd(blockchainAuctionId: string) {
       const bidders = await auctionContract.getBidders(blockchainAuctionId);
       console.log(`📊 Fetched ${bidders.length} bidders from contract`);
 
+      const auctionMeta = await auctionContract?.getAuctionMeta(blockchainAuctionId);
+      console.log("Contract Meta:", auctionMeta);
+
+      const localErc20Contract = await readContractSetup(auctionMeta.caInUse, erc20Abi);
+      if (!localErc20Contract) {
+        console.log("ERC20 Contract not found!")
+        throw new Error("Failed to setup ERC20 contract connection");
+      }
+
+      const decimals = await localErc20Contract.decimals();
+      console.log("Token Decimals:", decimals);
+
       // Format bidders data
-      const formattedBidders = bidders.map((bidder: any) => ({
-        fid: bidder.fid.toString(),
-        bidAmount: ethers.formatEther(bidder.bidAmount)
+      const formattedBidders = bidders.map((item: any) => ({
+        bidder: item[0], 
+        bidAmount: ethers.formatUnits(item[1],  decimals), 
+        fid: item[2]
       }));
 
       // Call the /end route to update database
