@@ -8,7 +8,7 @@ export default function InfoPage() {
   return (
     <PageLayout className="min-h-screen flex flex-col items-start justify-start">
       <div className="w-full max-w-4xl">
-        <Heading className="mb-4">How The House Works</Heading>
+        <Heading className="mb-4" size="lg">How The House Works</Heading>
         <p className="text-caption mb-8">
           HOUSE is the onchain auction marketplace where creators monetize their attention — from shoutouts to collabs to podcast slots — directly with brands and fans.
         </p>

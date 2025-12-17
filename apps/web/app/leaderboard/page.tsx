@@ -207,12 +207,10 @@ export default function LeaderboardPage() {
     <PageLayout className="min-h-screen flex flex-col items-start justify-start">
       <div className="w-full max-w-7xl max-lg:mx-auto">
         <div className="flex items-center gap-4 mb-8 max-lg:mb-4">
-          <div className="w-12 h-12 gradient-button rounded-full flex items-center justify-center">
-            <RiTrophyLine className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <Heading size="lg" gradient={false}>Leaderboard</Heading>
-          </div>
+          
+ 
+            <Heading size="lg" >Leaderboard</Heading>
+
         </div>
 
         <div className="flex mb-6 overflow-x-hidden">

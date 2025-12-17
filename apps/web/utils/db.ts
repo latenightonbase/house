@@ -37,10 +37,14 @@ async function dbConnect(): Promise<typeof mongoose> {
       family: 4 // Use IPv4, skip trying IPv6
     };
 
-    console.log('Connecting to MongoDB...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Connecting to MongoDB...');
+    }
     
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('MongoDB connected successfully');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('MongoDB connected successfully');
+      }
       return mongoose;
     }).catch((error) => {
       console.error('MongoDB connection error:', error);

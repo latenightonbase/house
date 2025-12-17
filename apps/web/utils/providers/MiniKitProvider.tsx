@@ -62,7 +62,7 @@ export function MiniKitContextProvider({ children }: { children: ReactNode }) {
           
         }}
       >
-        <SessionProvider refetchInterval={0} refetchOnWindowFocus={true}>
+        <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
           <GlobalProvider>
             {children}
           </GlobalProvider>

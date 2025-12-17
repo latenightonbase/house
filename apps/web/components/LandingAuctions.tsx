@@ -165,8 +165,6 @@ const LandingAuctions: React.FC = () => {
       );
       const data: ApiResponse = await response.json();
 
-      console.log("API Response:", data);
-
       if (data.success) {
         if (append) {
           setAuctions((prev) => [...prev, ...data.auctions]);
@@ -886,7 +884,7 @@ const LandingAuctions: React.FC = () => {
     <div className="flex mb-6 overflow-x-hidden">
       <button
         onClick={() => setCurrencyFilter("all")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
+        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
           currencyFilter === "all"
             ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
             : "text-caption hover:text-foreground"
@@ -896,7 +894,7 @@ const LandingAuctions: React.FC = () => {
       </button>
       <button
         onClick={() => setCurrencyFilter("usdc")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
+        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
           currencyFilter === "usdc"
             ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
             : "text-caption hover:text-foreground"
@@ -906,7 +904,7 @@ const LandingAuctions: React.FC = () => {
       </button>
       <button
         onClick={() => setCurrencyFilter("creator-coins")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0 ${
+        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
           currencyFilter === "creator-coins"
             ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
             : "text-caption hover:text-foreground"
@@ -917,9 +915,19 @@ const LandingAuctions: React.FC = () => {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="w-full max-w-6xl mx-auto mt-8">
+  return (
+    <div className="w-full max-lg:mx-auto mt-2">
+      <div className="flex flex-col items-start justify-between mb-8">
+        <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
+        <p className="text-caption text-sm mt-2">
+          Discover the most active auctions happening right now
+        </p>
+      </div>
+
+      {/* Currency Filter */}
+      <CurrencyFilterButtons />
+
+      {loading ? (
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <RiLoader5Fill className="animate-spin text-4xl text-primary" />
@@ -931,13 +939,7 @@ const LandingAuctions: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full max-w-6xl mx-auto mt-8">
+      ) : error ? (
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center">
@@ -969,23 +971,7 @@ const LandingAuctions: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  if (auctions.length === 0) {
-    return (
-      <div className="w-full max-lg:mx-auto mt-2">
-        <div className="flex flex-col items-start justify-between mb-8">
-          <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
-          <p className="text-caption text-sm mt-2">
-            Discover the most active auctions happening right now
-          </p>
-        </div>
-
-        {/* Currency Filter */}
-        <CurrencyFilterButtons />
-
+      ) : auctions.length === 0 ? (
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
@@ -1022,30 +1008,15 @@ const LandingAuctions: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full max-lg:mx-auto mt-2">
-      <div className="flex flex-col items-start justify-between mb-8">
-        <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
-        <p className="text-caption text-sm mt-2">
-          Discover the most active auctions happening right now
-        </p>
-      </div>
-
-      {/* Currency Filter */}
-      <CurrencyFilterButtons />
-
-      <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+      ) : (
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
         {auctions.map((auction, index) => (
           <div
             key={auction._id}
             className="bg-primary/10 w-full text-white border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full"
           >
             {/* Header with ranking */}
-            <div className="gradient-button p-4 relative flex-shrink-0">
+            <div className="gradient-button p-4 relative shrink-0">
               <div className="flex items-center justify-between">
                 <span className="bg-white/20 text-white text-sm font-semibold px-3 py-1 rounded-full">
                   #{index + 1}
@@ -1214,18 +1185,18 @@ const LandingAuctions: React.FC = () => {
             </div>
 
             {/* Content */}
-            <div className="p-4 flex flex-col flex-grow">
+            <div className="p-4 flex flex-col grow">
               <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
                 {auction.auctionName}
               </h3>
 
               {auction.description && (
-                <p className="text-caption text-sm mb-3 line-clamp-2 min-h-[2.5rem]">
+                <p className="text-caption text-sm mb-3 line-clamp-2 min-h-10">
                   {auction.description}
                 </p>
               )}
 
-              <div className="space-y-3 flex-grow flex flex-col">
+              <div className="space-y-3 grow flex flex-col">
                 {/* Highest bid */}
                 <div className="flex justify-between items-center">
                   {auction.highestBid == 0 ? (
@@ -1258,7 +1229,7 @@ const LandingAuctions: React.FC = () => {
                 </div>
 
                 {/* Top Bidder - Always reserve space */}
-                <div className="flex justify-between items-center min-h-[32px]">
+                <div className="flex justify-between items-center min-h-8">
                   {auction.topBidder ? (
                     <>
                       <div className="text-caption text-sm">Top Bidder</div>
@@ -1287,7 +1258,7 @@ const LandingAuctions: React.FC = () => {
                 </div>
 
                 {/* Spacer to push content to bottom */}
-                <div className="flex-grow"></div>
+                <div className="grow"></div>
 
                 {/* Host info */}
                 <div className="border-t pt-3 mt-auto">
@@ -1360,40 +1331,39 @@ const LandingAuctions: React.FC = () => {
         {hasMore && !loadingMore && auctions.length > 0 && (
           <div ref={observerRef} className="w-full h-10" />
         )}
-      </div>
 
-      {/* Debug info and manual load more */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-4 p-4 bg-gray-800 rounded">
-          <p>
-            Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)},
-            page={page}, auctionsCount={auctions.length}, filter=
-            {currencyFilter}
-          </p>
-          {hasMore && (
-            <Button
-              onClick={loadMoreAuctions}
-              disabled={loadingMore}
-              className="mt-2"
-            >
-              {loadingMore ? "Loading..." : "Load More (Manual)"}
-            </Button>
-          )}
-        </div>
-      )}
+        {/* Debug info and manual load more */}
+        {process.env.NEXT_PUBLIC_ENV === "DEV" && (
+          <div className="mt-4 p-4 bg-gray-800 rounded">
+            <p>
+              Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)},
+              page={page}, auctionsCount={auctions.length}, filter=
+              {currencyFilter}
+            </p>
+            {hasMore && (
+              <Button
+                onClick={loadMoreAuctions}
+                disabled={loadingMore}
+                className="mt-2"
+              >
+                {loadingMore ? "Loading..." : "Load More (Manual)"}
+              </Button>
+            )}
+          </div>
+        )}
 
-      {/* Click outside to close share dropdown */}
-      {shareDropdownOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShareDropdownOpen(null)}
-        />
-      )}
+        {/* Click outside to close share dropdown */}
+        {shareDropdownOpen && (
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShareDropdownOpen(null)}
+          />
+        )}
 
-      {/* Bid Drawer */}
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent className="drawer-content max-h-[85vh] h-auto flex flex-col">
-          <DrawerHeader className="flex-shrink-0">
+        {/* Bid Drawer */}
+        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+          <DrawerContent className="drawer-content max-h-[85vh] h-auto flex flex-col">
+            <DrawerHeader className="shrink-0">
             <DrawerTitle className="my-4 text-xl">Place Your Bid</DrawerTitle>
             <div className="text-left text-md">
               {selectedAuction && (
@@ -1497,7 +1467,7 @@ const LandingAuctions: React.FC = () => {
                 )}
               </div>
 
-              <DrawerFooter className="flex-shrink-0">
+              <DrawerFooter className="shrink-0">
                 <Button
                   onClick={handleConfirmBid}
                   disabled={isLoading || !bidAmount}
@@ -1517,6 +1487,8 @@ const LandingAuctions: React.FC = () => {
           )}
         </DrawerContent>
       </Drawer>
+      </div>
+      )}
 
       {/* Show all auctions link */}
     </div>

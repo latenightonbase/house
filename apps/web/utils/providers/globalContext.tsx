@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { sdk } from "@farcaster/miniapp-sdk";
 import { usePrivy } from "@privy-io/react-auth";
@@ -41,6 +42,7 @@ const GlobalContext = createContext<GlobalContextProps | null>(null);
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const { context } = useMiniKit();
   const [user, setUser] = useState<any | null>(null);
+  const userCreatedRef = useRef(false);
 
   const {ready, authenticated, user:privyUser, getAccessToken} = usePrivy();
   const {address} = useAccount();
@@ -56,7 +58,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
       const result = await sdk.actions.signIn({nonce});
       // Send the received signature from Farcaster to Privy for authentication
       // or pass a SIWF message signed by an auth address
-      const loggedInUser = await loginToMiniApp({
+      await loginToMiniApp({
         message: result.message,
         signature: result.signature,
       });
@@ -64,32 +66,37 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     };
     login();
   }
-}, [ready, authenticated, context]);
+}, [ready, authenticated, initLoginToMiniApp, loginToMiniApp]);
 
 useEffect(() => {
   const createUser = async () => {
-    if(privyUser && privyUser.farcaster){
+    if(privyUser && privyUser.farcaster && !userCreatedRef.current){
+      userCreatedRef.current = true;
       const accessToken = await getAccessToken();
-            const response = await fetch('/api/protected/user/create', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-              },
-              body: JSON.stringify({
-                privyId: privyUser?.id,
-                socialId: privyUser?.farcaster?.fid,
-                socialPlatform: 'FARCASTER',
-                twitterProfile: undefined,
-                wallet: address,
-              }),
-            });
-
+      const response = await fetch('/api/protected/user/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          privyId: privyUser?.id,
+          socialId: privyUser?.farcaster?.fid,
+          socialPlatform: 'FARCASTER',
+          twitterProfile: undefined,
+          wallet: address,
+        }),
+      });
+      
+      if (!response.ok) {
+        // Reset flag if creation failed so it can be retried
+        userCreatedRef.current = false;
+      }
     }
   };
   
   createUser();
-},[privyUser, address])
+},[privyUser, address, getAccessToken])
 
 useEffect(() => {
   if(context){
@@ -101,7 +108,9 @@ useEffect(() => {
     })
   }
   else if(!context && privyUser){
-    console.log('Setting user from Privy:', privyUser);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Setting user from Privy:', privyUser);
+    }
     setUser({
       socialId: privyUser?.twitter?.subject,
       username: privyUser?.twitter?.username,
