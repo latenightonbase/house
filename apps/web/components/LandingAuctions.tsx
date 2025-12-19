@@ -836,6 +836,37 @@ const LandingAuctions: React.FC = () => {
     }
   };
 
+  // Function to render description with clickable links
+  const renderDescription = (description: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = description.split(urlRegex);
+    
+    return (
+      <p className="text-caption text-sm mb-3 line-clamp-2 min-h-10">
+        {parts.map((part, index) => {
+          if (part.match(urlRegex)) {
+            const displayText = part.length > 40 
+              ? part.substring(0, 40) + '...' 
+              : part;
+            return (
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {displayText}
+              </a>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </p>
+    );
+  };
+
   const SkeletonCard = () => (
     <div className="bg-gray-400/10 w-full border border-gray-300 rounded-xl shadow-sm overflow-hidden animate-pulse">
       {/* Header */}
@@ -1190,11 +1221,7 @@ const LandingAuctions: React.FC = () => {
                 {auction.auctionName}
               </h3>
 
-              {auction.description && (
-                <p className="text-caption text-sm mb-3 line-clamp-2 min-h-10">
-                  {auction.description}
-                </p>
-              )}
+              {auction.description && renderDescription(auction.description)}
 
               <div className="space-y-3 grow flex flex-col">
                 {/* Highest bid */}
