@@ -23,6 +23,8 @@ export interface IUser extends Document {
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
+  averageRating: number;
+  totalReviews: number;
   twitterProfile?: {
     id: string;
     username: string;
@@ -91,6 +93,17 @@ const UserSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Auction',
     }],
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     twitterProfile: {
       id: {
         type: String,
@@ -132,4 +145,6 @@ const UserSchema: Schema = new Schema(
 UserSchema.index({ username: 1 });
 
 // Export the model
+UserSchema.index({ averageRating: 1 });
+UserSchema.index({ totalReviews: 1 });
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { RiLoader5Fill, RiArrowLeftLine, RiUserLine } from 'react-icons/ri'
 import Heading from '@/components/UI/Heading'
 import UserAuctions from '@/components/UserAuctions'
+import ReviewList from '@/components/ReviewList'
 import { useMiniKit } from '@coinbase/onchainkit/minikit'
 import { sdk } from '@farcaster/miniapp-sdk'
 
@@ -199,6 +200,11 @@ export default function UserPage() {
           activeAuctions={userData.activeAuctions}
           endedAuctions={userData.endedAuctions}
         />
+
+        {/* Reviews Section */}
+        <div className="mt-8">
+          <ReviewList userId={userId} />
+        </div>
       </div>
     </div>
   )
