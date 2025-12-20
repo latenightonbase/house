@@ -49,13 +49,6 @@ export default function LoginWithOAuth() {
     };
   }, [menuOpen]);
 
-  // Auto-trigger login if iframe_redirect query parameter is present
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('iframe_redirect') && !authenticated) {
-      handleTwitterLogin();
-    }
-  }, [authenticated]);
 
   const handleAddWallet = async (walletAddress: string) => {
     try {
@@ -89,7 +82,7 @@ export default function LoginWithOAuth() {
       
       // Check if iframe_redirect query parameter is present
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('iframe_redirect')) {
+      if (urlParams.get('type') === 'iframe_redirect') {
         window.location.href = 'https://wl.houseproto.fun/whitelist/house-protocol/portal';
         return;
       }
@@ -162,6 +155,14 @@ export default function LoginWithOAuth() {
       console.error('Login failed', error);
     }
   });
+
+    // Auto-trigger login if iframe_redirect query parameter is present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('type') === 'iframe_redirect' && !authenticated) {
+      login({ loginMethods: ['twitter']});
+    }
+  }, [authenticated, login]);
 
   const handleTwitterLogin = () => {
     // Check if running in an iframe
