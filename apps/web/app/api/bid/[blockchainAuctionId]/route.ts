@@ -212,7 +212,7 @@ export async function POST(
 
     // Find auction in database
     const auction = await Auction.findOne({ blockchainAuctionId })
-      .populate('bidders.user', 'wallets username socialId socialPlatform twitterProfile')
+      .populate('bidders.user', 'wallet username socialId socialPlatform twitterProfile')
       .populate('hostedBy', 'wallet username socialId socialPlatform twitterProfile')
       .lean() as any | null;
 
@@ -265,28 +265,15 @@ export async function POST(
 
     const bidders: ContractBidder[] = contractBidders;
 
-    console.log("Processing bidders from contract:", bidders);
-    console.log("Auction bidders from DB:", auction.bidders);
-
     // Create a map of wallet addresses to user data from auction.bidders for quick lookup
     const walletToUserMap: Record<string, any> = {};
     if (auction.bidders && auction.bidders.length > 0) {
-      auction.bidders.forEach((dbBidder: any) => {
-        console.log("This is the bidder from DB:", dbBidder);
-        // Check if user exists and if any contract bidder has a wallet matching this user's wallets
-        if (dbBidder.user && bidders.some((contractBidder: any) => 
-          dbBidder.user.wallets.some((w: string) => {
-            console.log("This is W", w, "Contract bidder:", contractBidder.bidder);
-            return w.toLowerCase() === contractBidder.bidder.toLowerCase();
-          })
-        )) {
-          // Map all of the user's wallets to their user data
-          dbBidder.user.wallets.forEach((wallet: string) => {
-            walletToUserMap[wallet.toLowerCase()] = {
-              ...dbBidder.user,
-              userId: dbBidder.user._id?.toString() || dbBidder.user._id
-            };
-          });
+      auction.bidders.forEach((bidder: any) => {
+        if (bidder.user && bidder.user.wallet) {
+          walletToUserMap[bidder.user.wallet.toLowerCase()] = {
+            ...bidder.user,
+            userId: bidder.user._id?.toString() || bidder.user._id
+          };
         }
       });
     }
@@ -326,9 +313,6 @@ export async function POST(
         // Use wallet address for identicon
         const truncatedAddress = `${fidValue.slice(0, 6)}...${fidValue.slice(-4)}`;
         const twitterProfile = userData?.twitterProfile;
-
-
-
         processedBidders.push({
           displayName: twitterProfile?.username || truncatedAddress,
           image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,

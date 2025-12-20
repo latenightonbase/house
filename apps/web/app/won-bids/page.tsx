@@ -7,8 +7,6 @@ import Heading from "@/components/UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
-import ReviewForm from "@/components/ReviewForm";
-import toast from 'react-hot-toast';
 
 interface Auction {
   _id: string;
@@ -28,8 +26,6 @@ interface Auction {
   participantCount: number;
   bidCount: number;
   timeInfo: string;
-  deliveredByHost?: boolean;
-  hasReview?: boolean;
 }
 
 interface WonBidsResponse {
@@ -47,7 +43,6 @@ export default function WonBidsPage() {
   const [auctions, setAuctions] = useState<WonAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showReviewForm, setShowReviewForm] = useState<{ auctionId: string; auctionName: string } | null>(null);
   const navigate = useNavigateWithLoader();
   const { getAccessToken } = usePrivy();
 
@@ -90,16 +85,6 @@ export default function WonBidsPage() {
 
   const viewAuction = (blockchainAuctionId: string) => {
     navigate(`/bid/${blockchainAuctionId}`);
-  };
-
-  const handleReviewSuccess = () => {
-    setShowReviewForm(null);
-    // Refresh the auctions list to update review status
-    fetchWonBids();
-  };
-
-  const openReviewForm = (auctionId: string, auctionName: string) => {
-    setShowReviewForm({ auctionId, auctionName });
   };
 
   useEffect(() => {
@@ -279,40 +264,15 @@ export default function WonBidsPage() {
               </div>
 
               {/* Action Button */}
-              <div className="flex gap-2 w-full flex-col">
+              <div className="flex gap-2 w-full">
                 <Button
                   onClick={() => viewAuction(auction.blockchainAuctionId)}
                   variant="outline"
                   size="sm"
-                  className="w-full h-10"
+                  className="flex-1 h-10"
                 >
                   View Details
                 </Button>
-
-                {/* Leave Review Button - Only if delivered and not reviewed */}
-                {auction.deliveredByHost && !auction.hasReview && (
-                  <Button
-                    onClick={() => openReviewForm(auction._id, auction.auctionName)}
-                    variant="default"
-                    size="sm"
-                    className="w-full h-10"
-                  >
-                    Leave a Review
-                  </Button>
-                )}
-
-                {/* Status Badges */}
-                {!auction.deliveredByHost && (
-                  <div className="w-full text-center py-2 bg-yellow-500/20 border border-yellow-500/50 rounded text-yellow-400 text-xs">
-                    Waiting for host to mark as delivered
-                  </div>
-                )}
-
-                {auction.hasReview && (
-                  <div className="w-full text-center py-2 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-xs">
-                    ✓ Review Submitted
-                  </div>
-                )}
               </div>
 
               <div className="text-center mt-2">
@@ -330,20 +290,6 @@ export default function WonBidsPage() {
           <p className="text-caption text-sm">
             Total victories: <span className="font-semibold text-primary">{auctions.length}</span>
           </p>
-        </div>
-      )}
-
-      {/* Review Form Modal */}
-      {showReviewForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="max-w-2xl w-full">
-            <ReviewForm
-              auctionId={showReviewForm.auctionId}
-              auctionName={showReviewForm.auctionName}
-              onSuccess={handleReviewSuccess}
-              onCancel={() => setShowReviewForm(null)}
-            />
-          </div>
         </div>
       )}
     </div>

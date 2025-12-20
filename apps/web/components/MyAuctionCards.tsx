@@ -55,9 +55,6 @@ interface Auction {
   bidCount: number;
   status: "active" | "upcoming" | "ended";
   timeInfo: string;
-  deliveredByHost?: boolean;
-  hasReview?: boolean;
-  winningBid?: string;
 }
 
 interface AuctionsResponse {
@@ -89,7 +86,6 @@ export default function MyAuctionCards() {
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentEndingAuction, setCurrentEndingAuction] = useState<{auctionId: string, bidders: any[]} | null>(null);
-  const [markingDelivered, setMarkingDelivered] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
   const { sendCalls, isSuccess, status: txStatus } = useSendCalls();
@@ -559,44 +555,6 @@ export default function MyAuctionCards() {
     }
   };
 
-  const markAsDelivered = async (auctionId: string) => {
-    setMarkingDelivered(auctionId);
-    const toastId = toast.loading("Marking auction as delivered...");
-
-    try {
-      const accessToken = await getAccessToken();
-      
-      const response = await fetch('/api/protected/reviews/mark-delivered', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ auctionId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to mark as delivered');
-      }
-
-      toast.success('Auction marked as delivered! Winner can now leave a review.', { id: toastId });
-      
-      // Update local state
-      setAuctions(prev => prev.map(auction => 
-        auction._id === auctionId 
-          ? { ...auction, deliveredByHost: true }
-          : auction
-      ));
-    } catch (error: any) {
-      console.error('Error marking as delivered:', error);
-      toast.error(error.message || 'Failed to mark as delivered', { id: toastId });
-    } finally {
-      setMarkingDelivered(null);
-    }
-  };
-
   return (
     <div className="w-full overflow-hidden p-4">
       <Heading size="md">My Auctions</Heading>
@@ -732,67 +690,34 @@ export default function MyAuctionCards() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 w-full flex-col">
-                <div className="flex gap-2 w-full">
-                  {auction.status === "active" && (
-                    <Button
-                      onClick={() => endAuction(auction.blockchainAuctionId)}
-                      disabled={isLoading || endingAuction === auction.blockchainAuctionId}
-                      variant="default"
-                      size="sm"
-                      className="flex-1 h-10"
-                    >
-                      {(isLoading && endingAuction === auction.blockchainAuctionId) || endingAuction === auction.blockchainAuctionId ? (
-                        <>
-                          <RiLoader5Fill className="animate-spin h-3 w-3 mr-2" />
-                          Ending...
-                        </>
-                      ) : (
-                        "End Auction"
-                      )}
-                    </Button>
-                  )}
-
+              <div className="flex gap-2 w-full">
+                {auction.status === "active" && (
                   <Button
-                    onClick={() => viewAuction(auction.blockchainAuctionId)}
-                    variant="outline"
+                    onClick={() => endAuction(auction.blockchainAuctionId)}
+                    disabled={isLoading || endingAuction === auction.blockchainAuctionId}
+                    variant="default"
                     size="sm"
                     className="flex-1 h-10"
                   >
-                    View
-                  </Button>
-                </div>
-
-                {/* Mark Delivered Button - Only for ended auctions with winner */}
-                {auction.status === "ended" && 
-                 auction.winningBid && 
-                 auction.winningBid !== 'no_bids' && 
-                 !auction.deliveredByHost && (
-                  <Button
-                    onClick={() => markAsDelivered(auction._id)}
-                    disabled={markingDelivered === auction._id}
-                    variant="default"
-                    size="sm"
-                    className="w-full h-10"
-                  >
-                    {markingDelivered === auction._id ? (
+                    {(isLoading && endingAuction === auction.blockchainAuctionId) || endingAuction === auction.blockchainAuctionId ? (
                       <>
                         <RiLoader5Fill className="animate-spin h-3 w-3 mr-2" />
-                        Marking...
+                        Ending...
                       </>
                     ) : (
-                      "Mark as Delivered"
+                      "End Auction"
                     )}
                   </Button>
                 )}
 
-                {/* Delivered Status Badge */}
-                {auction.status === "ended" && auction.deliveredByHost && (
-                  <div className="w-full text-center py-2 bg-green-500/20 border border-green-500/50 rounded text-green-400 text-xs">
-                    ✓ Marked as Delivered
-                    {auction.hasReview && " • Reviewed"}
-                  </div>
-                )}
+                <Button
+                  onClick={() => viewAuction(auction.blockchainAuctionId)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-10"
+                >
+                  View
+                </Button>
               </div>
 
               {auction.status === "ended" && (

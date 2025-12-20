@@ -230,7 +230,7 @@ export default function BidPage() {
             contractBidders = await contract.getBidders(blockchainAuctionId);
             console.log(
               "Fetched bidders from contract:",
-              contractBidders
+              contractBidders.length
             );
           }
         } catch (contractError) {
@@ -949,37 +949,6 @@ export default function BidPage() {
     }
   }
 
-  // Function to render description with clickable links
-  const renderDescription = (description: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = description.split(urlRegex);
-    
-    return (
-      <p className="text-caption text-sm mt-2">
-        {parts.map((part, index) => {
-          if (part.match(urlRegex)) {
-            const displayText = part.length > 40 
-              ? part.substring(0, 40) + '...' 
-              : part;
-            return (
-              <a
-                key={index}
-                href={part}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {displayText}
-              </a>
-            );
-          }
-          return <span key={index}>{part}</span>;
-        })}
-      </p>
-    );
-  };
-
   return (
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
@@ -988,7 +957,11 @@ export default function BidPage() {
           <div className="flex justify-between items-start mb-4">
             <div className="flex-1">
               <Heading size="md">{auctionData.auctionName}</Heading>
-              {auctionData.description && renderDescription(auctionData.description)}
+              {auctionData.description && (
+                <p className="text-caption text-sm mt-2">
+                  {auctionData.description}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span
