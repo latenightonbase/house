@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Heading from "./UI/Heading";
@@ -108,8 +108,6 @@ export default function BidPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
-  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
-  const titleRef = useRef<HTMLDivElement>(null);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -210,13 +208,7 @@ export default function BidPage() {
     return calculateUSDValue(amount, tokenPrice);
   };
 
-  // Check if title overflows
-  useEffect(() => {
-    if (titleRef.current && auctionData) {
-      const element = titleRef.current;
-      setIsTitleOverflowing(element.scrollWidth > element.clientWidth);
-    }
-  }, [auctionData]);
+
 
   useEffect(() => {
     const fetchAuctionData = async () => {
@@ -997,27 +989,7 @@ export default function BidPage() {
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
           <div className="mb-4">
             <div className="flex-1">
-              <div 
-                ref={titleRef}
-                className="overflow-hidden relative"
-                style={{ maxWidth: '100%' }}
-              >
-                <div 
-                  className={isTitleOverflowing ? 'animate-marquee' : ''}
-                  style={{
-                    display: 'inline-block',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Heading size="md">{auctionData.auctionName}</Heading>
-                  {isTitleOverflowing && (
-                    <>
-                      <span style={{ paddingRight: '3rem' }}></span>
-                      <Heading size="md">{auctionData.auctionName}</Heading>
-                    </>
-                  )}
-                </div>
-              </div>
+              <Heading size="md">{auctionData.auctionName}</Heading>
               {auctionData.description && renderDescription(auctionData.description)}
             </div>
           </div>
