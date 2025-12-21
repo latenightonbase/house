@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Heading from "./UI/Heading";
@@ -108,6 +108,8 @@ export default function BidPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareDropdownOpen, setShareDropdownOpen] = useState(false);
+  const [isTitleOverflowing, setIsTitleOverflowing] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -208,6 +210,14 @@ export default function BidPage() {
     return calculateUSDValue(amount, tokenPrice);
   };
 
+  // Check if title overflows
+  useEffect(() => {
+    if (titleRef.current && auctionData) {
+      const element = titleRef.current;
+      setIsTitleOverflowing(element.scrollWidth > element.clientWidth);
+    }
+  }, [auctionData]);
+
   useEffect(() => {
     const fetchAuctionData = async () => {
       try {
@@ -230,7 +240,7 @@ export default function BidPage() {
             contractBidders = await contract.getBidders(blockchainAuctionId);
             console.log(
               "Fetched bidders from contract:",
-              contractBidders.length
+              contractBidders
             );
           }
         } catch (contractError) {
@@ -949,174 +959,70 @@ export default function BidPage() {
     }
   }
 
+  // Function to render description with clickable links
+  const renderDescription = (description: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = description.split(urlRegex);
+    
+    return (
+      <p className="text-caption text-sm mt-2">
+        {parts.map((part, index) => {
+          if (part.match(urlRegex)) {
+            const displayText = part.length > 40 
+              ? part.substring(0, 40) + '...' 
+              : part;
+            return (
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {displayText}
+              </a>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </p>
+    );
+  };
+
   return (
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
         {/* Auction Header */}
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4">
             <div className="flex-1">
-              <Heading size="md">{auctionData.auctionName}</Heading>
-              {auctionData.description && (
-                <p className="text-caption text-sm mt-2">
-                  {auctionData.description}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  auctionData.auctionStatus === "Running"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
+              <div 
+                ref={titleRef}
+                className="overflow-hidden relative"
+                style={{ maxWidth: '100%' }}
               >
-                {auctionData.auctionStatus}
-              </span>
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-white hover:bg-white/20"
-                  onClick={handleShareClick}
+                <div 
+                  className={isTitleOverflowing ? 'animate-marquee' : ''}
+                  style={{
+                    display: 'inline-block',
+                    whiteSpace: 'nowrap',
+                  }}
                 >
-                  <IoShareOutline className="h-4 w-4" />
-                </Button>
-                {shareDropdownOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "0px",
-                      top: "40px",
-                      background: "rgba(0, 0, 0, 0.8)",
-                      backdropFilter: "blur(24px)",
-                      borderRadius: "8px",
-                      boxShadow:
-                        "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-                      zIndex: 50,
-                      width: "180px",
-                      padding: "8px",
-                    }}
-                  >
-                    <button
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "8px 12px",
-                        fontSize: "14px",
-                        color: "hsl(var(--primary))",
-                        backgroundColor: "transparent",
-                        borderRadius: "4px",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          "rgba(255, 255, 255, 0.1)";
-                        e.currentTarget.style.color = "hsl(var(--primary))";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "hsl(var(--primary))";
-                      }}
-                      onClick={() =>
-                        copyToClipboard(
-                          `${process.env.NEXT_PUBLIC_DOMAIN}/bid/${blockchainAuctionId}`,
-                          "Web URL"
-                        )
-                      }
-                    >
-                      <IoLinkOutline
-                        style={{ height: "16px", width: "16px", flexShrink: 0 }}
-                      />
-                      Web URL
-                    </button>
-                    <button
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "8px 12px",
-                        fontSize: "14px",
-                        color: "hsl(var(--primary))",
-                        backgroundColor: "transparent",
-                        borderRadius: "4px",
-                        border: "none",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        whiteSpace: "nowrap",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          "rgba(255, 255, 255, 0.1)";
-                        e.currentTarget.style.color = "hsl(var(--primary))";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.color = "hsl(var(--primary))";
-                      }}
-                      onClick={() =>
-                        copyToClipboard(
-                          `${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${blockchainAuctionId}`,
-                          "Miniapp URL"
-                        )
-                      }
-                    >
-                      <IoCopyOutline
-                        style={{ height: "16px", width: "16px", flexShrink: 0 }}
-                      />
-                      Miniapp URL
-                    </button>
-                    {context && (
-                      <button
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          padding: "8px 12px",
-                          fontSize: "14px",
-                          color: "hsl(var(--primary))",
-                          backgroundColor: "transparent",
-                          borderRadius: "4px",
-                          border: "none",
-                          cursor: "pointer",
-                          transition: "all 0.2s",
-                          whiteSpace: "nowrap",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor =
-                            "rgba(255, 255, 255, 0.1)";
-                          e.currentTarget.style.color = "hsl(var(--primary))";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = "transparent";
-                          e.currentTarget.style.color = "hsl(var(--primary))";
-                        }}
-                        onClick={() => composeCast()}
-                      >
-                        <FaShare
-                          style={{
-                            height: "16px",
-                            width: "16px",
-                            flexShrink: 0,
-                          }}
-                        />
-                        Share Cast
-                      </button>
-                    )}
-                  </div>
-                )}
+                  <Heading size="md">{auctionData.auctionName}</Heading>
+                  {isTitleOverflowing && (
+                    <>
+                      <span style={{ paddingRight: '3rem' }}></span>
+                      <Heading size="md">{auctionData.auctionName}</Heading>
+                    </>
+                  )}
+                </div>
               </div>
+              {auctionData.description && renderDescription(auctionData.description)}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 mb-4">
             <div>
               <p className="text-xs text-caption mb-1">Hosted By</p>
               <div className="flex items-center gap-2">
@@ -1169,6 +1075,158 @@ export default function BidPage() {
                     )} ${auctionData.currency}`
                   : `${auctionData.minimumBid} ${auctionData.currency}`}
               </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 mt-4">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold ${
+                auctionData.auctionStatus === "Running"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {auctionData.auctionStatus}
+            </span>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                onClick={handleShareClick}
+              >
+                <IoShareOutline className="h-4 w-4" />
+              </Button>
+              {shareDropdownOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "0px",
+                    bottom: "40px",
+                    background: "rgba(0, 0, 0, 0.8)",
+                    backdropFilter: "blur(24px)",
+                    borderRadius: "8px",
+                    boxShadow:
+                      "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                    zIndex: 50,
+                    width: "180px",
+                    padding: "8px",
+                  }}
+                >
+                  <button
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      fontSize: "14px",
+                      color: "hsl(var(--primary))",
+                      backgroundColor: "transparent",
+                      borderRadius: "4px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(255, 255, 255, 0.1)";
+                      e.currentTarget.style.color = "hsl(var(--primary))";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "hsl(var(--primary))";
+                    }}
+                    onClick={() =>
+                      copyToClipboard(
+                        `${process.env.NEXT_PUBLIC_DOMAIN}/bid/${blockchainAuctionId}`,
+                        "Web URL"
+                      )
+                    }
+                  >
+                    <IoLinkOutline
+                      style={{ height: "16px", width: "16px", flexShrink: 0 }}
+                    />
+                    Web URL
+                  </button>
+                  <button
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      fontSize: "14px",
+                      color: "hsl(var(--primary))",
+                      backgroundColor: "transparent",
+                      borderRadius: "4px",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      whiteSpace: "nowrap",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        "rgba(255, 255, 255, 0.1)";
+                      e.currentTarget.style.color = "hsl(var(--primary))";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                      e.currentTarget.style.color = "hsl(var(--primary))";
+                    }}
+                    onClick={() =>
+                      copyToClipboard(
+                        `${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${blockchainAuctionId}`,
+                        "Miniapp URL"
+                      )
+                    }
+                  >
+                    <IoCopyOutline
+                      style={{ height: "16px", width: "16px", flexShrink: 0 }}
+                    />
+                    Miniapp URL
+                  </button>
+                  {context && (
+                    <button
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "8px 12px",
+                        fontSize: "14px",
+                        color: "hsl(var(--primary))",
+                        backgroundColor: "transparent",
+                        borderRadius: "4px",
+                        border: "none",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        whiteSpace: "nowrap",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          "rgba(255, 255, 255, 0.1)";
+                        e.currentTarget.style.color = "hsl(var(--primary))";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = "hsl(var(--primary))";
+                      }}
+                      onClick={() => composeCast()}
+                    >
+                      <FaShare
+                        style={{
+                          height: "16px",
+                          width: "16px",
+                          flexShrink: 0,
+                        }}
+                      />
+                      Share Cast
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

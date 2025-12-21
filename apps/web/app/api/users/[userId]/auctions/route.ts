@@ -20,7 +20,7 @@ export async function GET(
     const { userId } = await params;
 
     // Find user and their auctions
-    const userDoc = await User.findOne({socialId: userId})
+    const userDoc = await User.findById(userId)
       .select('wallet fid username hostedAuctions twitterProfile socialId socialPlatform');
 
     if (!userDoc) {
