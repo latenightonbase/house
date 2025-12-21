@@ -3,9 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Compiler optimizations
   compiler: {
-    removeConsole: process.env.NEXT_PUBLIC_ENV !== "DEV" ? {
-      exclude: ["error", "warn"],
-    } : false,
+   
   },
   
   images: {
