@@ -81,6 +81,7 @@ interface Auction {
     wallet: string;
     username: string; // Enhanced with Neynar display_name
     fid: string;
+    socialId: string;
     pfp_url: string | null; // Profile picture from Neynar
     bidAmount: number;
     bidTimestamp: Date;
@@ -167,7 +168,12 @@ const LandingAuctions: React.FC = () => {
 
       if (data.success) {
         if (append) {
-          setAuctions((prev) => [...prev, ...data.auctions]);
+          setAuctions((prev) => {
+            // Filter out duplicates by creating a Set of existing IDs
+            const existingIds = new Set(prev.map(a => a._id));
+            const newAuctions = data.auctions.filter(a => !existingIds.has(a._id));
+            return [...prev, ...newAuctions];
+          });
         } else {
           setAuctions(data.auctions);
         }
@@ -682,10 +688,6 @@ const LandingAuctions: React.FC = () => {
 
   const formatBidAmount = (amount: number, currency: string): string => {
     return `${amount.toLocaleString()} ${currency}`;
-  };
-
-  const truncateAddress = (address: string): string => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   // Function to get token decimals from ERC20 contract
@@ -1270,7 +1272,7 @@ const LandingAuctions: React.FC = () => {
                           className="rounded-full w-6 aspect-square"
                         />
                         <h3 className="max-w-32 truncate text-md">
-                          {auction.topBidder?.username}
+                          {auction.topBidder?.username || "User "+ auction.topBidder.socialId}
                         </h3>
                       </div>
                     </>
@@ -1312,7 +1314,7 @@ const LandingAuctions: React.FC = () => {
                         {auction.hostedBy.display_name ||
                           (auction.hostedBy.username
                             ? `@${auction.hostedBy.username}`
-                            : truncateAddress(auction.hostedBy.wallet))}
+                            : auction.hostedBy.socialId)}
                       </span>
                     </div>
                   </div>

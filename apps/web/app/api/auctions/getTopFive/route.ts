@@ -65,14 +65,15 @@ export async function GET(req: NextRequest) {
     }
 
     // Process hostedBy and top bidders data to fetch display names from Neynar API
-    const uniqueFids = new Set<string>();
+    const hostFids = new Set<string>();
+    const bidderFids = new Set<string>();
     
-    // Collect unique FIDs that don't start with "none" from hosts and top bidders
+    // Collect unique FIDs separately for hosts and top bidders
     runningAuctions.forEach(auction => {
       // Add host FID
       if (auction.hostedBy?.socialId && auction.hostedBy.socialId !== '' && auction.hostedBy.socialPlatform !== "TWITTER") {
         console.log('Adding host FID:', auction.hostedBy.socialId);
-        uniqueFids.add(auction.hostedBy.socialId);
+        hostFids.add(auction.hostedBy.socialId);
       }
       
       // Add top bidder FID if there are bidders
@@ -80,20 +81,22 @@ export async function GET(req: NextRequest) {
         const highestBid = Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount));
         const topBidder = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
         if (topBidder?.user?.socialId && topBidder.user.socialId !== '' && topBidder.user.socialPlatform !== "TWITTER") {
-          uniqueFids.add(topBidder.user.socialId);
+          bidderFids.add(topBidder.user.socialId);
         }
       }
     });
 
-    // Fetch display names from Neynar API for valid FIDs
+    // Fetch display names from Neynar API separately for hosts and bidders
     let neynarUsers: Record<string, any> = {};
-    console.log('Unique FIDs collected:', Array.from(uniqueFids));
-    if (uniqueFids.size > 0) {
+    
+    // Fetch host data
+    console.log('Host FIDs collected:', Array.from(hostFids));
+    if (hostFids.size > 0) {
       try {
-        const fidsArray = Array.from(uniqueFids);
-        console.log('Fetching user data for FIDs:', fidsArray);
+        const hostFidsArray = Array.from(hostFids);
+        console.log('Fetching host data for FIDs:', hostFidsArray);
         const res = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
+          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFidsArray.join(',')}`,
           {
             headers: {
               "x-api-key": process.env.NEYNAR_API_KEY as string,
@@ -103,19 +106,50 @@ export async function GET(req: NextRequest) {
         
         if (res.ok) {
           const jsonRes = await res.json();
-          console.log('Neynar API response:', jsonRes);
+          console.log('Neynar API response for hosts:', jsonRes);
           if (jsonRes.users) {
-            // Create a map of fid -> user data
             jsonRes.users.forEach((user: any) => {
               neynarUsers[user.fid] = user;
             });
-            console.log('Neynar users mapped:', Object.keys(neynarUsers));
+            console.log('Host users mapped:', Object.keys(neynarUsers));
           }
         } else {
-          console.error('Neynar API error:', res.status, await res.text());
+          console.error('Neynar API error for hosts:', res.status, await res.text());
         }
       } catch (error) {
-        console.error('Error fetching user data from Neynar:', error);
+        console.error('Error fetching host data from Neynar:', error);
+      }
+    }
+
+    // Fetch bidder data separately
+    console.log('Bidder FIDs collected:', Array.from(bidderFids));
+    if (bidderFids.size > 0) {
+      try {
+        const bidderFidsArray = Array.from(bidderFids);
+        console.log('Fetching bidder data for FIDs:', bidderFidsArray);
+        const res = await fetch(
+          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${bidderFidsArray.join(',')}`,
+          {
+            headers: {
+              "x-api-key": process.env.NEYNAR_API_KEY as string,
+            },
+          }
+        );
+        
+        if (res.ok) {
+          const jsonRes = await res.json();
+          console.log('Neynar API response for bidders:', jsonRes);
+          if (jsonRes.users) {
+            jsonRes.users.forEach((user: any) => {
+              neynarUsers[user.fid] = user;
+            });
+            console.log('Bidder users mapped:', Object.keys(neynarUsers));
+          }
+        } else {
+          console.error('Neynar API error for bidders:', res.status, await res.text());
+        }
+      } catch (error) {
+        console.error('Error fetching bidder data from Neynar:', error);
       }
     }
 
