@@ -3,6 +3,7 @@ import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import connectToDB from '@/utils/db';
 import { sendNotification } from '@repo/queue';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 export async function POST(
   req: NextRequest,
@@ -65,30 +66,13 @@ export async function POST(
 
     // Fetch from Neynar if FID exists and is numeric
     if (highestBidderUser.socialId && !highestBidderUser.socialId.startsWith('0x') && !highestBidderUser.socialId.startsWith('none')) {
-      try {
-        const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${highestBidderUser.socialId}`,
-          {
-            headers: {
-              'x-api-key': process.env.NEYNAR_API_KEY as string,
-            },
-          }
-        );
-
-        if (neynarResponse.ok) {
-          const neynarData = await neynarResponse.json();
-          const neynarUser = neynarData.users?.[0];
-          if (neynarUser) {
-            highestBidderUsername = neynarUser.username || neynarUser.display_name || highestBidderUsername;
-            console.log('[Outbid Notification] Fetched username from Neynar:', highestBidderUsername);
-          } else {
-            console.log('[Outbid Notification] No user found in Neynar response');
-          }
-        } else {
-          console.log('[Outbid Notification] Neynar response not OK:', neynarResponse.status);
-        }
-      } catch (error) {
-        console.error('Error fetching highest bidder from Neynar:', error);
+      const neynarUsersMap = await getFidsWithCache([highestBidderUser.socialId]);
+      const neynarUser = neynarUsersMap[highestBidderUser.socialId];
+      if (neynarUser) {
+        highestBidderUsername = neynarUser.username || neynarUser.display_name || highestBidderUsername;
+        console.log('[Outbid Notification] Fetched username from cache/Neynar:', highestBidderUsername);
+      } else {
+        console.log('[Outbid Notification] No user found in cache/Neynar');
       }
     }
 

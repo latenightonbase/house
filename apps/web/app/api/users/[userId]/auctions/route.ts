@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/utils/db';
 import User from '@/utils/schemas/User';
 import Auction from '@/utils/schemas/Auction';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 export async function GET(
   req: NextRequest,
@@ -41,23 +42,8 @@ export async function GET(
       // Fetch Neynar data if needed
       (async () => {
         if (shouldFetchNeynar) {
-          try {
-            const neynarResponse = await fetch(
-              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.socialId}`,
-              {
-                headers: {
-                  'x-api-key': process.env.NEYNAR_API_KEY || '',
-                },
-              }
-            );
-
-            if (neynarResponse.ok) {
-              const data = await neynarResponse.json();
-              return data.users?.[0] || null;
-            }
-          } catch (neynarError) {
-            console.error('Error fetching Neynar data:', neynarError);
-          }
+          const neynarUsersMap = await getFidsWithCache([user.socialId]);
+          return neynarUsersMap[user.socialId] || null;
         }
         return null;
       })(),

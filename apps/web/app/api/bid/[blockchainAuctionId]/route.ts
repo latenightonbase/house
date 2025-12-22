@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
 import connectToDB from '@/utils/db';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 interface ContractBidder {
   bidder: string;
@@ -57,57 +58,19 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
     }
   });
 
-  // Fetch Neynar data for both bidders and host in parallel
+  // Fetch Neynar data for both bidders and host
   const hostSocialId = auction.hostedBy?.socialId;
   const hostSocialPlatform = auction.hostedBy?.socialPlatform;
   const shouldFetchHost = hostSocialPlatform === 'FARCASTER' && hostSocialId && !hostSocialId.startsWith('none') && !hostSocialId.startsWith('0x');
 
-  const [neynarUsers, hostNeynarData] = await Promise.all([
-    // Fetch Neynar data for Farcaster users
-    (async () => {
-      if (farcasterFids.length > 0) {
-        try {
-          const neynarResponse = await fetch(
-            `https://api.neynar.com/v2/farcaster/user/bulk?fids=${farcasterFids.join(',')}`,
-            {
-              headers: {
-                "x-api-key": process.env.NEYNAR_API_KEY as string,
-              },
-            }
-          );
-          if (neynarResponse.ok) {
-            const neynarData = await neynarResponse.json();
-            return neynarData.users || [];
-          }
-        } catch (error) {
-          console.error('Error fetching Neynar data for ended auction:', error);
-        }
-      }
-      return [];
-    })(),
-    // Fetch host Neynar data
-    (async () => {
-      if (shouldFetchHost) {
-        try {
-          const neynarResponse = await fetch(
-            `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostSocialId}`,
-            {
-              headers: {
-                "x-api-key": process.env.NEYNAR_API_KEY as string,
-              },
-            }
-          );
-          if (neynarResponse.ok) {
-            const neynarData = await neynarResponse.json();
-            return neynarData.users?.[0];
-          }
-        } catch (error) {
-          console.error('Error fetching host Neynar data:', error);
-        }
-      }
-      return null;
-    })()
-  ]);
+  const allFids = [...farcasterFids];
+  if (shouldFetchHost) {
+    allFids.push(hostSocialId);
+  }
+
+  const neynarUsersMap = await getFidsWithCache(allFids);
+  const neynarUsers = Object.values(neynarUsersMap);
+  const hostNeynarData = shouldFetchHost ? neynarUsersMap[hostSocialId] : null;
 
   // Process bidders from database
   const processedBidders: ProcessedBidder[] = uniqueBidders.map((bidder: any) => {
@@ -383,61 +346,17 @@ export async function POST(
 
     console.log('Processing hostedBy with FID:', hostFid);
 
-    // Fetch Neynar data for both numeric FIDs and host in parallel
-    const [neynarUsers, hostNeynarUser] = await Promise.all([
-      // Fetch Neynar data for numeric FIDs if any exist
-      (async () => {
-        if (numericFids.length > 0) {
-          try {
-            const neynarResponse = await fetch(
-              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${numericFids.join(',')}`,
-              {
-                headers: {
-                  "x-api-key": process.env.NEYNAR_API_KEY as string,
-                },
-              }
-            );
+    // Fetch Neynar data for both numeric FIDs and host
+    const allFids = [...numericFids];
+    if (shouldFetchHostFid) {
+      allFids.push(hostFid);
+    }
 
-            console.log("Neynar response status:", neynarResponse);
+    const neynarUsersMap = await getFidsWithCache(allFids);
+    const neynarUsers = Object.values(neynarUsersMap);
+    const hostNeynarUser = shouldFetchHostFid ? neynarUsersMap[hostFid] : null;
 
-            if (neynarResponse.ok) {
-              const neynarData = await neynarResponse.json();
-
-              console.log("Neynar data fetched:", neynarData);
-
-              return neynarData.users || [];
-            }
-          } catch (error) {
-            console.error('Error fetching Neynar data:', error);
-          }
-        }
-        return [];
-      })(),
-      // Fetch host Neynar data
-      (async () => {
-        if (shouldFetchHostFid) {
-          try {
-            const neynarResponse = await fetch(
-              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFid}`,
-              {
-                headers: {
-                  "x-api-key": process.env.NEYNAR_API_KEY as string,
-                },
-              }
-            );
-
-            if (neynarResponse.ok) {
-              console.log('Fetching host data from Neynar for FID:', hostFid);
-              const neynarData = await neynarResponse.json();
-              return neynarData.users?.[0];
-            }
-          } catch (error) {
-            console.error('Error fetching host data from Neynar:', error);
-          }
-        }
-        return null;
-      })()
-    ]);
+    console.log("Neynar data fetched:", neynarUsers);
 
     // Update processed bidders with Neynar data
     for (let i = 0; i < bidders.length; i++) {

@@ -3,6 +3,7 @@ import connectDB from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { fetchTokenPrice } from '@/utils/tokenPrice';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 export async function GET() {
   try {
@@ -164,31 +165,10 @@ export async function GET() {
     // Fetch display names from Neynar API for valid FIDs
     let neynarUsers: Record<string, any> = {};
     if (uniqueFids.size > 0) {
-      try {
-        const fidsArray = Array.from(uniqueFids);
-        console.log('Fetching Neynar data for FIDs:', fidsArray);
-        const res = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
-          }
-        );
-        
-        if (res.ok) {
-          const jsonRes = await res.json();
-          console.log('Neynar API response:', jsonRes);
-          if (jsonRes.users) {
-            jsonRes.users.forEach((user: any) => {
-              console.log('Neynar user fetched:', user);
-              neynarUsers[user.fid] = user;
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data from Neynar:', error);
-      }
+      const fidsArray = Array.from(uniqueFids);
+      console.log('Fetching Neynar data for FIDs:', fidsArray);
+      neynarUsers = await getFidsWithCache(fidsArray);
+      console.log('Neynar users fetched from cache:', Object.keys(neynarUsers));
     }
 
     // Enhance users with Neynar data

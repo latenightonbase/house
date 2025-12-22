@@ -3,6 +3,7 @@ import connectDB from '@/utils/db';
 import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
 import User from '@/utils/schemas/User';
 import { getWeekBoundaries } from '@/utils/weekHelpers';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 export async function GET() {
   try {
@@ -36,28 +37,8 @@ export async function GET() {
     // Fetch display names from Neynar API for valid FIDs
     let neynarUsers: Record<string, any> = {};
     if (uniqueFids.size > 0) {
-      try {
-        const fidsArray = Array.from(uniqueFids);
-        const res = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${fidsArray.join(',')}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
-          }
-        );
-        
-        if (res.ok) {
-          const jsonRes = await res.json();
-          if (jsonRes.users) {
-            jsonRes.users.forEach((user: any) => {
-              neynarUsers[user.fid] = user;
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data from Neynar:', error);
-      }
+      const fidsArray = Array.from(uniqueFids);
+      neynarUsers = await getFidsWithCache(fidsArray);
     }
 
     // Enhance entries with Neynar data
