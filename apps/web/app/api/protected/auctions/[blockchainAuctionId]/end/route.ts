@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { authOptions } from '@/utils/auth';
 import { ethers } from 'ethers';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 import { authenticateRequest } from '@/utils/authService';

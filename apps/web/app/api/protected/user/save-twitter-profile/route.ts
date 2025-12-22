@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/utils/auth';
 import User from '@/utils/schemas/User';
 import dbConnect from '@/utils/db';
 import { authenticateRequest } from '@/utils/authService';

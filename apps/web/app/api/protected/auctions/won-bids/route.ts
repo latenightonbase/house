@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
-import { authOptions } from '@/utils/auth';
 import { authenticateRequest } from '@/utils/authService';
 
 export async function GET(req: NextRequest) {
