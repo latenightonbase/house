@@ -57,26 +57,57 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
     }
   });
 
-  // Fetch Neynar data for Farcaster users
-  let neynarUsers: any[] = [];
-  if (farcasterFids.length > 0) {
-    try {
-      const neynarResponse = await fetch(
-        `https://api.neynar.com/v2/farcaster/user/bulk?fids=${farcasterFids.join(',')}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEYNAR_API_KEY as string,
-          },
+  // Fetch Neynar data for both bidders and host in parallel
+  const hostSocialId = auction.hostedBy?.socialId;
+  const hostSocialPlatform = auction.hostedBy?.socialPlatform;
+  const shouldFetchHost = hostSocialPlatform === 'FARCASTER' && hostSocialId && !hostSocialId.startsWith('none') && !hostSocialId.startsWith('0x');
+
+  const [neynarUsers, hostNeynarData] = await Promise.all([
+    // Fetch Neynar data for Farcaster users
+    (async () => {
+      if (farcasterFids.length > 0) {
+        try {
+          const neynarResponse = await fetch(
+            `https://api.neynar.com/v2/farcaster/user/bulk?fids=${farcasterFids.join(',')}`,
+            {
+              headers: {
+                "x-api-key": process.env.NEYNAR_API_KEY as string,
+              },
+            }
+          );
+          if (neynarResponse.ok) {
+            const neynarData = await neynarResponse.json();
+            return neynarData.users || [];
+          }
+        } catch (error) {
+          console.error('Error fetching Neynar data for ended auction:', error);
         }
-      );
-      if (neynarResponse.ok) {
-        const neynarData = await neynarResponse.json();
-        neynarUsers = neynarData.users || [];
       }
-    } catch (error) {
-      console.error('Error fetching Neynar data for ended auction:', error);
-    }
-  }
+      return [];
+    })(),
+    // Fetch host Neynar data
+    (async () => {
+      if (shouldFetchHost) {
+        try {
+          const neynarResponse = await fetch(
+            `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostSocialId}`,
+            {
+              headers: {
+                "x-api-key": process.env.NEYNAR_API_KEY as string,
+              },
+            }
+          );
+          if (neynarResponse.ok) {
+            const neynarData = await neynarResponse.json();
+            return neynarData.users?.[0];
+          }
+        } catch (error) {
+          console.error('Error fetching host Neynar data:', error);
+        }
+      }
+      return null;
+    })()
+  ]);
 
   // Process bidders from database
   const processedBidders: ProcessedBidder[] = uniqueBidders.map((bidder: any) => {
@@ -87,7 +118,7 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
     console.log('Processing ended auction bidder:', bidder);
 
     if (user?.socialPlatform === 'FARCASTER') {
-      const neynarUser = neynarUsers.find(nu => nu.fid.toString() === user.socialId);
+      const neynarUser = neynarUsers.find((nu:any) => nu.fid.toString() === user.socialId);
       if (neynarUser) {
         displayName = neynarUser.display_name || neynarUser.username || `User ${user.socialId}`;
         image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet?.toLowerCase() || 'default'}`;
@@ -121,31 +152,11 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
 
   // Process hostedBy
   let enhancedHostedBy = { ...(auction.hostedBy as any) };
-  const hostSocialId = auction.hostedBy?.socialId;
-  const hostSocialPlatform = auction.hostedBy?.socialPlatform;
 
-  if (hostSocialPlatform === 'FARCASTER' && hostSocialId && !hostSocialId.startsWith('none') && !hostSocialId.startsWith('0x')) {
-    try {
-      const neynarResponse = await fetch(
-        `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostSocialId}`,
-        {
-          headers: {
-            "x-api-key": process.env.NEYNAR_API_KEY as string,
-          },
-        }
-      );
-      if (neynarResponse.ok) {
-        const neynarData = await neynarResponse.json();
-        const neynarUser = neynarData.users?.[0];
-        if (neynarUser) {
-          enhancedHostedBy.username = neynarUser.username || enhancedHostedBy.username;
-          enhancedHostedBy.display_name = neynarUser.display_name;
-          enhancedHostedBy.pfp_url = neynarUser.pfp_url;
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching host Neynar data:', error);
-    }
+  if (hostNeynarData) {
+    enhancedHostedBy.username = hostNeynarData.username || enhancedHostedBy.username;
+    enhancedHostedBy.display_name = hostNeynarData.display_name;
+    enhancedHostedBy.pfp_url = hostNeynarData.pfp_url;
   } else if (hostSocialPlatform === 'TWITTER' && enhancedHostedBy.twitterProfile) {
     enhancedHostedBy.username = enhancedHostedBy.twitterProfile.username;
     enhancedHostedBy.display_name = enhancedHostedBy.twitterProfile.name;
@@ -366,41 +377,75 @@ export async function POST(
 
     console.log("Numeric FIDs to fetch from Neynar:", numericFids);
 
-    // Fetch Neynar data for numeric FIDs if any exist
-    let neynarUsers: any[] = [];
-    if (numericFids.length > 0) {
-      try {
-        const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${numericFids.join(',')}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
+    // Prepare host FID fetch
+    const hostFid = (auction.hostedBy as any)?.socialId;
+    const shouldFetchHostFid = hostFid && hostFid !== '' && !hostFid.startsWith('none');
+
+    console.log('Processing hostedBy with FID:', hostFid);
+
+    // Fetch Neynar data for both numeric FIDs and host in parallel
+    const [neynarUsers, hostNeynarUser] = await Promise.all([
+      // Fetch Neynar data for numeric FIDs if any exist
+      (async () => {
+        if (numericFids.length > 0) {
+          try {
+            const neynarResponse = await fetch(
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${numericFids.join(',')}`,
+              {
+                headers: {
+                  "x-api-key": process.env.NEYNAR_API_KEY as string,
+                },
+              }
+            );
+
+            console.log("Neynar response status:", neynarResponse);
+
+            if (neynarResponse.ok) {
+              const neynarData = await neynarResponse.json();
+
+              console.log("Neynar data fetched:", neynarData);
+
+              return neynarData.users || [];
+            }
+          } catch (error) {
+            console.error('Error fetching Neynar data:', error);
           }
-        );
-
-        console.log("Neynar response status:", neynarResponse);
-
-        if (neynarResponse.ok) {
-          const neynarData = await neynarResponse.json();
-
-          console.log("Neynar data fetched:", neynarData);
-
-          neynarUsers = neynarData.users || [];
         }
-      } catch (error) {
-        console.error('Error fetching Neynar data:', error);
-        // Continue without Neynar data
-      }
-    }
+        return [];
+      })(),
+      // Fetch host Neynar data
+      (async () => {
+        if (shouldFetchHostFid) {
+          try {
+            const neynarResponse = await fetch(
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFid}`,
+              {
+                headers: {
+                  "x-api-key": process.env.NEYNAR_API_KEY as string,
+                },
+              }
+            );
+
+            if (neynarResponse.ok) {
+              console.log('Fetching host data from Neynar for FID:', hostFid);
+              const neynarData = await neynarResponse.json();
+              return neynarData.users?.[0];
+            }
+          } catch (error) {
+            console.error('Error fetching host data from Neynar:', error);
+          }
+        }
+        return null;
+      })()
+    ]);
 
     // Update processed bidders with Neynar data
     for (let i = 0; i < bidders.length; i++) {
       const bidder = bidders[i];
       
-      if (!bidder.fid.startsWith('0x')) {
+      if (!bidder.fid.startsWith('0x') && !bidder.fid.startsWith('none')) {
         // This is a numeric FID
-        const neynarUser = neynarUsers.find(user => user.fid.toString() === bidder.fid);
+        const neynarUser = neynarUsers.find((user:any) => user.fid.toString() === bidder.fid);
         
         console.log(`Matching Neynar user for FID ${bidder.fid}:`, neynarUser);
 
@@ -422,36 +467,11 @@ export async function POST(
 
     // Process hostedBy to add enhanced user data from Neynar or Twitter
     let enhancedHostedBy = { ...(auction.hostedBy as any) };
-    const hostFid = (auction.hostedBy as any)?.socialId;
-
-    console.log('Processing hostedBy with FID:', hostFid);
     
-    if (hostFid && hostFid !== '' && !hostFid.startsWith('none')) {
-      try {
-        const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFid}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
-          }
-        );
-
-        if (neynarResponse.ok) {
-
-          console.log('Fetching host data from Neynar for FID:', hostFid);
-          const neynarData = await neynarResponse.json();
-          const neynarUser = neynarData.users?.[0];
-          
-          if (neynarUser) {
-            enhancedHostedBy.username = neynarUser.username || enhancedHostedBy.username;
-            enhancedHostedBy.display_name = neynarUser.display_name;
-            enhancedHostedBy.pfp_url = neynarUser.pfp_url;
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching host data from Neynar:', error);
-      }
+    if (hostNeynarUser) {
+      enhancedHostedBy.username = hostNeynarUser.username || enhancedHostedBy.username;
+      enhancedHostedBy.display_name = hostNeynarUser.display_name;
+      enhancedHostedBy.pfp_url = hostNeynarUser.pfp_url;
     } else if (hostFid && hostFid.startsWith('none') && enhancedHostedBy.twitterProfile?.username) {
       // Use Twitter profile for "none" FID hosts
       enhancedHostedBy.username = enhancedHostedBy.twitterProfile.username;

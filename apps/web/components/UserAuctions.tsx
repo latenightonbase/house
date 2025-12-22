@@ -34,8 +34,17 @@ export default function UserAuctions({ activeAuctions, endedAuctions }: UserAuct
   }
 
   const formatBidAmount = (amount: number, currency: string) => {
+    console.log('formatBidAmount - amount:', amount, 'type:', typeof amount, 'currency:', currency)
+    
+    // If amount is already in human-readable format (less than 1000), return as-is
+    if (amount < 1000) {
+      return amount.toFixed(2)
+    }
+    
+    // Otherwise, assume it's in wei format and convert
     const decimals = currency.toUpperCase() === 'USDC' ? 6 : 18
     const converted = amount / Math.pow(10, decimals)
+    console.log('Converted amount:', converted)
     return converted.toFixed(2)
   }
 

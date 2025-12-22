@@ -21,7 +21,7 @@ export async function GET(
 
     // Find user and their auctions
     const userDoc = await User.findById(userId)
-      .select('wallet fid username hostedAuctions twitterProfile socialId socialPlatform');
+      .select('wallets fid username hostedAuctions twitterProfile socialId socialPlatform');
 
     if (!userDoc) {
       return NextResponse.json(
@@ -34,7 +34,41 @@ export async function GET(
 
     const user: any = userDoc;
 
-    // Fetch user details from Neynar if FID is a valid number
+    // Fetch user details from Neynar and auctions in parallel
+    const shouldFetchNeynar = user.socialId && user.socialPlatform !== "TWITTER";
+
+    const [neynarData, auctions] = await Promise.all([
+      // Fetch Neynar data if needed
+      (async () => {
+        if (shouldFetchNeynar) {
+          try {
+            const neynarResponse = await fetch(
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.socialId}`,
+              {
+                headers: {
+                  'x-api-key': process.env.NEYNAR_API_KEY || '',
+                },
+              }
+            );
+
+            if (neynarResponse.ok) {
+              const data = await neynarResponse.json();
+              return data.users?.[0] || null;
+            }
+          } catch (neynarError) {
+            console.error('Error fetching Neynar data:', neynarError);
+          }
+        }
+        return null;
+      })(),
+      // Get all auctions hosted by this user
+      Auction.find({ hostedBy: user._id })
+        .select('auctionName endDate startDate currency blockchainAuctionId minimumBid bidders')
+        .sort({ createdAt: -1 })
+        .lean()
+    ]);
+
+    // Process user profile
     let userProfile = {
       username: (user.username as string) || null,
       pfp_url: null as string | null,
@@ -43,46 +77,24 @@ export async function GET(
       x_username: null as string | null
     };
 
-    if (user.socialId && user.socialPlatform !== "TWITTER") {
-      // FID is a valid number, fetch from Neynar
-      try {
-        const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${user.socialId}`,
-          {
-            headers: {
-              'x-api-key': process.env.NEYNAR_API_KEY || '',
-            },
-          }
+    if (neynarData) {
+      userProfile.username = neynarData.username || user.username;
+      userProfile.pfp_url = neynarData.pfp_url || null;
+      userProfile.display_name = neynarData.display_name || null;
+      userProfile.bio = neynarData.profile?.bio?.text || null;
+      
+      // Extract X username from verified_accounts using correct Neynar API structure
+      if (neynarData.verified_accounts && Array.isArray(neynarData.verified_accounts)) {
+        const xAccount = neynarData.verified_accounts.find((account: any) => 
+          account.platform === 'x'
         );
-
-        if (neynarResponse.ok) {
-          const neynarData = await neynarResponse.json();
-          
-          if (neynarData.users && neynarData.users.length > 0) {
-            const neynarUser = neynarData.users[0];
-            userProfile.username = neynarUser.username || user.username;
-            userProfile.pfp_url = neynarUser.pfp_url || null;
-            userProfile.display_name = neynarUser.display_name || null;
-            userProfile.bio = neynarUser.profile?.bio?.text || null;
-            
-            // Extract X username from verified_accounts using correct Neynar API structure
-            if (neynarUser.verified_accounts && Array.isArray(neynarUser.verified_accounts)) {
-              const xAccount = neynarUser.verified_accounts.find((account: any) => 
-                account.platform === 'x'
-              );
-              if (xAccount && xAccount.username) {
-                userProfile.x_username = xAccount.username;
-                console.log('Found X username from verified_accounts:', xAccount.username);
-              }
-            }
-            
-            console.log('Final user profile with X username:', userProfile.x_username);
-          }
+        if (xAccount && xAccount.username) {
+          userProfile.x_username = xAccount.username;
+          console.log('Found X username from verified_accounts:', xAccount.username);
         }
-      } catch (neynarError) {
-        console.error('Error fetching Neynar data:', neynarError);
-        // Continue with existing user data
       }
+      
+      console.log('Final user profile with X username:', userProfile.x_username);
     } else {
       // FID starts with "none" or doesn't exist, use wallet-based defaults
       userProfile.username = user.twitterProfile.username ? user.twitterProfile.username : `${user.wallets[0].slice(0, 6)}...${user.wallets[0].slice(-4)}`;
@@ -100,12 +112,6 @@ export async function GET(
       // }
     }
 
-    // Get all auctions hosted by this user
-    const auctions = await Auction.find({ hostedBy: user._id })
-      .select('auctionName endDate startDate currency blockchainAuctionId minimumBid bidders')
-      .sort({ createdAt: -1 })
-      .lean();
-
     // Separate active and ended auctions
     const now = new Date();
     const activeAuctions = auctions.filter(auction => new Date(auction.endDate) > now);
@@ -114,9 +120,16 @@ export async function GET(
     // Calculate highest bid for each auction
     const processAuctions = (auctionList: any[]) => {
       return auctionList.map(auction => {
+        console.log('Processing auction:', auction.auctionName, 'minimumBid:', auction.minimumBid, 'bidders:', auction.bidders);
+        
         const highestBid = auction.bidders && auction.bidders.length > 0
-          ? Math.max(...auction.bidders.map((b: any) => b.bidAmount))
+          ? Math.max(...auction.bidders.map((b: any) => {
+              console.log('Bidder bid amount:', b.bidAmount, 'type:', typeof b.bidAmount);
+              return Number(b.bidAmount) || 0;
+            }))
           : 0;
+
+        console.log('Calculated highest bid:', highestBid);
 
         return {
           _id: auction._id,
@@ -125,7 +138,7 @@ export async function GET(
           startDate: auction.startDate,
           currency: auction.currency,
           blockchainAuctionId: auction.blockchainAuctionId,
-          minimumBid: auction.minimumBid,
+          minimumBid: Number(auction.minimumBid) || 0,
           highestBid,
           biddersCount: auction.bidders?.length || 0
         };
@@ -135,7 +148,7 @@ export async function GET(
     return NextResponse.json({
       user: {
         _id: user._id,
-        wallet: user.wallet,
+        wallet: user.wallets[0],
         fid: user.socialId,
         username: userProfile.username,
         pfp_url: userProfile.pfp_url,

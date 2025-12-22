@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
+import User from '@/utils/schemas/User';
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
+    
+    // Ensure User model is registered
+    User;
 
     const currentDate = new Date();
     const { searchParams } = new URL(req.url);
@@ -23,26 +27,28 @@ export async function GET(req: NextRequest) {
 
     // Find auctions that are currently running (started but not ended)
     // Sort by endDate ascending (soonest ending first) and implement pagination
-    const runningAuctions = await Auction.find({
-      status: 'ongoing',
-      enabled: true,
-      startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate },
-      ...currencyQuery
-    })
-    .populate('hostedBy') // Populate full host information
-    .populate('bidders.user') // Populate full bidder user information
-    .sort({ endDate: 1 }) // Sort by end date ascending (soonest ending first)
-    .skip(skip)
-    .limit(limit)
-    .lean(); // Use lean() for faster read-only queries
+    const [runningAuctions, totalCount] = await Promise.all([
+      Auction.find({
+        status: 'ongoing',
+        enabled: true,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate },
+        ...currencyQuery
+      })
+      .populate('hostedBy') // Populate full host information
+      .populate('bidders.user') // Populate full bidder user information
+      .sort({ endDate: 1 }) // Sort by end date ascending (soonest ending first)
+      .skip(skip)
+      .limit(limit)
+      .lean(), // Use lean() for faster read-only queries
 
-    // Get total count for pagination info
-    const totalCount = await Auction.countDocuments({
-      startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate },
-      ...currencyQuery
-    });
+      // Get total count for pagination info
+      Auction.countDocuments({
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate },
+        ...currencyQuery
+      })
+    ]);
 
     if (runningAuctions.length === 0 && page === 1) {
       return NextResponse.json({
@@ -89,69 +95,76 @@ export async function GET(req: NextRequest) {
     // Fetch display names from Neynar API separately for hosts and bidders
     let neynarUsers: Record<string, any> = {};
     
-    // Fetch host data
     console.log('Host FIDs collected:', Array.from(hostFids));
-    if (hostFids.size > 0) {
-      try {
-        const hostFidsArray = Array.from(hostFids);
-        console.log('Fetching host data for FIDs:', hostFidsArray);
-        const res = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFidsArray.join(',')}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
-          }
-        );
-        
-        if (res.ok) {
-          const jsonRes = await res.json();
-          console.log('Neynar API response for hosts:', jsonRes);
-          if (jsonRes.users) {
-            jsonRes.users.forEach((user: any) => {
-              neynarUsers[user.fid] = user;
-            });
-            console.log('Host users mapped:', Object.keys(neynarUsers));
-          }
-        } else {
-          console.error('Neynar API error for hosts:', res.status, await res.text());
-        }
-      } catch (error) {
-        console.error('Error fetching host data from Neynar:', error);
-      }
-    }
-
-    // Fetch bidder data separately
     console.log('Bidder FIDs collected:', Array.from(bidderFids));
-    if (bidderFids.size > 0) {
-      try {
-        const bidderFidsArray = Array.from(bidderFids);
-        console.log('Fetching bidder data for FIDs:', bidderFidsArray);
-        const res = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk?fids=${bidderFidsArray.join(',')}`,
-          {
-            headers: {
-              "x-api-key": process.env.NEYNAR_API_KEY as string,
-            },
+
+    // Fetch host and bidder data in parallel
+    await Promise.all([
+      // Fetch host data
+      (async () => {
+        if (hostFids.size > 0) {
+          try {
+            const hostFidsArray = Array.from(hostFids);
+            console.log('Fetching host data for FIDs:', hostFidsArray);
+            const res = await fetch(
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${hostFidsArray.join(',')}`,
+              {
+                headers: {
+                  "x-api-key": process.env.NEYNAR_API_KEY as string,
+                },
+              }
+            );
+            
+            if (res.ok) {
+              const jsonRes = await res.json();
+              console.log('Neynar API response for hosts:', jsonRes);
+              if (jsonRes.users) {
+                jsonRes.users.forEach((user: any) => {
+                  neynarUsers[user.fid] = user;
+                });
+                console.log('Host users mapped:', Object.keys(neynarUsers));
+              }
+            } else {
+              console.error('Neynar API error for hosts:', res.status, await res.text());
+            }
+          } catch (error) {
+            console.error('Error fetching host data from Neynar:', error);
           }
-        );
-        
-        if (res.ok) {
-          const jsonRes = await res.json();
-          console.log('Neynar API response for bidders:', jsonRes);
-          if (jsonRes.users) {
-            jsonRes.users.forEach((user: any) => {
-              neynarUsers[user.fid] = user;
-            });
-            console.log('Bidder users mapped:', Object.keys(neynarUsers));
-          }
-        } else {
-          console.error('Neynar API error for bidders:', res.status, await res.text());
         }
-      } catch (error) {
-        console.error('Error fetching bidder data from Neynar:', error);
-      }
-    }
+      })(),
+      // Fetch bidder data
+      (async () => {
+        if (bidderFids.size > 0) {
+          try {
+            const bidderFidsArray = Array.from(bidderFids);
+            console.log('Fetching bidder data for FIDs:', bidderFidsArray);
+            const res = await fetch(
+              `https://api.neynar.com/v2/farcaster/user/bulk?fids=${bidderFidsArray.join(',')}`,
+              {
+                headers: {
+                  "x-api-key": process.env.NEYNAR_API_KEY as string,
+                },
+              }
+            );
+            
+            if (res.ok) {
+              const jsonRes = await res.json();
+              console.log('Neynar API response for bidders:', jsonRes);
+              if (jsonRes.users) {
+                jsonRes.users.forEach((user: any) => {
+                  neynarUsers[user.fid] = user;
+                });
+                console.log('Bidder users mapped:', Object.keys(neynarUsers));
+              }
+            } else {
+              console.error('Neynar API error for bidders:', res.status, await res.text());
+            }
+          } catch (error) {
+            console.error('Error fetching bidder data from Neynar:', error);
+          }
+        }
+      })()
+    ]);
 
     // Calculate additional fields for each auction
     const auctionsWithStats = runningAuctions.map(auction => {
