@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if the user is the host of the auction
-      if (auction.hostedBy._id !== user._id.toString()) {
+      if (auction.hostedBy._id.toString() !== user._id.toString()) {
         console.error("❌ [OWNERSHIP] User is not the auction host");
         return NextResponse.json(
           { error: "Only the auction host can end the auction" },
