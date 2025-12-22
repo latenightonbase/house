@@ -37,8 +37,12 @@ export async function POST(request: NextRequest) {
           }
         }
       },
-      { new: true, upsert: true }
+      { new: true }
     );
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found. Please complete registration first.' }, { status: 404 });
+    }
 
     console.log('Twitter profile updated:', user);
 

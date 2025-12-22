@@ -80,12 +80,6 @@ export default function LoginWithOAuth() {
     onComplete: async ({ user, isNewUser, wasAlreadyAuthenticated, loginMethod, loginAccount }) => {
       console.log('User logged in successfully', user);
       
-      // Check if iframe_redirect query parameter is present
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('type') === 'iframe_redirect') {
-        window.location.href = 'https://wl.houseproto.fun/whitelist/house-protocol/portal';
-        return;
-      }
       if (isNewUser && user.twitter?.subject) {
         console.log('New user detected, creating user in database');
         try {
@@ -149,6 +143,13 @@ export default function LoginWithOAuth() {
         } catch (error) {
           console.error('Error saving Twitter profile:', error);
         }
+      }
+      
+      // Check if iframe_redirect query parameter is present and redirect AFTER user creation
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('type') === 'iframe_redirect') {
+        window.location.href = 'https://wl.houseproto.fun/whitelist/house-protocol/portal';
+        return;
       }
     },
     onError: (error) => {

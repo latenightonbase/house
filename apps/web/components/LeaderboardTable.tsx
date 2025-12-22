@@ -39,7 +39,7 @@ export default function LeaderboardTable({
 
   const handleRowClick = (row: any) => {
       if(!row.socialId) return;
-      navigate(`/user/${row.socialId}`);
+      navigate(`/user/${row._id}`);
     
   };
 
