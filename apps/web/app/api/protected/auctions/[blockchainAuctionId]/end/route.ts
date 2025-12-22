@@ -46,6 +46,9 @@ export async function POST(req: NextRequest) {
     const auction = await Auction.findOne({ blockchainAuctionId }).populate(
       "hostedBy"
     );
+
+    console.log("[AUCTION END] Fetched auction:", auction);
+
     if (!auction) {
       console.error("❌ [AUCTION LOOKUP] Auction not found in database");
       return NextResponse.json({ error: "Auction not found" }, { status: 404 });
