@@ -153,8 +153,8 @@ export async function GET(req: NextRequest) {
 
       console.log("Auction's Top Bidder:", topBidder);
 
-      // Calculate participant count
-      const participantCount = auction.bidders.length;
+      // Calculate participant count (unique users only)
+      const participantCount = new Set(auction.bidders.map((bidder: any) => bidder.user._id.toString())).size;
 
       // Calculate time remaining
       const timeRemaining = auction.endDate.getTime() - currentDate.getTime();
