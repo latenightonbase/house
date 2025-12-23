@@ -119,6 +119,9 @@ export default function BidPage() {
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
+  
+  // Token price for auction (separate from bid input)
+  const [auctionTokenPrice, setAuctionTokenPrice] = useState<number | null>(null);
 
   // Additional state for handleBid functionality
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
@@ -266,6 +269,16 @@ export default function BidPage() {
         const data = await processedResponse.json();
         console.log("Fetched auction data from API:", data);
         setAuctionData(data);
+        
+        // Fetch token price for USD calculations
+        if (data.tokenAddress) {
+          try {
+            const price = await fetchTokenPrice(data.tokenAddress);
+            setAuctionTokenPrice(price);
+          } catch (error) {
+            console.error("Error fetching auction token price:", error);
+          }
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -339,6 +352,13 @@ export default function BidPage() {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
+  };
+  
+  const calculateBidderUSDValue = (bidAmount: string): number | null => {
+    if (!auctionTokenPrice || !auctionData) return null;
+    const decimals = auctionData.currency.toUpperCase() === "USDC" ? 6 : 18;
+    const amount = parseFloat(bidAmount) / Math.pow(10, decimals);
+    return amount * auctionTokenPrice;
   };
 
   const openBidDrawer = () => {
@@ -1260,11 +1280,14 @@ export default function BidPage() {
                         )}{" "}
                         {auctionData.currency}
                       </p>
-                      {bidder.usdValue && (
-                        <p className="text-xs text-secondary text-right">
-                          {formatUSDAmount(bidder.usdValue)}
-                        </p>
-                      )}
+                      {(() => {
+                        const usdValue = calculateBidderUSDValue(bidder.bidAmount);
+                        return usdValue !== null && (
+                          <p className="text-xs text-secondary text-right">
+                            ${usdValue.toFixed(2)}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                 ))}
