@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader"
 import { useRouter, usePathname } from "next/navigation"
-import SearchBar from "./SearchBar"
+// import SearchBar from "./SearchBar"
 import { RiSearchLine, RiInformationLine, RiAddCircleLine, RiTrophyLine, RiQrScanLine, RiUserLine } from "react-icons/ri"
 import { usePrivy } from "@privy-io/react-auth"
 import { GoDotFill } from "react-icons/go";
@@ -53,7 +53,7 @@ export default function Navbar(){
     return (
         <>
             {/* Search Bar Overlay */}
-            {authenticated && <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
+           {/* {authenticated && <SearchBar isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />} */}
 
             {/* Mobile Navbar */}
             <div className="relative z-50 lg:hidden" ref={mobileMenuRef}>
@@ -62,12 +62,12 @@ export default function Navbar(){
                     
                     <div className="flex items-center gap-4">
                         {/* Search Button */}
-                       {authenticated && <button 
+                       {/* {authenticated && <button 
                             onClick={() => setIsSearchOpen(true)}
                             className="text-primary hover:text-white transition-colors"
                         >
                             <RiSearchLine className="text-xl" />
-                        </button>}
+                        </button>} */}
 
                         {/* WalletConnect or Hamburger Menu */}
                         <AggregateConnector />

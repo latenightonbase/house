@@ -24,11 +24,16 @@ export async function GET(req: NextRequest) {
     const users = await User.find({
       $or: [
         { wallet: { $regex: query, $options: 'i' } },
+        { wallets: { $regex: query, $options: 'i' } },
         { fid: { $regex: query, $options: 'i' } },
-        { username: { $regex: query, $options: 'i' } }
+        { socialId: { $regex: query, $options: 'i' } },
+        { username: { $regex: query, $options: 'i' } },
+        { 'twitterProfile.username': { $regex: query, $options: 'i' } },
+        { 'twitterProfile.name': { $regex: query, $options: 'i' } },
+        { 'twitterProfile.id': { $regex: query, $options: 'i' } }
       ]
     })
-    .select('_id wallet fid username')
+    .select('_id wallet wallets fid socialId socialPlatform username twitterProfile')
     .limit(10)
     .lean();
 

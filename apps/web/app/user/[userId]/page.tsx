@@ -139,7 +139,7 @@ export default function UserPage() {
                     className="w-10 h-10 aspect-square rounded-full border-2 border-primary/30"
                 />
                 )}
-                    <Heading size="sm" className="max-lg:w-36 truncate">
+                    <Heading size="sm" className="w-full truncate">
                         {userData.user.display_name || (userData.user.username ? `@${userData.user.username}` : 'User Profile')}
                     </Heading>
                     
