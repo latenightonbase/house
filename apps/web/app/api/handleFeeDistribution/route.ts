@@ -221,19 +221,10 @@ export async function POST(req: NextRequest) {
             swapTxHash = receipt.hash;
         }
 
-        // // Calculate distribution amounts (3:3:2 ratio)
-        // console.log('📊 Calculating distribution amounts (3:3:2 ratio)...');
-        const firstThree = (totalUSDC * 3n) / 8n;  // 3/8 of total
-        const secondThree = (totalUSDC * 3n) / 8n; // 3/8 of total
-        const lastTwo = totalUSDC - firstThree - secondThree; // remainder
-
-        // console.log('✅ Distribution calculated:', {
-        //     total: totalUSDC.toString(),
-        //     firstThree: firstThree.toString(),
-        //     secondThree: secondThree.toString(),
-        //     lastTwo: lastTwo.toString(),
-        //     percentages: '37.5% | 37.5% | 25%'
-        // });
+        // Calculate distribution amounts (25% RISAV, 12.5% BILL, 62.5% buy/burn)
+        const risavAmount = (totalUSDC * 1n) / 4n;  // 25%
+        const billAmount = (totalUSDC * 1n) / 8n;   // 12.5%
+        const buyBurnAmount = totalUSDC - risavAmount - billAmount; // 62.5%
 
         // // USDC contract for transfers
         // console.log('🏦 Setting up USDC contract...');
@@ -251,34 +242,21 @@ export async function POST(req: NextRequest) {
             console.warn('⚠️ Warning: Actual balance is less than expected USDC amount');
         }
 
-        // // PART 1: Distribute first 3 parts in 1:2 ratio
-        // console.log('💰 PART 1: Distributing first 3 parts (1:2 ratio)...');
-        const billAmount = firstThree / 3n; // 1/3 of first part
-        const devAmount = firstThree - billAmount; // 2/3 of first part
-
-        // console.log('Distribution breakdown:', {
-        //     billAmount: billAmount.toString(),
-        //     totalDevAmount: devAmount.toString(),
-        //     recipient: 'BILL_WALLET + RISAV_WALLET'
-        // });
-
-        // // Send to BILL_WALLET
-        // console.log('💸 Sending to BILL_WALLET...');
-        // const billTx = await usdcContract.transfer(process.env.BILL_WALLET, billAmount);
-        // await billTx.wait();
-        // console.log('✅ Sent to BILL_WALLET:', billAmount.toString(), 'Hash:', billTx.hash);
-
-        // Send entire dev amount to RISAV_WALLET only
-        console.log('💸 Sending dev amount to RISAV_WALLET...');
-        const risavTx = await usdcContract.transfer(process.env.RISAV_WALLET, devAmount);
+        console.log('💸 Sending 25% to RISAV_WALLET...');
+        const risavTx = await usdcContract.transfer(process.env.RISAV_WALLET, risavAmount);
         await risavTx.wait();
-        console.log('✅ Sent to RISAV_WALLET:', devAmount.toString(), 'Hash:', risavTx.hash);
+        console.log('✅ Sent to RISAV_WALLET:', risavAmount.toString(), 'Hash:', risavTx.hash);
+
+        console.log('💸 Sending 12.5% to BILL_WALLET...');
+        const billTx = await usdcContract.transfer(process.env.BILL_WALLET, billAmount);
+        await billTx.wait();
+        console.log('✅ Sent to BILL_WALLET:', billAmount.toString(), 'Hash:', billTx.hash);
 
         const tokenBuyParams = new URLSearchParams({
             chainId: BASE_CHAIN_ID,
             sellToken: USDC_BASE,
             buyToken: TARGET_TOKEN,
-            sellAmount: secondThree.toString(),
+            sellAmount: buyBurnAmount.toString(),
             taker: wallet.address,
             slippagePercentage: '0.5', // 0.5% slippage protection
             gasless: 'false', // Optimize for lower gas
@@ -399,18 +377,7 @@ export async function POST(req: NextRequest) {
             console.log('⚠️ No tokens to burn - balance is zero');
         }
 
-        console.log('✅ PART 2 completed - Token purchase and burn process finished');
-
-        // PART 3: Send last 2 parts to staking contract
-        console.log('🏦 PART 3: Sending final portion to staking contract...');
-        console.log('Amount to send:', lastTwo.toString());
-        console.log('Staking contract address:', process.env.STAKING_CONTRACT);
-
-        const stakingTx = await usdcContract.transfer(process.env.BILL_WALLET, lastTwo + billAmount);
-        await stakingTx.wait();
-        // console.log('✅ Successfully sent to STAKING_CONTRACT!');
-        // // console.log('Amount sent:', lastTwo.toString());
-        // console.log('Transaction hash:', stakingTx.hash);
+        console.log('✅ Token purchase and burn process finished');
 
         const endTime = Date.now();
         const executionTime = endTime - startTime;
@@ -434,9 +401,8 @@ export async function POST(req: NextRequest) {
             tokenBuyTxHash: tokenBuyReceipt.hash,
             distribution: {
                 billWallet: billAmount.toString(),
-                devWallet: devAmount.toString(),
-                tokenBurnAmount: tokenBalance.toString(),
-                stakingContract: lastTwo.toString()
+                risavWallet: risavAmount.toString(),
+                tokenBurnAmount: tokenBalance.toString()
             }
         });
 
