@@ -18,6 +18,8 @@ interface UserData {
     display_name?: string | null
     bio?: string | null
     x_username?: string | null
+    twitterProfile?: any | null
+    platform?: string | null
   }
   activeAuctions: any[]
   endedAuctions: any[]
@@ -60,6 +62,7 @@ export default function UserPage() {
         }
 
         const data = await response.json()
+        console.log('Fetched user data:', data)
         setUserData(data)
       } catch (err: any) {
         setError(err.message)
@@ -145,7 +148,7 @@ export default function UserPage() {
                 <p className="text-white/80 text-sm my-3 line-clamp-2">{userData.user.bio}</p>
               )}
               <div className='flex gap-2 w-full items-center justify-center lg:justify-start'>
-                {userData.user.x_username && (
+                {userData.user.x_username && userData.user.platform == "FARCASTER" && (
                 <div className="">
                   <a 
                     href={`https://x.com/${userData.user.x_username}`}
@@ -165,7 +168,27 @@ export default function UserPage() {
                   </a>
                 </div>
               )}
-                {context && userData.user.fid && (
+              {userData.user.twitterProfile && userData.user.platform == "TWITTER" && (
+                <div className="">
+                  <a 
+                    href={`https://x.com/${userData.user.twitterProfile.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-xs bg-white/10 border border-white/20 rounded-md p-2 text-white font-bold transition-colors"
+                  >
+                    @{userData.user.twitterProfile.username}
+                    <svg 
+                      className="w-3 h-3" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              )}
+                {context && userData.user.fid && userData.user.platform == "FARCASTER" && (
                     <button
                       onClick={handleViewProfile}
                       className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 border border-primary/30 text-primary rounded-lg hover:bg-primary/30 transition-colors text-sm font-medium"

@@ -140,7 +140,9 @@ export async function GET(
         pfp_url: userProfile.pfp_url,
         display_name: userProfile.display_name,
         bio: userProfile.bio,
-        x_username: userProfile.x_username
+        x_username: userProfile.x_username,
+        twitterProfile: user.twitterProfile || null,
+        platform: user.socialPlatform || null
       },
       activeAuctions: processAuctions(activeAuctions),
       endedAuctions: processAuctions(endedAuctions)
