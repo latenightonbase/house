@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { NextRequest, NextResponse } from "next/server";
 
 const USDC_BASE = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const TARGET_TOKEN = "0x8c32bcfc720fec35443748a96030ce866d0665ff";
+const TARGET_TOKEN = "0x05AF98aeBeC91AeF2BD893614a2C333C58855012"; // AUCTION TOKEN
 const ZERO_X_API_KEY = process.env.ZERO_X_API_KEY;
 const BASE_CHAIN_ID = "8453";
 
