@@ -120,7 +120,7 @@ export default function Welcome() {
                 <div className="text-left text-caption flex flex-col font-semibold text-xl gap-2 mb-4">
                     Welcome to <span className="gradient-text text-3xl block font-bold">The House!</span>
                 </div>
-                <div className="bg-white/10 w-fit rounded-full px-2 py-1 text-xs flex items-center justify-center gap-1 text-white">by <span><Image src={`/lnob.jpg`} alt="lnob" width={20} height={20} className="w-4 aspect-square rounded-full " /></span> latenightonbase(LNOB)</div>
+                <div className="bg-white/10 w-fit rounded-full px-2 py-1 text-xs flex items-center justify-center gap-1 text-white">Powered by <a href="https://dexscreener.com/base/0x51f77b39db5b14605abb569647a9a33e733ab3e018e79325a44c07aadd927686" target="_blank" className="gradient-text font-bold">$AUCTION</a></div>
 
                 <button onClick={()=>{navigate('/create')}} className= " max-lg:w-full w-80 px-6 py-3 hover:-translate-y-1 duration-200 gradient-button flex gap-2 items-center justify-center text-white rounded-md hover:bg-green-700 transition">
                     <FaPlus/> Create Auction
