@@ -3,6 +3,7 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { getFidsWithCache } from '@/utils/fidCache';
+import { getRedisClient } from '@/utils/redisCache';
 
 export async function GET(req: NextRequest) {
   try {
@@ -103,6 +104,63 @@ export async function GET(req: NextRequest) {
     const allFids = [...Array.from(hostFids), ...Array.from(bidderFids)];
     if (allFids.length > 0) {
       neynarUsers = await getFidsWithCache(allFids);
+      
+      // Identify missing FIDs and make fallback API call if needed
+      const missingFids: string[] = [];
+      for (const fid of allFids) {
+        if (!neynarUsers[fid]) {
+          // Check if user has Twitter profile
+          const hasTwitterProfile = runningAuctions.some(auction => {
+            // Check host
+            if (auction.hostedBy?.socialId === fid && auction.hostedBy?.twitterProfile) {
+              return true;
+            }
+            // Check bidders
+            return auction.bidders.some((bidder: any) => 
+              bidder.user?.socialId === fid && bidder.user?.twitterProfile
+            );
+          });
+          
+          if (!hasTwitterProfile) {
+            missingFids.push(fid);
+          }
+        }
+      }
+
+      // Make fallback Neynar API call for missing FIDs
+      if (missingFids.length > 0) {
+        try {
+          const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${missingFids.join(',')}`, {
+            headers: {
+              'api_key': process.env.NEYNAR_API_KEY || ''
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const redisClient = getRedisClient();
+            
+            // Cache each user in Redis and add to neynarUsers
+            for (const user of data.users) {
+              neynarUsers[user.fid.toString()] = user;
+              
+              if (redisClient) {
+                try {
+                  await redisClient.setex(
+                    `fid:${user.fid}`,
+                    3600,
+                    JSON.stringify(user)
+                  );
+                } catch (err) {
+                  console.warn('Failed to cache Neynar user:', err);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Fallback Neynar API call failed:', error);
+        }
+      }
     }
 
     // Calculate additional fields for each auction

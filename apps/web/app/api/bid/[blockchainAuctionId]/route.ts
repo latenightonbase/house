@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Auction, { IAuction } from '../../../../utils/schemas/Auction';
+import User from '../../../../utils/schemas/User';
 import connectToDB from '@/utils/db';
 import { fetchTokenPrice, calculateUSDValue } from '@/utils/tokenPrice';
 import { getFidsWithCache } from '@/utils/fidCache';
+import { getRedisClient } from '@/utils/redisCache';
 
 interface ContractBidder {
   bidder: string;
@@ -69,6 +71,56 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
   }
 
   const neynarUsersMap = await getFidsWithCache(allFids);
+  
+  // Identify missing FIDs and make fallback API call if needed
+  const missingFids: string[] = [];
+  for (const fid of farcasterFids) {
+    if (!neynarUsersMap[fid]) {
+      // Check if bidder has Twitter profile
+      const hasTwitterProfile = uniqueBidders.some((bidder: any) => 
+        bidder.user?.socialId === fid && bidder.user?.twitterProfile
+      );
+      if (!hasTwitterProfile) {
+        missingFids.push(fid);
+      }
+    }
+  }
+
+  // Make fallback Neynar API call for missing FIDs
+  if (missingFids.length > 0) {
+    try {
+      const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${missingFids.join(',')}`, {
+        headers: {
+          'api_key': process.env.NEYNAR_API_KEY || ''
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const redisClient = getRedisClient();
+        
+        // Cache each user in Redis and add to neynarUsersMap
+        for (const user of data.users) {
+          neynarUsersMap[user.fid.toString()] = user;
+          
+          if (redisClient) {
+            try {
+              await redisClient.setex(
+                `fid:${user.fid}`,
+                3600,
+                JSON.stringify(user)
+              );
+            } catch (err) {
+              console.warn('Failed to cache Neynar user:', err);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Fallback Neynar API call failed:', error);
+    }
+  }
+  
   const neynarUsers = Object.values(neynarUsersMap);
   const hostNeynarData = shouldFetchHost ? neynarUsersMap[hostSocialId] : null;
 
@@ -162,6 +214,9 @@ export async function POST(
   try {
     
     await connectToDB();
+    
+    // Ensure User model is registered
+    const _ = User;
     
     const blockchainAuctionId = req.nextUrl.pathname.split('/')[3];
     
@@ -353,10 +408,61 @@ export async function POST(
     }
 
     const neynarUsersMap = await getFidsWithCache(allFids);
+    
+    // Identify missing FIDs and make fallback API call if needed
+    const missingFids: string[] = [];
+    for (const fid of numericFids) {
+      if (!neynarUsersMap[fid]) {
+        // Check if bidder has Twitter profile
+        const bidderIndex = bidders.findIndex(b => b.fid === fid);
+        if (bidderIndex !== -1) {
+          const userData = walletToUserMap[bidders[bidderIndex].bidder.toLowerCase()];
+          if (!userData?.twitterProfile) {
+            missingFids.push(fid);
+          }
+        }
+      }
+    }
+
+    // Make fallback Neynar API call for missing FIDs
+    if (missingFids.length > 0) {
+      try {
+        const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${missingFids.join(',')}`, {
+          headers: {
+            'api_key': process.env.NEYNAR_API_KEY || ''
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const redisClient = getRedisClient();
+          
+          // Cache each user in Redis and add to neynarUsersMap
+          for (const user of data.users) {
+            neynarUsersMap[user.fid.toString()] = user;
+            
+            if (redisClient) {
+              try {
+                await redisClient.setex(
+                  `fid:${user.fid}`,
+                  3600,
+                  JSON.stringify(user)
+                );
+              } catch (err) {
+                console.warn('Failed to cache Neynar user:', err);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Fallback Neynar API call failed:', error);
+      }
+    }
+    
     const neynarUsers = Object.values(neynarUsersMap);
     const hostNeynarUser = shouldFetchHostFid ? neynarUsersMap[hostFid] : null;
 
-    console.log("Neynar data fetched:", neynarUsers);
+    console.log("Neynar data fetched from redis:", neynarUsers);
 
     // Update processed bidders with Neynar data
     for (let i = 0; i < bidders.length; i++) {
