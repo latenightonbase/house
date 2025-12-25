@@ -37,7 +37,6 @@ import TwitterAuthModal from "./UI/TwitterAuthModal";
 import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
-import { isWhitelisted } from "@/utils/whitelist";
 import { base as baseChain } from "viem/chains";
 import { ethers } from "ethers";
 
@@ -243,10 +242,24 @@ export default function CreateAuction() {
     }
     setIsLoading(true);
 
-    const whitelisted = isWhitelisted(address);
-    //first check if the user is whitelisted, if not, show error toast and return
-    if (!whitelisted) {
-      toast.error("You are not whitelisted to create an auction");
+    // Check whitelist from database
+    try {
+      const accessToken = await getAccessToken();
+      const whitelistResponse = await fetch(`/api/users/${address}/checkWhitelist`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      const whitelistData = await whitelistResponse.json();
+      
+      if (!whitelistData.whitelisted) {
+        toast.error("You are not whitelisted to create an auction");
+        setIsLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.error("Error checking whitelist:", error);
+      toast.error("Failed to verify whitelist status");
       setIsLoading(false);
       return;
     }
