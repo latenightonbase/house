@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
     console.log('Existing user check:', existingUser);
 
     if (existingUser) {
+
+      if(!existingUser.privyId){
+        existingUser.privyId = privyId;
+        await existingUser.save();
+      }
+
       return NextResponse.json({ 
         success: true, 
         user: existingUser,
