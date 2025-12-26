@@ -1,62 +1,20 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyAccessToken } from "@/utils/privyAuth";
-import dbConnect from "@/utils/db";
-import User from "@/utils/schemas/User";
 
+// Middleware runs in Edge Runtime - can't use Mongoose/database
+// Only verify token format here, admin check happens in API routes
 export async function middleware(request: NextRequest) {
-  try {
-    const authorization = request.headers.get("Authorization");
+  const authorization = request.headers.get("Authorization");
 
-    if (!authorization) {
-      return NextResponse.json(
-        { error: "Missing authorization header" },
-        { status: 401 }
-      );
-    }
-
-    const token = authorization.split(" ")[1];
-    if (!token) {
-      return NextResponse.json(
-        { error: "Invalid authorization format" },
-        { status: 401 }
-      );
-    }
-
-    // Verify the Privy access token
-    const claims = await verifyAccessToken(token);
-    console.log("Privy claims:", claims);
-
-    // Get user from database to check admin status
-    await dbConnect();
-    const user = await User.findOne({ privyId: claims.userId });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check if user is admin (using socialId/FID)
-    const isAdmin = user.socialId === "666038" || user.socialId === "1129842";
-    if (!isAdmin) {
-      return NextResponse.json(
-        { error: "Unauthorized: Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    console.log("Admin access granted for user:", user.socialId);
-
-    return NextResponse.next();
-  } catch (error) {
-    console.error("Middleware error:", error);
+  if (!authorization || !authorization.startsWith("Bearer ")) {
     return NextResponse.json(
-      { error: "Authentication failed", details: error instanceof Error ? error.message : "Unknown error" },
+      { error: "Missing or invalid authorization header" },
       { status: 401 }
     );
   }
+
+  // Just pass through - API routes will verify the Privy token and check admin status
+  return NextResponse.next();
 }
 
 export const config = {
