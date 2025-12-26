@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
 
   const fid = Number(fidParam);
 
-  if (Number.isNaN(fid) || fid !== 666038) {
+  if (Number.isNaN(fid) || (fid !== 666038 && fid !== 1129842)) {
     return NextResponse.json(
       { error: "Invalid fid parameter" },
       { status: 401 }

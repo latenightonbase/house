@@ -71,7 +71,7 @@ export default function AdminPage() {
       setWhitelists(data.whitelists);
     } catch (error) {
       console.error('Error fetching whitelists:', error);
-      toast.error('Failed to load whitelist data');
+      toast.error('Failed to load whitelists');
     } finally {
       setLoading(false);
     }
