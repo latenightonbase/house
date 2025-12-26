@@ -38,7 +38,9 @@ export default function AdminPage() {
   const [newNickname, setNewNickname] = useState('');
 
   // Check if user has admin access (FID 666038)
-  const isAdmin = user?.socialId === '666038';
+  const isAdmin = user?.socialId === "666038" || user?.socialId === "1129842";
+
+  toast.success(`Logged in as ${user?.socialId}`);
 
   useEffect(() => {
     if (authenticated 
