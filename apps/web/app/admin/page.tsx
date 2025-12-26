@@ -41,7 +41,7 @@ export default function AdminPage() {
   // Check if user has admin access
   useEffect(() => {
     if (user?.socialId) {
-      const adminStatus = user.socialId === "666038" || user.socialId === "1129842";
+      const adminStatus = user.socialId == "666038" || user.socialId == "1129842";
       setIsAdmin(adminStatus);
       console.log('Admin check:', { socialId: user.socialId, isAdmin: adminStatus });
     }
