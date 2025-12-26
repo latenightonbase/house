@@ -36,16 +36,19 @@ export default function AdminPage() {
   const [editingEntry, setEditingEntry] = useState<WhitelistEntry | null>(null);
   const [newWallet, setNewWallet] = useState('');
   const [newNickname, setNewNickname] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Check if user has admin access (FID 666038)
-  const isAdmin = user?.socialId === "666038" || user?.socialId === "1129842";
-
-  toast.success(`Logged in as ${user?.socialId}`);
+  // Check if user has admin access
+  useEffect(() => {
+    if (user?.socialId) {
+      const adminStatus = user.socialId === "666038" || user.socialId === "1129842";
+      setIsAdmin(adminStatus);
+      console.log('Admin check:', { socialId: user.socialId, isAdmin: adminStatus });
+    }
+  }, [user?.socialId]);
 
   useEffect(() => {
-    if (authenticated 
-        && isAdmin
-    ) {
+    if (authenticated && isAdmin) {
       fetchWhitelists();
     }
   }, [authenticated, isAdmin]);
