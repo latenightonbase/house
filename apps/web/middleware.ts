@@ -1,48 +1,62 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@farcaster/quick-auth";
+import { verifyAccessToken } from "@/utils/privyAuth";
+import dbConnect from "@/utils/db";
+import User from "@/utils/schemas/User";
 
 export async function middleware(request: NextRequest) {
-  let authorization;
+  try {
+    const authorization = request.headers.get("Authorization");
 
-  const env = process.env.NEXT_PUBLIC_ENV;
-  const client = createClient();
-  if (env == "DEV") {
-    authorization = `Bearer ${process.env.DEV_HEADER as string}`;
-  } else {
-    authorization = request.headers.get("Authorization");
-  }
+    if (!authorization) {
+      return NextResponse.json(
+        { error: "Missing authorization header" },
+        { status: 401 }
+      );
+    }
 
-  if (!authorization) {
-    return NextResponse.json({ status: 401, statusText: "Unauthorized" });
-  }
+    const token = authorization.split(" ")[1];
+    if (!token) {
+      return NextResponse.json(
+        { error: "Invalid authorization format" },
+        { status: 401 }
+      );
+    }
 
-  const payload = await client.verifyJwt({
-    token: authorization?.split(" ")[1] as string,
-    domain: process.env.HOSTNAME as string,
-  });
+    // Verify the Privy access token
+    const claims = await verifyAccessToken(token);
+    console.log("Privy claims:", claims);
 
-  console.log("JWT payload:", payload);
+    // Get user from database to check admin status
+    await dbConnect();
+    const user = await User.findOne({ privyId: claims.userId });
 
-  const fidParam = payload.sub;
-  if (!fidParam) {
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is admin (using socialId/FID)
+    const isAdmin = user.socialId === "666038" || user.socialId === "1129842";
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Unauthorized: Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    console.log("Admin access granted for user:", user.socialId);
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware error:", error);
     return NextResponse.json(
-      { error: "Missing fid parameter" },
+      { error: "Authentication failed", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 401 }
     );
   }
-
-  const fid = Number(fidParam);
-
-  if (Number.isNaN(fid) || (fid !== 666038 && fid !== 1129842)) {
-    return NextResponse.json(
-      { error: "Invalid fid parameter" },
-      { status: 401 }
-    );
-  }
-
-  // Create a new response with modified headers
-  return NextResponse.next();
 }
 
 export const config = {
