@@ -792,7 +792,7 @@ export default function BidPage() {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            user.platform == "FARCASTER" ? String(user.socialId) : address
+            bidderIdentifier
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {

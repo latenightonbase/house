@@ -535,7 +535,7 @@ const LandingAuctions: React.FC = () => {
           const txHash = await contract?.placeBid(
             auctionId,
             bidAmountInWei,
-            user.platform == "FARCASTER" ? String(user.socialId) : address as `0x${string}`
+            bidderIdentifier
           );
 
           toast.loading("Transaction submitted, waiting for confirmation...", {
@@ -587,7 +587,7 @@ const LandingAuctions: React.FC = () => {
               args: [
                 auctionId,
                 bidAmountInWei,
-                user.platform == "FARCASTER" ? String(user.socialId) : address,
+                user.socialId,
               ],
             }),
             capabilities: {
