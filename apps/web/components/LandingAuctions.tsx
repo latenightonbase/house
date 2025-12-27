@@ -48,6 +48,7 @@ import { FaShare } from "react-icons/fa";
 import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
+import ScrollingName from "./utils/ScrollingName";
 
 interface Bidder {
   user: string;
@@ -85,6 +86,7 @@ interface Auction {
     pfp_url: string | null; // Profile picture from Neynar
     bidAmount: number;
     bidTimestamp: Date;
+    _id: string
   } | null;
   participantCount: number;
   hoursRemaining: number;
@@ -424,9 +426,8 @@ const LandingAuctions: React.FC = () => {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
-        const bidderIdentifier = user?.platform == "FARCASTER"
-          ? String(user.socialId)
-          : (address as string);
+        const bidderIdentifier = String(user.socialId)
+         
         const approveData = encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
@@ -1262,7 +1263,7 @@ const LandingAuctions: React.FC = () => {
                   {auction.topBidder ? (
                     <>
                       <div className="text-caption text-sm">Top Bidder</div>
-                      <div className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2">
+                      <div onClick={()=> auction.topBidder?._id && navigate(`/user/${auction.topBidder._id}`)} className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2 max-lg:max-w-52 truncate">
                         <Image
                           unoptimized
                           alt="top bidder"
@@ -1271,9 +1272,17 @@ const LandingAuctions: React.FC = () => {
                           height={100}
                           className="rounded-full w-6 aspect-square"
                         />
-                        <h3 className="max-w-32 truncate text-md">
-                          {auction.topBidder?.username || "User "+ auction.topBidder.socialId}
-                        </h3>
+                        <div className="hidden lg:block">
+                          <h3 className="text-md">
+                            {auction.topBidder?.username || "User "+ auction.topBidder.socialId}
+                          </h3>
+                        </div>
+                        <div className="lg:hidden">
+                          <ScrollingName 
+                            name={auction.topBidder?.username || "User "+ auction.topBidder.socialId}
+                            className="w-40 text-md"
+                          />
+                        </div>
                       </div>
                     </>
                   ) : (
@@ -1310,12 +1319,23 @@ const LandingAuctions: React.FC = () => {
                         height={24}
                         className="rounded-full w-6 h-6 aspect-square object-cover"
                       />
-                      <span className="max-w-32 truncate">
-                        {auction.hostedBy.display_name ||
-                          (auction.hostedBy.username
-                            ? `@${auction.hostedBy.username}`
-                            : auction.hostedBy.socialId)}
-                      </span>
+                      <div className="hidden lg:block">
+                        <span>
+                          {auction.hostedBy.display_name ||
+                            (auction.hostedBy.username
+                              ? `@${auction.hostedBy.username}`
+                              : auction.hostedBy.socialId)}
+                        </span>
+                      </div>
+                      <div className="lg:hidden">
+                        <ScrollingName 
+                          name={auction.hostedBy.display_name ||
+                            (auction.hostedBy.username
+                              ? `@${auction.hostedBy.username}`
+                              : auction.hostedBy.socialId) as string}
+                          className="max-w-40"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -295,109 +295,73 @@ export async function POST(
     const bidders: ContractBidder[] = contractBidders;
 
     console.log("Processing bidders from contract:", bidders);
-    console.log("Auction bidders from DB:", auction.bidders);
 
-    // Create a map of wallet addresses to user data from auction.bidders for quick lookup
-    const walletToUserMap: Record<string, any> = {};
-    if (auction.bidders && auction.bidders.length > 0) {
-      auction.bidders.forEach((dbBidder: any) => {
-        console.log("This is the bidder from DB:", dbBidder);
-        // Check if user exists and if any contract bidder has a wallet matching this user's wallets
-        if (dbBidder.user && bidders.some((contractBidder: any) => 
-          dbBidder.user.wallets.some((w: string) => {
-            console.log("This is W", w, "Contract bidder:", contractBidder.bidder);
-            return w.toLowerCase() === contractBidder.bidder.toLowerCase();
-          })
-        )) {
-          // Map all of the user's wallets to their user data
-          dbBidder.user.wallets.forEach((wallet: string) => {
-            walletToUserMap[wallet.toLowerCase()] = {
-              ...dbBidder.user,
-              userId: dbBidder.user._id?.toString() || dbBidder.user._id
-            };
-          });
-        }
-      });
-    }
+    // Extract all unique FIDs from contract bidders (excluding 0x and none prefixes)
+    const bidderFids = bidders
+      .map(b => b.fid)
+      .filter(fid => !fid.startsWith('0x') && !fid.startsWith('none'));
 
-    console.log("Wallet to User Map:", walletToUserMap);
+    // Query User collection by socialId to get user data
+    const users = await User.find({
+      socialId: { $in: bidderFids }
+    }).select('_id socialId username socialPlatform twitterProfile').lean();
 
-    // Process bidders - separate numeric FIDs from wallet address FIDs
+    console.log("Found users from DB:", users);
+
+    // Create a map of socialId (FID) to user data for quick lookup
+    const fidToUserMap: Record<string, any> = {};
+    users.forEach((user: any) => {
+      if (user.socialId) {
+        fidToUserMap[user.socialId] = {
+          ...user,
+          userId: user._id?.toString() || user._id
+        };
+      }
+    });
+
+    console.log("FID to User Map:", fidToUserMap);
+
+    // Process bidders - collect numeric FIDs for Neynar and build initial array with userId
     const numericFids: string[] = [];
     const processedBidders: ProcessedBidder[] = [];
 
     for (let i = 0; i < bidders.length; i++) {
       const bidder = bidders[i];
+      const userData = fidToUserMap[bidder.fid];
 
-      console.log("Processing bidder:", bidder);
-
-      const fidValue = bidder.fid;
-      
-      // Get user data from the populated auction.bidders
-      const userData = walletToUserMap[bidder.bidder.toLowerCase()];
-
-      console.log(bidder.bidAmount, bidder, "Details of each bid", "User data:", userData)
+      console.log("Processing bidder:", bidder, "User data:", userData);
       
       // Calculate USD value
       let usdValue: number | undefined = undefined;
       
       if (hasStoredUSDValues && auction.bidders && auction.bidders[i]) {
-        // Use stored USD value from database if available
         usdValue = (auction.bidders[i] as any).usdcValue || undefined;
       } else if (tokenPriceUSD > 0) {
-        // Calculate USD value using current token price
         const bidAmountFormatted = Number(bidder.bidAmount) / Math.pow(10, decimals);
         usdValue = calculateUSDValue(bidAmountFormatted, tokenPriceUSD);
       }
-      
-      // Check if FID is a hex string (wallet address)
-      if (fidValue.startsWith('0x')) {
-        // Use wallet address for identicon
-        const truncatedAddress = `${fidValue.slice(0, 6)}...${fidValue.slice(-4)}`;
-        const twitterProfile = userData?.twitterProfile;
 
-
-
-        processedBidders.push({
-          displayName: twitterProfile?.username || truncatedAddress,
-          image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
-          bidAmount: bidder.bidAmount,
-          usdValue,
-          walletAddress: bidder.bidder,
-          userId: userData?.userId
-        });
-      } else if (fidValue.startsWith('none')) {
-        // FID starts with "none" - use Twitter profile if available
-        const twitterProfile = userData?.twitterProfile;
-        const truncatedAddress = `${bidder.bidder.slice(0, 6)}...${bidder.bidder.slice(-4)}`;
-        processedBidders.push({
-          displayName: twitterProfile?.name || twitterProfile?.username || truncatedAddress,
-          image: twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`,
-          bidAmount: bidder.bidAmount,
-          usdValue,
-          walletAddress: bidder.bidder,
-          userId: userData?.userId
-        });
-      } else {
-        // Numeric FID - collect for batch processing
-        numericFids.push(fidValue);
-        // Temporarily add placeholder
-        processedBidders.push({
-          displayName: '',
-          image: '',
-          bidAmount: bidder.bidAmount,
-          usdValue,
-          walletAddress: bidder.bidder,
-          userId: userData?.userId
-        });
+      // Collect numeric FIDs for batch Neynar fetch
+      if (!bidder.fid.startsWith('0x') && !bidder.fid.startsWith('none')) {
+        numericFids.push(bidder.fid);
       }
+
+      // Build initial bidder object with userId always set
+      processedBidders.push({
+        displayName: '',
+        image: '',
+        bidAmount: bidder.bidAmount,
+        usdValue,
+        walletAddress: bidder.bidder,
+        userId: userData?._id?.toString() || userData?._id
+      });
     }
 
     console.log("Numeric FIDs to fetch from Neynar:", numericFids);
 
     // Prepare host FID fetch
     const hostFid = (auction.hostedBy as any)?.socialId;
-    const shouldFetchHostFid = hostFid && hostFid !== '' && !hostFid.startsWith('none');
+    const shouldFetchHostFid = hostFid && hostFid !== '' && !hostFid.startsWith('none') && !hostFid.startsWith('0x');
 
     console.log('Processing hostedBy with FID:', hostFid);
 
@@ -414,12 +378,9 @@ export async function POST(
     for (const fid of numericFids) {
       if (!neynarUsersMap[fid]) {
         // Check if bidder has Twitter profile
-        const bidderIndex = bidders.findIndex(b => b.fid === fid);
-        if (bidderIndex !== -1) {
-          const userData = walletToUserMap[bidders[bidderIndex].bidder.toLowerCase()];
-          if (!userData?.twitterProfile) {
-            missingFids.push(fid);
-          }
+        const userData = fidToUserMap[fid];
+        if (!userData?.twitterProfile) {
+          missingFids.push(fid);
         }
       }
     }
@@ -464,23 +425,31 @@ export async function POST(
 
     console.log("Neynar data fetched from redis:", neynarUsers);
 
-    // Update processed bidders with Neynar data
+    // Populate displayName and image for all bidders
     for (let i = 0; i < bidders.length; i++) {
       const bidder = bidders[i];
+      const userData = fidToUserMap[bidder.fid];
+      const truncatedAddress = `${bidder.bidder.slice(0, 6)}...${bidder.bidder.slice(-4)}`;
       
-      if (!bidder.fid.startsWith('0x') && !bidder.fid.startsWith('none')) {
-        // This is a numeric FID
+      if (bidder.fid.startsWith('0x')) {
+        // Hex FID (wallet address) - use Twitter or fallback
+        processedBidders[i].displayName = userData?.twitterProfile?.username || truncatedAddress;
+        processedBidders[i].image = userData?.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
+      } else if (bidder.fid.startsWith('none')) {
+        // No FID - use Twitter or fallback
+        processedBidders[i].displayName = userData?.twitterProfile?.name || userData?.twitterProfile?.username || truncatedAddress;
+        processedBidders[i].image = userData?.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
+      } else {
+        // Numeric FID - use Neynar data, then Twitter fallback
         const neynarUser = neynarUsers.find((user:any) => user.fid.toString() === bidder.fid);
         
-        console.log(`Matching Neynar user for FID ${bidder.fid}:`, neynarUser);
-
         if (neynarUser) {
           processedBidders[i].displayName = neynarUser.display_name || neynarUser.username || `User ${bidder.fid}`;
           processedBidders[i].image = neynarUser.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         } else {
-          // Fallback if Neynar data not found
-          processedBidders[i].displayName = bidder.twitterProfile?.username || `User ${bidder.fid}`;
-          processedBidders[i].image = bidder.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
+          // Fallback to Twitter profile or generic
+          processedBidders[i].displayName = userData?.twitterProfile?.username || `User ${bidder.fid}`;
+          processedBidders[i].image = userData?.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${bidder.bidder.toLowerCase()}`;
         }
       }
     }

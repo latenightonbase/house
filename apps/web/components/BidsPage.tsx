@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Heading from "./UI/Heading";
+import ScrollingName from "./utils/ScrollingName";
 import {
   auctionAbi,
   contractAdds,
@@ -678,9 +679,7 @@ export default function BidPage() {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
-        const bidderIdentifier = user?.platform == "FARCASTER"
-          ? String(user.socialId)
-          : (address as string);
+        const bidderIdentifier = String(user.socialId)
         const approveData = encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
@@ -1256,6 +1255,7 @@ export default function BidPage() {
                       bidder.userId ? "cursor-pointer" : ""
                     }`}
                     onClick={() =>
+
                       bidder.userId && navigate(`/user/${bidder.userId}`)
                     }
                   >
@@ -1265,10 +1265,13 @@ export default function BidPage() {
                         alt={bidder.displayName}
                         className="w-8 h-8 rounded-full"
                       />
-                      <div>
-                        <p className="font-semibold text-white max-w-40 truncate">
+                      <div className="hidden lg:block">
+                        <p className="font-semibold text-white">
                           {bidder.displayName}
                         </p>
+                      </div>
+                      <div className="lg:hidden">
+                        <ScrollingName name={bidder.displayName} className="max-w-40 font-semibold text-white" />
                       </div>
                     </div>
 
