@@ -429,10 +429,8 @@ export default function BidPage() {
     bidAmount: number,
     decimals: number
   ): bigint => {
-    // Convert the bid amount to the token's decimal representation
-    const factor = Math.pow(10, decimals);
-    const amountInWei = Math.floor(bidAmount * factor);
-    return BigInt(amountInWei);
+    // Use ethers.js parseUnits to avoid floating point precision issues
+    return ethers.parseUnits(bidAmount.toString(), decimals);
   };
 
   const processSuccess = async (auctionId: string, bidAmount: number) => {

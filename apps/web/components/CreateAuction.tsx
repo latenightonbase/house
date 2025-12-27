@@ -223,14 +223,12 @@ export default function CreateAuction() {
 
   // Function to convert bid amount to proper decimal format
   const convertBidAmountToWei = (
-    bidAmount: number,
-    decimals: number
-  ): bigint => {
-    // Convert the bid amount to the token's decimal representation
-    const factor = Math.pow(10, decimals);
-    const amountInWei = Math.floor(bidAmount * factor);
-    return BigInt(amountInWei);
-  };
+      bidAmount: number,
+      decimals: number
+    ): bigint => {
+      // Use ethers.js parseUnits to avoid floating point precision issues
+      return ethers.parseUnits(bidAmount.toString(), decimals);
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
