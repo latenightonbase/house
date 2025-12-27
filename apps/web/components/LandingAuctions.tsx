@@ -1280,7 +1280,7 @@ const LandingAuctions: React.FC = () => {
                         <div className="lg:hidden">
                           <ScrollingName 
                             name={auction.topBidder?.username || "User "+ auction.topBidder.socialId}
-                            className="w-40 text-md"
+                            className="max-w-40 text-md"
                           />
                         </div>
                       </div>
