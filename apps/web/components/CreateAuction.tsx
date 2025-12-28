@@ -438,6 +438,7 @@ export default function CreateAuction() {
       }
       // Farcaster/Base App Flow
       else {
+
         toast.loading("Preparing transaction for mobile wallet...", {
           id: toastId,
         });
@@ -450,8 +451,8 @@ export default function CreateAuction() {
             data: encodedStartAuctionData,
           },
         ];
-
-        if (context?.client.clientFid === 309857) {
+        try{
+if (context?.client.clientFid === 309857) {
           toast.loading("Connecting to Base SDK...", { id: toastId });
 
           const provider = createBaseAccountSDK({
@@ -500,6 +501,40 @@ export default function CreateAuction() {
             calls: calls,
           });
         }
+        }
+        catch(error){
+          toast.loading("Fallback to External Wallets");
+
+          const contract = await writeNewContractSetup(
+            contractAdds.auctions,
+            auctionAbi,
+            externalWallets[0]
+          );
+
+          toast.loading("Waiting for transaction...", { id: toastId });
+
+          // Call the smart contract
+          const txHash = await contract?.startAuction(
+            auctionId,
+            selectedCurrency.contractAddress as `0x${string}`,
+            auctionTitle,
+            BigInt(Math.round(durationHours)),
+            minBidAmountWei
+          );
+
+          await txHash?.wait();
+
+          if (!txHash) {
+            toast.error("Failed to submit transaction", { id: toastId });
+            setIsLoading(false);
+            return;
+          }
+
+          toast.loading("Transaction confirmed!", { id: toastId });
+
+          await processSuccess(auctionId);
+        }
+        
       }
     } catch (error: any) {
       console.error("Error creating auction:", error);
