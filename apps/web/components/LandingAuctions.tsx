@@ -137,6 +137,8 @@ const LandingAuctions: React.FC = () => {
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
+  const [storedAuction, setStoredAuction] = useState<Auction | null>(null);
+  const [storedBidAmountInWei, setStoredBidAmountInWei] = useState<bigint>(BigInt(0));
 
   const { context } = useMiniKit();
 
@@ -236,6 +238,85 @@ const LandingAuctions: React.FC = () => {
 
   const navigate = useNavigateWithLoader();
 
+  const handleFallbackTransaction = async () => {
+    if (!loadingToastId || !currentBid || !storedAuction || !address) return;
+
+    try {
+      toast.loading("Fallback to External Wallets", { id: loadingToastId });
+
+      const wallet = externalWallets[0];
+      if (!wallet) {
+        toast.error("Unable to find a connected wallet", { id: loadingToastId });
+        setIsLoading(false);
+        return;
+      }
+
+      await wallet.switchChain(baseChain.id);
+      const bidderIdentifier = String(user.socialId);
+
+      toast.loading("Sending approval transaction", { id: loadingToastId });
+      const erc20Contract = await writeNewContractSetup(
+        storedAuction.tokenAddress,
+        erc20Abi,
+        externalWallets[0]
+      );
+
+      const approveTx = await erc20Contract?.approve(
+        contractAdds.auctions as `0x${string}`,
+        storedBidAmountInWei
+      );
+
+      await approveTx?.wait();
+
+      if (!approveTx) {
+        toast.error("Approval transaction failed", { id: loadingToastId });
+        setIsLoading(false);
+        return;
+      }
+
+      toast.success("Approval successful!", { id: loadingToastId });
+      toast.loading("Sending bid transaction", { id: loadingToastId });
+
+      const contract = await writeNewContractSetup(
+        contractAdds.auctions,
+        auctionAbi,
+        externalWallets[0]
+      );
+
+      toast.loading("Waiting for transaction...", { id: loadingToastId });
+
+      const txHash = await contract?.placeBid(
+        currentBid.auctionId,
+        storedBidAmountInWei,
+        bidderIdentifier
+      );
+
+      toast.loading("Transaction submitted, waiting for confirmation...", {
+        id: loadingToastId,
+      });
+
+      await txHash?.wait();
+
+      if (!txHash) {
+        toast.error("Transaction failed", { id: loadingToastId });
+        setIsLoading(false);
+        return;
+      }
+
+      toast.loading("Transaction confirmed! Saving bid details...", {
+        id: loadingToastId,
+      });
+
+      await processSuccess(currentBid.auctionId, currentBid.amount);
+    } catch (error) {
+      console.error("Fallback transaction failed:", error);
+      toast.error("Fallback transaction failed. Please try again.", { id: loadingToastId });
+      setIsLoading(false);
+      setCurrentBid(null);
+      setLoadingToastId(null);
+    }
+  };
+
   useEffect(() => {
     // When transaction succeeds
     if (status == "success" && currentBid) {
@@ -248,16 +329,8 @@ const LandingAuctions: React.FC = () => {
       processSuccess(currentBid.auctionId, currentBid.amount);
     }
     // When transaction fails (status === 'error')
-    else if (status === "error") {
-      if (loadingToastId) {
-        toast.error("Transaction failed. Please try again.", {
-          id: loadingToastId,
-        });
-      }
-      setIsLoading(false);
-      setCurrentBid(null);
-      setLoadingToastId(null);
-      console.error("Transaction failed");
+    else if (status === "error" && currentBid && loadingToastId) {
+      handleFallbackTransaction();
     }
   }, [isSuccess, status]);
 
@@ -600,6 +673,8 @@ const LandingAuctions: React.FC = () => {
 
         // Store current bid info for useEffect to handle
         setCurrentBid({ auctionId, amount: bidAmount });
+        setStoredAuction(auction);
+        setStoredBidAmountInWei(bidAmountInWei);
 
         if (context?.client.clientFid === 309857) {
           toast.loading("Connecting to Base SDK...", { id: toastId });
