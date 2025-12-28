@@ -90,6 +90,8 @@ export default function CreateAuction() {
     try {
       toast.loading("Fallback to External Wallets", { id: loadingToastId });
 
+      await externalWallets[0].switchChain(baseChain.id);
+
       const contract = await writeNewContractSetup(
         contractAdds.auctions,
         auctionAbi,
@@ -443,6 +445,8 @@ export default function CreateAuction() {
           toast.loading("Transaction confirmed!", { id: toastId });
           await processSuccess(auctionId);
         } catch (e) {
+                await externalWallets[0].switchChain(baseChain.id);
+
           const contract = await writeNewContractSetup(
             contractAdds.auctions,
             auctionAbi,
@@ -543,6 +547,7 @@ if (context?.client.clientFid === 309857) {
         }
         catch(error){
           toast.loading("Fallback to External Wallets");
+      await externalWallets[0].switchChain(baseChain.id);
 
           const contract = await writeNewContractSetup(
             contractAdds.auctions,
