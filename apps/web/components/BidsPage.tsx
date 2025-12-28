@@ -213,6 +213,7 @@ export default function BidPage() {
       }
 
       toast.success("Approval successful!", { id: loadingToastId });
+      await new Promise(resolve => setTimeout(resolve, 2000));
       toast.loading("Sending bid transaction", { id: loadingToastId });
 
       const contract = await writeNewContractSetup(
@@ -846,6 +847,8 @@ export default function BidPage() {
             setIsLoading(false);
             return;
           }
+
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
           toast.success("Approval successful!", { id: toastId });
 

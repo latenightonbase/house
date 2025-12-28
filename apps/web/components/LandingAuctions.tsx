@@ -275,6 +275,7 @@ const LandingAuctions: React.FC = () => {
       }
 
       toast.success("Approval successful!", { id: loadingToastId });
+      await new Promise(resolve => setTimeout(resolve, 2000));
       toast.loading("Sending bid transaction", { id: loadingToastId });
 
       const contract = await writeNewContractSetup(
@@ -586,11 +587,14 @@ const LandingAuctions: React.FC = () => {
 
           await approveTx?.wait();
 
+          
+          
           if (!approveTx) {
             toast.error("Approval transaction failed", { id: toastId });
             setIsLoading(false);
             return;
           }
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
           toast.success("Approval successful!", { id: toastId });
 
