@@ -16,7 +16,7 @@ export async function GET() {
     auctions.forEach(auction => {
       if (auction.winningBid && auction.bidders.length > 0) {
         const winningBidder = auction.bidders.find(
-          bidder => bidder.user.toString() === auction.winningBid?.toString()
+          (bidder:any) => bidder.user.toString() === auction.winningBid?.toString()
         );
         if (winningBidder && winningBidder.usdcValue) {
           totalEarnings += winningBidder.usdcValue;
@@ -26,7 +26,7 @@ export async function GET() {
 
     const uniqueBidders = new Set();
     auctions.forEach(auction => {
-      auction.bidders.forEach(bidder => {
+      auction.bidders.forEach((bidder:any) => {
         uniqueBidders.add(bidder.user.toString());
       });
     });
