@@ -84,7 +84,7 @@ export default function CreateAuction() {
 
   useEffect(() => {
     // When transaction succeeds
-    if (isSuccess) {
+    if (status == "success") {
       if (loadingToastId) {
         toast.success("Transaction successful!", {
           id: loadingToastId,

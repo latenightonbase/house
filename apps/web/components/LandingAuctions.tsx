@@ -238,7 +238,7 @@ const LandingAuctions: React.FC = () => {
 
   useEffect(() => {
     // When transaction succeeds
-    if (isSuccess && currentBid) {
+    if (status == "success" && currentBid) {
       if (loadingToastId) {
         toast.success("Transaction successful! Saving bid details...", {
           id: loadingToastId,
