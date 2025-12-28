@@ -71,6 +71,8 @@ export default function CreateAuction() {
   const [loadingToastId, setLoadingToastId] = useState<string | null>(null);
   const { sendCalls, isSuccess, status } = useSendCalls();
   const [showTwitterModal, setShowTwitterModal] = useState(false);
+  const [storedDurationHours, setStoredDurationHours] = useState<number>(0);
+  const [storedMinBidAmountWei, setStoredMinBidAmountWei] = useState<bigint>(BigInt(0));
 
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -81,6 +83,47 @@ export default function CreateAuction() {
   const [myCallId, setMyCallId] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
+
+  const handleFallbackTransaction = async () => {
+    if (!loadingToastId || !genAuctionId || !selectedCurrency || !address) return;
+
+    try {
+      toast.loading("Fallback to External Wallets", { id: loadingToastId });
+
+      const contract = await writeNewContractSetup(
+        contractAdds.auctions,
+        auctionAbi,
+        externalWallets[0]
+      );
+
+      toast.loading("Waiting for transaction...", { id: loadingToastId });
+
+      // Call the smart contract
+      const txHash = await contract?.startAuction(
+        genAuctionId,
+        selectedCurrency.contractAddress as `0x${string}`,
+        auctionTitle,
+        BigInt(Math.round(storedDurationHours)),
+        storedMinBidAmountWei
+      );
+
+      await txHash?.wait();
+
+      if (!txHash) {
+        toast.error("Failed to submit transaction", { id: loadingToastId });
+        setIsLoading(false);
+        return;
+      }
+
+      toast.loading("Transaction confirmed!", { id: loadingToastId });
+
+      await processSuccess(genAuctionId);
+    } catch (error) {
+      console.error("Fallback transaction failed:", error);
+      toast.error("Fallback transaction failed. Please try again.", { id: loadingToastId });
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // When transaction succeeds
@@ -93,14 +136,8 @@ export default function CreateAuction() {
       processSuccess(genAuctionId);
     }
     // When transaction fails (status === 'error')
-    else if (status === "error") {
-      if (loadingToastId) {
-        toast.error("Transaction failed. Please try again.", {
-          id: loadingToastId,
-        });
-      }
-      setIsLoading(false);
-      console.error("Transaction failed");
+    else if (status === "error" && genAuctionId && loadingToastId) {
+      handleFallbackTransaction();
     }
   }, [isSuccess, status]);
 
@@ -444,6 +481,8 @@ export default function CreateAuction() {
         });
 
         setGenAuctionId(auctionId);
+        setStoredDurationHours(durationHours);
+        setStoredMinBidAmountWei(minBidAmountWei);
         const calls = [
           {
             to: contractAdds.auctions,
