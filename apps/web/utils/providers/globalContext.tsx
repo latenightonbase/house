@@ -44,10 +44,27 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
   const userCreatedRef = useRef(false);
 
-  const {ready, authenticated, user:privyUser, getAccessToken} = usePrivy();
+  const {ready, authenticated, user:privyUser, getAccessToken, logout} = usePrivy();
   const {address} = useAccount();
   const {initLoginToMiniApp, loginToMiniApp} = useLoginToMiniApp();
 
+  // Detect when Farcaster account changes and logout if needed
+  useEffect(() => {
+    const checkAccountSwitch = async () => {
+      if (ready && authenticated && privyUser?.farcaster && context?.user?.fid) {
+        const currentFid = context.user.fid.toString();
+        const privyFid = privyUser?.farcaster?.fid?.toString();
+        
+        if (currentFid !== privyFid) {
+          console.log('Farcaster account switched, logging out...');
+          userCreatedRef.current = false;
+          await logout();
+        }
+      }
+    };
+    
+    checkAccountSwitch();
+  }, [ready, authenticated, privyUser, context, logout]);
 
   useEffect(() => {
   if (ready && !authenticated) {
