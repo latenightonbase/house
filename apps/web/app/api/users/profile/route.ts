@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
         const dbUser = await User.findOne({
             socialId: socialId
-        }).select('_id wallets username socialId socialPlatform fid twitterProfile hostedAuctions bidsWon participatedAuctions createdAt averageRating totalReviews');
+        }).select('_id wallets username socialId socialPlatform fid twitterProfile hostedAuctions bidsWon participatedAuctions createdAt averageRating totalReviews notificationDetails');
 
         console.log('DB User', dbUser);
 
