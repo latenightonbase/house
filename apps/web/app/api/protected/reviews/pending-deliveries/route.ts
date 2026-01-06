@@ -69,12 +69,17 @@ export async function GET(req: NextRequest) {
 
     const neynarUsersMap = fidSet.size > 0 ? await getFidsWithCache(Array.from(fidSet)) : {};
 
+    // Helper to safely convert to plain object
+    const toPlainObject = (obj: any) => {
+      return obj?.toObject ? obj.toObject() : obj;
+    };
+
     // Enrich user data with social profiles
     const enrichDeliveries = (deliveries: any[]) => {
       return deliveries.map((delivery: any) => ({
         ...delivery.toObject(),
-        winnerId: delivery.winnerId ? enrichWithSocialProfile(delivery.winnerId.toObject(), neynarUsersMap) : null,
-        hostId: delivery.hostId ? enrichWithSocialProfile(delivery.hostId.toObject(), neynarUsersMap) : null,
+        winnerId: delivery.winnerId ? enrichWithSocialProfile(toPlainObject(delivery.winnerId), neynarUsersMap) : null,
+        hostId: delivery.hostId ? enrichWithSocialProfile(toPlainObject(delivery.hostId), neynarUsersMap) : null,
       }));
     };
 

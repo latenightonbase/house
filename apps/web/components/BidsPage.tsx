@@ -87,6 +87,12 @@ interface AuctionData {
     wallet?: string;
     averageRating?: number;
     totalReviews?: number;
+    twitterProfile?: {
+      id: string;
+      username: string;
+      name: string;
+      profileImageUrl?: string;
+    };
   };
 }
 
@@ -1097,9 +1103,9 @@ export default function BidPage() {
             <div>
               <p className="text-xs text-caption mb-1">Hosted By</p>
               <div className="flex items-center gap-2">
-                {auctionData.hostedBy.pfp_url && (
+                {(auctionData.hostedBy.pfp_url || auctionData.hostedBy.twitterProfile?.profileImageUrl) && (
                   <img
-                    src={auctionData.hostedBy.pfp_url}
+                    src={auctionData.hostedBy.pfp_url || auctionData.hostedBy.twitterProfile?.profileImageUrl}
                     alt="Host avatar"
                     className="w-6 h-6 rounded-full"
                   />
@@ -1112,12 +1118,12 @@ export default function BidPage() {
                     className="text-md font-semibold text-primary bg-transparent px-0 hover:text-primary/80 transition-colors"
                   >
                     {auctionData.hostedBy.display_name ||
-                      auctionData.hostedBy.username}
+                      auctionData.hostedBy.username || auctionData.hostedBy.twitterProfile?.username}
                   </button>
                 ) : (
                   <span className="text-md font-semibold">
                     {auctionData.hostedBy.display_name ||
-                      auctionData.hostedBy.username}
+                      auctionData.hostedBy.username || auctionData.hostedBy.twitterProfile?.username}
                   </span>
                 )}
                 {auctionData.hostedBy.averageRating && auctionData.hostedBy.averageRating > 0 && (

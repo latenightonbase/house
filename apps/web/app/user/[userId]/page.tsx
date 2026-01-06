@@ -211,7 +211,7 @@ export default function UserPage() {
               )}
               <div className='flex gap-2 w-full items-center justify-center lg:justify-start'>
                 {userData.user.x_username && userData.user.platform == "FARCASTER" && (
-                <div className="">
+                <div className="mt-4">
                   <a 
                     href={`https://x.com/${userData.user.x_username}`}
                     target="_blank"
