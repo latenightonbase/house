@@ -84,11 +84,20 @@ export default function CreateAuction() {
 
   const navigate = useNavigateWithLoader();
 
-  const handleFallbackTransaction = async () => {
-    if (!loadingToastId || !genAuctionId || !selectedCurrency || !address) return;
+  const handleFallbackTransaction = async (
+    auctionId: string,
+    durationHours: number,
+    minBidAmountWei: bigint,
+    toastId: string
+  ) => {
+    if (!selectedCurrency || !address || externalWallets.length === 0) {
+      toast.error("Wallet not connected", { id: toastId });
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      toast.loading("Fallback to External Wallets", { id: loadingToastId });
+      console.log("Initiating fallback transaction with external wallet...");
 
       await externalWallets[0].switchChain(baseChain.id);
 
@@ -98,31 +107,30 @@ export default function CreateAuction() {
         externalWallets[0]
       );
 
-      toast.loading("Waiting for transaction...", { id: loadingToastId });
+      toast.loading("Confirming...", { id: toastId });
 
       // Call the smart contract
       const txHash = await contract?.startAuction(
-        genAuctionId,
+        auctionId,
         selectedCurrency.contractAddress as `0x${string}`,
         auctionTitle,
-        BigInt(Math.round(storedDurationHours)),
-        storedMinBidAmountWei
+        BigInt(Math.round(durationHours)),
+        minBidAmountWei
       );
 
       await txHash?.wait();
 
       if (!txHash) {
-        toast.error("Failed to submit transaction", { id: loadingToastId });
+        toast.error("Failed to submit transaction", { id: toastId });
         setIsLoading(false);
         return;
       }
 
-      toast.loading("Transaction confirmed!", { id: loadingToastId });
-
-      await processSuccess(genAuctionId);
+      toast.success("Transaction confirmed!", { id: toastId });
+      await processSuccess(auctionId);
     } catch (error) {
       console.error("Fallback transaction failed:", error);
-      toast.error("Fallback transaction failed. Please try again.", { id: loadingToastId });
+      toast.error("Transaction failed", { id: toastId });
       setIsLoading(false);
     }
   };
@@ -131,15 +139,21 @@ export default function CreateAuction() {
     // When transaction succeeds
     if (status == "success") {
       if (loadingToastId) {
-        toast.success("Transaction successful!", {
+        toast.success("Success!", {
           id: loadingToastId,
         });
       }
       processSuccess(genAuctionId);
     }
-    // When transaction fails (status === 'error')
-    else if (status === "error" && genAuctionId && loadingToastId) {
-      handleFallbackTransaction();
+    // When transaction fails (status === 'error') - fallback to external wallet
+    else if (status === "error" && genAuctionId && loadingToastId && storedDurationHours > 0) {
+      console.log("sendCalls failed, attempting fallback transaction...");
+      handleFallbackTransaction(
+        genAuctionId,
+        storedDurationHours,
+        storedMinBidAmountWei,
+        loadingToastId
+      );
     }
   }, [isSuccess, status]);
 
@@ -157,7 +171,7 @@ export default function CreateAuction() {
   }, [selectedCurrency]);
 
   const processSuccess = async (auctionId: string) => {
-    const saveToastId = toast.loading("Saving auction details...");
+    const saveToastId = toast.loading("Saving...");
 
     try {
       const now = new Date();
@@ -193,7 +207,7 @@ export default function CreateAuction() {
         throw new Error(errorData.error || "Failed to save auction details");
       }
 
-      toast.success("Auction created successfully! Redirecting...", {
+      toast.success("Created!", {
         id: saveToastId,
       });
 
@@ -205,18 +219,16 @@ export default function CreateAuction() {
     } catch (error: any) {
       console.error("Error saving auction details:", error);
 
-      let errorMessage = "Failed to save auction details. Please try again.";
+      let errorMessage = "Failed to save";
 
       // Handle specific error types
       if (error.code === "ECONNREFUSED") {
-        errorMessage =
-          "Cannot connect to server. Please ensure the development server is running.";
+        errorMessage = "Server offline";
       } else if (
         error.name === "TypeError" &&
         error.message.includes("fetch")
       ) {
-        errorMessage =
-          "Network error. Please check your connection and ensure the server is running.";
+        errorMessage = "Network error";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -330,7 +342,7 @@ export default function CreateAuction() {
     }
 
     // Start loading toast
-    const toastId = toast.loading("Creating auction...");
+    const toastId = toast.loading("Creating...");
     setLoadingToastId(toastId);
 
     try {
@@ -341,7 +353,6 @@ export default function CreateAuction() {
       let minBidAmountWei: bigint;
 
       try {
-        toast.loading("Fetching token information...", { id: toastId });
         tokenDecimals = await getTokenDecimals(
           selectedCurrency.contractAddress
         );
@@ -356,10 +367,6 @@ export default function CreateAuction() {
         console.log(
           `Minimum bid ${minBidFloat} converted to ${minBidAmountWei} with ${tokenDecimals} decimals`
         );
-
-        toast.loading("Token information retrieved successfully", {
-          id: toastId,
-        });
       } catch (error) {
         console.error(
           "Error fetching token decimals, using default 18:",
@@ -371,7 +378,6 @@ export default function CreateAuction() {
         console.log(
           `Using default 18 decimals. Minimum bid ${minBidFloat} converted to ${minBidAmountWei}`
         );
-        toast.loading("Using default token configuration...", { id: toastId });
       }
 
       const auctionId = String(Date.now());
@@ -393,7 +399,7 @@ export default function CreateAuction() {
 
       // PC/Browser Wallet flow
       if (!context) {
-        toast.loading("Preparing transaction...", { id: toastId });
+        toast.loading("Preparing...", { id: toastId });
         const wallet = externalWallets[0];
         
         // wallet.walletClientType ==="embedded"  ;
@@ -445,45 +451,16 @@ export default function CreateAuction() {
             return;
           }
 
-          toast.loading("Transaction confirmed!", { id: toastId });
           await processSuccess(auctionId);
         } catch (e) {
-                await externalWallets[0].switchChain(baseChain.id);
-
-          const contract = await writeNewContractSetup(
-            contractAdds.auctions,
-            auctionAbi,
-            externalWallets[0]
-          );
-
-          toast.loading("Waiting for transaction...", { id: toastId });
-
-          // Call the smart contract
-          const txHash = await contract?.startAuction(
-            auctionId,
-            selectedCurrency.contractAddress as `0x${string}`,
-            auctionTitle,
-            BigInt(Math.round(durationHours)),
-            minBidAmountWei
-          );
-
-          await txHash?.wait();
-
-          if (!txHash) {
-            toast.error("Failed to submit transaction", { id: toastId });
-            setIsLoading(false);
-            return;
-          }
-
-          toast.loading("Transaction confirmed!", { id: toastId });
-
-          await processSuccess(auctionId);
+          console.log("wallet_sendCalls failed, falling back to direct contract call:", e);
+          await handleFallbackTransaction(auctionId, durationHours, minBidAmountWei, toastId);
         }
       }
       // Farcaster/Base App Flow
       else {
 
-        toast.loading("Preparing transaction for mobile wallet...", {
+        toast.loading("Preparing...", {
           id: toastId,
         });
 
@@ -499,7 +476,7 @@ export default function CreateAuction() {
         ];
         try{
 if (context?.client.clientFid === 309857) {
-          toast.loading("Connecting to Base SDK...", { id: toastId });
+          toast.loading("Connecting...", { id: toastId });
 
           const provider = createBaseAccountSDK({
             appName: "Bill test app",
@@ -510,7 +487,7 @@ if (context?.client.clientFid === 309857) {
           const cryptoAccount = await getCryptoKeyAccount();
           const fromAddress = cryptoAccount?.account?.address;
 
-          toast.loading("Submitting transaction...", { id: toastId });
+          toast.loading("Submitting...", { id: toastId });
 
           const callsId: any = await provider.request({
             method: "wallet_sendCalls",
@@ -532,16 +509,13 @@ if (context?.client.clientFid === 309857) {
           const result = await checkStatus(callsId);
 
           if (result == true) {
-            toast.loading("Transaction confirmed!", { id: toastId });
             await processSuccess(auctionId);
           } else {
-            toast.error("Transaction failed or timed out", { id: toastId });
+            toast.error("Failed", { id: toastId });
             setIsLoading(false);
           }
         } else {
-          // toast.loading("Submitting transaction via thingy" + String(externalWallets[0].meta));
-          toast.loading(externalWallets[0].meta.name);
-          toast.loading("Waiting for wallet confirmation...", { id: toastId });
+          toast.loading("Waiting...", { id: toastId });
 
           sendCalls({
             account: address as `0x${string}`,
@@ -551,37 +525,8 @@ if (context?.client.clientFid === 309857) {
         }
         }
         catch(error){
-          toast.loading("Fallback to External Wallets");
-      await externalWallets[0].switchChain(baseChain.id);
-
-          const contract = await writeNewContractSetup(
-            contractAdds.auctions,
-            auctionAbi,
-            externalWallets[0]
-          );
-
-          toast.loading("Waiting for transaction...", { id: toastId });
-
-          // Call the smart contract
-          const txHash = await contract?.startAuction(
-            auctionId,
-            selectedCurrency.contractAddress as `0x${string}`,
-            auctionTitle,
-            BigInt(Math.round(durationHours)),
-            minBidAmountWei
-          );
-
-          await txHash?.wait();
-
-          if (!txHash) {
-            toast.error("Failed to submit transaction", { id: toastId });
-            setIsLoading(false);
-            return;
-          }
-
-          toast.loading("Transaction confirmed!", { id: toastId });
-
-          await processSuccess(auctionId);
+          toast.error("Transaction failed", { id: toastId });
+          setIsLoading(false);
         }
         
       }
@@ -589,18 +534,18 @@ if (context?.client.clientFid === 309857) {
       console.error("Error creating auction:", error);
 
       // Handle different types of errors
-      let errorMessage = "Failed to create auction. Please try again.";
+      let errorMessage = "Failed";
 
       if (error?.message?.includes("user rejected")) {
-        errorMessage = "Transaction was cancelled by user.";
+        errorMessage = "Cancelled";
       } else if (error?.message?.includes("insufficient funds")) {
-        errorMessage = "Insufficient funds to complete the transaction.";
+        errorMessage = "Insufficient funds";
       } else if (error?.message?.includes("Max 3 active auctions")) {
-        errorMessage = "You can only have 3 active auctions at a time.";
+        errorMessage = "Max 3 active auctions";
       } else if (
         error?.message?.includes("Minimum bid must be greater than 0")
       ) {
-        errorMessage = "Minimum bid amount must be greater than 0.";
+        errorMessage = "Min bid > 0";
       } else if (error?.shortMessage) {
         errorMessage = error.shortMessage;
       } else if (error?.message) {

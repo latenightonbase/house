@@ -243,15 +243,25 @@ const LandingAuctions: React.FC = () => {
 
   const navigate = useNavigateWithLoader();
 
-  const handleFallbackTransaction = async () => {
-    if (!loadingToastId || !currentBid || !storedAuction || !address) return;
+  const handleFallbackTransaction = async (
+    auctionId: string,
+    bidAmount: number,
+    bidAmountInWei: bigint,
+    auction: Auction,
+    toastId: string
+  ) => {
+    if (!address || externalWallets.length === 0) {
+      toast.error("Wallet not connected", { id: toastId });
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      toast.loading("Fallback to External Wallets", { id: loadingToastId });
+      console.log("Initiating fallback transaction with external wallet...");
 
       const wallet = externalWallets[0];
       if (!wallet) {
-        toast.error("Unable to find a connected wallet", { id: loadingToastId });
+        toast.error("Unable to find a connected wallet", { id: toastId });
         setIsLoading(false);
         return;
       }
@@ -259,29 +269,27 @@ const LandingAuctions: React.FC = () => {
       await wallet.switchChain(baseChain.id);
       const bidderIdentifier = String(user.socialId);
 
-      toast.loading("Sending approval transaction", { id: loadingToastId });
+      toast.loading("Approving...", { id: toastId });
       const erc20Contract = await writeNewContractSetup(
-        storedAuction.tokenAddress,
+        auction.tokenAddress,
         erc20Abi,
         externalWallets[0]
       );
 
       const approveTx = await erc20Contract?.approve(
         contractAdds.auctions as `0x${string}`,
-        storedBidAmountInWei
+        bidAmountInWei
       );
 
       await approveTx?.wait();
 
       if (!approveTx) {
-        toast.error("Approval transaction failed", { id: loadingToastId });
+        toast.error("Approval transaction failed", { id: toastId });
         setIsLoading(false);
         return;
       }
 
-      toast.success("Approval successful!", { id: loadingToastId });
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.loading("Sending bid transaction", { id: loadingToastId });
+      toast.loading("Bidding...", { id: toastId });
 
       const contract = await writeNewContractSetup(
         contractAdds.auctions,
@@ -289,34 +297,27 @@ const LandingAuctions: React.FC = () => {
         externalWallets[0]
       );
 
-      toast.loading("Waiting for transaction...", { id: loadingToastId });
+      toast.loading("Confirming...", { id: toastId });
 
       const txHash = await contract?.placeBid(
-        currentBid.auctionId,
-        storedBidAmountInWei,
+        auctionId,
+        bidAmountInWei,
         bidderIdentifier
       );
-
-      toast.loading("Transaction submitted, waiting for confirmation...", {
-        id: loadingToastId,
-      });
 
       await txHash?.wait();
 
       if (!txHash) {
-        toast.error("Transaction failed", { id: loadingToastId });
+        toast.error("Transaction failed", { id: toastId });
         setIsLoading(false);
         return;
       }
 
-      toast.loading("Transaction confirmed! Saving bid details...", {
-        id: loadingToastId,
-      });
-
-      await processSuccess(currentBid.auctionId, currentBid.amount);
+      toast.success("Transaction confirmed!", { id: toastId });
+      await processSuccess(auctionId, bidAmount);
     } catch (error) {
       console.error("Fallback transaction failed:", error);
-      toast.error("Fallback transaction failed. Please try again.", { id: loadingToastId });
+      toast.error("Failed", { id: toastId });
       setIsLoading(false);
       setCurrentBid(null);
       setLoadingToastId(null);
@@ -334,9 +335,16 @@ const LandingAuctions: React.FC = () => {
       // Don't clear currentBid here - let processSuccess handle it
       processSuccess(currentBid.auctionId, currentBid.amount);
     }
-    // When transaction fails (status === 'error')
-    else if (status === "error" && currentBid && loadingToastId) {
-      handleFallbackTransaction();
+    // When transaction fails (status === 'error') - fallback to external wallet
+    else if (status === "error" && currentBid && loadingToastId && storedAuction && storedBidAmountInWei > BigInt(0)) {
+      console.log("sendCalls failed, attempting fallback transaction...");
+      handleFallbackTransaction(
+        currentBid.auctionId,
+        currentBid.amount,
+        storedBidAmountInWei,
+        storedAuction,
+        loadingToastId
+      );
     }
   }, [isSuccess, status]);
 
@@ -373,7 +381,7 @@ const LandingAuctions: React.FC = () => {
         );
       }
 
-      toast.success("Bid placed successfully! Refreshing auctions...");
+      toast.success("Bid placed!");
 
       // Refresh the auctions to show updated bid data
       await fetchTopAuctions(1, false);
@@ -450,7 +458,7 @@ const LandingAuctions: React.FC = () => {
         }
       }
 
-      const toastId = toast.loading("Preparing transaction...");
+      const toastId = toast.loading("Preparing...");
       setLoadingToastId(toastId);
       setIsLoading(true);
 
@@ -578,67 +586,8 @@ const LandingAuctions: React.FC = () => {
           await processSuccess(auctionId, bidAmount);
           return;
         } catch (walletSendError) {
-          toast.loading("Sending approval transaction", { id: toastId });
-          const erc20Contract = await writeNewContractSetup(
-            auction.tokenAddress,
-            erc20Abi,
-            externalWallets[0]
-          );
-
-          // approve transaction
-          const approveTx = await erc20Contract?.approve(
-            contractAdds.auctions as `0x${string}`,
-            bidAmountInWei
-          );
-
-          await approveTx?.wait();
-
-          
-          
-          if (!approveTx) {
-            toast.error("Approval transaction failed", { id: toastId });
-            setIsLoading(false);
-            return;
-          }
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          toast.success("Approval successful!", { id: toastId });
-
-          toast.loading("Sending bid transaction", { id: toastId });
-
-          const contract = await writeNewContractSetup(
-            contractAdds.auctions,
-            auctionAbi,
-            externalWallets[0]
-          );
-
-          toast.loading("Waiting for transaction...", { id: toastId });
-
-          // Call the smart contract
-          const txHash = await contract?.placeBid(
-            auctionId,
-            bidAmountInWei,
-            bidderIdentifier
-          );
-
-          toast.loading("Transaction submitted, waiting for confirmation...", {
-            id: toastId,
-          });
-
-          await txHash?.wait();
-
-          if (!txHash) {
-            toast.error("Transaction failed", { id: toastId });
-            setIsLoading(false);
-            return;
-          }
-
-          toast.loading("Transaction confirmed! Saving bid details...", {
-            id: toastId,
-          });
-
-          // Directly call processSuccess for non-MiniKit flow
-          await processSuccess(auctionId, bidAmount);
+          toast.error("Transaction failed", { id: toastId });
+          setIsLoading(false);
         }
       } else {
         toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, {
