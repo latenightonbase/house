@@ -166,7 +166,11 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
   });
 
   // Process hostedBy
-  let enhancedHostedBy = { ...(auction.hostedBy as any) };
+  let enhancedHostedBy = { 
+    ...(auction.hostedBy as any),
+    averageRating: auction.hostedBy?.averageRating || 0,
+    totalReviews: auction.hostedBy?.totalReviews || 0
+  };
 
   if (hostNeynarData) {
     enhancedHostedBy.username = hostNeynarData.username || enhancedHostedBy.username;
@@ -490,7 +494,11 @@ export async function POST(
       highestBid: highestBid.toString(),
       minimumBid: auction.minimumBid.toString(),
       bidders: processedBidders,
-      hostedBy: enhancedHostedBy
+      hostedBy: {
+        ...enhancedHostedBy,
+        averageRating: auction.hostedBy?.averageRating || 0,
+        totalReviews: auction.hostedBy?.totalReviews || 0
+      }
     };
 
     return NextResponse.json(response);

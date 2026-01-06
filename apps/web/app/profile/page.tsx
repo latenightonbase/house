@@ -4,12 +4,36 @@ import { useGlobalContext } from '@/utils/providers/globalContext'
 import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth'
 import Image from 'next/image'
 import Heading from '@/components/UI/Heading'
+import RatingCircle from '@/components/UI/RatingCircle'
 import { MdWallet } from 'react-icons/md'
 import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
 import { useState, useEffect } from 'react'
 import TwitterAuthModal from '@/components/UI/TwitterAuthModal'
 import { useMiniKit } from '@coinbase/onchainkit/minikit'
+import ReviewCard from '@/components/UI/ReviewCard'
+
+interface Review {
+  _id: string
+  rating: number
+  comment?: string
+  reviewer: {
+    _id: string
+    username?: string
+    pfp_url?: string
+    twitterProfile?: {
+      username: string
+      profileImageUrl?: string
+    }
+    wallets: string[]
+  }
+  auction: {
+    _id: string
+    auctionName: string
+    blockchainAuctionId: string
+  }
+  createdAt: string
+}
 
 interface UserProfile {
   _id: string
@@ -20,6 +44,8 @@ interface UserProfile {
   fid?: string
   pfp_url: string
   display_name: string
+  averageRating?: number
+  totalReviews?: number
   twitterProfile?: {
     id: string
     username: string
@@ -47,6 +73,7 @@ export default function ProfilePage() {
   const navigateWithLoader = useNavigateWithLoader()
   const [profileData, setProfileData] = useState<UserProfile | null>(null)
   const [statistics, setStatistics] = useState<ProfileStatistics | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([])
   const [loading, setLoading] = useState(true)
   const [showTwitterModal, setShowTwitterModal] = useState(false)
 
@@ -76,6 +103,13 @@ export default function ProfilePage() {
           console.log('Profile data received:', data.user)
           setProfileData(data.user)
           setStatistics(data.statistics)
+          
+          // Fetch reviews
+          const reviewsResponse = await fetch(`/api/reviews/user/${data.user._id}`)
+          const reviewsData = await reviewsResponse.json()
+          if (reviewsData.success) {
+            setReviews(reviewsData.reviews)
+          }
         }
       } catch (error) {
         console.error('Error fetching profile data:', error)
@@ -141,9 +175,22 @@ export default function ProfilePage() {
             )}
             
             <div className="flex-1 max-lg:text-center">
-              <Heading size="md" gradient={false} className="text-white mb-2">
+              <div className='flex gap-2 items-center max-lg:justify-center mb-4'>
+              <Heading size="md" gradient={false} className="text-white ">
                 {profileData?.twitterProfile?.username || user.username  || 'Anonymous User'}
               </Heading>
+              {profileData?.averageRating && profileData.averageRating > 0 && (
+                  <div className='relative'>
+                  <RatingCircle
+                    rating={profileData.averageRating}
+                    totalReviews={profileData.totalReviews || 0}
+                    size="sm"
+                    showLabel={false}
+                  />
+                  
+                  </div>
+                )}
+                </div>
               {!context && <p className="text-caption text-sm lg:text-base mb-4 text-caption font-bold">
                 Wallets: {profileData?.wallets.length ? <div className='flex flex-wrap gap-1 max-lg:justify-center mt-1'>
                   {profileData.wallets.map((wallet, index) => (
@@ -174,6 +221,35 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        {reviews.length > 0 && (
+          <div className="bg-black/50 rounded-xl border border-primary/20 p-6 my-6">
+            <h2 className="text-xl font-bold text-white mb-4">Reviews ({reviews.length})</h2>
+            <div className="space-y-4">
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review._id}
+                  rating={review.rating}
+                  comment={review.comment}
+                  reviewerId={review.reviewer._id}
+                  reviewerName={
+                    review.reviewer.twitterProfile?.username || 
+                    review.reviewer.username || 
+                    `${review.reviewer.wallets[0]?.slice(0, 6)}...${review.reviewer.wallets[0]?.slice(-4)}`
+                  }
+                  reviewerPfp={
+                    review.reviewer.twitterProfile?.profileImageUrl ||
+                    review.reviewer.pfp_url ||
+                    null
+                  }
+                  auctionName={review.auction.auctionName}
+                  createdAt={review.createdAt}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -231,8 +307,8 @@ export default function ProfilePage() {
             </div> */}
           </div>
         </div>
-        
-        <TwitterAuthModal 
+                
+                <TwitterAuthModal 
           isOpen={showTwitterModal}
           onClose={() => setShowTwitterModal(false)}
           onSuccess={() => {

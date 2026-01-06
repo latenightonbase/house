@@ -102,40 +102,38 @@ export default function UserAuctions({ activeAuctions, endedAuctions }: UserAuct
   return (
     <div className="space-y-8">
       {/* Active Auctions */}
-      <div>
-        <h2 className="text-xl font-bold text-white mb-4">
-          Active Auctions ({activeAuctions.length})
-        </h2>
-        {activeAuctions.length === 0 ? (
-          <div className="bg-white/5 rounded-lg p-8 text-center">
-            <p className="text-caption">No active auctions</p>
-          </div>
-        ) : (
+      {activeAuctions.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4">
+            Active Auctions ({activeAuctions.length})
+          </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {activeAuctions.map((auction) => (
               <AuctionCard key={auction._id} auction={auction} isActive={true} />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Ended Auctions */}
-      <div>
-        <h2 className="text-xl font-bold text-white mb-4">
-          Ended Auctions ({endedAuctions.length})
-        </h2>
-        {endedAuctions.length === 0 ? (
-          <div className="bg-white/5 rounded-lg p-8 text-center">
-            <p className="text-caption">No ended auctions</p>
-          </div>
-        ) : (
+      {endedAuctions.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold text-white mb-4">
+            Ended Auctions ({endedAuctions.length})
+          </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {endedAuctions.map((auction) => (
               <AuctionCard key={auction._id} auction={auction} isActive={false} />
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {activeAuctions.length === 0 && endedAuctions.length === 0 && (
+        <div className="bg-white/5 rounded-lg p-8 text-center">
+          <p className="text-caption">No auctions</p>
+        </div>
+      )}
     </div>
   )
 }

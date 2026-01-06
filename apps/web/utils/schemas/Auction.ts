@@ -107,6 +107,19 @@ const AuctionSchema: Schema = new Schema(
       type: Boolean,
       default: true,
     },
+    deliveredByHost: {
+      type: Boolean,
+      default: false,
+    },
+    hasReview: {
+      type: Boolean,
+      default: false,
+    },
+    rating:{
+      type: Schema.Types.ObjectId,
+      ref: 'Review',
+      default: null,
+    },
     winningBid: {
       type: Schema.Types.Mixed,
       default: null,
@@ -163,19 +176,20 @@ AuctionSchema.virtual('isActive').get(function(this: IAuction) {
 
 // Virtual to get the highest bid
 AuctionSchema.virtual('highestBid').get(function(this: IAuction) {
-  if (this.bidders.length === 0) return 0;
+  if (!this.bidders || this.bidders.length === 0) return 0;
   return Math.max(...this.bidders.map(bidder => bidder.bidAmount));
 });
 
 // Virtual to get the highest bidder
 AuctionSchema.virtual('highestBidder').get(function(this: IAuction) {
-  if (this.bidders.length === 0) return null;
+  if (!this.bidders || this.bidders.length === 0) return null;
   const highestBid = Math.max(...this.bidders.map(bidder => bidder.bidAmount));
   return this.bidders.find(bidder => bidder.bidAmount === highestBid);
 });
 
 // Virtual to get unique participants count
 AuctionSchema.virtual('participantCount').get(function(this: IAuction) {
+  if (!this.bidders) return 0;
   const uniqueUsers = new Set(this.bidders.map(bidder => bidder.user.toString()));
   return uniqueUsers.size;
 });

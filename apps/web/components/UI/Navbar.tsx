@@ -172,7 +172,7 @@ export default function Navbar(){
                 </div>
 
                 {/* Search Button */}
-                {authenticated && <div className="px-4 mb-4">
+                {/* {authenticated && <div className="px-4 mb-4">
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 transition-colors text-caption hover:text-white"
@@ -180,7 +180,7 @@ export default function Navbar(){
                         <RiSearchLine className="text-xl" />
                         <span>Search Users</span>
                     </button>
-                </div>}
+                </div>} */}
 
                 {/* Sidebar Content */}
                 <div className="flex-1 p-4">

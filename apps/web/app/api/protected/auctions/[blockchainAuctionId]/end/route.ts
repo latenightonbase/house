@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/utils/db";
 import Auction, { IBidder } from "@/utils/schemas/Auction";
 import User from "@/utils/schemas/User";
+import PendingDelivery from "@/utils/schemas/PendingDelivery";
 import { ethers } from "ethers";
 import { fetchTokenPrice, calculateUSDValue } from "@/utils/tokenPrice";
 import { authenticateRequest } from "@/utils/authService";
@@ -227,6 +228,29 @@ export async function POST(req: NextRequest) {
 
     auction.status = "ended";
     await auction.save();
+
+    // Create PendingDelivery document if there's a winner
+    if (auction.winningBid && auction.winningBid !== "no_bids") {
+      try {
+        const host = await User.findById(auction.hostedBy);
+        const winner = await User.findById(auction.winningBid);
+
+        if (host && winner && host.socialId && winner.socialId) {
+          await PendingDelivery.create({
+            auctionId: auction._id,
+            hostId: host._id,
+            winnerId: winner._id,
+            hostSocialId: host.socialId,
+            winnerSocialId: winner.socialId,
+            delivered: false,
+          });
+          console.log("[PENDING DELIVERY] Created pending delivery record");
+        }
+      } catch (error) {
+        console.error("❌ [PENDING DELIVERY] Failed to create:", error);
+        // Don't fail the auction end if pending delivery creation fails
+      }
+    }
 
     // Trigger fee distribution in the background (true fire-and-forget)
     // This runs server-side so it continues even if client disconnects

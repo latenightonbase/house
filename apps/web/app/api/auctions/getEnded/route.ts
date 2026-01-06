@@ -9,88 +9,46 @@ export async function GET(req: NextRequest) {
   try {
     await dbConnect();
     
-    // Ensure User model is registered
     User;
 
     const currentDate = new Date();
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '3'); // Changed default to 3 for faster loading
-    const currencyFilter = searchParams.get('currency') || 'all';
-    const skip = (page - 1) * limit;
+    const limit = parseInt(searchParams.get('limit') || '5');
 
-    // Build currency filter query
-    let currencyQuery = {};
-    if (currencyFilter === 'usdc') {
-      currencyQuery = { currency: 'USDC' };
-    } else if (currencyFilter === 'creator-coins') {
-      currencyQuery = { currency: { $ne: 'USDC' } };
-    }
+    const endedAuctions = await Auction.find({
+      status: 'ended',
+      enabled: true,
+      endDate: { $lt: currentDate },
+      bidders: { $exists: true, $ne: [] }
+    })
+    .populate({
+      path: 'hostedBy',
+      select: '_id wallet wallets fid socialId socialPlatform username twitterProfile averageRating totalReviews'
+    })
+    .populate({
+      path: 'bidders.user',
+      select: '_id wallet wallets fid socialId socialPlatform username twitterProfile'
+    })
+    .sort({ endDate: -1 })
+    .limit(limit)
+    .lean();
 
-    // Find auctions that are currently running (started but not ended)
-    // Sort by endDate ascending (soonest ending first) and implement pagination
-    const [runningAuctions, totalCount] = await Promise.all([
-      Auction.find({
-        status: 'ongoing',
-        enabled: true,
-        startDate: { $lte: currentDate },
-        endDate: { $gte: currentDate },
-        ...currencyQuery
-      })
-      .populate({
-        path: 'hostedBy',
-        select: '_id wallet wallets fid socialId socialPlatform username twitterProfile averageRating totalReviews'
-      }) // Populate full host information with explicit field selection
-      .populate({
-        path: 'bidders.user',
-        select: '_id wallet wallets fid socialId socialPlatform username twitterProfile'
-      }) // Populate full bidder user information
-      .sort({ endDate: 1 }) // Sort by end date ascending (soonest ending first)
-      .skip(skip)
-      .limit(limit)
-      .lean(), // Use lean() for faster read-only queries
-
-      // Get total count for pagination info
-      Auction.countDocuments({
-        startDate: { $lte: currentDate },
-        endDate: { $gte: currentDate },
-        ...currencyQuery
-      })
-    ]);
-
-    if (runningAuctions.length === 0 && page === 1) {
+    if (endedAuctions.length === 0) {
       return NextResponse.json({
         success: true,
         auctions: [],
-        total: 0,
-        page,
-        hasMore: false
+        total: 0
       }, { status: 200 });
     }
 
-    if (runningAuctions.length === 0 && page > 1) {
-      return NextResponse.json({
-        success: true,
-        auctions: [],
-        total: totalCount,
-        page,
-        hasMore: false
-      }, { status: 200 });
-    }
-
-    // Process hostedBy and top bidders data to fetch display names from Neynar API
     const hostFids = new Set<string>();
     const bidderFids = new Set<string>();
     
-    // Collect unique FIDs separately for hosts and top bidders
-    runningAuctions.forEach(auction => {
-      // Add host FID
+    endedAuctions.forEach(auction => {
       if (auction.hostedBy?.socialId && auction.hostedBy.socialId !== '' && auction.hostedBy.socialPlatform !== "TWITTER") {
-        console.log('Adding host FID:', auction.hostedBy.socialId);
         hostFids.add(auction.hostedBy.socialId);
       }
       
-      // Add top bidder FID if there are bidders
       if (auction.bidders.length > 0) {
         const highestBid = Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount));
         const topBidder = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
@@ -100,28 +58,19 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    // Fetch display names from Neynar API separately for hosts and bidders
     let neynarUsers: Record<string, any> = {};
     
-    console.log('Host FIDs collected:', Array.from(hostFids));
-    console.log('Bidder FIDs collected:', Array.from(bidderFids));
-
-    // Combine all FIDs and fetch with cache
     const allFids = [...Array.from(hostFids), ...Array.from(bidderFids)];
     if (allFids.length > 0) {
       neynarUsers = await getFidsWithCache(allFids);
       
-      // Identify missing FIDs and make fallback API call if needed
       const missingFids: string[] = [];
       for (const fid of allFids) {
         if (!neynarUsers[fid]) {
-          // Check if user has Twitter profile
-          const hasTwitterProfile = runningAuctions.some(auction => {
-            // Check host
+          const hasTwitterProfile = endedAuctions.some(auction => {
             if (auction.hostedBy?.socialId === fid && auction.hostedBy?.twitterProfile) {
               return true;
             }
-            // Check bidders
             return auction.bidders.some((bidder: any) => 
               bidder.user?.socialId === fid && bidder.user?.twitterProfile
             );
@@ -133,7 +82,6 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // Make fallback Neynar API call for missing FIDs
       if (missingFids.length > 0) {
         try {
           const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${missingFids.join(',')}`, {
@@ -146,7 +94,6 @@ export async function GET(req: NextRequest) {
             const data = await response.json();
             const redisClient = getRedisClient();
             
-            // Cache each user in Redis and add to neynarUsers
             for (const user of data.users) {
               neynarUsers[user.fid.toString()] = user;
               
@@ -169,45 +116,31 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Calculate additional fields for each auction
-    const auctionsWithStats = runningAuctions.map(auction => {
-
-      console.log("Auction Stats", auction)
-
-      // Calculate highest bid
+    const auctionsWithStats = endedAuctions.map(auction => {
       const highestBid = auction.bidders.length > 0 
         ? Math.max(...auction.bidders.map((bidder: any) => bidder.bidAmount))
         : 0;
 
-      // Find top bidder
       let topBidder = null;
       if (auction.bidders.length > 0) {
         const topBidderData = auction.bidders.find((bidder: any) => bidder.bidAmount === highestBid);
         if (topBidderData) {
-
-          console.log("Top bidder data exists", topBidderData);
-
           topBidder = {
             ...topBidderData.user,
             bidAmount: topBidderData.bidAmount,
             bidTimestamp: topBidderData.bidTimestamp
           };
 
-          // Enhance top bidder with Neynar data
           if (topBidder.socialId && topBidder.socialId !== '' && topBidder.socialPlatform !== "TWITTER") {
-            // For valid FIDs, use data from Neynar API
-            console.log(`Processing top bidder ${topBidder.socialId}:`, { neynarUser: neynarUsers[topBidder.socialId] });
             const neynarUser = neynarUsers[topBidder.socialId];
             const fallbackWallet = topBidder.wallet;
             const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
             topBidder.username = neynarUser?.display_name || topBidder.username || truncatedWallet;
             topBidder.pfp_url = neynarUser?.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
           } else if (topBidder.twitterProfile?.username) {
-            // No valid FID, use Twitter profile
             topBidder.username = topBidder.twitterProfile.username;
             topBidder.pfp_url = topBidder.twitterProfile.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${topBidder.wallet}`;
           } else {
-            // No FID or Twitter profile, use truncated wallet
             const wallet = topBidder.wallet;
             topBidder.username = wallet ? `${wallet.slice(0, 4)}...${wallet.slice(-2)}` : wallet;
             topBidder.pfp_url = `https://api.dicebear.com/5.x/identicon/svg?seed=${wallet}`;
@@ -215,51 +148,25 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      console.log("Auction's Top Bidder:", topBidder);
-
-      // Calculate participant count (unique users only)
       const participantCount = new Set(auction.bidders.map((bidder: any) => bidder.user._id.toString())).size;
 
-      // Calculate time remaining
-      const timeRemaining = auction.endDate.getTime() - currentDate.getTime();
-      const hoursRemaining = Math.max(0, Math.floor(timeRemaining / (1000 * 60 * 60)));
+      const timeEnded = currentDate.getTime() - auction.endDate.getTime();
+      const hoursEnded = Math.floor(timeEnded / (1000 * 60 * 60));
 
-      // Process hostedBy to add username and display_name fields
       let enhancedHostedBy = { ...auction.hostedBy };
-      console.log('Original hostedBy data:', {
-        socialId: auction.hostedBy?.socialId,
-        averageRating: auction.hostedBy?.averageRating,
-        totalReviews: auction.hostedBy?.totalReviews
-      });
       if (auction.hostedBy?.socialId && auction.hostedBy.socialId !== '' && auction.hostedBy.socialPlatform !== "TWITTER") {
-        // For valid FIDs, use data from Neynar API
         const neynarUser = neynarUsers[auction.hostedBy.socialId];
         const fallbackWallet = auction.hostedBy.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         
-        console.log(`Processing host ${auction.hostedBy.socialId}:`, {
-          neynarUser: neynarUser ? { username: neynarUser.username, display_name: neynarUser.display_name } : null,
-          originalUsername: auction.hostedBy.username,
-          fallback: truncatedWallet
-        });
-        
-        // Set both username, display_name, and profile picture
         enhancedHostedBy.username = neynarUser?.username || auction.hostedBy.username || truncatedWallet;
         enhancedHostedBy.display_name = neynarUser?.display_name || null;
         enhancedHostedBy.pfp_url = neynarUser?.pfp_url || auction.hostedBy.twitterProfile?.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${fallbackWallet}`;
-        
-        console.log(`Enhanced host data:`, {
-          username: enhancedHostedBy.username,
-          display_name: enhancedHostedBy.display_name,
-          pfp_url: enhancedHostedBy.pfp_url
-        });
       } else if (auction.hostedBy?.twitterProfile?.username) {
-        // No valid FID, use Twitter profile username
         enhancedHostedBy.username = auction.hostedBy.twitterProfile.username;
         enhancedHostedBy.display_name = auction.hostedBy.twitterProfile.name || null;
         enhancedHostedBy.pfp_url = auction.hostedBy.twitterProfile.profileImageUrl || `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`;
       } else {
-        // No FID or Twitter profile, use existing username or truncated wallet
         const wallet = auction.hostedBy.wallet;
         enhancedHostedBy.username = auction.hostedBy.username || (wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet);
         enhancedHostedBy.display_name = null;
@@ -270,14 +177,13 @@ export async function GET(req: NextRequest) {
         ...auction,
         hostedBy: {
           ...enhancedHostedBy,
-          // Preserve the fetched values; only use 0 if they're explicitly undefined/null
           averageRating: auction.hostedBy?.averageRating ?? 0,
           totalReviews: auction.hostedBy?.totalReviews ?? 0
         },
         highestBid,
         topBidder,
         participantCount,
-        hoursRemaining,
+        hoursEnded,
         bidCount: auction.bidders.length
       };
     });
@@ -285,18 +191,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       auctions: auctionsWithStats,
-      total: totalCount,
-      page,
-      hasMore: skip + auctionsWithStats.length < totalCount
+      total: endedAuctions.length
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Error fetching top 5 running auctions:', error);
+    console.error('Error fetching ended auctions:', error);
     return NextResponse.json(
       { 
         success: false, 
         error: 'Internal server error',
-        message: 'Failed to fetch running auctions'
+        message: 'Failed to fetch ended auctions'
       }, 
       { status: 500 }
     );

@@ -34,9 +34,36 @@ export async function POST(request: NextRequest) {
     console.log('Existing user check:', existingUser);
 
     if (existingUser) {
+      let updated = false;
 
       if(!existingUser.privyId){
         existingUser.privyId = privyId;
+        updated = true;
+      }
+
+      if (twitterProfile) {
+        const currentTwitterProfile = existingUser.twitterProfile;
+        const needsUpdate = !currentTwitterProfile ||
+          currentTwitterProfile.id !== twitterProfile.id ||
+          currentTwitterProfile.username !== twitterProfile.username ||
+          currentTwitterProfile.name !== (twitterProfile.name || twitterProfile.username) ||
+          currentTwitterProfile.profileImageUrl !== twitterProfile.profileImageUrl;
+
+        if (needsUpdate) {
+          existingUser.twitterProfile = {
+            id: twitterProfile.id,
+            username: twitterProfile.username,
+            name: twitterProfile.name || twitterProfile.username,
+            profileImageUrl: twitterProfile.profileImageUrl
+          };
+          if (!existingUser.username) {
+            existingUser.username = twitterProfile.username;
+          }
+          updated = true;
+        }
+      }
+
+      if (updated) {
         await existingUser.save();
       }
 

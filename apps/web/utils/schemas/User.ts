@@ -23,6 +23,8 @@ export interface IUser extends Document {
   hostedAuctions: Types.ObjectId[];
   bidsWon: Types.ObjectId[];
   participatedAuctions: Types.ObjectId[];
+  averageRating?: number;
+  totalReviews?: number;
   twitterProfile?: {
     id: string;
     username: string;
@@ -91,6 +93,14 @@ const UserSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Auction',
     }],
+    averageRating: {
+      type: Number,
+      default: 0,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
     twitterProfile: {
       id: {
         type: String,

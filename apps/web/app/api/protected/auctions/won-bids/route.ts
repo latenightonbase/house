@@ -64,6 +64,8 @@ export async function GET(req: NextRequest) {
         highestBid,
         participantCount,
         bidCount,
+        deliveredByHost: auction.deliveredByHost,
+        hasReview: auction.hasReview,
         timeInfo: `Ended ${endDate.toLocaleDateString()}`
       };
     });

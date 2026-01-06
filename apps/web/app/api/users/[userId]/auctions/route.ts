@@ -22,7 +22,7 @@ export async function GET(
 
     // Find user and their auctions
     const userDoc = await User.findById(userId)
-      .select('wallets fid username hostedAuctions twitterProfile socialId socialPlatform');
+      .select('wallets fid username hostedAuctions twitterProfile socialId socialPlatform averageRating totalReviews');
 
     if (!userDoc) {
       return NextResponse.json(
@@ -141,6 +141,8 @@ export async function GET(
         display_name: userProfile.display_name,
         bio: userProfile.bio,
         x_username: userProfile.x_username,
+        averageRating: user.averageRating || 0,
+        totalReviews: user.totalReviews || 0,
         twitterProfile: user.twitterProfile || null,
         platform: user.socialPlatform || null
       },

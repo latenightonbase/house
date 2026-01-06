@@ -54,36 +54,10 @@ export async function POST(req: NextRequest) {
         console.log('Token to swap:', token);
         console.log('Wallet address:', wallet.address);
 
-        let totalUSDC;
         let swapTxHash = null;
 
-        // Check if token is already USDC - if so, skip the initial swap
-        if (token.toLowerCase() === USDC_BASE.toLowerCase()) {
-            console.log('ℹ️ Token is already USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), skipping initial swap...');
-            console.log('✅ Proceeding directly to USDC distribution');
-            
-            // Get USDC balance directly
-            const usdcContract = new ethers.Contract(
-                USDC_BASE,
-                ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'],
-                provider
-            );
-            
-            const usdcBalance = await usdcContract.balanceOf(wallet.address);
-            console.log('✅ USDC balance retrieved:', usdcBalance.toString());
-            console.log('✅ USDC balance (human readable):', ethers.formatUnits(usdcBalance, 6), 'USDC');
-            
-            if (usdcBalance === 0n) {
-                console.error('❌ No USDC to distribute - balance is zero');
-                return NextResponse.json({ success: false, message: 'No USDC to distribute' }, { status: 400 });
-            }
-            
-            totalUSDC = usdcBalance;
-        } else {
-            // Original swap logic for non-USDC tokens
-
-            // Original swap logic for non-USDC tokens
-            // // Get token balance
+        // If token is NOT USDC, swap to USDC first
+        if (token.toLowerCase() !== USDC_BASE.toLowerCase()) {
             console.log('📊 Checking token balance...');
             const tokenContract = new ethers.Contract(
                 token,
@@ -107,18 +81,17 @@ export async function POST(req: NextRequest) {
                 return NextResponse.json({ success: false, message: 'Failed to get token balance' }, { status: 500 });
             }
 
-            // // Get price quote
-            // console.log('💰 Getting price quote from 0x API...');
+            console.log('💰 Getting price quote from 0x API...');
             const priceParams = new URLSearchParams({
                 chainId: BASE_CHAIN_ID,
                 sellToken: token,
                 buyToken: USDC_BASE,
                 sellAmount: balance.toString(),
                 taker: wallet.address,
-                slippagePercentage: '0.5', // 0.5% slippage protection
-                gasless: 'false', // Optimize for lower gas
-                intentOnFilling: 'true', // Signal intent for better routing
-                enableSlippageProtection: 'true', // Enable slippage protection
+                slippagePercentage: '0.5',
+                gasless: 'false',
+                intentOnFilling: 'true',
+                enableSlippageProtection: 'true',
             });
 
             const priceResponse = await fetch(
@@ -133,14 +106,6 @@ export async function POST(req: NextRequest) {
 
             const priceData = await priceResponse.json();
 
-            // console.log('✅ Price data received:', {
-            //     buyAmount: priceData.buyAmount,
-            //     sellAmount: priceData.sellAmount,
-            //     price: priceData.price,
-            //     gasPrice: priceData.gasPrice
-            // });
-
-            // // Check if allowance is needed
             if (priceData.issues?.allowance) {
                 console.log('🔐 Approving token allowance...');
                 const tokenContract = new ethers.Contract(
@@ -159,8 +124,7 @@ export async function POST(req: NextRequest) {
                 console.log('ℹ️ No token allowance needed');
             }
 
-            // // Get firm quote
-            // console.log('📋 Getting firm quote from 0x API...');
+            console.log('📋 Getting firm quote from 0x API...');
             const quoteResponse = await fetch(
                 `https://api.0x.org/swap/allowance-holder/quote?${priceParams.toString()}`,
                 {
@@ -173,31 +137,21 @@ export async function POST(req: NextRequest) {
 
             const quoteData = await quoteResponse.json();
 
-            // console.log('✅ Quote data received:', {
-            //     buyAmount: quoteData.buyAmount,
-            //     gas: quoteData.transaction.gas,
-            //     to: quoteData.transaction.to
-            // });
-
-            // // Execute swap
-            // console.log('🔄 Executing token to USDC swap...');
+            console.log('🔄 Executing token to USDC swap...');
             
-            // Get current gas price and set a reasonable gas limit
             const feeData = await provider.getFeeData();
             const currentGasPrice = feeData.gasPrice || 0n;
             console.log('Current network gas price:', ethers.formatUnits(currentGasPrice, 'gwei'), 'gwei');
             
-            // Use a more conservative gas price multiplier based on current conditions
             const gasPriceGwei = parseFloat(ethers.formatUnits(currentGasPrice, 'gwei'));
-            const multiplier = BigInt(gasPriceGwei > 20 ? 105 : 110); // Lower multiplier if gas is already high
+            const multiplier = BigInt(gasPriceGwei > 20 ? 105 : 110);
             const swapOptimizedGasPrice = (currentGasPrice * multiplier) / 100n;
             
             console.log('Optimized gas price:', ethers.formatUnits(swapOptimizedGasPrice, 'gwei'), 'gwei');
             
-            // Estimate gas limit with buffer
             const swapEstimatedGas = quoteData.transaction.gas ? 
-                (BigInt(quoteData.transaction.gas) * 120n) / 100n : // 20% buffer
-                250000n; // fallback gas limit for token swaps
+                (BigInt(quoteData.transaction.gas) * 120n) / 100n :
+                250000n;
             
             const swapTx = await wallet.sendTransaction({
                 to: quoteData.transaction.to,
@@ -217,8 +171,25 @@ export async function POST(req: NextRequest) {
             console.log('Gas price used:', swapOptimizedGasPrice.toString());
             console.log('Total gas cost (ETH):', ethers.formatEther(receipt.gasUsed * swapOptimizedGasPrice));
             
-            totalUSDC = BigInt(quoteData.buyAmount);
             swapTxHash = receipt.hash;
+        } else {
+            console.log('ℹ️ Token is already USDC, skipping swap...');
+        }
+
+        // Get USDC balance
+        const usdcContract = new ethers.Contract(
+            USDC_BASE,
+            ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'],
+            provider
+        );
+        
+        const totalUSDC = await usdcContract.balanceOf(wallet.address);
+        console.log('✅ USDC balance retrieved:', totalUSDC.toString());
+        console.log('✅ USDC balance (human readable):', ethers.formatUnits(totalUSDC, 6), 'USDC');
+        
+        if (totalUSDC === 0n) {
+            console.error('❌ No USDC to distribute - balance is zero');
+            return NextResponse.json({ success: false, message: 'No USDC to distribute' }, { status: 400 });
         }
 
         // Calculate distribution amounts (25% RISAV, 12.5% BILL, 62.5% buy/burn)
@@ -226,29 +197,21 @@ export async function POST(req: NextRequest) {
         const billAmount = (totalUSDC * 1n) / 8n;   // 12.5%
         const buyBurnAmount = totalUSDC - risavAmount - billAmount; // 62.5%
 
-        // // USDC contract for transfers
-        // console.log('🏦 Setting up USDC contract...');
-        const usdcContract = new ethers.Contract(
+        // USDC contract for transfers
+        console.log('🏦 Setting up USDC contract for transfers...');
+        const usdcTransferContract = new ethers.Contract(
             USDC_BASE,
-            ['function transfer(address to, uint256 amount) external returns (bool)', 'function balanceOf(address) view returns (uint256)'],
+            ['function transfer(address to, uint256 amount) external returns (bool)'],
             wallet
         );
 
-        // // Check actual USDC balance
-        const actualUSDCBalance = await usdcContract.balanceOf(wallet.address);
-        // console.log('✅ Actual USDC balance in wallet:', actualUSDCBalance.toString());
-        
-        if (actualUSDCBalance < totalUSDC) {
-            console.warn('⚠️ Warning: Actual balance is less than expected USDC amount');
-        }
-
         console.log('💸 Sending 25% to RISAV_WALLET...');
-        const risavTx = await usdcContract.transfer(process.env.RISAV_WALLET, risavAmount);
+        const risavTx = await usdcTransferContract.transfer(process.env.RISAV_WALLET, risavAmount);
         await risavTx.wait();
         console.log('✅ Sent to RISAV_WALLET:', risavAmount.toString(), 'Hash:', risavTx.hash);
 
         console.log('💸 Sending 12.5% to BILL_WALLET...');
-        const billTx = await usdcContract.transfer(process.env.BILL_WALLET, billAmount);
+        const billTx = await usdcTransferContract.transfer(process.env.BILL_WALLET, billAmount);
         await billTx.wait();
         console.log('✅ Sent to BILL_WALLET:', billAmount.toString(), 'Hash:', billTx.hash);
 
@@ -258,10 +221,10 @@ export async function POST(req: NextRequest) {
             buyToken: TARGET_TOKEN,
             sellAmount: buyBurnAmount.toString(),
             taker: wallet.address,
-            slippagePercentage: '0.5', // 0.5% slippage protection
-            gasless: 'false', // Optimize for lower gas
-            intentOnFilling: 'true', // Signal intent for better routing
-            enableSlippageProtection: 'true', // Enable slippage protection
+            slippagePercentage: '0.5',
+            gasless: 'false',
+            intentOnFilling: 'true',
+            enableSlippageProtection: 'true',
         });
 
         const tokenPriceResponse = await fetch(

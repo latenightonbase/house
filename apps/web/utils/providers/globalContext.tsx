@@ -87,6 +87,7 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
 useEffect(() => {
   const createUser = async () => {
+    console.log('Checking if user creation is needed:', {privyUser, address});
     if(privyUser && privyUser.farcaster && !userCreatedRef.current){
       userCreatedRef.current = true;
       const accessToken = await getAccessToken();
@@ -132,6 +133,7 @@ useEffect(() => {
       socialId: privyUser?.twitter?.subject,
       username: privyUser?.twitter?.username,
       pfp_url: privyUser?.twitter?.profilePictureUrl,
+      privyId: privyUser?.id,
       platform: 'TWITTER'
     })
   }

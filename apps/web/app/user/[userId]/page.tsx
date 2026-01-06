@@ -1,80 +1,128 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { RiLoader5Fill, RiArrowLeftLine, RiUserLine } from 'react-icons/ri'
-import Heading from '@/components/UI/Heading'
-import UserAuctions from '@/components/UserAuctions'
-import { useMiniKit } from '@coinbase/onchainkit/minikit'
-import { sdk } from '@farcaster/miniapp-sdk'
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { RiLoader5Fill, RiArrowLeftLine, RiUserLine } from "react-icons/ri";
+import Heading from "@/components/UI/Heading";
+import UserAuctions from "@/components/UserAuctions";
+import ReviewCard from "@/components/UI/ReviewCard";
+import RatingCircle from "@/components/UI/RatingCircle";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { sdk } from "@farcaster/miniapp-sdk";
 
 interface UserData {
   user: {
-    _id: string
-    wallet: string
-    fid?: string
-    username?: string
-    pfp_url?: string | null
-    display_name?: string | null
-    bio?: string | null
-    x_username?: string | null
-    twitterProfile?: any | null
-    platform?: string | null
-  }
-  activeAuctions: any[]
-  endedAuctions: any[]
+    _id: string;
+    wallet: string;
+    fid?: string;
+    username?: string;
+    pfp_url?: string | null;
+    display_name?: string | null;
+    bio?: string | null;
+    x_username?: string | null;
+    averageRating?: number;
+    totalReviews?: number;
+    twitterProfile?: any | null;
+    platform?: string | null;
+  };
+  activeAuctions: any[];
+  endedAuctions: any[];
+}
+
+interface Review {
+  _id: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  reviewer: {
+    _id: string;
+    username?: string;
+    display_name?: string;
+    pfp_url?: string | null;
+    twitterProfile?: {
+      username: string;
+      profileImageUrl?: string;
+    };
+  };
+  auction: {
+    auctionName: string;
+  };
 }
 
 export default function UserPage() {
-  const params = useParams()
-  const router = useRouter()
-  const userId = params.userId as string
+  const params = useParams();
+  const router = useRouter();
+  const userId = params.userId as string;
 
-  const [userData, setUserData] = useState<UserData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"reviews" | "active" | "ended">("reviews");
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
-  const {context} = useMiniKit()
+  const { context } = useMiniKit();
 
   const handleViewProfile = async () => {
     if (context && userData?.user.fid) {
       try {
-        await sdk.actions.viewProfile({ 
-          fid: parseInt(userData.user.fid)
-        })
+        await sdk.actions.viewProfile({
+          fid: parseInt(userData.user.fid),
+        });
       } catch (error) {
-        console.error('Error viewing profile:', error)
+        console.error("Error viewing profile:", error);
       }
     }
-  }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        setLoading(true)
-        const response = await fetch(`/api/users/${userId}/auctions`)
-        
+        setLoading(true);
+        const response = await fetch(`/api/users/${userId}/auctions`);
+
         if (!response.ok) {
           if (response.status === 404) {
-            throw new Error('User not found')
+            throw new Error("User not found");
           }
-          throw new Error('Failed to fetch user data')
+          throw new Error("Failed to fetch user data");
         }
 
-        const data = await response.json()
-        console.log('Fetched user data:', data)
-        setUserData(data)
+        const data = await response.json();
+        setUserData(data);
       } catch (err: any) {
-        setError(err.message)
+        setError(err.message);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     if (userId) {
-      fetchUserData()
+      fetchUserData();
     }
-  }, [userId])
+  }, [userId]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!userId || activeTab !== "reviews") return;
+      
+      try {
+        setReviewsLoading(true);
+        const response = await fetch(`/api/reviews/user/${userId}`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          setReviews(data.reviews || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch reviews:", err);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [userId, activeTab]);
 
   if (loading) {
     return (
@@ -84,7 +132,7 @@ export default function UserPage() {
           <p className="mt-4 text-caption">Loading user profile...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -101,7 +149,7 @@ export default function UserPage() {
           </button>
         </div>
       </div>
-    )
+    );
   }
 
   if (!userData) {
@@ -109,7 +157,7 @@ export default function UserPage() {
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-caption">No user data found</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -126,10 +174,10 @@ export default function UserPage() {
 
         {/* User Header */}
         <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 border border-white/10">
-          <div className="flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex max-lg:flex-col items-center justify-between gap-2">
-                <div>
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex-1 min-w-0 w-full">
+              <div className="w-full flex lg:justify-start mb-4 max-lg:flex-col items-center justify-start gap-2">
+                <div className="w-full">
                     <div className="flex items-center gap-2">
                         {/* Profile Picture */}
                 {userData.user.pfp_url && (
@@ -142,10 +190,24 @@ export default function UserPage() {
                     <Heading size="sm" className="w-full truncate">
                         {userData.user.display_name || (userData.user.username ? `@${userData.user.username}` : 'User Profile')}
                     </Heading>
+
+                    {(userData.user.averageRating ?? 0) > 0 && (userData.user.totalReviews ?? 0) > 0 && (
+                        <div className="relative">
+                          <RatingCircle
+                            rating={userData.user.averageRating}
+                            totalReviews={userData.user.totalReviews}
+                            size="md"
+                            showLabel={false}
+                          />
+                          {/* <div className="absolute text-sm font-bold top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                            {userData.user.averageRating}
+                          </div> */}
+                        </div>
+                      )}
                     
                     </div>
                     {userData.user.bio && (
-                <p className="text-white/80 text-sm my-3 line-clamp-2">{userData.user.bio}</p>
+                <p className="text-white/80 text-sm my-3 line-clamp-2 max-lg:text-center">{userData.user.bio}</p>
               )}
               <div className='flex gap-2 w-full items-center justify-center lg:justify-start'>
                 {userData.user.x_username && userData.user.platform == "FARCASTER" && (
@@ -197,33 +259,107 @@ export default function UserPage() {
                       Profile
                     </button>
                   )}
-
-              </div>
-                    
                 </div>
-                <div className="lg:text-right text-center flex flex-col items-center gap-2">
-                  {/* View Profile Button - only show if context is available and user has fid */}
-                  
-                  <div>
-                    <p className="text-caption text-xs">Total Auctions</p>
-                    <p className="text-2xl font-bold text-primary">
-                      {userData.activeAuctions.length + userData.endedAuctions.length}
-                    </p>
-                  </div>
+                
+                <div className="flex items-center justify-between mt-4 w-full">
+                  <p className="text-caption text-md">Hosted</p>
+                  <p className="text-2xl font-bold text-primary w-full lg:text-right text-right">
+                    {userData.activeAuctions.length + userData.endedAuctions.length}
+                  </p>
                 </div>
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* Auctions */}
-        <UserAuctions 
-          activeAuctions={userData.activeAuctions}
-          endedAuctions={userData.endedAuctions}
-        />
+        {/* Toggle Buttons */}
+        <div className="flex mb-6 overflow-x-hidden gap-2">
+          <button
+            onClick={() => setActiveTab("reviews")}
+            className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+              activeTab === "reviews"
+                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+                : "text-caption hover:text-foreground"
+            }`}
+          >
+            Reviews
+          </button>
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+              activeTab === "active"
+                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+                : "text-caption hover:text-foreground"
+            }`}
+          >
+            Active
+          </button>
+          <button
+            onClick={() => setActiveTab("ended")}
+            className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+              activeTab === "ended"
+                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+                : "text-caption hover:text-foreground"
+            }`}
+          >
+            Ended
+          </button>
+        </div>
+
+        {/* Content based on active tab */}
+        {activeTab === "reviews" && (
+          <div>
+            <h2 className="text-xl font-bold text-white mb-4">
+              Reviews ({reviews.length})
+            </h2>
+            {reviewsLoading ? (
+              <div className="bg-white/5 rounded-lg p-8 text-center">
+                <RiLoader5Fill className="text-primary animate-spin text-3xl mx-auto" />
+                <p className="mt-4 text-caption">Loading reviews...</p>
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="bg-white/5 rounded-lg p-8 text-center">
+                <p className="text-caption">No reviews yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {reviews.map((review) => (
+                  <ReviewCard
+                    key={review._id}
+                    rating={review.rating}
+                    comment={review.comment}
+                    reviewerId={review.reviewer._id}
+                    reviewerName={
+                      review.reviewer.display_name ||
+                      (review.reviewer.username ? `@${review.reviewer.username}` : "Anonymous")
+                    }
+                    reviewerPfp={review.reviewer.twitterProfile?.profileImageUrl ||
+                    review.reviewer.pfp_url ||
+                    null}
+                    auctionName={review.auction.auctionName}
+                    createdAt={review.createdAt}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "active" && (
+          <UserAuctions
+            activeAuctions={userData.activeAuctions}
+            endedAuctions={[]}
+          />
+        )}
+
+        {activeTab === "ended" && (
+          <UserAuctions
+            activeAuctions={[]}
+            endedAuctions={userData.endedAuctions}
+          />
+        )}
       </div>
     </div>
-  )
+    </div>
+  );
 }
-
