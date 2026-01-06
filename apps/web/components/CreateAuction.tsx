@@ -539,7 +539,7 @@ if (context?.client.clientFid === 309857) {
             setIsLoading(false);
           }
         } else {
-          toast.loading("Submitting transaction via thingy" + externalWallets[0].walletClientType);
+          toast.loading("Submitting transaction via thingy" + externalWallets[0].connectorType + externalWallets[0].address as string);
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
 
           sendCalls({
