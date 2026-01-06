@@ -395,6 +395,8 @@ export default function CreateAuction() {
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
         const wallet = externalWallets[0];
+        toast.loading("Submitting transaction..." + wallet.walletClientType + " " + wallet.type, { id: toastId });
+        // wallet.walletClientType ==="embedded"  ;
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
 
