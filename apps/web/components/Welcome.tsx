@@ -40,7 +40,7 @@ export default function Welcome() {
     const {context} = useMiniKit();
     const {wallets} = useWallets();
     const address = wallets.length > 0 ? wallets[0].address : null;
-    const [hasNotifications, setHasNotifications] = useState<boolean | null>(null);
+    const [hasNotifications, setHasNotifications] = useState<boolean>(true);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [pastDrawerOpen, setPastDrawerOpen] = useState(false);
     const [pastAuctions, setPastAuctions] = useState<any[]>([]);
@@ -116,7 +116,9 @@ export default function Welcome() {
             }
         };
 
+        if(user)
         checkNotifications();
+    
     }, [context, user?.socialId]);
 
     const handleAddMiniApp = useCallback(async () => {
@@ -175,12 +177,12 @@ export default function Welcome() {
                 <div className="bg-white/10 w-fit rounded-full px-2 py-1 text-xs flex items-center justify-center gap-1 text-white">Powered by <a href="https://dexscreener.com/base/0x51f77b39db5b14605abb569647a9a33e733ab3e018e79325a44c07aadd927686" target="_blank" className="gradient-text font-bold">$AUCTION</a></div>
 
                 <div className="flex flex-wrap gap-3">
-                    <button onClick={()=>{navigate('/create')}} className= "max-lg:w-full w-80 px-6 py-3 hover:-translate-y-1 duration-200 gradient-button flex gap-2 items-center justify-center text-white rounded-md hover:bg-green-700 transition">
+                    <button onClick={()=>{navigate('/create')}} className= "max-lg:w-full w-80 px-6 py-3 hover:-translate-y-1 duration-200 gradient-button flex gap-2 items-center justify-center text-white rounded-md hover:bg-green-700 transition font-bold">
                         <FaPlus/> Create Auction
                     </button>
                     <button
                         onClick={() => setPastDrawerOpen(true)}
-                        className="max-lg:w-full w-64 px-6 py-3 border border-white/20 text-white rounded-md hover:border-white/40 hover:bg-white/10 transition"
+                        className="max-lg:w-full w-64 px-6 py-3 border border-white/20 text-white rounded-md hover:border-white/40 hover:bg-white/10 transition bg-gradient-to-br from-yellow-500 to-orange-500 font-bold"
                     >
                         View Past Auctions
                     </button>
