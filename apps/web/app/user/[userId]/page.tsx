@@ -261,7 +261,7 @@ export default function UserPage() {
                   )}
                 </div>
                 
-                <div className="flex items-center justify-between mt-4 w-full">
+                <div className="flex items-center justify-between mt-4 w-full bg-primary/10 border border-primary rounded-lg p-4">
                   <p className="text-caption text-md">Hosted</p>
                   <p className="text-2xl font-bold text-primary w-full lg:text-right text-right">
                     {userData.activeAuctions.length + userData.endedAuctions.length}

@@ -56,7 +56,7 @@ export default function ReviewCard({
               ))}
             </div>
           </div>
-          <p className="text-xs text-caption mb-1 -translate-x-8">
+          <p className="text-xs text-caption mb-1 ">
             {auctionName}
           </p>
           
