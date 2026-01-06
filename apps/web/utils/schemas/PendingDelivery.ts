@@ -57,6 +57,5 @@ const PendingDeliverySchema: Schema = new Schema(
 // Compound indexes for efficient queries
 PendingDeliverySchema.index({ hostSocialId: 1, delivered: 1 });
 PendingDeliverySchema.index({ winnerSocialId: 1, delivered: 1 });
-PendingDeliverySchema.index({ auctionId: 1 });
 
 export default mongoose.models.PendingDelivery || mongoose.model<IPendingDelivery>('PendingDelivery', PendingDeliverySchema);

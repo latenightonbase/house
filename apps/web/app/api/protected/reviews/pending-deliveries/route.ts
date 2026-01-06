@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import PendingDelivery from '@/utils/schemas/PendingDelivery';
-import Auction from '@/utils/schemas/Auction';
-import User from '@/utils/schemas/User';
+import '@/utils/schemas/Auction'; // Import to register model
+import '@/utils/schemas/User'; // Import to register model
 import { authenticateRequest } from '@/utils/authService';
 import { getFidsWithCache } from '@/utils/fidCache';
 
