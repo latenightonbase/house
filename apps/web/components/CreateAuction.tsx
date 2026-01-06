@@ -395,7 +395,7 @@ export default function CreateAuction() {
       if (!context) {
         toast.loading("Preparing transaction...", { id: toastId });
         const wallet = externalWallets[0];
-        toast.loading("Submitting transaction..." + wallet.walletClientType + " " + wallet.type, { id: toastId });
+        
         // wallet.walletClientType ==="embedded"  ;
         await wallet.switchChain(baseChain.id); // Base Mainnet chain ID
         const provider = await wallet.getEthereumProvider();
@@ -539,6 +539,7 @@ if (context?.client.clientFid === 309857) {
             setIsLoading(false);
           }
         } else {
+          toast.loading("Submitting transaction via thingy" + externalWallets[0].walletClientType);
           toast.loading("Waiting for wallet confirmation...", { id: toastId });
 
           sendCalls({
