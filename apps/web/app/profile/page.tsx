@@ -225,9 +225,9 @@ export default function ProfilePage() {
         {/* Reviews Section */}
         {reviews.length > 0 && (
           <div className="bg-black/50 rounded-xl border border-primary/20 p-6 my-6">
-            <h2 className="text-xl font-bold text-white mb-4">Reviews ({reviews.length})</h2>
+            <h2 className="text-xl font-bold text-white mb-4">Reviews ({reviews.filter(r => r.auction).length})</h2>
             <div className="space-y-4">
-              {reviews.map((review) => (
+              {reviews.filter(review => review.auction).map((review) => (
                 <ReviewCard
                   key={review._id}
                   rating={review.rating}
