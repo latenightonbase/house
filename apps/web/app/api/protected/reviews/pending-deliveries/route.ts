@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import PendingDelivery from '@/utils/schemas/PendingDelivery';
+import Review from '@/utils/schemas/Review';
 import '@/utils/schemas/Auction'; // Import to register model
 import '@/utils/schemas/User'; // Import to register model
 import { authenticateRequest } from '@/utils/authService';
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
     await dbConnect();
 
     // Find all pending deliveries where user is host or winner
-    const [asHostPending, asWinnerDelivered, asWinnerUndelivered] = await Promise.all([
+    const [asHostPending, asWinnerDeliveredAll, asWinnerUndelivered] = await Promise.all([
       // As host - only undelivered
       PendingDelivery.find({
         hostSocialId: socialId,
@@ -54,6 +55,17 @@ export async function GET(req: NextRequest) {
         .populate('hostId')
         .sort({ createdAt: -1 }),
     ]);
+
+    // Filter out delivered auctions that already have reviews
+    const deliveredAuctionIds = asWinnerDeliveredAll.map((d: any) => d.auctionId._id);
+    const existingReviews = await Review.find({
+      auction: { $in: deliveredAuctionIds }
+    }).select('auction');
+    
+    const reviewedAuctionIds = new Set(existingReviews.map((r: any) => r.auction.toString()));
+    const asWinnerDelivered = asWinnerDeliveredAll.filter((d: any) => 
+      !reviewedAuctionIds.has(d.auctionId._id.toString())
+    );
 
     // Collect all FIDs to fetch from Neynar
     const fidSet = new Set<string>();
