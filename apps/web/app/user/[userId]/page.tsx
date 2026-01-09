@@ -209,9 +209,9 @@ export default function UserPage() {
                     {userData.user.bio && (
                 <p className="text-white/80 text-sm my-3 line-clamp-2 max-lg:text-center">{userData.user.bio}</p>
               )}
-              <div className='flex gap-2 w-full items-center justify-center lg:justify-start'>
+              <div className='flex gap-2 w-full items-center justify-center lg:justify-start mt-4'>
                 {userData.user.x_username && userData.user.platform == "FARCASTER" && (
-                <div className="mt-4">
+                
                   <a 
                     href={`https://x.com/${userData.user.x_username}`}
                     target="_blank"
@@ -228,7 +228,7 @@ export default function UserPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                   </a>
-                </div>
+             
               )}
               {userData.user.twitterProfile && userData.user.platform == "TWITTER" && (
                 <div className="">

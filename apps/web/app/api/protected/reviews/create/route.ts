@@ -55,11 +55,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Only the auction winner can leave a review' }, { status: 403 });
     }
 
-    // Verify the auction has been marked as delivered
-    if (!pendingDelivery.delivered) {
-      return NextResponse.json({ error: 'Host must mark the auction as delivered before you can review' }, { status: 400 });
-    }
-
     // Find the auction
     const auction = await Auction.findById(auctionId);
     if (!auction) {
@@ -84,7 +79,7 @@ export async function POST(req: NextRequest) {
       reviewee: auction.hostedBy,
       rating,
       comment: comment || undefined,
-      deliveredByHost: true,
+      deliveredByHost: pendingDelivery.delivered,
     });
 
     await review.save();

@@ -25,6 +25,11 @@ const User: any = mongoose.models['User'] || mongoose.model('User', new mongoose
   notificationDetails: { url: String, token: String },
 }));
 
+const Auction: any = mongoose.models['Auction'] || mongoose.model('Auction', new mongoose.Schema({
+  blockchainAuctionId: String,
+  name: String,
+}));
+
 // ============ Worker ============
 console.log('🚀 Starting auction reminder worker...');
 
@@ -35,6 +40,16 @@ const auctionReminderWorker = new Worker<AuctionReminderJobData>(
     console.log(`⏰ Processing ${reminderType} reminder for auction: ${blockchainAuctionId}`);
 
     await connectDB();
+
+    const auction = await Auction.findOne({ blockchainAuctionId });
+    if (!auction) {
+      throw new Error(`Auction not found: ${blockchainAuctionId}`);
+    }
+
+    if(auction.status === "ended"){
+      console.log(`Auction ${blockchainAuctionId} has already ended. Skipping notifications.`);
+      return { sent: 0, failed: 0 };
+    }
 
     // Fetch all users with notification details
     const users = await User.find({

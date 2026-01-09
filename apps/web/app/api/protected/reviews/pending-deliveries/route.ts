@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     await dbConnect();
 
     // Find all pending deliveries where user is host or winner
-    const [asHostPending, asWinnerDeliveredAll, asWinnerUndelivered] = await Promise.all([
+    const [asHostPending, asWinnerAll] = await Promise.all([
       // As host - only undelivered
       PendingDelivery.find({
         hostSocialId: socialId,
@@ -37,40 +37,30 @@ export async function GET(req: NextRequest) {
         .populate('winnerId')
         .sort({ createdAt: -1 }),
 
-      // As winner - delivered (ready for review)
+      // As winner - all auctions
       PendingDelivery.find({
         winnerSocialId: socialId,
-        delivered: true,
-      })
-        .populate('auctionId')
-        .populate('hostId')
-        .sort({ deliveredDate: -1 }),
-
-      // As winner - not delivered yet
-      PendingDelivery.find({
-        winnerSocialId: socialId,
-        delivered: false,
       })
         .populate('auctionId')
         .populate('hostId')
         .sort({ createdAt: -1 }),
     ]);
 
-    // Filter out delivered auctions that already have reviews
-    const deliveredAuctionIds = asWinnerDeliveredAll.map((d: any) => d.auctionId._id);
+    // Filter out auctions that already have reviews
+    const winnerAuctionIds = asWinnerAll.map((d: any) => d.auctionId._id);
     const existingReviews = await Review.find({
-      auction: { $in: deliveredAuctionIds }
+      auction: { $in: winnerAuctionIds }
     }).select('auction');
     
     const reviewedAuctionIds = new Set(existingReviews.map((r: any) => r.auction.toString()));
-    const asWinnerDelivered = asWinnerDeliveredAll.filter((d: any) => 
+    const asWinner = asWinnerAll.filter((d: any) => 
       !reviewedAuctionIds.has(d.auctionId._id.toString())
     );
 
     // Collect all FIDs to fetch from Neynar
     const fidSet = new Set<string>();
     
-    [...asHostPending, ...asWinnerDelivered, ...asWinnerUndelivered].forEach((delivery: any) => {
+    [...asHostPending, ...asWinner].forEach((delivery: any) => {
       if (delivery.winnerId && shouldFetchFromNeynar(delivery.winnerId)) {
         fidSet.add(String(delivery.winnerId.socialId));
       }
@@ -97,10 +87,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       asHost: enrichDeliveries(asHostPending),
-      asWinner: {
-        delivered: enrichDeliveries(asWinnerDelivered),
-        undelivered: enrichDeliveries(asWinnerUndelivered),
-      },
+      asWinner: enrichDeliveries(asWinner),
     });
   } catch (error: any) {
     console.error('Error fetching pending deliveries:', error);

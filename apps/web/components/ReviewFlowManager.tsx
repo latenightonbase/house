@@ -45,8 +45,7 @@ const ReviewFlowManager: React.FC = () => {
   const pathname = usePathname();
 
   const [asHost, setAsHost] = useState<PendingDelivery[]>([]);
-  const [asWinnerDelivered, setAsWinnerDelivered] = useState<PendingDelivery[]>([]);
-  const [asWinnerUndelivered, setAsWinnerUndelivered] = useState<PendingDelivery[]>([]);
+  const [asWinner, setAsWinner] = useState<PendingDelivery[]>([]);
   const [isHostDrawerOpen, setIsHostDrawerOpen] = useState(false);
   const [isWinnerDrawerOpen, setIsWinnerDrawerOpen] = useState(false);
   const [selectedReviewAuction, setSelectedReviewAuction] = useState<PendingDelivery | null>(null);
@@ -78,8 +77,7 @@ const ReviewFlowManager: React.FC = () => {
         console.log('Pending deliveries fetched:', data);
 
         setAsHost(data.asHost || []);
-        setAsWinnerDelivered(data.asWinner?.delivered || []);
-        setAsWinnerUndelivered(data.asWinner?.undelivered || []);
+        setAsWinner(data.asWinner || []);
       }
     } catch (error) {
       console.error('Error fetching pending deliveries:', error);
@@ -137,9 +135,8 @@ const ReviewFlowManager: React.FC = () => {
     setSelectedReviewAuction(null);
   };
 
-  const totalWinnerCount = asWinnerDelivered.length + asWinnerUndelivered.length;
   const showHostButton = asHost.length > 0;
-  const showWinnerButton = totalWinnerCount > 0;
+  const showWinnerButton = asWinner.length > 0;
 
   if (loading || !authenticated || pathname !== '/') {
     return null;
@@ -172,9 +169,9 @@ const ReviewFlowManager: React.FC = () => {
             aria-label="Won Auctions"
           >
             <Trophy className="w-6 h-6" />
-            {totalWinnerCount > 0 && (
+            {asWinner.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                {totalWinnerCount}
+                {asWinner.length}
               </span>
             )}
             
@@ -275,89 +272,50 @@ const ReviewFlowManager: React.FC = () => {
                 user={user}
               />
             ) : (
-              <div className="space-y-6 max-h-[60vh] overflow-y-auto">
-                {/* Delivered - Ready for Review */}
-                {asWinnerDelivered.length > 0 && (
-                  <div>
-                    <h3 className="text-white font-semibold mb-3 text-lg">Ready for Review</h3>
-                    <div className="space-y-3">
-                      {asWinnerDelivered.map((delivery) => (
-                        <div 
-                          key={delivery._id}
-                          className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl p-4 space-y-3"
-                        >
-                          <div>
-                            <p className="text-white/70 text-sm mb-1">Auction</p>
-                            <button
-                              onClick={() => router.push(`/bid/${delivery.auctionId.blockchainAuctionId}`)}
-                              className="text-white font-semibold text-lg hover:text-primary transition-colors text-left"
-                            >
-                              {delivery.auctionId.auctionName}
-                            </button>
-                          </div>
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                {asWinner.map((delivery) => (
+                  <div 
+                    key={delivery._id}
+                    className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl p-4 space-y-3"
+                  >
+                    <div>
+                      <p className="text-white/70 text-sm mb-1">Auction</p>
+                      <button
+                        onClick={() => router.push(`/bid/${delivery.auctionId.blockchainAuctionId}`)}
+                        className="text-white font-semibold text-lg hover:text-primary transition-colors text-left"
+                      >
+                        {delivery.auctionId.auctionName}
+                      </button>
+                    </div>
 
-                          <div>
-                            <p className="text-white/70 text-sm mb-1">Host</p>
-                            <p className="text-white font-semibold">
-                              {delivery.hostId?.username || 'Unknown'}
-                            </p>
-                          </div>
+                    <div>
+                      <p className="text-white/70 text-sm mb-1">Host</p>
+                      <p className="text-white font-semibold">
+                        {delivery.hostId?.username || 'Unknown'}
+                      </p>
+                    </div>
 
-                          <Button
-                            onClick={() => setSelectedReviewAuction(delivery)}
-                            size="sm"
-                            className="w-full"
-                          >
-                            <MessageSquare className="w-4 h-4 mr-1" />
-                            Leave Review
-                          </Button>
-                        </div>
-                      ))}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => router.push(`/user/${delivery.hostId?._id}`)}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <User className="w-4 h-4 mr-1" />
+                        Contact Host
+                      </Button>
+                      <Button
+                        onClick={() => setSelectedReviewAuction(delivery)}
+                        size="sm"
+                        className="flex-1"
+                      >
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        Rate
+                      </Button>
                     </div>
                   </div>
-                )}
-
-                {/* Undelivered - Contact Host */}
-                {asWinnerUndelivered.length > 0 && (
-                  <div>
-                    <h3 className="text-white font-semibold mb-3 text-lg">Awaiting Delivery</h3>
-                    <div className="space-y-3">
-                      {asWinnerUndelivered.map((delivery) => (
-                        <div 
-                          key={delivery._id}
-                          className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl p-4 space-y-3"
-                        >
-                          <div>
-                            <p className="text-white/70 text-sm mb-1">Auction</p>
-                            <button
-                              onClick={() => router.push(`/bid/${delivery.auctionId.blockchainAuctionId}`)}
-                              className="text-white font-semibold text-lg hover:text-primary transition-colors text-left"
-                            >
-                              {delivery.auctionId.auctionName}
-                            </button>
-                          </div>
-
-                          <div>
-                            <p className="text-white/70 text-sm mb-1">Host</p>
-                            <p className="text-white font-semibold">
-                              {delivery.hostId?.username || 'Unknown'}
-                            </p>
-                          </div>
-
-                          <Button
-                            onClick={() => router.push(`/user/${delivery.hostId?._id}`)}
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                          >
-                            <User className="w-4 h-4 mr-1" />
-                            Contact Host
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                ))}
               </div>
             )}
           </div>
