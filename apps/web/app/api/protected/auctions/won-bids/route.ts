@@ -3,6 +3,8 @@ import dbConnect from '@/utils/db';
 import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authenticateRequest } from '@/utils/authService';
+import { getFidsWithCache } from '@/utils/fidCache';
+import { getRedisClient } from '@/utils/redisCache';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,16 +15,16 @@ export async function GET(req: NextRequest) {
 
     // Get wallet address from query params
     const { searchParams } = new URL(req.url);
-    const wallet = searchParams.get('wallet');
+    const socialId = searchParams.get('socialId');
 
-    if (!wallet) {
-      return NextResponse.json({ error: 'Wallet address is required' }, { status: 400 });
+    if (!socialId) {
+      return NextResponse.json({ error: 'Social ID is required' }, { status: 400 });
     }
 
     await dbConnect();
 
     // Find the user
-    const user = await User.findOne({ wallet });
+    const user = await User.findOne({ socialId: socialId });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -32,8 +34,71 @@ export async function GET(req: NextRequest) {
       winningBid: user._id,
       endDate: { $lt: new Date() } // Only ended auctions
     })
-    .populate('hostedBy', 'wallet username')
+    .populate('hostedBy', 'socialId twitterProfile socialPlatform')
     .sort({ endDate: -1 }); // Most recent first
+
+    console.log(`Found ${wonAuctions} won auctions for user with socialId: ${socialId}`);
+
+    // Collect all host FIDs that need Neynar data
+    const hostFids: string[] = [];
+    wonAuctions.forEach(auction => {
+      const host = auction.hostedBy as any;
+      console.log('Processing host for auction:', auction._id, host);
+      if (host?.socialPlatform === 'FARCASTER' && host?.socialId) {
+        hostFids.push(host.socialId);
+      }
+    });
+
+    console.log('Host FIDs needing Neynar data:', hostFids);
+
+    // Fetch Neynar data for all hosts
+    const neynarUsersMap = await getFidsWithCache(hostFids);
+
+    // Identify missing FIDs and make fallback API call if needed
+    const missingFids: string[] = [];
+    for (const fid of hostFids) {
+      if (!neynarUsersMap[fid]) {
+        missingFids.push(fid);
+      }
+    }
+
+    // Make fallback Neynar API call for missing FIDs
+    if (missingFids.length > 0) {
+      try {
+        const response = await fetch(`https://api.neynar.com/v2/farcaster/user/bulk?fids=${missingFids.join(',')}`, {
+          headers: {
+            'api_key': process.env.NEYNAR_API_KEY || ''
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Fallback Neynar API response data:', data);
+          const redisClient = getRedisClient();
+          
+          // Cache each user in Redis and add to neynarUsersMap
+          for (const user of data.users) {
+            neynarUsersMap[user.fid.toString()] = user;
+            
+            if (redisClient) {
+              try {
+                await redisClient.setex(
+                  `fid:${user.fid}`,
+                  3600,
+                  JSON.stringify(user)
+                );
+              } catch (err) {
+                console.warn('Failed to cache Neynar user:', err);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Fallback Neynar API call failed:', error);
+      }
+    }
+
+    console.log('Final Neynar users map:', neynarUsersMap);
 
     // Format the auctions data
     const formattedAuctions = wonAuctions.map(auction => {
@@ -51,6 +116,36 @@ export async function GET(req: NextRequest) {
       
       const bidCount = auction.bidders.length;
 
+      // Enhance hostedBy with Neynar or Twitter data
+      const hostDoc = auction.hostedBy as any;
+
+      console.log('Original host data:', hostDoc);
+
+      let enhancedHostedBy = {username: "", display_name: "", pfp_url: "", socialId: hostDoc.socialId, socialPlatform: hostDoc.socialPlatform, twitterProfile: hostDoc.twitterProfile};
+
+      console.log('Processing host:', enhancedHostedBy.socialId, enhancedHostedBy);
+      
+      if (hostDoc.socialPlatform === 'TWITTER' && hostDoc.twitterProfile) {
+        console.log('Using Twitter profile for host:', hostDoc.socialId);
+        // Use Twitter profile
+        enhancedHostedBy.username = enhancedHostedBy.twitterProfile.username;
+        enhancedHostedBy.display_name = enhancedHostedBy.twitterProfile.name;
+        enhancedHostedBy.pfp_url = enhancedHostedBy.twitterProfile.profileImageUrl;
+      } else if (hostDoc.socialPlatform === 'FARCASTER' && hostDoc.socialId && !hostDoc.socialId.startsWith('none') && !hostDoc.socialId.startsWith('0x')) {
+        console.log('Using Neynar data for host:', hostDoc.socialId);
+        // Use Neynar data
+        const neynarUser = neynarUsersMap[hostDoc.socialId];
+
+        console.log('Neynar user data:', neynarUser);
+        if (neynarUser) {
+          enhancedHostedBy.username = neynarUser.username as string;
+          enhancedHostedBy.display_name = neynarUser.display_name as string;
+          enhancedHostedBy.pfp_url = neynarUser.pfp_url as string;
+        }
+      }
+
+      console.log('Enhanced host data:', enhancedHostedBy);
+
       return {
         _id: auction._id,
         auctionName: auction.auctionName,
@@ -60,7 +155,8 @@ export async function GET(req: NextRequest) {
         minimumBid: auction.minimumBid,
         blockchainAuctionId: auction.blockchainAuctionId,
         tokenAddress: auction.tokenAddress,
-        hostedBy: auction.hostedBy,
+        startingWallet: auction.startingWallet,
+        hostedBy: enhancedHostedBy,
         highestBid,
         participantCount,
         bidCount,

@@ -7,6 +7,8 @@ import Heading from "@/components/UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill, RiTrophyFill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import { useGlobalContext } from "@/utils/providers/globalContext";
+import Image from "next/image";
 
 interface Auction {
   _id: string;
@@ -17,10 +19,12 @@ interface Auction {
   minimumBid: number;
   blockchainAuctionId: string;
   tokenAddress: string;
+  startingWallet: string;
   hostedBy: {
     _id: string;
-    wallet: string;
     username?: string;
+    display_name?: string;
+    pfp_url?: string;
   };
   highestBid: number;
   participantCount: number;
@@ -38,8 +42,7 @@ interface WonAuction extends Auction {}
 
 export default function WonBidsPage() {
   const { authenticated } = usePrivy();
-  const { wallets } = useWallets();
-  const address = wallets.length > 0 ? wallets[0].address : null;
+  const {user} = useGlobalContext();
   const [auctions, setAuctions] = useState<WonAuction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export default function WonBidsPage() {
   const { getAccessToken } = usePrivy();
 
   const fetchWonBids = async () => {
-    if (!address) return;
+    if (!user) return;
 
     try {
       setLoading(true);
@@ -55,7 +58,7 @@ export default function WonBidsPage() {
 
       const accessToken = await getAccessToken();
       const response = await fetch(
-        `/api/protected/auctions/won-bids?wallet=${address}`,
+        `/api/protected/auctions/won-bids?socialId=${user.socialId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -88,14 +91,14 @@ export default function WonBidsPage() {
   };
 
   useEffect(() => {
-    if (authenticated && address) {
+    if (authenticated && user) {
       fetchWonBids();
     } else {
       setLoading(false);
     }
-  }, [authenticated, address]);
+  }, [authenticated, user]);
 
-  if (!authenticated || !address) {
+  if (!authenticated || !user) {
     return (
       <div className="w-full overflow-hidden p-4">
         <Heading size="md" className="mb-6">Won Auctions</Heading>
@@ -248,9 +251,10 @@ export default function WonBidsPage() {
                   <span className="text-caption text-sm flex-shrink-0">
                     Host:
                   </span>
-                  <span className="font-medium text-sm truncate ml-2 text-right">
-                    {auction.hostedBy.username || `${auction.hostedBy.wallet.slice(0, 6)}...${auction.hostedBy.wallet.slice(-4)}`}
-                  </span>
+                  <div onClick={()=>{navigate(`/user/${auction.hostedBy._id}`)}} className="font-medium text-sm truncate ml-2 flex gap-2 items-center px-2 py-1 bg-white/10 rounded-full">
+                    {auction.hostedBy.pfp_url &&<Image unoptimized src={auction.hostedBy.pfp_url as string} alt={auction.hostedBy.username || 'Host profile picture'} width={40} height={40} className="w-6 aspect-square rounded-full border border-white" />}
+                    {auction.hostedBy.username || `${auction.startingWallet.slice(0, 6)}...${auction.startingWallet.slice(-4)}`}
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-start w-full">
