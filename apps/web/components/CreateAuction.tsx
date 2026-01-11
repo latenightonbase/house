@@ -39,6 +39,8 @@ import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
 import { base as baseChain } from "viem/chains";
 import { ethers } from "ethers";
+import { Drawer, DrawerContent } from "./UI/Drawer";
+import sdk from "@farcaster/frame-sdk";
 
 interface CurrencyOption {
   name: string;
@@ -77,12 +79,35 @@ export default function CreateAuction() {
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
+  const [isSuccessDrawerOpen, setIsSuccessDrawerOpen] = useState(false);
+  const [createdAuctionData, setCreatedAuctionData] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const { context } = useMiniKit();
 
   const [myCallId, setMyCallId] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
+
+  async function composeCast() {
+    try {
+      if (!createdAuctionData) return;
+      const url = `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${createdAuctionData.id}`;
+      const text = `I just created "${createdAuctionData.title}" on House! Check it out and place your bid! ${url}`;
+
+      await sdk.actions.composeCast({
+        text,
+        embeds: [
+          `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${createdAuctionData.id}`,
+        ],
+      });
+    } catch (e) {
+      console.error("Error composing cast:", e);
+      toast.error("Failed to compose cast");
+    }
+  }
 
   const handleFallbackTransaction = async (
     auctionId: string,
@@ -212,10 +237,23 @@ export default function CreateAuction() {
       });
 
       setIsLoading(false);
-      // Small delay to show success message before navigation
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      
+      // Store created auction data for sharing
+      setCreatedAuctionData({
+        id: auctionId,
+        title: auctionTitle,
+      });
+      
+      // Reset form
+      setAuctionTitle("");
+      setDescription("");
+      setSelectedCurrency(null);
+      setEndTime(null);
+      setMinBidAmount("5");
+      setCurrentStep(0);
+      
+      // Open success drawer
+      setIsSuccessDrawerOpen(true);
     } catch (error: any) {
       console.error("Error saving auction details:", error);
 
@@ -875,6 +913,61 @@ if (context?.client.clientFid === 309857) {
           setCurrentStep(currentStep + 1);
         }}
       />
+
+      {/* Success Drawer */}
+      <Drawer open={isSuccessDrawerOpen} onOpenChange={setIsSuccessDrawerOpen}>
+        <DrawerContent className="drawer-content">
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-center mb-4">
+              Auction Created Successfully! 🎉
+            </h2>
+            <p className="text-center text-caption mb-6">
+              Your auction "{createdAuctionData?.title}" has been created.
+            </p>
+            
+            <div className="space-y-3">
+              {context && (
+                <button
+                  onClick={() => {
+                    composeCast();
+                    setIsSuccessDrawerOpen(false);
+                  }}
+                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-semibold transition-all hover:bg-purple-700"
+                >
+                  Share on App
+                </button>
+              )}
+              
+              <button
+                onClick={() => {
+                  if (createdAuctionData) {
+                    const url = `https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/bid/${createdAuctionData.id}`;
+                    const text = `I just created "${createdAuctionData.title}" on House! Check it out and place your bid! ${url}`;
+                    window.open(
+                      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+                      '_blank'
+                    );
+                  }
+                  setIsSuccessDrawerOpen(false);
+                }}
+                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold transition-all hover:bg-blue-600"
+              >
+                Share on X
+              </button>
+              
+              <button
+                onClick={() => {
+                  setIsSuccessDrawerOpen(false);
+                  navigate("/");
+                }}
+                className="w-full px-4 py-3 bg-white/10 text-white rounded-lg font-semibold transition-all hover:bg-white/20"
+              >
+                Home
+              </button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
