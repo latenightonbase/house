@@ -37,6 +37,7 @@ export default function RootLayout({
                 style: {
                   background: '#363636',
                   color: '#fff',
+                  fontSize: '12px',
                 },
                 success: {
                   style: {

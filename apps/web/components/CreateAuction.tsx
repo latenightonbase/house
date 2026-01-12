@@ -41,6 +41,7 @@ import { base as baseChain } from "viem/chains";
 import { ethers } from "ethers";
 import { Drawer, DrawerContent } from "./UI/Drawer";
 import sdk from "@farcaster/frame-sdk";
+import { checkTokenAmount } from "@/utils/checkTokenAmount";
 
 interface CurrencyOption {
   name: string;
@@ -329,6 +330,15 @@ export default function CreateAuction() {
       return;
     }
     setIsLoading(true);
+
+    await checkTokenAmount(address).then((hasEnough) => {
+      if (!hasEnough.allow) {
+        toast.error("Insufficient $AUCTION tokens");
+        toast.error(`Need ${hasEnough.short} more $AUCTION tokens in this wallet to create an auction`);
+        setIsLoading(false);
+        return;
+      }
+    });
 
     // Check whitelist from database
     try {

@@ -4,6 +4,8 @@ import Auction from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
 import { authenticateRequest } from '@/utils/authService';
 import { scheduleAuctionReminders, scheduleAuctionEnd } from '@repo/queue';
+import Whitelist from '@/utils/schemas/Whitelist';
+import { checkTokenAmount } from '@/utils/checkTokenAmount';
 
 export async function POST(req: NextRequest) {
   console.log('Verifying token in auction creation route');
@@ -15,6 +17,22 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, hostPrivyId, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet } = body;
+
+    const checkWl = await Whitelist.findOne({
+      walletAddress: startingWallet.toLowerCase(),
+    })
+
+    if (!checkWl) {
+      return NextResponse.json({ error: 'Starting wallet is not whitelisted' }, { status: 403 });
+    }
+
+    await checkTokenAmount(startingWallet).then((hasEnough) => {
+      if (hasEnough.allow == false) {
+        throw new Error('Insufficient token balance in starting wallet');
+      }}).catch((err) => {
+        console.error('Token amount check failed:', err);
+        return NextResponse.json({ error: 'Insufficient token balance in starting wallet' }, { status: 403 });
+      });
 
     console.log('Creating auction with data:', body);
 
