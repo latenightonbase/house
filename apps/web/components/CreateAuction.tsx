@@ -331,14 +331,6 @@ export default function CreateAuction() {
     }
     setIsLoading(true);
 
-    await checkTokenAmount(address).then((hasEnough) => {
-      if (!hasEnough.allow) {
-        toast.error("Insufficient $AUCTION tokens");
-        toast.error(`Need ${hasEnough.short} more $AUCTION tokens in this wallet to create an auction`);
-        setIsLoading(false);
-        return;
-      }
-    });
 
     // Check whitelist from database
     try {
@@ -351,9 +343,14 @@ export default function CreateAuction() {
       const whitelistData = await whitelistResponse.json();
       
       if (!whitelistData.whitelisted) {
-        toast.error("You are not whitelisted to create an auction");
-        setIsLoading(false);
-        return;
+        await checkTokenAmount(address).then((hasEnough) => {
+          if (!hasEnough.allow) {
+            toast.error("Insufficient $AUCTION tokens");
+            toast.error(`Need ${hasEnough.short} more $AUCTION tokens in this wallet to create an auction`);
+            setIsLoading(false);
+            return;
+          }
+    });
       }
     } catch (error) {
       console.error("Error checking whitelist:", error);

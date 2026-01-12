@@ -23,16 +23,14 @@ export async function POST(req: NextRequest) {
     })
 
     if (!checkWl) {
-      return NextResponse.json({ error: 'Starting wallet is not whitelisted' }, { status: 403 });
-    }
-
-    await checkTokenAmount(startingWallet).then((hasEnough) => {
+      await checkTokenAmount(startingWallet).then((hasEnough) => {
       if (hasEnough.allow == false) {
         throw new Error('Insufficient token balance in starting wallet');
       }}).catch((err) => {
         console.error('Token amount check failed:', err);
         return NextResponse.json({ error: 'Insufficient token balance in starting wallet' }, { status: 403 });
       });
+    }
 
     console.log('Creating auction with data:', body);
 
