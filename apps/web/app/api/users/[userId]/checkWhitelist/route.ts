@@ -1,23 +1,45 @@
+import { checkTokenAmount } from "@/utils/checkTokenAmount";
 import dbConnect from "@/utils/db";
 import Whitelist from "@/utils/schemas/Whitelist";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   try {
     const address = request.url.split("/")[5];
     console.log("Checking whitelist for address:", address);
-    
+
     await dbConnect();
-    
+
     // Check whitelist from database
-    const whitelistEntry = await Whitelist.findOne({ 
+    const whitelistEntry = await Whitelist.findOne({
       walletAddress: address.toLowerCase(),
-      status: 'ACTIVE'
+      status: "ACTIVE",
     });
-    
+
     const whitelisted = !!whitelistEntry;
-    console.log("Whitelist result:", whitelisted);
-    
-    return new Response(JSON.stringify({ whitelisted }), { status: 200 });
+    if (!whitelisted) {
+      const tokenCheck = await checkTokenAmount(address);
+
+      if (!tokenCheck.allow) {
+        return NextResponse.json(
+          {
+            whitelisted: false,
+            allow: false,
+            short: tokenCheck.short,
+          },
+          { status: 200 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      ({
+        whitelisted:true,
+        allow: true,
+        short: 0,
+      }),
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error checking whitelist:", error);
     return new Response("Internal Server Error", { status: 500 });
