@@ -86,8 +86,7 @@ export default function CreateAuction() {
     id: string;
     title: string;
   } | null>(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-  const [uploadedImageKey, setUploadedImageKey] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
 
   const { context } = useMiniKit();
 
@@ -207,27 +206,30 @@ export default function CreateAuction() {
       const accessToken = await getAccessToken();
       console.log("Access Token:", accessToken);
 
+      // Create FormData to handle file upload
+      const formData = new FormData();
+      formData.append("auctionName", auctionTitle);
+      if (description) formData.append("description", description);
+      formData.append("blockchainAuctionId", auctionId);
+      formData.append("tokenAddress", selectedCurrency?.contractAddress || "");
+      formData.append("endDate", endTime?.toISOString() || "");
+      formData.append("currency", selectedCurrency?.symbol || "");
+      formData.append("startDate", now.toISOString());
+      formData.append("hostedBy", user.socialId);
+      formData.append("startingWallet", address || "");
+      formData.append("minimumBid", minBidAmount);
+      
+      // Add image file if selected
+      if (selectedImageFile) {
+        formData.append("image", selectedImageFile);
+      }
+
       const response = await fetch("/api/protected/auctions/create", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          auctionName: auctionTitle,
-          description: description || undefined,
-          blockchainAuctionId: auctionId,
-          tokenAddress: selectedCurrency?.contractAddress,
-          endDate: endTime,
-          currency: selectedCurrency?.symbol,
-          startDate: now,
-          hostedBy: user.socialId,
-          // hostPrivyId: user.privyId || undefined,
-          startingWallet: address,
-          minimumBid: parseFloat(minBidAmount),
-          imageUrl: uploadedImageUrl || undefined,
-          imageKey: uploadedImageKey || undefined,
-        }),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -257,6 +259,7 @@ export default function CreateAuction() {
       setEndTime(null);
       setMinBidAmount("5");
       setCurrentStep(0);
+      setSelectedImageFile(null);
       
       // Open success drawer
       setIsSuccessDrawerOpen(true);
@@ -699,7 +702,7 @@ if (context?.client.clientFid === 309857) {
   return (
     <div className="max-w-2xl max-lg:mx-auto">
       <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-        <div className="min-h-[400px] flex flex-col justify-between">
+        <div className="min-h-[400px] flex flex-col justify-start gap-4">
           <AnimatePresence mode="wait">
             {currentStep === 0 && (
               <motion.div
@@ -758,15 +761,12 @@ if (context?.client.clientFid === 309857) {
                   Upload an image to make your auction more attractive
                 </p>
                 <ImageUpload
-                  onUploadComplete={(url, key) => {
-                    setUploadedImageUrl(url);
-                    setUploadedImageKey(key);
+                  onFileSelect={(file) => {
+                    setSelectedImageFile(file);
                   }}
                   onRemove={() => {
-                    setUploadedImageUrl(null);
-                    setUploadedImageKey(null);
+                    setSelectedImageFile(null);
                   }}
-                  currentImageUrl={uploadedImageUrl || undefined}
                 />
               </motion.div>
             )}

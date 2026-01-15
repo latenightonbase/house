@@ -1039,7 +1039,7 @@ export default function BidPage() {
     <div className="min-h-screen py-8 max-lg:pt-4">
       <div className="max-w-6xl max-lg:mx-auto px-4 sm:px-6 lg:px-8">
         {/* Auction Header */}
-        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative">
+        <div className="bg-white/10 rounded-lg shadow-md lg:p-4 p-2 mb-8 relative overflow-hidden">
           {auctionData.imageUrl && (
             <div className="mb-4 -mx-4 -mt-4 lg:-mx-4 lg:-mt-4">
               <Image
@@ -1047,7 +1047,7 @@ export default function BidPage() {
                 alt={auctionData.auctionName}
                 width={800}
                 height={400}
-                className="w-full h-64 lg:h-96 object-cover rounded-t-lg"
+                className="w-full h-52 lg:h-96 object-cover rounded-t-lg"
                 unoptimized
               />
             </div>

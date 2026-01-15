@@ -6,6 +6,8 @@ import { authenticateRequest } from '@/utils/authService';
 import { scheduleAuctionReminders, scheduleAuctionEnd } from '@repo/queue';
 import Whitelist from '@/utils/schemas/Whitelist';
 import { checkTokenAmount } from '@/utils/checkTokenAmount';
+import { generatePresignedUrl } from '@/utils/s3/generatePresignedUrl';
+import { validateImageType, validateImageSize } from '@/utils/s3/imageValidation';
 
 export async function POST(req: NextRequest) {
   console.log('Verifying token in auction creation route');
@@ -14,9 +16,82 @@ export async function POST(req: NextRequest) {
   if (!authResult.success) {
     return authResult.response;
   }
+  
   try {
-    const body = await req.json();
-    const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, hostPrivyId, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet, imageUrl, imageKey } = body;
+    // Parse FormData
+    const formData = await req.formData();
+    const auctionName = formData.get('auctionName') as string;
+    const description = formData.get('description') as string | null;
+    const tokenAddress = formData.get('tokenAddress') as string;
+    const endDate = formData.get('endDate') as string;
+    const startDate = formData.get('startDate') as string;
+    const hostedBy = formData.get('hostedBy') as string;
+    const hostPrivyId = formData.get('hostPrivyId') as string | null;
+    const minimumBid = formData.get('minimumBid') as string;
+    const blockchainAuctionId = formData.get('blockchainAuctionId') as string;
+    const currency = formData.get('currency') as string;
+    const creationHash = formData.get('creationHash') as string | null;
+    const startingWallet = formData.get('startingWallet') as string;
+    const imageFile = formData.get('image') as File | null;
+
+    let imageUrl: string | undefined;
+    let imageKey: string | undefined;
+
+    // Upload image to S3 if provided
+    if (imageFile) {
+      try {
+        console.log('Processing image upload...');
+        
+        // Validate file type
+        const typeValidation = validateImageType(imageFile.type);
+        if (!typeValidation.valid) {
+          return NextResponse.json({ error: typeValidation.error }, { status: 400 });
+        }
+
+        // Validate file size
+        const sizeValidation = validateImageSize(imageFile.size);
+        if (!sizeValidation.valid) {
+          return NextResponse.json({ error: sizeValidation.error }, { status: 400 });
+        }
+
+        // Generate presigned URL
+        const { uploadUrl, imageUrl: s3ImageUrl, key } = await generatePresignedUrl(
+          imageFile.type,
+          imageFile.name
+        );
+
+        // Convert File to ArrayBuffer for upload
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Upload to S3
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': imageFile.type,
+          },
+          body: buffer,
+        });
+
+        if (!uploadResponse.ok) {
+          console.error('S3 upload failed:', await uploadResponse.text());
+          return NextResponse.json(
+            { error: 'Failed to upload image to S3' },
+            { status: 500 }
+          );
+        }
+
+        imageUrl = s3ImageUrl;
+        imageKey = key;
+        console.log('Image uploaded successfully:', imageUrl);
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        return NextResponse.json(
+          { error: 'Failed to upload image' },
+          { status: 500 }
+        );
+      }
+    }
 
     const checkWl = await Whitelist.findOne({
       walletAddress: startingWallet.toLowerCase(),
@@ -32,7 +107,19 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.log('Creating auction with data:', body);
+    console.log('Creating auction with data:', {
+      auctionName,
+      description,
+      tokenAddress,
+      endDate,
+      startDate,
+      hostedBy,
+      minimumBid,
+      blockchainAuctionId,
+      currency,
+      startingWallet,
+      hasImage: !!imageUrl,
+    });
 
     if (!auctionName || !tokenAddress || !endDate || !startDate || !hostedBy || !minimumBid) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -70,9 +157,9 @@ export async function POST(req: NextRequest) {
       tokenAddress,
       blockchainAuctionId,
       creationHash,
-      endDate,
+      endDate: new Date(endDate),
       hostedBy: user._id,
-      minimumBid,
+      minimumBid: parseFloat(minimumBid),
       startingWallet: startingWallet,
       imageUrl: imageUrl || undefined,
       imageKey: imageKey || undefined,
@@ -89,7 +176,7 @@ export async function POST(req: NextRequest) {
       const [reminderResult, endResult] = await Promise.all([
         scheduleAuctionReminders(
           newAuction._id.toString(),
-          blockchainAuctionId,
+          parseInt(blockchainAuctionId),
           auctionName,
           new Date(startDate),
           new Date(endDate)

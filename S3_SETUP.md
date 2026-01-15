@@ -82,22 +82,33 @@ AWS_S3_BUCKET_NAME=your-auction-images
 ## How It Works
 
 ### Upload Flow
-1. **Client Request**: User selects image in CreateAuction form
-2. **Get Presigned URL**: Client calls `/api/upload/presigned-url` with authentication
-3. **Direct Upload**: Client uploads directly to S3 using presigned URL
-4. **Save Reference**: Image URL and key saved to auction document
-5. **Display**: Images displayed in auction cards and detail pages
+1. **User Selects Image**: User selects image in CreateAuction form (Step 1)
+2. **Local Preview**: Image is stored locally and preview is shown
+3. **Blockchain Transaction**: User completes form and submits blockchain transaction
+4. **Transaction Success**: When blockchain transaction succeeds, `processSuccess` is called
+5. **Image Upload**: API route receives the image file via FormData
+6. **Upload to S3**: Server validates and uploads image to S3 using presigned URL
+7. **Save to Database**: If S3 upload succeeds, auction is created with imageUrl
+8. **Atomic Operation**: If S3 upload fails, entire auction creation fails (ensures consistency)
+9. **Display**: Images displayed in auction cards and detail pages
+
+### Benefits of This Approach
+- **Atomic Operations**: Image only uploaded if blockchain transaction succeeds
+- **Consistency**: If image upload fails, auction creation fails (no orphaned data)
+- **No Wasted Storage**: Failed transactions don't leave images in S3
+- **Better UX**: User sees local preview immediately, upload happens in background
 
 ### File Validation
 - **Allowed types**: JPEG, PNG, WebP, GIF
 - **Max size**: 5MB
 - **Naming**: UUID-based to prevent conflicts
+- **Validation**: Both client-side (immediate feedback) and server-side (security)
 
 ### Security
-- All upload endpoints require Privy authentication
-- Presigned URLs expire after 5 minutes
+- Auction creation endpoint requires Privy authentication
+- Server-side file validation (type and size)
 - Files stored with public-read ACL for display
-- Original filenames sanitized
+- Original filenames sanitized with UUID naming
 
 ## Testing
 
@@ -131,12 +142,12 @@ AWS_S3_BUCKET_NAME=your-auction-images
 
 ```
 apps/web/
-├── app/api/upload/
-│   └── presigned-url/
-│       └── route.ts          # Generates presigned URLs
+├── app/api/
+│   └── protected/auctions/create/
+│       └── route.ts          # Handles image upload and auction creation
 ├── components/
-│   ├── ImageUpload.tsx       # Upload component
-│   ├── CreateAuction.tsx     # Integrated upload step
+│   ├── ImageUpload.tsx       # File selection and preview component
+│   ├── CreateAuction.tsx     # Form with image upload step
 │   ├── LandingAuctions.tsx   # Display images in cards
 │   └── BidsPage.tsx          # Display in detail view
 └── utils/

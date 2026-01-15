@@ -207,7 +207,8 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
     highestBid: highestBid,
     minimumBid: (BigInt(Math.floor(auction.minimumBid * Math.pow(10, decimals)))).toString(),
     bidders: processedBidders,
-    hostedBy: enhancedHostedBy
+    hostedBy: enhancedHostedBy,
+    imageUrl: auction.imageUrl
   });
 }
 
@@ -498,7 +499,8 @@ export async function POST(
       highestBid: highestBid.toString(),
       minimumBid: auction.minimumBid.toString(),
       bidders: processedBidders,
-      hostedBy: enhancedHostedBy
+      hostedBy: enhancedHostedBy,
+      imageUrl: auction.imageUrl
     };
 
     return NextResponse.json(response);
