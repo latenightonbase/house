@@ -14,6 +14,7 @@ import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import ImageUpload from "./ImageUpload";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { encodeFunctionData, numberToHex } from "viem";
@@ -85,6 +86,8 @@ export default function CreateAuction() {
     id: string;
     title: string;
   } | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImageKey, setUploadedImageKey] = useState<string | null>(null);
 
   const { context } = useMiniKit();
 
@@ -222,6 +225,8 @@ export default function CreateAuction() {
           // hostPrivyId: user.privyId || undefined,
           startingWallet: address,
           minimumBid: parseFloat(minBidAmount),
+          imageUrl: uploadedImageUrl || undefined,
+          imageKey: uploadedImageKey || undefined,
         }),
       });
 
@@ -628,10 +633,12 @@ if (context?.client.clientFid === 309857) {
       case 0:
         return auctionTitle.trim().length > 0;
       case 1:
+        return true; // Image upload is optional
+      case 2:
         return (
           selectedCurrency !== null && selectedCurrency.name && !loadingPrice
         );
-      case 2:
+      case 3:
         return minBidAmount.trim() !== "" && !isNaN(parseFloat(minBidAmount));
       default:
         return false;
@@ -639,7 +646,7 @@ if (context?.client.clientFid === 309857) {
   };
 
   const handleNext = () => {
-    if (!canGoNext() || currentStep >= 3) return;
+    if (!canGoNext() || currentStep >= 4) return;
 
     setCurrentStep(currentStep + 1);
   };
@@ -744,6 +751,35 @@ if (context?.client.clientFid === 309857) {
                 transition={{ duration: 0.3 }}
                 className="space-y-4"
               >
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Add Image (Optional)
+                </h3>
+                <p className="text-sm text-caption mb-4">
+                  Upload an image to make your auction more attractive
+                </p>
+                <ImageUpload
+                  onUploadComplete={(url, key) => {
+                    setUploadedImageUrl(url);
+                    setUploadedImageKey(key);
+                  }}
+                  onRemove={() => {
+                    setUploadedImageUrl(null);
+                    setUploadedImageKey(null);
+                  }}
+                  currentImageUrl={uploadedImageUrl || undefined}
+                />
+              </motion.div>
+            )}
+
+            {currentStep === 2 && (
+              <motion.div
+                key="step-2"
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-4"
+              >
                 <CurrencySearch
                   onSelect={handleCurrencySelect}
                   selectedCurrency={selectedCurrency}
@@ -759,9 +795,9 @@ if (context?.client.clientFid === 309857) {
               </motion.div>
             )}
 
-            {currentStep === 2 && (
+            {currentStep === 3 && (
               <motion.div
-                key="step-2"
+                key="step-3"
                 initial={{ opacity: 0, x: 50 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}

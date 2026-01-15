@@ -28,6 +28,8 @@ export interface IAuction extends Document {
   enabled: boolean;
   startingWallet: string;
   status: 'ongoing' | 'ended' | 'paused';
+  imageUrl?: string;
+  imageKey?: string;
 }
 
 // Sub-schema for bidders
@@ -143,6 +145,16 @@ const AuctionSchema: Schema = new Schema(
       type: String,
       enum: ['ongoing', 'ended', 'paused'],
       default: 'ongoing',
+    },
+    imageUrl: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    imageKey: {
+      type: String,
+      required: false,
+      trim: true,
     },
   },
   {

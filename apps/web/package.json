@@ -8,11 +8,14 @@
     "start": "next start"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.965.0",
+    "@aws-sdk/s3-request-presigner": "^3.965.0",
     "@coinbase/onchainkit": "^0.38.17",
     "@farcaster/auth-client": "^0.7.0",
     "@farcaster/miniapp-node": "^0.1.11",
     "@farcaster/miniapp-sdk": "^0.1.10",
     "@farcaster/quick-auth": "^0.0.8",
+    "@neynar/nodejs-sdk": "^3.119.1",
     "@privy-io/react-auth": "^3.8.1",
     "@privy-io/server-auth": "^1.32.5",
     "@radix-ui/react-label": "^2.1.7",
@@ -36,6 +39,7 @@
     "next": "^15.5.9",
     "next-auth": "^4.24.11",
     "nprogress": "^0.2.0",
+    "openai": "^6.16.0",
     "react": "19.1.0",
     "react-day-picker": "^9.11.0",
     "react-dom": "19.1.0",
@@ -44,6 +48,7 @@
     "shadcdn": "^0.0.8",
     "siwe": "^3.0.0",
     "tailwind-merge": "^3.3.1",
+    "uuid": "^9.0.1",
     "vaul": "^1.1.2",
     "viem": "^2.38.0",
     "wagmi": "^2.17.5"

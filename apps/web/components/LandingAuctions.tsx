@@ -81,6 +81,7 @@ interface Auction {
   hostedBy: HostInfo;
   bidders: Bidder[];
   highestBid: number;
+  imageUrl?: string;
   topBidder: {
     wallet: string;
     username: string; // Enhanced with Neynar display_name
@@ -1254,6 +1255,19 @@ const LandingAuctions: React.FC = () => {
 
             {/* Content */}
             <div className="p-4 flex flex-col grow">
+              {auction.imageUrl && (
+                <div className="mb-3 -mx-4 -mt-4">
+                  <Image
+                    src={auction.imageUrl}
+                    alt={auction.auctionName}
+                    width={400}
+                    height={250}
+                    className="w-full h-48 object-cover"
+                    unoptimized
+                  />
+                </div>
+              )}
+              
               <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
                 {auction.auctionName}
               </h3>

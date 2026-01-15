@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
   try {
     const body = await req.json();
-    const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, hostPrivyId, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet } = body;
+    const { auctionName, description, tokenAddress, endDate, startDate, hostedBy, hostPrivyId, minimumBid, blockchainAuctionId, currency, creationHash, startingWallet, imageUrl, imageKey } = body;
 
     const checkWl = await Whitelist.findOne({
       walletAddress: startingWallet.toLowerCase(),
@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
       endDate,
       hostedBy: user._id,
       minimumBid,
-      startingWallet: startingWallet
+      startingWallet: startingWallet,
+      imageUrl: imageUrl || undefined,
+      imageKey: imageKey || undefined,
     });
 
     await newAuction.save();
