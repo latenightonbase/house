@@ -8,9 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.965.0",
-    "@aws-sdk/core": "^3.969.0",
-    "@aws-sdk/s3-request-presigner": "^3.965.0",
+    "@aws-sdk/client-s3": "^3.726.0",
+    "@aws-sdk/core": "^3.726.0",
+    "@aws-sdk/s3-request-presigner": "^3.726.0",
     "@coinbase/onchainkit": "^0.38.17",
     "@farcaster/auth-client": "^0.7.0",
     "@farcaster/miniapp-node": "^0.1.11",
