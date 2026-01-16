@@ -53,7 +53,7 @@ export function createAuctionFrameUrl(params: {
   durationHours: number;
 }): string {
   // Generate URL to our custom frame endpoint that handles contract calls
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.com";
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://your-app.com";
   
   const frameUrl = new URL(`${baseUrl}/api/bot/frame/create-auction`);
   frameUrl.searchParams.set("name", params.auctionName);
