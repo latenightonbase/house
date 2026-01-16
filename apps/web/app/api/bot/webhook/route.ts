@@ -100,19 +100,19 @@ export async function POST(req: NextRequest) {
       durationHours: parsed.durationHours,
     });
 
+    console.log(`[Bot] Generated frame URL: ${frameUrl}`);
+
     // Reply with auction summary - frame URL is embedded so it renders as interactive frame
     const response = `🎉 Ready to create your auction!
 
 📝 ${parsed.auctionName}
 ${parsed.description ? `📄 ${parsed.description}\n` : ""}💰 Min Bid: ${parsed.minimumBid} ${currency}
-⏰ Duration: ${parsed.durationHours} hours
-
-Click below to sign the transaction! 👇`;
+⏰ Duration: ${parsed.durationHours} hours`;
 
     // Pass frameUrl as embed so it renders as a Farcaster Frame
     await replyToCast(castHash, response, frameUrl);
 
-    console.log(`[Bot] Replied to @${cast.author.username} with frame URL`);
+    console.log(`[Bot] Replied to @${cast.author.username} with frame embed`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

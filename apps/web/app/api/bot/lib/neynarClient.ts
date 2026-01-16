@@ -9,7 +9,7 @@ export const neynar = new NeynarAPIClient(config);
 export async function replyToCast(
   parentHash: string,
   text: string,
-  embedUrl?: string
+  frameUrl?: string
 ): Promise<void> {
   const signerUuid = process.env.BOT_SIGNER_UUID;
   
@@ -17,10 +17,16 @@ export async function replyToCast(
     throw new Error("BOT_SIGNER_UUID is not set");
   }
 
-  console.log(`[Neynar] Publishing cast with signer: ${signerUuid.substring(0, 8)}...`);
-  console.log(`[Neynar] Reply to: ${parentHash}`);
-  if (embedUrl) {
-    console.log(`[Neynar] Embed URL: ${embedUrl}`);
+  console.log(`[Neynar] Publishing cast`);
+  console.log(`[Neynar] Signer: ${signerUuid.substring(0, 8)}...`);
+  console.log(`[Neynar] Parent: ${parentHash}`);
+  console.log(`[Neynar] Text: ${text.substring(0, 50)}...`);
+  
+  // Build embeds array if frameUrl is provided
+  const embeds = frameUrl ? [{ url: frameUrl }] : [];
+  
+  if (frameUrl) {
+    console.log(`[Neynar] Frame embed URL: ${frameUrl}`);
   }
   
   try {
@@ -28,9 +34,10 @@ export async function replyToCast(
       signerUuid,
       text,
       parent: parentHash,
-      embeds: embedUrl ? [{ url: embedUrl }] : undefined,
+      embeds: embeds.length > 0 ? embeds : undefined,
     });
-    console.log(`[Neynar] Cast published: ${result.cast.hash}`);
+    console.log(`[Neynar] Cast published successfully!`);
+    console.log(`[Neynar] Cast hash: ${result.cast.hash}`);
   } catch (error) {
     if (isApiErrorResponse(error)) {
       console.error(`[Neynar] API Error ${error.response.status}:`, error.response.data);
