@@ -24,7 +24,9 @@ interface WebhookPayload {
 
 export async function POST(req: NextRequest) {
   try {
-    const body: WebhookPayload = await req.json();
+    const body = await req.json();
+    
+    console.log(`[Bot] Webhook received:`, JSON.stringify(body, null, 2));
 
     // Only handle cast.created events
     if (body.type !== "cast.created") {
@@ -36,7 +38,9 @@ export async function POST(req: NextRequest) {
     const castHash = cast.hash;
     const text = cast.text;
 
-    console.log(`[Bot] Received cast from @${cast.author.username}: ${text}`);
+    console.log(`[Bot] Cast hash: ${castHash}`);
+    console.log(`[Bot] Author FID: ${authorFid}`);
+    console.log(`[Bot] Text: ${text}`);
 
     // Connect to database
     await dbConnect();

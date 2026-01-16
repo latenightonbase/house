@@ -1,4 +1,4 @@
-import { NeynarAPIClient, Configuration } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration, isApiErrorResponse } from "@neynar/nodejs-sdk";
 
 const config = new Configuration({
   apiKey: process.env.NEYNAR_API_KEY!,
@@ -10,11 +10,28 @@ export async function replyToCast(
   parentHash: string,
   text: string
 ): Promise<void> {
-  await neynar.publishCast({
-    signerUuid: process.env.BOT_SIGNER_UUID!,
-    text,
-    parent: parentHash,
-  });
+  const signerUuid = process.env.BOT_SIGNER_UUID;
+  
+  if (!signerUuid) {
+    throw new Error("BOT_SIGNER_UUID is not set");
+  }
+
+  console.log(`[Neynar] Publishing cast with signer: ${signerUuid.substring(0, 8)}...`);
+  console.log(`[Neynar] Reply to: ${parentHash}`);
+  
+  try {
+    const result = await neynar.publishCast({
+      signerUuid,
+      text,
+      parent: parentHash,
+    });
+    console.log(`[Neynar] Cast published: ${result.cast.hash}`);
+  } catch (error) {
+    if (isApiErrorResponse(error)) {
+      console.error(`[Neynar] API Error ${error.response.status}:`, error.response.data);
+    }
+    throw error;
+  }
 }
 
 export async function getUserVerifiedWallet(fid: number): Promise<string | null> {
@@ -36,7 +53,7 @@ export function createAuctionFrameUrl(params: {
   durationHours: number;
 }): string {
   // Generate URL to our custom frame endpoint that handles contract calls
-  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://your-app.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.com";
   
   const frameUrl = new URL(`${baseUrl}/api/bot/frame/create-auction`);
   frameUrl.searchParams.set("name", params.auctionName);
