@@ -55,8 +55,9 @@ export async function GET(req: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_URL || "https://your-app.com";
   const postUrl = `${baseUrl}/api/bot/frame/create-auction`;
   
-  // Generate dynamic image URL (you can create an OG image endpoint)
-  const imageUrl = `${baseUrl}/api/og/auction?name=${encodeURIComponent(auctionName)}&token=${tokenName}&minBid=${minimumBid}&duration=${durationHours}`;
+  // Use a placeholder image for now (you can create a dynamic OG image endpoint later)
+  // Frame images should be 1.91:1 aspect ratio (e.g., 1200x630)
+  const imageUrl = `https://placehold.co/1200x630/7C3AED/white?text=${encodeURIComponent(auctionName)}`;
 
   const html = getFrameHtml({
     auctionName,

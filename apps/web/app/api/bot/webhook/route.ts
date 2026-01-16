@@ -42,6 +42,13 @@ export async function POST(req: NextRequest) {
     console.log(`[Bot] Author FID: ${authorFid}`);
     console.log(`[Bot] Text: ${text}`);
 
+    // Ignore bot's own casts to prevent self-reply loops
+    const botFid = process.env.BOT_FID;
+    if (botFid && authorFid.toString() === botFid) {
+      console.log(`[Bot] Ignoring own cast`);
+      return NextResponse.json({ success: true });
+    }
+
     // Connect to database
     await dbConnect();
 
