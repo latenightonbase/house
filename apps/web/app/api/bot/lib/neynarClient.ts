@@ -8,7 +8,8 @@ export const neynar = new NeynarAPIClient(config);
 
 export async function replyToCast(
   parentHash: string,
-  text: string
+  text: string,
+  embedUrl?: string
 ): Promise<void> {
   const signerUuid = process.env.BOT_SIGNER_UUID;
   
@@ -18,12 +19,16 @@ export async function replyToCast(
 
   console.log(`[Neynar] Publishing cast with signer: ${signerUuid.substring(0, 8)}...`);
   console.log(`[Neynar] Reply to: ${parentHash}`);
+  if (embedUrl) {
+    console.log(`[Neynar] Embed URL: ${embedUrl}`);
+  }
   
   try {
     const result = await neynar.publishCast({
       signerUuid,
       text,
       parent: parentHash,
+      embeds: embedUrl ? [{ url: embedUrl }] : undefined,
     });
     console.log(`[Neynar] Cast published: ${result.cast.hash}`);
   } catch (error) {

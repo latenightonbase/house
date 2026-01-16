@@ -100,18 +100,16 @@ export async function POST(req: NextRequest) {
       durationHours: parsed.durationHours,
     });
 
-    // Reply with auction summary and frame
+    // Reply with auction summary and frame as embed
     const response = `🎉 Ready to create your auction!
 
 📝 **${parsed.auctionName}**
 ${parsed.description ? `📄 ${parsed.description}\n` : ""}💰 Min Bid: ${parsed.minimumBid} ${currency}
 ⏰ Duration: ${parsed.durationHours} hours
 
-Click below to sign and create! 👇
+Click below to sign and create! 👇`;
 
-${frameUrl}`;
-
-    await replyToCast(castHash, response);
+    await replyToCast(castHash, response, frameUrl);
 
     console.log(`[Bot] Replied to @${cast.author.username} with frame URL`);
 
