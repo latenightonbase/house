@@ -14,6 +14,7 @@ import Input from "./UI/Input";
 import CurrencySearch from "./UI/CurrencySearch";
 import DateTimePicker from "./UI/DateTimePicker";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import { useSearchParams } from "next/navigation";
 import ImageUpload from "./ImageUpload";
 // import { WalletConnect } from "./Web3/walletConnect";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
@@ -93,6 +94,59 @@ export default function CreateAuction() {
   const [myCallId, setMyCallId] = useState<string | null>(null);
 
   const navigate = useNavigateWithLoader();
+  const searchParams = useSearchParams();
+
+  // Prefill form from URL params (from bot)
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (prefill === "true") {
+      const name = searchParams.get("name");
+      const token = searchParams.get("token");
+      const minBid = searchParams.get("minBid");
+      const duration = searchParams.get("duration");
+
+      if (name) {
+        setAuctionTitle(name);
+      }
+
+      if (minBid) {
+        setMinBidAmount(minBid);
+      }
+
+      if (token) {
+        // Known tokens mapping
+        const knownTokens: Record<string, { name: string; symbol: string }> = {
+          "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913": { name: "USD Coin", symbol: "USDC" },
+          "0x4200000000000000000000000000000000000006": { name: "Wrapped Ether", symbol: "WETH" },
+        };
+
+        const tokenInfo = knownTokens[token.toLowerCase()];
+        if (tokenInfo) {
+          setSelectedCurrency({
+            name: tokenInfo.name,
+            symbol: tokenInfo.symbol,
+            contractAddress: token,
+          });
+        } else {
+          // For unknown tokens, set with address as name
+          setSelectedCurrency({
+            name: `Token (${token.slice(0, 6)}...${token.slice(-4)})`,
+            symbol: "TOKEN",
+            contractAddress: token,
+          });
+        }
+      }
+
+      if (duration) {
+        const durationHours = parseInt(duration);
+        if (!isNaN(durationHours) && durationHours > 0) {
+          const endDate = new Date();
+          endDate.setHours(endDate.getHours() + durationHours);
+          setEndTime(endDate);
+        }
+      }
+    }
+  }, [searchParams]);
 
   async function composeCast() {
     try {
