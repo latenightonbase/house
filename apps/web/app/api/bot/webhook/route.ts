@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/utils/db";
 import User from "@/utils/schemas/User";
-import { replyToCast, getUserVerifiedWallet, createAuctionLink } from "../lib/neynarClient";
+import { replyToCast, getUserVerifiedWallet, createAuctionFrameUrl } from "../lib/neynarClient";
 import { parseAuctionCommand } from "../lib/simpleParser";
 import { getCurrencyFromToken } from "../lib/tokenLookup";
 
@@ -91,8 +91,8 @@ export async function POST(req: NextRequest) {
     // Get currency from token address
     const currency = await getCurrencyFromToken(parsed.tokenAddress);
 
-    // Create link to the create page with prefilled data
-    const createLink = createAuctionLink({
+    // Create transaction frame URL
+    const frameUrl = createAuctionFrameUrl({
       auctionName: parsed.auctionName,
       tokenAddress: parsed.tokenAddress,
       tokenName: currency,
@@ -100,16 +100,17 @@ export async function POST(req: NextRequest) {
       durationHours: parsed.durationHours,
     });
 
-    // Reply with auction summary and link
+    // Reply with auction summary - frame URL is embedded so it renders as interactive frame
     const response = `🎉 Ready to create your auction!
 
 📝 ${parsed.auctionName}
 ${parsed.description ? `📄 ${parsed.description}\n` : ""}💰 Min Bid: ${parsed.minimumBid} ${currency}
 ⏰ Duration: ${parsed.durationHours} hours
 
-👉 ${createLink}`;
+Click below to sign the transaction! 👇`;
 
-    await replyToCast(castHash, response);
+    // Pass frameUrl as embed so it renders as a Farcaster Frame
+    await replyToCast(castHash, response, frameUrl);
 
     console.log(`[Bot] Replied to @${cast.author.username} with frame URL`);
 

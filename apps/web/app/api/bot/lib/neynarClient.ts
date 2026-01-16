@@ -50,24 +50,24 @@ export async function getUserVerifiedWallet(fid: number): Promise<string | null>
   }
 }
 
-export function createAuctionLink(params: {
+export function createAuctionFrameUrl(params: {
   auctionName: string;
   tokenAddress: string;
   tokenName: string;
   minimumBid: number;
   durationHours: number;
 }): string {
-  // Use the Farcaster mini app URL with prefilled data
-  const miniAppUrl = process.env.NEXT_PUBLIC_MINIAPP_URL || "https://farcaster.xyz/miniapps/0d5aS3cWVprk/house";
+  // Use our self-hosted transaction frame
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://house-auction.vercel.app";
   
-  // Build URL to the create page with prefilled data
-  const createUrl = new URL(`${miniAppUrl}/create`);
-  createUrl.searchParams.set("prefill", "true");
-  createUrl.searchParams.set("name", params.auctionName);
-  createUrl.searchParams.set("token", params.tokenAddress);
-  createUrl.searchParams.set("minBid", params.minimumBid.toString());
-  createUrl.searchParams.set("duration", params.durationHours.toString());
+  // Build URL to our frame endpoint with all auction params
+  const frameUrl = new URL(`${baseUrl}/api/bot/frame/create-auction`);
+  frameUrl.searchParams.set("name", params.auctionName);
+  frameUrl.searchParams.set("token", params.tokenAddress);
+  frameUrl.searchParams.set("tokenName", params.tokenName);
+  frameUrl.searchParams.set("minBid", params.minimumBid.toString());
+  frameUrl.searchParams.set("duration", params.durationHours.toString());
 
-  return createUrl.toString();
+  return frameUrl.toString();
 }
 
