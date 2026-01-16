@@ -17,7 +17,12 @@ export interface AuctionData {
  */
 export function parseAuctionCommand(text: string): AuctionData | { error: string } {
   // Remove bot mention
-  const cleanText = text.replace(/@\w+/g, "").trim();
+  let cleanText = text.replace(/@\w+/g, "").trim();
+  
+  // Normalize smart quotes to straight quotes (mobile keyboards use curly quotes)
+  cleanText = cleanText
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')  // Double quotes
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'"); // Single quotes
 
   // Extract quoted strings (name and optional description)
   const quotedStrings = cleanText.match(/"([^"]+)"/g)?.map(s => s.replace(/"/g, "")) || [];
@@ -39,7 +44,8 @@ export function parseAuctionCommand(text: string): AuctionData | { error: string
   }
 
   // Extract token address (0x followed by 40 hex chars)
-  const tokenMatch = cleanText.match(/token[:\s]*(0x[a-fA-F0-9]{40})/i) ||
+  // Handles: token:0x..., token: 0x..., token 0x..., or just 0x...
+  const tokenMatch = cleanText.match(/token[:\s]*\s*(0x[a-fA-F0-9]{40})/i) ||
                      cleanText.match(/(0x[a-fA-F0-9]{40})/);
   
   if (!tokenMatch) {
