@@ -57,12 +57,11 @@ export function createAuctionLink(params: {
   minimumBid: number;
   durationHours: number;
 }): string {
-  // Use the Farcaster mini app URL with prefilled data
+  // Use the Farcaster mini app URL - point to the bot-create page for instant transaction
   const miniAppUrl = process.env.NEXT_PUBLIC_MINIAPP_URL || "https://farcaster.xyz/miniapps/0d5aS3cWVprk/house";
   
-  // Build URL to the create page with prefilled data
-  const createUrl = new URL(`${miniAppUrl}/create`);
-  createUrl.searchParams.set("prefill", "true");
+  // Build URL to the bot-create page (auto-initiates transaction)
+  const createUrl = new URL(`${miniAppUrl}/bot-create`);
   createUrl.searchParams.set("name", params.auctionName);
   createUrl.searchParams.set("token", params.tokenAddress);
   createUrl.searchParams.set("minBid", params.minimumBid.toString());
