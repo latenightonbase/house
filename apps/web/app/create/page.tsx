@@ -6,8 +6,10 @@ import Heading from "@/components/UI/Heading";
 export default function CreatePage() {
     return (
         <PageLayout className="">
-            <Heading size="lg">Start an Auction!</Heading>
-            <p className="text-caption text-sm mt-4">Fill out these fields and start receiving bids in your Base coin of choice.</p>
+            <div className="text-center mb-6">
+                <Heading size="lg">Create New Auction</Heading>
+                <p className="text-caption text-sm mt-2">List your digital assets for auction</p>
+            </div>
             <Suspense fallback={<div className="animate-pulse">Loading...</div>}>
                 <CreateAuction/>
             </Suspense>

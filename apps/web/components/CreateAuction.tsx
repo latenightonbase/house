@@ -690,20 +690,16 @@ if (context?.client.clientFid === 309857) {
       case 0:
         return auctionTitle.trim().length > 0;
       case 1:
-        return true; // Image upload is optional
+        return selectedCurrency !== null && selectedCurrency.name && !loadingPrice && minBidAmount.trim() !== "" && !isNaN(parseFloat(minBidAmount));
       case 2:
-        return (
-          selectedCurrency !== null && selectedCurrency.name && !loadingPrice
-        );
-      case 3:
-        return minBidAmount.trim() !== "" && !isNaN(parseFloat(minBidAmount));
+        return endTime !== null;
       default:
         return false;
     }
   };
 
   const handleNext = () => {
-    if (!canGoNext() || currentStep >= 4) return;
+    if (!canGoNext() || currentStep >= 2) return;
 
     setCurrentStep(currentStep + 1);
   };
@@ -717,7 +713,7 @@ if (context?.client.clientFid === 309857) {
   if (!address)
     return (
       <div className=" max-lg:mx-auto mt-4">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-white/20 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg
@@ -754,9 +750,39 @@ if (context?.client.clientFid === 309857) {
     );
 
   return (
-    <div className="max-w-2xl max-lg:mx-auto">
-      <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-        <div className="min-h-[400px] flex flex-col justify-start gap-4">
+    <div className="max-w-2xl mx-auto px-4 lg:min-w-[800px] max-lg:pb-20">
+      <form onSubmit={handleSubmit} className="space-y-6 mt-8">
+        {/* Step Progress */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center max-w-sm mx-auto">
+            {[1, 2, 3].map((step, idx) => (
+              <div key={step} className="flex items-center">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all flex-shrink-0 ${
+                    idx === currentStep
+                      ? "bg-gradient-to-r from-primary to-secondary text-white shadow-lg"
+                      : idx < currentStep
+                      ? "bg-gradient-to-r from-primary to-secondary text-white"
+                      : "bg-white/10 text-gray-400 border border-gray-600"
+                  }`}
+                >
+                  {step}
+                </div>
+                {idx < 2 && (
+                  <div
+                    className={`h-0.5 w-16 mx-2 transition-all ${
+                      idx < currentStep
+                        ? "bg-gradient-to-r from-primary to-secondary"
+                        : "bg-white/10"
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="lg:min-h-[450px] min-h-[300px] flex flex-col">
           <AnimatePresence mode="wait">
             {currentStep === 0 && (
               <motion.div
@@ -765,7 +791,7 @@ if (context?.client.clientFid === 309857) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-6"
               >
                 <Input
                   label="Auction Title"
@@ -775,27 +801,21 @@ if (context?.client.clientFid === 309857) {
                       setAuctionTitle(value);
                     }
                   }}
-                  placeholder="Enter a title for your auction (max 30 chars)"
+                  placeholder="Enter auction title"
                   required
                 />
-                <div className="text-xs text-gray-400 text-right">
-                  {auctionTitle.length}/30 characters
-                </div>
                 <Input
-                  label="Description (Optional)"
+                  label="Description"
                   value={description}
                   onChange={(value) => {
                     if (value.length <= 200) {
                       setDescription(value);
                     }
                   }}
-                  placeholder="Enter a description for your auction (max 200 chars)"
+                  placeholder="Describe your auction item"
                   multiline
-                  rows={3}
+                  rows={4}
                 />
-                <div className="text-xs text-gray-400 text-right">
-                  {description.length}/200 characters
-                </div>
               </motion.div>
             )}
 
@@ -806,22 +826,24 @@ if (context?.client.clientFid === 309857) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-6"
               >
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  Add Image (Optional)
-                </h3>
-                <p className="text-sm text-caption mb-4">
-                  Upload an image to make your auction more attractive
-                </p>
-                <ImageUpload
-                  onFileSelect={(file) => {
-                    setSelectedImageFile(file);
-                  }}
-                  onRemove={() => {
-                    setSelectedImageFile(null);
-                  }}
+                <CurrencySearch
+                  onSelect={handleCurrencySelect}
+                  selectedCurrency={selectedCurrency}
                 />
+                <Input
+                  label="Minimum Bid"
+                  value={minBidAmount}
+                  onChange={setMinBidAmount}
+                  placeholder="0.00"
+                  type="number"
+                />
+                {minBidAmount && tokenPrice !== null && !loadingPrice && (
+                  <div className="text-sm text-gray-400">
+                    ≈ {formatUSDAmount(calculateUSDValue(parseFloat(minBidAmount), tokenPrice))}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -832,170 +854,110 @@ if (context?.client.clientFid === 309857) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-6"
               >
-                <CurrencySearch
-                  onSelect={handleCurrencySelect}
-                  selectedCurrency={selectedCurrency}
-                />
-                {selectedCurrency && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-sm text-blue-700">
-                      <strong>Selected Token:</strong> {selectedCurrency.name} (
-                      {selectedCurrency.symbol})
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endTime ? endTime.toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const date = new Date(e.target.value);
+                        if (endTime) {
+                          date.setHours(endTime.getHours());
+                          date.setMinutes(endTime.getMinutes());
+                        }
+                        setEndTime(date);
+                      }}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
                   </div>
-                )}
-              </motion.div>
-            )}
-
-            {currentStep === 3 && (
-              <motion.div
-                key="step-3"
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4"
-              >
-                <Input
-                  label="Minimum Bid Amount"
-                  value={minBidAmount}
-                  onChange={setMinBidAmount}
-                  placeholder="Enter the minimum bid amount (default: 0)"
-                  type="number"
-                />
-                {minBidAmount && tokenPrice !== null && !loadingPrice && (
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-sm text-green-700">
-                      <strong>USD Value:</strong>{" "}
-                      {formatUSDAmount(
-                        calculateUSDValue(parseFloat(minBidAmount), tokenPrice)
-                      )}
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={endTime ? `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}` : ''}
+                      onChange={(e) => {
+                        const [hours, minutes] = e.target.value.split(':');
+                        const date = endTime ? new Date(endTime) : new Date();
+                        date.setHours(parseInt(hours));
+                        date.setMinutes(parseInt(minutes));
+                        setEndTime(date);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
                   </div>
-                )}
-                {loadingPrice && (
-                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="text-sm text-gray-700 flex items-center gap-2">
-                      <RiLoader5Fill className="animate-spin" />
-                      Fetching token price...
-                    </div>
+                </div>
+
+                <div className="bg-white/10 border border-white/10 rounded-lg p-4 space-y-3">
+                  <h3 className="text-lg font-semibold text-white mb-4">Auction Summary</h3>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Title:</span>
+                    <span className="text-white font-medium">{auctionTitle || 'Not set'}</span>
                   </div>
-                )}
-              </motion.div>
-            )}
-
-            {currentStep === 3 && (
-              <motion.div
-                key="step-3"
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4"
-              >
-                <DateTimePicker
-                  label="Auction End Time (Local Time)"
-                  value={endTime}
-                  onChange={setEndTime}
-                  placeholder=""
-                  required
-                  minDate={new Date()}
-                />
-                {endTime && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-sm text-blue-700">
-                      <strong>Auction Duration:</strong>{" "}
-                      {(() => {
-                        const now = new Date();
-                        const diff = endTime.getTime() - now.getTime();
-                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const hours = Math.floor(
-                          (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
-                        );
-                        const minutes = Math.floor(
-                          (diff % (1000 * 60 * 60)) / (1000 * 60)
-                        );
-
-                        if (diff <= 0)
-                          return "Invalid time (must be in the future)";
-
-                        const parts = [];
-                        if (days > 0)
-                          parts.push(`${days} day${days > 1 ? "s" : ""}`);
-                        if (hours > 0)
-                          parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
-                        if (minutes > 0 && days === 0)
-                          parts.push(
-                            `${minutes} minute${minutes > 1 ? "s" : ""}`
-                          );
-
-                        return parts.join(", ");
-                      })()}
-                    </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Currency:</span>
+                    <span className="text-white font-medium">{selectedCurrency?.symbol || 'ETH'}</span>
                   </div>
-                )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Minimum Bid:</span>
+                    <span className="text-white font-medium">{minBidAmount || '0'} {selectedCurrency?.symbol || 'ETH'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">End Date:</span>
+                    <span className="text-white font-medium">{endTime ? endTime.toLocaleDateString() : 'Not set'}</span>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
 
-          <div className="mt-8 space-y-4 absolute bottom-4 left-0 w-full px-6">
-            <div className="flex justify-between items-center gap-4">
-              <button
-                type="button"
-                onClick={handlePrev}
-                disabled={currentStep === 0}
-                className="flex items-center gap-2 px-4 py-2 lg:ml-64 bg-gray-200 text-gray-700 rounded-lg font-semibold transition-all hover:bg-gray-300 disabled:opacity-0 disabled:cursor-not-allowed"
-              >
-                <FaChevronLeft />
-                Previous
-              </button>
+        <div className="flex justify-between items-center pt-6 border-t border-white/10">
+          <button
+            type="button"
+            onClick={handlePrev}
+            disabled={currentStep === 0}
+            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+              currentStep === 0
+                ? 'bg-white/10 text-gray-600 cursor-not-allowed'
+                : 'bg-white/10 text-white hover:bg-gray-600'
+            }`}
+          >
+            Previous
+          </button>
 
-              {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!canGoNext()}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
-                >
-                  Next
-                  <FaChevronRight />
-                </button>
+          {currentStep < 2 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!canGoNext()}
+              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!isFormValid || isLoading}
+              className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg font-semibold transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <RiLoader5Fill className="text-xl animate-spin" />
+                  Creating...
+                </div>
               ) : (
-                <button
-                  type="submit"
-                  disabled={!isFormValid || isLoading}
-                  className="px-4 py-2 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary/90 disabled:bg-disabled disabled:cursor-not-allowed disabled:text-gray-500"
-                >
-                  {isLoading ? (
-                    <div className="flex items-center text-black/50 justify-center gap-2">
-                      <RiLoader5Fill className="text-xl animate-spin" />
-                      Creating...
-                    </div>
-                  ) : (
-                    "Create"
-                  )}
-                </button>
+                'Create'
               )}
-            </div>
-
-            {/* Progress Indicator */}
-            <div className="flex justify-center gap-2">
-              {[0, 1, 2, 3].map((step) => (
-                <div
-                  key={step}
-                  className={`h-2 w-12 rounded-full transition-all ${
-                    step === currentStep
-                      ? "bg-primary"
-                      : step < currentStep
-                      ? "bg-primary/50"
-                      : "bg-primary/10"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+            </button>
+          )}
         </div>
       </form>
 

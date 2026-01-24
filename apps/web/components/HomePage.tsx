@@ -6,6 +6,7 @@ import PageLayout from "@/components/UI/PageLayout";
 import Heading from "@/components/UI/Heading";
 import Welcome from "@/components/Welcome";
 import InfoCarousel from "@/components/InfoCarousel";
+import LeaderboardSidebar from "./LeaderboardSidebar";
 // import { UsernameManager } from "@/components/UI/UsernameManager";
 
 NProgress.configure({ showSpinner: false });
@@ -39,7 +40,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen absolute top-0 left-0 lg:left-48 w-full flex flex-col items-center justify-center gap-4 z-50">
+      <div className="min-h-screen absolute top-0 left-0 w-full flex flex-col items-center justify-center gap-4 z-50">
         <Heading className="text-center">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></Heading>
         <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden my-3">
           <div 
@@ -58,8 +59,13 @@ export default function HomePage() {
     >
       {/* <UsernameManager /> */}
       <Welcome/>
-      <InfoCarousel/>
-      <LandingAuctions/>
+      {/* <InfoCarousel/> */}
+      <div className="flex items-start w-full">
+        <LandingAuctions/>
+        {/* Sidebar */}
+              <LeaderboardSidebar />
+      </div>
+      
      
     </PageLayout>
   );

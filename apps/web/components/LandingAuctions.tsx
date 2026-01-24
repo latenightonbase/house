@@ -13,6 +13,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "./UI/Drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./UI/Dialog";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import RatingCircle from "./UI/RatingCircle";
 import toast from "react-hot-toast";
@@ -50,6 +58,9 @@ import LoginWithOAuth from "./utils/twitterConnect";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
 import ScrollingName from "./utils/ScrollingName";
+import { Users } from "lucide-react";
+import AuctionCard from "./AuctionCard";
+import LeaderboardSidebar from "./LeaderboardSidebar";
 
 interface Bidder {
   user: string;
@@ -127,6 +138,15 @@ const LandingAuctions: React.FC = () => {
     "all" | "usdc" | "creator-coins"
   >("all");
 
+  // Recent Activity Ticker State
+  const [recentBids, setRecentBids] = useState<{
+    bidderName: string;
+    auctionName: string;
+    bidAmount: number;
+    currency: string;
+    bidTimestamp: string;
+  }[]>([]);
+
   // Intersection Observer ref
   const observerRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +155,16 @@ const LandingAuctions: React.FC = () => {
   const [selectedAuction, setSelectedAuction] = useState<Auction | null>(null);
   const [bidAmount, setBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    setIsDesktop(mediaQuery.matches);
+    
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   // Token price state
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -212,6 +242,29 @@ const LandingAuctions: React.FC = () => {
     // Fetch auctions for all users (both authenticated and unauthenticated)
     fetchTopAuctions(1, false);
   }, [currencyFilter]);
+
+  // Fetch recent activity for ticker
+  useEffect(() => {
+    const fetchRecentActivity = async () => {
+      try {
+        const res = await fetch('/api/leaderboard/recent-bids');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setRecentBids(data.data.slice(0, 10));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching recent bids:', err);
+      }
+    };
+
+    fetchRecentActivity();
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchRecentActivity, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Intersection Observer for lazy loading
   useEffect(() => {
@@ -499,6 +552,9 @@ const LandingAuctions: React.FC = () => {
           checkUsdc(auction.tokenAddress) ? 6 : 18
         )
       );
+
+      console.log("User token balance:", formattedBalance);
+
       if (formattedBalance < bidAmount) {
         toast.error("Insufficient token balance to place bid", { id: toastId });
         setIsLoading(false);
@@ -515,6 +571,9 @@ const LandingAuctions: React.FC = () => {
 
         await wallet.switchChain(baseChain.id);
         const provider = await wallet.getEthereumProvider();
+
+        console.log("Using external wallet provider for transaction...", user);
+
         const bidderIdentifier = String(user.socialId)
          
         const approveData = encodeFunctionData({
@@ -553,6 +612,8 @@ const LandingAuctions: React.FC = () => {
           ],
         } as const;
 
+        console.log("Calls request prepared:", callsRequest);
+
         try {
           const callsResponse = await provider.request({
             method: "wallet_sendCalls",
@@ -587,10 +648,17 @@ const LandingAuctions: React.FC = () => {
           await processSuccess(auctionId, bidAmount);
           return;
         } catch (walletSendError) {
-          toast.error("Transaction failed", { id: toastId });
-          setIsLoading(false);
+          console.log("wallet_sendCalls failed, attempting fallback transaction...");
+          await handleFallbackTransaction(
+            auctionId,
+            bidAmount,
+            bidAmountInWei,
+            auction,
+            toastId
+          );
         }
       } else {
+        console.log("Using OnChainKit context for transaction..., bidAmount:");
         toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, {
           id: toastId,
         });
@@ -880,7 +948,7 @@ const LandingAuctions: React.FC = () => {
     const parts = description.split(urlRegex);
     
     return (
-      <p className="text-caption text-sm mb-3 line-clamp-2 min-h-10">
+      <p className="text-caption text-sm mb-3 line-clamp-2 min-h-6">
         {parts.map((part, index) => {
           if (part.match(urlRegex)) {
             const displayText = part.length > 40 
@@ -906,42 +974,37 @@ const LandingAuctions: React.FC = () => {
   };
 
   const SkeletonCard = () => (
-    <div className="bg-gray-400/10 w-full border border-gray-300 rounded-xl shadow-sm overflow-hidden animate-pulse">
-      {/* Header */}
-      <div className="bg-gray-700 p-4">
-        <div className="flex items-center justify-between">
-          <div className="bg-gray-600 h-6 w-12 rounded-full"></div>
-          <div className="bg-gray-600 h-4 w-24 rounded"></div>
+    <div className="bg-black/40 w-full max-w-full text-white border border-secondary/10 rounded-2xl transition-all overflow-hidden flex flex-col animate-pulse col-span-1">
+      {/* Image skeleton */}
+      <div className="relative w-full h-64 bg-secondary/20"></div>
+
+      {/* Content skeleton */}
+      <div className="p-6 flex flex-col grow">
+        {/* Title */}
+        <div className="h-8 bg-secondary/20 rounded w-3/4 mb-2"></div>
+        
+        {/* Description with min-h-6 to match actual card */}
+        <div className="mb-3 min-h-6">
+          <div className="h-4 bg-secondary/20 rounded w-full"></div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        <div className="bg-gray-700 h-6 w-3/4 rounded"></div>
-        <div className="bg-gray-700 h-4 w-full rounded"></div>
-        <div className="bg-gray-700 h-4 w-5/6 rounded"></div>
+        {/* Host info */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-3 bg-secondary/20 rounded w-6"></div>
+          <div className="w-5 h-5 bg-secondary/20 rounded-full"></div>
+          <div className="h-3 bg-secondary/20 rounded w-24"></div>
+        </div>
 
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <div className="bg-gray-700 h-4 w-16 rounded"></div>
-            <div className="bg-gray-700 h-4 w-20 rounded"></div>
+        {/* Bottom section */}
+        <div className="border-t border-secondary/10 pt-4 mt-auto space-y-3 flex justify-between items-center">
+          <div className="flex flex-col justify-center items-start">
+            <div className="h-4 bg-secondary/20 rounded w-20 mb-1"></div>
+            <div className="h-6 bg-secondary/20 rounded w-28 mb-1"></div>
+            <div className="h-3 bg-secondary/20 rounded w-16"></div>
           </div>
-
-          <div className="flex justify-between items-center">
-            <div className="bg-gray-700 h-4 w-20 rounded"></div>
-            <div className="bg-gray-700 h-4 w-8 rounded"></div>
-          </div>
-
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between">
-              <div className="bg-gray-700 h-4 w-16 rounded"></div>
-              <div className="bg-gray-700 h-4 w-24 rounded"></div>
-            </div>
-          </div>
-
-          <div className="flex justify-center gap-2 px-1">
-            <div className="bg-gray-700 h-12 w-[70%] rounded"></div>
-            <div className="bg-gray-700 h-12 w-[30%] rounded"></div>
+          <div className="flex items-center justify-between bg-secondary/20 rounded-full border border-secondary/30 px-2 py-1 w-16">
+            <div className="w-4 h-4 bg-secondary/20 rounded-full"></div>
+            <div className="h-4 bg-secondary/20 rounded w-6"></div>
           </div>
         </div>
       </div>
@@ -950,33 +1013,33 @@ const LandingAuctions: React.FC = () => {
 
   // Currency Filter Component (reusable)
   const CurrencyFilterButtons = () => (
-    <div className="flex mb-6 overflow-x-hidden">
+    <div className="flex gap-1 justify-end mb-6 overflow-x-hidden">
       <button
         onClick={() => setCurrencyFilter("all")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
           currencyFilter === "all"
-            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-            : "text-caption hover:text-foreground"
+            ? "selected-gradient"
+            : "bg-white/5 border "
         }`}
       >
         All
       </button>
       <button
         onClick={() => setCurrencyFilter("usdc")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
           currencyFilter === "usdc"
-            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-            : "text-caption hover:text-foreground"
+            ? "selected-gradient"
+            : "bg-white/5 border "
         }`}
       >
         USDC
       </button>
       <button
         onClick={() => setCurrencyFilter("creator-coins")}
-        className={`px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap shrink-0 ${
+        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
           currencyFilter === "creator-coins"
-            ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-            : "text-caption hover:text-foreground"
+            ? "selected-gradient"
+            : "bg-white/5 border "
         }`}
       >
         Creator Coins
@@ -985,28 +1048,50 @@ const LandingAuctions: React.FC = () => {
   );
 
   return (
-    <div className="w-full max-lg:mx-auto mt-2 pb-24">
-      <div className="flex flex-col items-start justify-between mb-8">
-        <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
-        <p className="text-caption text-sm mt-2">
-          Discover the most active auctions happening right now
-        </p>
-      </div>
-
-      {/* Currency Filter */}
-      <CurrencyFilterButtons />
-
-      {loading ? (
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
-          <div className="flex flex-col items-center gap-4">
-            <RiLoader5Fill className="animate-spin text-4xl text-primary" />
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Loading Auctions</h3>
-              <p className="text-caption">
-                Fetching the latest auction data...
-              </p>
-            </div>
+    <div className="w-full lg:mt-10 mt-8 pb-24 ">
+      {/* Main Content */}
+      <div className="w-full max-lg:mx-auto lg:w-[1000px]">
+        {/* Recent Activity Ticker - Mobile Only */}
+        <div className="lg:hidden mb-4 overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 rounded-lg py-2">
+          <div className="flex animate-scroll whitespace-nowrap">
+            {recentBids.length > 0 ? (
+              <>
+                {[...recentBids, ...recentBids, ...recentBids].map((bid, index) => (
+                  <div key={index} className="inline-flex items-center mx-4 text-sm">
+                    <span className="text-caption">{bid.bidderName}</span>
+                    
+                    <span className="mx-2 text-caption">•</span>
+                    <span className="text-white font-medium">{bid.auctionName}</span>
+                    <span className="mx-2 text-green-500">→</span>
+                    <span className="text-primary font-semibold">
+                      {bid.bidAmount.toLocaleString()} {bid.currency}
+                    </span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="inline-flex items-center mx-4 text-sm text-caption">
+                <span>Loading recent activity...</span>
+              </div>
+            )}
           </div>
+        </div>
+
+        <div className="flex max-lg:flex-col lg:items-center justify-between lg:mb-4 max-lg:gap-4">
+          <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
+          {/* Currency Filter */}
+        <CurrencyFilterButtons />
+        </div>
+
+        
+
+      <div className="w-full">
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       ) : error ? (
         <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
@@ -1041,7 +1126,7 @@ const LandingAuctions: React.FC = () => {
           </div>
         </div>
       ) : auctions.length === 0 ? (
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-primary/10 p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg
@@ -1078,350 +1163,15 @@ const LandingAuctions: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
         {auctions.map((auction, index) => (
-          <div
+          <AuctionCard
             key={auction._id}
-            className="bg-primary/10 w-full text-white border border-primary rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden flex flex-col h-full"
-          >
-            {/* Header with ranking */}
-            <div className="gradient-button p-4 relative shrink-0">
-              <div className="flex items-center justify-between">
-                <span className="bg-white/20 text-white text-sm font-semibold px-3 py-1 rounded-full">
-                  #{index + 1}
-                </span>
-                <div className="flex items-center gap-2 ">
-                  <span className="text-white text-sm">
-                    {formatTimeRemaining(auction.hoursRemaining)} left
-                  </span>
-                  <div className="">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-white hover:bg-white/20"
-                      onClick={() =>
-                        handleShareClick(auction.blockchainAuctionId)
-                      }
-                    >
-                      <IoShareOutline className="h-4 w-4" />
-                    </Button>
-                    {shareDropdownOpen === auction.blockchainAuctionId && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          right: "10px",
-                          top: "40px",
-                          background: "rgba(0, 0, 0, 0.8)",
-                          backdropFilter: "blur(24px)",
-                          borderRadius: "8px",
-                          boxShadow:
-                            "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-                          zIndex: 50,
-                          width: "180px",
-                          padding: "8px",
-                        }}
-                      >
-                        <button
-                          style={{
-                            width: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "8px 12px",
-                            fontSize: "14px",
-                            color: "hsl(var(--primary))",
-                            backgroundColor: "transparent",
-                            borderRadius: "4px",
-                            border: "none",
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                            whiteSpace: "nowrap",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(255, 255, 255, 0.1)";
-                            e.currentTarget.style.color = "hsl(var(--primary))";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                            e.currentTarget.style.color = "hsl(var(--primary))";
-                          }}
-                          onClick={() =>
-                            copyToClipboard(
-                              `${process.env.NEXT_PUBLIC_DOMAIN}/bid/${auction.blockchainAuctionId}`,
-                              "Web URL"
-                            )
-                          }
-                        >
-                          <IoLinkOutline
-                            style={{
-                              height: "16px",
-                              width: "16px",
-                              flexShrink: 0,
-                            }}
-                          />
-                          Web URL
-                        </button>
-                        <button
-                          style={{
-                            width: "100%",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            padding: "8px 12px",
-                            fontSize: "14px",
-                            color: "hsl(var(--primary))",
-                            backgroundColor: "transparent",
-                            borderRadius: "4px",
-                            border: "none",
-                            cursor: "pointer",
-                            transition: "all 0.2s",
-                            whiteSpace: "nowrap",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "rgba(255, 255, 255, 0.1)";
-                            e.currentTarget.style.color = "hsl(var(--primary))";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                            e.currentTarget.style.color = "hsl(var(--primary))";
-                          }}
-                          onClick={() =>
-                            copyToClipboard(
-                              `${process.env.NEXT_PUBLIC_MINIAPP_URL}/bid/${auction.blockchainAuctionId}`,
-                              "Miniapp URL"
-                            )
-                          }
-                        >
-                          <IoCopyOutline
-                            style={{
-                              height: "16px",
-                              width: "16px",
-                              flexShrink: 0,
-                            }}
-                          />
-                          Miniapp URL
-                        </button>
-                        {context && (
-                          <button
-                            style={{
-                              width: "100%",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              padding: "8px 12px",
-                              fontSize: "14px",
-                              color: "hsl(var(--primary))",
-                              backgroundColor: "transparent",
-                              borderRadius: "4px",
-                              border: "none",
-                              cursor: "pointer",
-                              transition: "all 0.2s",
-                              whiteSpace: "nowrap",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "rgba(255, 255, 255, 0.1)";
-                              e.currentTarget.style.color =
-                                "hsl(var(--primary))";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                "transparent";
-                              e.currentTarget.style.color =
-                                "hsl(var(--primary))";
-                            }}
-                            onClick={() => composeCast(auction)}
-                          >
-                            <FaShare
-                              style={{
-                                height: "16px",
-                                width: "16px",
-                                flexShrink: 0,
-                              }}
-                            />
-                            Share Cast
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 flex flex-col grow">
-              {auction.imageUrl && (
-                <div className="mb-3 -mx-4 -mt-4">
-                  <Image
-                    src={auction.imageUrl}
-                    alt={auction.auctionName}
-                    width={400}
-                    height={250}
-                    className="w-full h-48 object-cover"
-                    unoptimized
-                  />
-                </div>
-              )}
-              
-              <h3 className="text-xl font-semibold text-white mb-2 line-clamp-1">
-                {auction.auctionName}
-              </h3>
-
-              {auction.description && renderDescription(auction.description)}
-
-              <div className="space-y-3 grow flex flex-col">
-                {/* Highest bid */}
-                <div className="flex justify-between items-center">
-                  {auction.highestBid == 0 ? (
-                    <>
-                      <span className="text-caption text-sm w-[30%]">
-                        Min Bid:
-                      </span>
-                      <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
-                        {formatBidAmount(auction.minimumBid, auction.currency)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-caption text-sm w-[30%]">
-                        Highest Bid:
-                      </span>
-                      <span className="font-semibold text-md text-primary text-nowrap text-truncate w-[70%] text-end overflow-hidden">
-                        {formatBidAmount(auction.highestBid, auction.currency)}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {/* Stats */}
-                <div className="flex justify-between items-center">
-                  <div className="text-caption text-sm">Participants</div>
-                  <div className="font-semibold text-md text-white">
-                    {auction.participantCount}
-                  </div>
-                </div>
-
-                {/* Top Bidder - Always reserve space */}
-                <div className="flex justify-between items-center min-h-8">
-                  {auction.topBidder ? (
-                    <>
-                      <div className="text-caption text-sm">Top Bidder</div>
-                      <div onClick={()=> auction.topBidder?._id && navigate(`/user/${auction.topBidder._id}`)} className="font-semibold text-md text-white bg-white/10 rounded-full px-2 py-1 flex gap-2 max-lg:max-w-52 truncate">
-                        <Image
-                          unoptimized
-                          alt="top bidder"
-                          src={auction.topBidder?.pfp_url || ""}
-                          width={100}
-                          height={100}
-                          className="rounded-full w-6 aspect-square"
-                        />
-                        <div className="hidden lg:block">
-                          <h3 className="text-md">
-                            {auction.topBidder?.username || "User "+ auction.topBidder.socialId}
-                          </h3>
-                        </div>
-                        <div className="lg:hidden">
-                          <ScrollingName 
-                            name={auction.topBidder?.username || "User "+ auction.topBidder.socialId}
-                            className="max-w-40 text-md"
-                          />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-caption text-sm">Top Bidder</div>
-                      <div className="font-semibold text-md text-caption">
-                        No bids yet
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Spacer to push content to bottom */}
-                <div className="grow"></div>
-
-                {/* Host info */}
-                <div className="border-t pt-3 mt-auto">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-caption">Hosted by:</span>
-                    <div
-                      className="flex items-center gap-2 text-primary hover:text-primary cursor-pointer font-bold transition-colors duration-200 justify-center"
-                      onClick={() =>
-                        navigate(`/user/${auction.hostedBy._id}`)
-                      }
-                    >
-                      <Image
-                        unoptimized
-                        alt="host"
-                        src={
-                          auction.hostedBy.pfp_url ||
-                          `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.hostedBy.wallet}`
-                        }
-                        width={24}
-                        height={24}
-                        className="rounded-full w-6 h-6 aspect-square object-cover"
-                      />
-                      <div className="hidden lg:block">
-                        <span>
-                          {auction.hostedBy.display_name ||
-                            (auction.hostedBy.username
-                              ? `@${auction.hostedBy.username}`
-                              : auction.hostedBy.socialId)}
-                        </span>
-                      </div>
-                      <div className="lg:hidden flex ">
-                        <ScrollingName 
-                          name={auction.hostedBy.display_name ||
-                            (auction.hostedBy.username
-                              ? `@${auction.hostedBy.username}`
-                              : auction.hostedBy.socialId) as string}
-                          className="max-w-40"
-                        />
-                        
-                      </div>
-
-                      {(auction.hostedBy.averageRating ?? 0) > 0 && (auction.hostedBy.totalReviews ?? 0) > 0 && (
-                        <RatingCircle
-                          rating={auction.hostedBy.averageRating}
-                          totalReviews={auction.hostedBy.totalReviews}
-                          size="sm"
-                          showLabel={false}
-                        />
-                      )}
-
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action button */}
-                <div className="flex justify-center gap-2 px-1">
-                  <Button
-                    variant={"default"}
-                    className="w-[70%] h-12 hover:opacity-90 text-white font-bold text-lg"
-                    onClick={() => openBidDrawer(auction)}
-                  >
-                    Bid
-                  </Button>
-                  <Button
-                    variant={"outline"}
-                    className="w-[30%] h-12 hover:opacity-90 text-lg"
-                    onClick={() => {
-                      // Navigate to auction detail page
-                      navigate(`/bid/${auction.blockchainAuctionId}`);
-                    }}
-                  >
-                    View
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+            auction={auction}
+            onNavigate={navigate}
+            renderDescription={renderDescription}
+            onBidClick={openBidDrawer}
+          />
         ))}
 
         {/* Skeleton cards for loading more */}
@@ -1469,9 +1219,12 @@ const LandingAuctions: React.FC = () => {
         )}
       </div>
       )}
-
-        {/* Bid Drawer */}
-        <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+      </div>
+      </div>
+      
+        {/* Responsive Bid Modal */}
+        {!isDesktop ? (
+          <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
           <DrawerContent className="drawer-content max-h-[85vh] h-auto flex flex-col">
             <DrawerHeader className="shrink-0">
             <DrawerTitle className="my-4 text-xl">Place Your Bid</DrawerTitle>
@@ -1597,6 +1350,134 @@ const LandingAuctions: React.FC = () => {
           )}
         </DrawerContent>
       </Drawer>
+        ) : (
+          <Dialog open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl">Place Your Bid</DialogTitle>
+                <div className="text-left text-sm mt-4">
+                  {selectedAuction && (
+                    <ul className="space-y-2">
+                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                        <span className="text-caption">Bidding on:</span>
+                        <strong className="text-primary">
+                          {selectedAuction.auctionName}
+                        </strong>
+                      </li>
+                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                        <span className="text-caption">Minimum bid:</span>
+                        <strong className="text-primary">
+                          {formatBidAmount(
+                            selectedAuction.minimumBid,
+                            selectedAuction.currency
+                          )}
+                        </strong>
+                      </li>
+
+                      {selectedAuction.highestBid > 0 && (
+                        <li className="border-b border-b-white/10 py-2 flex justify-between">
+                          <span className="text-caption">
+                            Current highest bid:
+                          </span>
+                          <strong className="text-primary">
+                            {formatBidAmount(
+                              selectedAuction.highestBid,
+                              selectedAuction.currency
+                            )}
+                          </strong>
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </DialogHeader>
+
+              {!address ? (
+                <div className="py-4">
+                  <div className="text-center mb-4">
+                    <p className="text-caption mb-4">
+                      Please connect your wallet to place a bid
+                    </p>
+                    <AggregateConnector />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="py-4">
+                    <Input
+                      label="Bid Amount"
+                      value={bidAmount}
+                      onChange={(value) => {
+                        setBidAmount(value);
+                        if (bidError) setBidError(""); // Clear error when user types
+                      }}
+                      placeholder={
+                        selectedAuction
+                          ? `Enter amount in ${selectedAuction.currency}`
+                          : "Enter bid amount"
+                      }
+                      type="number"
+                      required
+                      className="mb-2"
+                    />
+
+                    {/* USD Value Display */}
+                    {bidAmount && parseFloat(bidAmount) > 0 && (
+                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-caption">USD Value:</span>
+                          <div className="flex items-center">
+                            {tokenPriceLoading ? (
+                              <>
+                                <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                                <span className="text-caption">Loading...</span>
+                              </>
+                            ) : priceError ? (
+                              <span className="text-red-400">{priceError}</span>
+                            ) : tokenPrice && getUSDValue() ? (
+                              <span className="text-primary font-medium">
+                                {formatUSDAmount(getUSDValue()!)}
+                              </span>
+                            ) : (
+                              <span className="text-caption">--</span>
+                            )}
+                          </div>
+                        </div>
+                        {tokenPrice && !tokenPriceLoading && !priceError && (
+                          <div className="text-xs text-caption mt-1">
+                            1 {selectedAuction?.currency} ={" "}
+                            {formatUSDAmount(tokenPrice)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {bidError && (
+                      <p className="text-red-500 text-sm mt-1">{bidError}</p>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      onClick={handleConfirmBid}
+                      disabled={isLoading || !bidAmount}
+                      className="w-full h-12 text-lg font-bold"
+                    >
+                      {isLoading ? (
+                        <>
+                          <RiLoader5Fill className="text-2xl mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        "Confirm Bid"
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        )}
     </div>
   );
 };

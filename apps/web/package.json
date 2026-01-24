@@ -19,6 +19,7 @@
     "@neynar/nodejs-sdk": "^3.119.1",
     "@privy-io/react-auth": "^3.8.1",
     "@privy-io/server-auth": "^1.32.5",
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.3",

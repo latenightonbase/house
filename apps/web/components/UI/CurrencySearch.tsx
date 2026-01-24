@@ -122,7 +122,7 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
         <div
           className={twMerge(
             "mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20",
-            selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? "border-green-500" : "opacity-70"
+            selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? "border-primary" : "opacity-70"
           )}
         >
           <div className="flex justify-between items-center">

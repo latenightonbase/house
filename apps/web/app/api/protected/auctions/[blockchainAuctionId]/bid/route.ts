@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import Auction, { IBidder } from '@/utils/schemas/Auction';
 import User from '@/utils/schemas/User';
+import Bid from '@/utils/schemas/Bid';
 import WeeklyBidderLeaderboard from '@/utils/schemas/WeeklyBidderLeaderboard';
 import { fetchTokenPrice } from '@/utils/tokenPrice';
 import { getWeekBoundaries } from '@/utils/weekHelpers';
@@ -145,6 +146,27 @@ export async function POST(req: NextRequest) {
     await auction.save();
     console.log("✅ Auction saved successfully");
 
+    // Create separate Bid document for tracking
+    let createdBid = null;
+    try {
+      console.log("📝 Creating separate Bid document...");
+      createdBid = await Bid.create({
+        auction: auction._id,
+        user: user._id,
+        socialId: socialId || privyId,
+        bidAmount,
+        usdcValue: usdcValue || 0,
+        currency: auction.currency,
+        tokenAddress: auction.tokenAddress,
+        blockchainAuctionId,
+        bidTimestamp: new Date(),
+      });
+      console.log("✅ Bid document created successfully:", createdBid._id);
+    } catch (bidError) {
+      console.error("⚠️ Failed to create Bid document (non-blocking):", bidError);
+      // Don't fail the entire bid process if Bid document creation fails
+    }
+
     // Add auction to user's participated auctions if not already there
     if (!user.participatedAuctions.includes(auction._id)) {
       console.log("📝 Adding auction to user's participated auctions...");
@@ -209,7 +231,9 @@ export async function POST(req: NextRequest) {
         amount: bidAmount,
         currency: auction.currency,
         timestamp: new Date(),
-        auctionId: auction._id
+        auctionId: auction._id,
+        bidId: createdBid?._id || null,
+        usdcValue: usdcValue || 0
       }
     };
     

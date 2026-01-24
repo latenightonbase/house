@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import PageLayout from "@/components/UI/PageLayout"
-import Heading from "@/components/UI/Heading"
-import LeaderboardTable from "@/components/LeaderboardTable"
-import { RiTrophyLine } from "react-icons/ri"
+import { RiLoader5Fill } from "react-icons/ri"
 import { cn } from "@/lib/utils"
+import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
+import { ChartLineIcon, Medal } from 'lucide-react'
 
 interface TopRevenueUser {
   _id: string;
@@ -15,6 +15,7 @@ interface TopRevenueUser {
   username?: string;
   display_name?: string;
   pfp_url?: string;
+  socialId?: string;
   twitterProfile?: {
     username: string;
     name: string;
@@ -33,6 +34,7 @@ interface HighestBid {
   username?: string;
   display_name?: string;
   pfp_url?: string;
+  socialId?: string;
   twitterProfile?: {
     username: string;
     name: string;
@@ -48,6 +50,7 @@ export default function LeaderboardPage() {
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const [loadingBids, setLoadingBids] = useState(true);
   const [activeTab, setActiveTab] = useState<'revenue' | 'bids'>('revenue');
+  const navigate = useNavigateWithLoader();
 
   useEffect(() => {
     const fetchTopRevenue = async () => {
@@ -90,175 +93,214 @@ export default function LeaderboardPage() {
   const formatNumber = (num: number) => {
     if (!num) return '0';
     return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(num);
   };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       year: 'numeric'
     });
   };
 
-  const revenueColumns = [
-    {
-      key: 'username',
-      label: 'User',
-      render: (value: string, row: TopRevenueUser) => (
-        <div className="flex items-center gap-3 min-w-0">
-          {row.pfp_url && (
-            <img
-              src={row.pfp_url}
-              alt={row.display_name || row.username || 'User'}
-              className="w-6 h-6 rounded-full flex-shrink-0"
-            />
-          )}
-          <div className="min-w-0">
-            <div className="font-medium truncate">
-              {row.display_name || row.username || formatWallet(row.wallet)}
-            </div>
-            {row.username && row.display_name && (
-              <div className="text-xs text-caption truncate">@{row.username}</div>
-            )}
-          </div>
-        </div>
-      ),
-      className: 'font-bold'
-    },
-    {
-      key: 'totalRevenue',
-      label: 'Revenue ($)',
-      render: (value: number) => (
-        <span className="font-semibold text-primary">${formatNumber(value)}</span>
-      ),
-      className: 'text-right'
-    },
-    {
-      key: 'auctionCount',
-      label: 'Auctions',
-      render: (value: number) => (
-        <span className="text-caption">{value}</span>
-      ),
-      className: 'text-right'
-    }
-  ];
+  const getRankBadgeColor = (index: number) => {
+    if (index === 0) return 'bg-yellow-500/90';
+    if (index === 1) return 'bg-gray-400/90';
+    if (index === 2) return 'bg-orange-600/90';
+    return 'bg-gray-700/90';
+  };
 
-  const bidsColumns = [
-    {
-      key: 'username',
-      label: 'User',
-      render: (value: string, row: HighestBid) => (
-        <div className="flex items-center gap-3 min-w-0">
-          {row.pfp_url && (
-            <img
-              src={row.pfp_url}
-              alt={row.display_name || row.username || 'User'}
-              className="w-6 h-6 aspect-square rounded-full flex-shrink-0"
-            />
-          )}
-          <div className="min-w-0">
-            <div className="font-medium truncate">
-              {row.display_name || row.username || formatWallet(row.wallet)}
-            </div>
-            {row.username && row.display_name && (
-              <div className="text-xs text-caption truncate">@{row.username}</div>
-            )}
-          </div>
-        </div>
-      ),
-      className: 'font-bold'
-    },
-    {
-      key: 'auctionName',
-      label: 'Auction',
-      render: (value: string) => (
-        <span className="font-medium truncate block">{value}</span>
-      )
-    },
-    {
-      key: 'bidAmount',
-      label: 'Bid Amount',
-      render: (value: number, row: HighestBid) => (
-        <div>
-          <div className="font-semibold text-primary">
-            {formatNumber(value)} {row.currency}
-          </div>
-          {row.usdcValue && (
-            <div className="text-xs text-caption">${formatNumber(row.usdcValue)}</div>
-          )}
-        </div>
-      ),
-      className: 'text-right'
-    },
-    {
-      key: 'bidTimestamp',
-      label: 'Date',
-      render: (value: string) => (
-        <span className="text-caption text-sm">{formatDate(value)}</span>
-      ),
-      className: 'text-right'
-    }
-  ];
+  const handleCardClick = (userId: string, socialId?: string) => {
+    if (!socialId) return;
+    navigate(`/user/${userId}`);
+  };
 
   return (
-    <PageLayout className="min-h-screen flex flex-col items-start justify-start">
-      <div className="w-full max-w-7xl max-lg:mx-auto">
-        <div className="flex items-center gap-4 mb-8 max-lg:mb-4">
-          
- 
-            <Heading size="lg" >Leaderboard</Heading>
-
+    <div className="min-h-screen flex flex-col items-center justify-start">
+      <div className="w-full lg:min-w-[1000px] mx-auto lg:px-4 pb-16">
+        <div className="flex flex-col items-center mb-8 mt-4">
+          <div className="lg:w-20 lg:h-20 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-2 border-yellow-500/50 flex items-center justify-center mb-4">
+            <svg className="lg:w-10 lg:h-10 w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+          </div>
+          <h1 className="lg:text-4xl text-2xl font-bold mb-2">Leaderboard</h1>
+          <p className="text-sm max-lg:text-xs text-gray-400">Top performers in the HOUSE community</p>
         </div>
 
-        <div className="flex mb-6 overflow-x-hidden">
+        <div className="flex gap-4 mb-8 border-b border-gray-800 w-full">
           <button
             onClick={() => setActiveTab('revenue')}
             className={cn(
-              "px-4 py-2 font-medium transition-colors whitespace-nowrap flex-shrink-0",
+              "pb-3 px-2 font-medium transition-colors relative flex items-center gap-2 flex-1 justify-center max-lg:text-sm",
               activeTab === 'revenue'
-                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-                : "text-caption hover:text-foreground"
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
             )}
           >
-            🏆 Revenue
+            <ChartLineIcon className="w-5 h-5" />
+            <span>Top Revenue</span>
+            {activeTab === 'revenue' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
           </button>
           <button
             onClick={() => setActiveTab('bids')}
             className={cn(
-              "px-4 py-2 font-medium transition-colors whitespace-nowrap flex-shrink-0",
+              "pb-3 px-2 font-medium transition-colors relative flex items-center gap-2 flex-1 justify-center max-lg:text-sm",
               activeTab === 'bids'
-                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
-                : "text-caption hover:text-foreground"
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
             )}
           >
-            💎 Bids
+            <Medal className="w-5 h-5 " />
+            <span>Highest Bids</span>
+            {activeTab === 'bids' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
           </button>
         </div>
 
-        {activeTab === 'revenue' && (
-          <LeaderboardTable
-            title="Top Revenue Earners"
-            columns={revenueColumns}
-            data={topRevenue}
-            loading={loadingRevenue}
-            emptyMessage="No revenue data available yet"
-          />
-        )}
+        <div className="w-full ">
+          {activeTab === 'revenue' && (
+            <div className="space-y-3">
+              {loadingRevenue ? (
+                <div className="flex items-center justify-center py-16">
+                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                </div>
+              ) : topRevenue.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  No revenue data available yet
+                </div>
+              ) : (
+                topRevenue.slice(0, 10).map((user, index) => (
+                  <div
+                    key={user._id}
+                    onClick={() => handleCardClick(user._id, user.socialId)}
+                    className={cn(
+                      "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
+                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
+                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm lg:text-base",
+                      getRankBadgeColor(index)
+                    )}>
+                      #{index + 1}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
+                      {user.pfp_url && (
+                        <img
+                          src={user.pfp_url}
+                          alt={user.display_name || user.username || 'User'}
+                          className="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex-shrink-0 object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-white truncate text-sm lg:text-base">
+                          {user.display_name || user.username || formatWallet(user.wallet)}
+                        </div>
+                        {user.username && (
+                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                            @{user.username}
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-        {activeTab === 'bids' && (
-          <LeaderboardTable
-            title="Highest Bids"
-            columns={bidsColumns}
-            data={highestBids}
-            loading={loadingBids}
-            emptyMessage="No bids placed yet"
-          />
-        )}
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
+                        ${formatNumber(user.totalRevenue)}
+                      </div>
+                      <div className="text-xs lg:text-sm text-gray-400">
+                        {user.auctionCount} auction{user.auctionCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'bids' && (
+            <div className="space-y-3">
+              {loadingBids ? (
+                <div className="flex items-center justify-center py-16">
+                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                </div>
+              ) : highestBids.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  No bids placed yet
+                </div>
+              ) : (
+                highestBids.slice(0, 10).map((bid, index) => (
+                  <div
+                    key={bid._id}
+                    onClick={() => handleCardClick(bid.userId, bid.socialId)}
+                    className={cn(
+                      "rounded-xl p-4 lg:p-5 flex items-start lg:items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
+                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
+                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm lg:text-base",
+                      getRankBadgeColor(index)
+                    )}>
+                      #{index + 1}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
+                      {bid.pfp_url && (
+                        <img
+                          src={bid.pfp_url}
+                          alt={bid.display_name || bid.username || 'User'}
+                          className="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex-shrink-0 object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-white truncate text-sm lg:text-base">
+                          {bid.display_name || bid.username || formatWallet(bid.wallet)}
+                        </div>
+                        {bid.username && (
+                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                            @{bid.username}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-500 truncate mt-0.5 lg:hidden">
+                          {bid.auctionName}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
+                        ${formatNumber(bid.bidAmount)}
+                      </div>
+                      <div className="text-xs lg:text-sm text-gray-400 hidden lg:block">
+                        {formatDate(bid.bidTimestamp)}
+                      </div>
+                      <div className="text-xs text-gray-500 lg:hidden">
+                        {bid.auctionName.length > 15 ? bid.auctionName.slice(0, 15) + '...' : bid.auctionName}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </PageLayout>
+    </div>
   )
 }
 

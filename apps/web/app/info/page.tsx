@@ -2,142 +2,142 @@
 
 import PageLayout from "@/components/UI/PageLayout"
 import Heading from "@/components/UI/Heading"
-import { RiAuctionLine, RiUserLine, RiCoinLine, RiTrophyLine, RiQuestionLine, RiMoneyDollarCircleLine } from "react-icons/ri"
+import { RiRocketLine, RiLightbulbLine, RiGroupLine, RiMoneyDollarCircleLine, RiShieldCheckLine, RiTrophyLine, RiQuestionLine } from "react-icons/ri"
 
 export default function InfoPage() {
   return (
-    <PageLayout className="min-h-screen flex flex-col items-start justify-start">
-      <div className="w-full max-w-4xl">
-        <Heading className="mb-4" size="lg">How The House Works</Heading>
-        <p className="text-caption mb-8">
-          HOUSE is the onchain auction marketplace where creators monetize their attention — from shoutouts to collabs to podcast slots — directly with brands and fans.
-        </p>
+    <PageLayout className="min-h-screen flex flex-col items-center justify-start">
+      <div className="w-full max-w-6xl">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+              <RiQuestionLine className="text-3xl text-primary" />
+            </div>
+          </div>
+          <Heading className="mb-4" size="lg">How HOUSE Works</Heading>
+          <p className="text-caption max-w-3xl mx-auto">
+            Everything you need to know about creating auctions, bidding, and earning rewards on the platform
+          </p>
+        </div>
         
-        {/* For Creators Section */}
-        <div className="mb-12">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <RiUserLine className="text-primary" />
-            For Creators
-          </h2>
-          
-          <div className="space-y-4">
-            {/* Q1 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                How do I start?
-              </h3>
-              <p className="text-caption ml-7">
-                Click "Start Your Auction," connect your wallet or email, set your minimum bid, duration, and settlement token (USDC or your creator coin).
-              </p>
+        {/* Main Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-16">
+          {/* How to Start as a Creator */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiRocketLine className="text-2xl text-primary" />
             </div>
+            <h3 className="text-xl font-bold text-white mb-3">How to Start as a Creator</h3>
+            <p className="text-caption leading-relaxed">
+              Connect your wallet, link your Twitter account for verification, and create your first auction. Set your terms including currency, minimum bid, and auction duration. Share your auction with your community and watch the bids roll in.
+            </p>
+          </div>
 
-            {/* Q2 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                What happens when my auction ends?
-              </h3>
-              <p className="text-caption ml-7">
-                The highest bidder wins instantly. You get paid directly and can deliver your promised content (no middlemen).
-              </p>
+          {/* What Makes HOUSE Different */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiLightbulbLine className="text-2xl text-primary" />
             </div>
+            <h3 className="text-xl font-bold text-white mb-3">What Makes HOUSE Different</h3>
+            <p className="text-caption leading-relaxed">
+              HOUSE is built on transparency and community. All bids are on-chain, ensuring fairness. Our reward system gives back to active participants. Plus, with flexible currency options and easy-to-use interface, anyone can participate.
+            </p>
+          </div>
 
-            {/* Q3 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                What makes HOUSE different?
-              </h3>
-              <p className="text-caption ml-7">
-                Every auction is fully transparent, fair, and settles onchain — and a small portion of every deal powers the $LNOB buy + burn flywheel, rewarding the community that makes it all possible.
-              </p>
+          {/* For Bidders & Brands */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiGroupLine className="text-2xl text-primary" />
             </div>
+            <h3 className="text-xl font-bold text-white mb-3">For Bidders & Brands</h3>
+            <p className="text-caption leading-relaxed">
+              Browse active auctions, place competitive bids, and win exclusive digital assets. Track your bidding activity, claim your winnings, and earn rewards for participation. The more you engage, the more you earn.
+            </p>
+          </div>
+
+          {/* Settlement & Payments */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiMoneyDollarCircleLine className="text-2xl text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">Settlement & Payments</h3>
+            <p className="text-caption leading-relaxed">
+              When an auction ends, the highest bidder wins. Creators can claim their revenue, and winners can claim their prizes. All transactions are secure and processed on the Base chain for fast, low-cost settlements.
+            </p>
+          </div>
+
+          {/* What Happens When Auction Ends */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiShieldCheckLine className="text-2xl text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">What Happens When Auction Ends</h3>
+            <p className="text-caption leading-relaxed">
+              The auction creator can end the auction manually or it ends automatically at the set time. The highest bidder is declared winner and can claim their prize. Smart contracts ensure fair and transparent outcomes.
+            </p>
+          </div>
+
+          {/* Weekly Rewards Program */}
+          <div className="bg-gradient-to-br from-white/5 to-white/10 rounded-xl border border-white/20 p-8 hover:border-primary/50 transition-all">
+            <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4">
+              <RiTrophyLine className="text-2xl text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-3">Weekly Rewards Program</h3>
+            <p className="text-caption leading-relaxed">
+              Earn 1% cashback on all your bidding activity each week. The more you participate, the more you earn. Track your weekly stats and claim your rewards at the end of each cycle.
+            </p>
           </div>
         </div>
 
-        {/* For Brands Section */}
-        <div>
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <RiMoneyDollarCircleLine className="text-primary" />
-            For Brands
-          </h2>
-          
-          <div className="space-y-4">
-            {/* Q1 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                What can I do on HOUSE?
-              </h3>
-              <p className="text-caption ml-7">
-                Bid on top creators for brand placements — shoutouts, collabs, livestream mentions, or multi-creator campaigns.
+        {/* Quick Start Guide */}
+        <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl border border-primary/30 p-10">
+          <h2 className="text-2xl font-bold text-white text-center mb-10">Quick Start Guide</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Step 1 */}
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4">
+                1
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Connect Wallet</h3>
+              <p className="text-caption text-sm">
+                Link your crypto wallet to get started
               </p>
             </div>
 
-            {/* Q2 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                How do I know I'm getting ROI?
-              </h3>
-              <p className="text-caption ml-7">
-                Every auction includes reach metrics and transparent bid pricing. You can even deploy your entire ad budget across multiple creators in one click.
+            {/* Step 2 */}
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4">
+                2
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Browse or Create</h3>
+              <p className="text-caption text-sm">
+                Explore auctions or create your own
               </p>
             </div>
 
-            {/* Q3 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                How does payment work?
-              </h3>
-              <p className="text-caption ml-7">
-                You can settle in USDC or the creator's native token. HOUSE takes care of routing and onchain settlement.
+            {/* Step 3 */}
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4">
+                3
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Participate</h3>
+              <p className="text-caption text-sm">
+                Place bids or manage your auctions
               </p>
             </div>
 
-            {/* Q4 */}
-            <div className="bg-white/10 rounded-lg border border-primary/30 p-5">
-              <h3 className="text-lg font-semibold text-primary mb-2 flex items-start gap-2">
-                <RiQuestionLine className="text-xl flex-shrink-0 mt-0.5" />
-                What's the benefit of using HOUSE?
-              </h3>
-              <p className="text-caption ml-7">
-                You're not just buying ads — you're buying attention with engagement built in. Every deal triggers $LNOB buy + burns and fuels fans who actively promote your brand.
+            {/* Step 4 */}
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-white mx-auto mb-4">
+                4
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">Earn & Claim</h3>
+              <p className="text-caption text-sm">
+                Win auctions and claim rewards
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Key Features */}
-        <div className="mt-12 bg-primary/10 rounded-lg border border-primary/30 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <RiTrophyLine className="text-primary" />
-            Why Choose HOUSE?
-          </h3>
-          <ul className="space-y-2 text-caption">
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>Fully onchain auctions powered by smart contracts on Base</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>Transparent bidding with no middlemen</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>Instant settlement in USDC or creator tokens</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>Real-time bid updates and notifications</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-primary mt-1">•</span>
-              <span>$LNOB buy + burn mechanism rewarding the community</span>
-            </li>
-          </ul>
         </div>
       </div>
     </PageLayout>

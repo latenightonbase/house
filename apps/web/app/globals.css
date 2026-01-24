@@ -13,10 +13,27 @@
   animation: marquee 15s linear infinite;
 }
 
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 10s linear infinite;
+}
+
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
 :root {
   /* Main Colors based on #032e15 */
-  --primary: #4bb878;
-  --secondary: #42a373;
+  --secondary: #a620ff;
+  --primary: #ff64ff;
   --caption: #707070;
   --button: #399768;
   --button-hover: #4ab17d;
@@ -174,10 +191,34 @@ select {
 
 /* Gradient Text Class */
 .gradient-text {
-  @apply bg-gradient-to-br from-green-500 via-emerald-500 to-green-700 text-transparent bg-clip-text;
+  @apply bg-gradient-to-b from-primary to-secondary text-transparent bg-clip-text;
 }
 
 /* Gradient Button Class */
 .gradient-button {
-  @apply bg-gradient-to-br from-green-500 via-emerald-600 to-green-800;
+  @apply bg-gradient-to-r from-primary to-secondary;
+}
+
+/* Selected Gradient Class */
+.selected-gradient {
+  @apply bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

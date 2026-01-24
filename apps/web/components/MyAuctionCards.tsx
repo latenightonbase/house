@@ -6,6 +6,9 @@ import Heading from "./UI/Heading";
 import { cn } from "@/lib/utils";
 import { RiLoader5Fill } from "react-icons/ri";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import Image from "next/image";
+import { Users } from "lucide-react";
+import ScrollingName from "./utils/ScrollingName";
 import {
   auctionAbi,
   contractAdds,
@@ -45,6 +48,7 @@ interface Auction {
   blockchainAuctionId: string;
   tokenAddress: string;
   startingWallet: string;
+  imageUrl?: string;
   hostedBy: {
     _id: string;
     wallet: string;
@@ -161,7 +165,7 @@ export default function MyAuctionCards() {
       console.log('✅ Auction ended successfully, fee distribution initiated server-side');
       
       if (loadingToastId) {
-        toast.success("Auction ended successfully! Fee distribution running in background...", {
+        toast.success("Auction ended successfully!", {
           id: loadingToastId,
         });
       }
@@ -617,122 +621,171 @@ export default function MyAuctionCards() {
           {filteredAuctions.map((auction) => auction ? (
             <div
               key={auction._id}
-              className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-4 hover:shadow-lg transition-shadow w-full"
+              className="bg-black/40 w-full hover:scale-[1.02] duration-400 hover:shadow-lg shadow-primary/5 text-white border border-primary/10 rounded-2xl transition-all overflow-hidden flex flex-col h-full cursor-pointer"
+              onClick={() => viewAuction(auction.blockchainAuctionId)}
             >
-              <div className="flex justify-between items-start mb-4 w-full">
-                <h3 className="text-lg font-semibold truncate flex-1 pr-2 min-w-0">
-                  {auction.auctionName}
-                </h3>
-                <span
-                  className={cn(
-                    "text-sm font-medium capitalize flex-shrink-0",
-                    getStatusColor(auction.status)
-                  )}
-                >
-                  {auction.status}
-                </span>
-              </div>
-
-               {auction.startingWallet && <div className="flex justify-between items-center w-full mb-1">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Started By:
-                  </span>
-                  <a href={`https://basescan.org/address/${auction.startingWallet}`} className="font-medium text-sm truncate ml-2 text-right text-primary bg-primary/10 p-1 rounded-sm">
-                    {auction.startingWallet.slice(0, 6)}...{auction.startingWallet.slice(-4)}
-                  </a>
-                </div>}
-
-              <div className="space-y-2 mb-4 w-full">
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Minimum Bid:
-                  </span>
-                  <span className="font-medium text-sm truncate ml-2 text-right">
-                    {auction.minimumBid} {auction.currency}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Highest Bid:
-                  </span>
-                  <span className="font-medium text-sm truncate ml-2 text-right">
-                    {auction.highestBid} {auction.currency}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Participants:
-                  </span>
-                  <span className="font-medium text-sm">
-                    {auction.participantCount}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center w-full">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Total Bids:
-                  </span>
-                  <span className="font-medium text-sm">
-                    {auction.bidCount}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-start w-full">
-                  <span className="text-caption text-sm flex-shrink-0">
-                    Time:
-                  </span>
-                  <span className="font-medium text-xs text-right ml-2 leading-tight max-w-[60%] break-words">
-                    {auction.timeInfo}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 w-full">
-                {auction.status === "active" && (
-                  <Button
-                    onClick={() => endAuction(auction.blockchainAuctionId)}
-                    disabled={isLoading || endingAuction === auction.blockchainAuctionId}
-                    variant="default"
-                    size="sm"
-                    className="flex-1 h-10"
+              {/* Image */}
+              <div className="relative w-full h-48">
+                <Image
+                  src={
+                    auction.imageUrl ||
+                    `https://api.dicebear.com/9.x/glass/svg?seed=${
+                      auction.hostedBy.username || auction.hostedBy.wallet
+                    }`
+                  }
+                  alt={auction.auctionName}
+                  width={400}
+                  height={300}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+                <div className="absolute top-2 right-2">
+                  <span
+                    className={cn(
+                      "text-xs font-semibold capitalize px-3 py-1 rounded-full backdrop-blur-sm",
+                      auction.status === "active" && "bg-green-500/80 text-white",
+                      auction.status === "upcoming" && "bg-yellow-500/80 text-white",
+                      auction.status === "ended" && "bg-gray-500/80 text-white"
+                    )}
                   >
-                    {(isLoading && endingAuction === auction.blockchainAuctionId) || endingAuction === auction.blockchainAuctionId ? (
-                      <>
-                        <RiLoader5Fill className="animate-spin h-3 w-3 mr-2" />
-                        Ending...
-                      </>
-                    ) : (
-                      "End Auction"
-                    )}
-                  </Button>
-                )}
-
-                <Button
-                  onClick={() => viewAuction(auction.blockchainAuctionId)}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 h-10"
-                >
-                  View
-                </Button>
+                    {auction.status}
+                  </span>
+                </div>
               </div>
 
-              {auction.status === "ended" && (
-                <div className="text-center mt-2">
-                  <p className="text-caption text-xs">
-                    {auction.highestBid > 0 ? (
-                      <>
-                        Winner: {auction.highestBid} {auction.currency}
-                      </>
-                    ) : (
-                      "No bids received"
-                    )}
-                  </p>
+              {/* Content */}
+              <div className="p-6 flex flex-col grow">
+                <ScrollingName 
+                  name={auction.auctionName} 
+                  className="text-xl font-bold text-white mb-3"
+                />
+
+                <div className="space-y-2 mb-4">
+                  {auction.startingWallet && (
+                    <div className="flex justify-between items-center w-full">
+                      <span className="text-gray-400 text-sm flex-shrink-0">
+                        Started By:
+                      </span>
+                      <a 
+                        href={`https://basescan.org/address/${auction.startingWallet}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-xs truncate ml-2 text-right text-primary hover:text-primary/80 bg-primary/10 px-2 py-1 rounded-md transition-colors"
+                      >
+                        {auction.startingWallet.slice(0, 6)}...{auction.startingWallet.slice(-4)}
+                      </a>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-400 text-sm flex-shrink-0">
+                      Minimum Bid:
+                    </span>
+                    <span className="font-medium text-sm text-white">
+                      {auction.minimumBid} {auction.currency}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-400 text-sm flex-shrink-0">
+                      Highest Bid:
+                    </span>
+                    <span className="font-medium text-sm text-white">
+                      {auction.highestBid} {auction.currency}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-400 text-sm flex-shrink-0">
+                      Total Bids:
+                    </span>
+                    <span className="font-medium text-sm text-white">
+                      {auction.bidCount}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center w-full">
+                    <span className="text-gray-400 text-sm flex-shrink-0">
+                      Time:
+                    </span>
+                    <span className="font-medium text-xs text-right ml-2 text-white/80">
+                      {auction.timeInfo}
+                    </span>
+                  </div>
                 </div>
-              )}
+
+                <div className="border-t border-primary/10 pt-4 mt-auto space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex flex-col justify-center items-start">
+                      <span className="text-gray-400 text-sm">
+                        {auction.highestBid > 0 ? "Current Bid" : "Minimum Bid"}
+                      </span>
+                      <div className="text-white font-bold text-lg">
+                        {auction.highestBid > 0
+                          ? auction.highestBid
+                          : auction.minimumBid}{" "}
+                        {auction.currency}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between bg-white/10 rounded-full border border-white/30 px-3 py-1.5 gap-2">
+                      <Users className="w-4 h-4 text-white/50" />
+                      <span className="text-white text-sm font-semibold">
+                        {auction.participantCount}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 w-full">
+                    {auction.status === "active" && (
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          endAuction(auction.blockchainAuctionId);
+                        }}
+                        disabled={isLoading || endingAuction === auction.blockchainAuctionId}
+                        variant="default"
+                        size="sm"
+                        className="flex-1 h-10"
+                      >
+                        {(isLoading && endingAuction === auction.blockchainAuctionId) || endingAuction === auction.blockchainAuctionId ? (
+                          <>
+                            <RiLoader5Fill className="animate-spin h-3 w-3 mr-2" />
+                            Ending...
+                          </>
+                        ) : (
+                          "End Auction"
+                        )}
+                      </Button>
+                    )}
+
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        viewAuction(auction.blockchainAuctionId);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-10"
+                    >
+                      View Details
+                    </Button>
+                  </div>
+
+                  {auction.status === "ended" && (
+                    <div className="text-center pt-2 border-t border-primary/10">
+                      <p className="text-gray-400 text-xs">
+                        {auction.highestBid > 0 ? (
+                          <>
+                            Winner bid: <span className="text-white font-semibold">{auction.highestBid} {auction.currency}</span>
+                          </>
+                        ) : (
+                          "No bids received"
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           ) : null)}
         </div>

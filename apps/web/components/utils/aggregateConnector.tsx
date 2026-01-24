@@ -20,7 +20,7 @@ export default function AggregateConnector() {
 
         return (
     <>
-        <button onClick={() => navigate(`/profile`)} className="bg-white/10 rounded-full p-1 flex items-center justify-start">
+        <button onClick={() => navigate(`/profile`)} className="bg-white/10 rounded-lg p-1 flex items-center justify-start">
             <Image unoptimized src={user?.pfp_url as string} alt="Coinbase Logo" className="border-2 border-primary rounded-full w-8 h-8 aspect-square" />
         </button>
     </>)

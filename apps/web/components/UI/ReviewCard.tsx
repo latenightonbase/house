@@ -31,7 +31,7 @@ export default function ReviewCard({
   const navigate = useNavigateWithLoader()
 
   return (
-    <div className="bg-white/10 rounded-lg p-2 border border-white/10 hover:bg-white/15 transition-all duration-200">
+    <div className="bg-primary/5 rounded-lg p-2 border border-primary/10 hover:bg-primary/10 transition-all duration-200">
       <div className="flex items-start gap-2 mb-3">
         {reviewerPfp && (
           <img
