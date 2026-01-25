@@ -6,7 +6,6 @@ import Background from "@/components/UI/Background";
 import Navbar from "@/components/UI/Navbar";
 import { NProgressProvider } from "@/utils/useNavigateWithLoader";
 import { Toaster } from "react-hot-toast";
-import ReviewFlowManager from "@/components/ReviewFlowManager";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -53,7 +52,6 @@ export default function RootLayout({
                 },
               }}
             />
-            <ReviewFlowManager />
           </MiniKitContextProvider>
         </NProgressProvider>
       </body>

@@ -816,6 +816,11 @@ if (context?.client.clientFid === 309857) {
                   multiline
                   rows={4}
                 />
+                <ImageUpload
+                  onFileSelect={setSelectedImageFile}
+                  currentImageUrl={selectedImageFile ? URL.createObjectURL(selectedImageFile) : undefined}
+                  onRemove={() => setSelectedImageFile(null)}
+                />
               </motion.div>
             )}
 
