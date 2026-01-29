@@ -57,6 +57,16 @@ interface AuctionCardProps {
   onBidClick?: (auction: Auction) => void;
 }
 
+const formatTimeRemaining = (hours: number): string => {
+  if (hours < 1) return "Less than 1 hour";
+  if (hours < 24) return `${hours} hour${hours !== 1 ? "s" : ""}`;  
+  const days = Math.floor(hours / 24);
+  const remainingHours = hours % 24;
+  return `${days} day${days !== 1 ? "s" : ""} ${
+    remainingHours > 0 ? `${remainingHours}h` : ""
+  }`;
+};
+
 const AuctionCard: React.FC<AuctionCardProps> = ({
   auction,
   onNavigate,
@@ -139,6 +149,12 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
         </div>
 
         <div className="border-t border-primary/10 pt-4 mt-auto space-y-3">
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-sm">
+              <span className="text-gray-400">Time left: </span>
+              <span className="text-white font-medium">{formatTimeRemaining(auction.hoursRemaining)}</span>
+            </div>
+          </div>
           <div className="flex justify-between items-center">
             <div className="flex flex-col justify-center items-start">
               <span className="text-gray-400 text-sm">
