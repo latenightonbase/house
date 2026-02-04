@@ -750,7 +750,7 @@ if (context?.client.clientFid === 309857) {
     );
 
   return (
-    <div className="max-w-2xl mx-auto px-4 lg:min-w-[800px] max-lg:pb-20">
+    <div className="max-w-2xl mx-auto px-2 lg:px-4 lg:min-w-[800px] max-lg:pb-20">
       <form onSubmit={handleSubmit} className="space-y-6 mt-8">
         {/* Step Progress */}
         <div className="flex justify-center mb-8">
@@ -861,43 +861,20 @@ if (context?.client.clientFid === 309857) {
                 transition={{ duration: 0.3 }}
                 className="space-y-6"
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={endTime ? endTime.toISOString().split('T')[0] : ''}
-                      onChange={(e) => {
-                        const date = new Date(e.target.value);
-                        if (endTime) {
-                          date.setHours(endTime.getHours());
-                          date.setMinutes(endTime.getMinutes());
-                        }
-                        setEndTime(date);
-                      }}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      End Time
-                    </label>
-                    <input
-                      type="time"
-                      value={endTime ? `${String(endTime.getHours()).padStart(2, '0')}:${String(endTime.getMinutes()).padStart(2, '0')}` : ''}
-                      onChange={(e) => {
-                        const [hours, minutes] = e.target.value.split(':');
-                        const date = endTime ? new Date(endTime) : new Date();
-                        date.setHours(parseInt(hours));
-                        date.setMinutes(parseInt(minutes));
-                        setEndTime(date);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={endTime ? endTime.toISOString().slice(0, 16) : ''}
+                    onChange={(e) => {
+                      const date = new Date(e.target.value);
+                      setEndTime(date);
+                    }}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
                 </div>
 
                 <div className="bg-white/10 border border-white/10 rounded-lg p-4 space-y-3">
