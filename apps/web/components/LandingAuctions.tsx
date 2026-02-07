@@ -436,6 +436,7 @@ const LandingAuctions: React.FC = () => {
       }
 
       toast.success("Bid placed!");
+      window.location.reload();
 
       // Refresh the auctions to show updated bid data
       await fetchTopAuctions(1, false);

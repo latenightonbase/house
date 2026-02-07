@@ -4,7 +4,17 @@ import { MdWallet, MdLogout, MdMoreVert, MdLogin } from 'react-icons/md';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function LoginWithOAuth() {
+interface XPStats {
+  level: number;
+  currentSeasonXP: number;
+  totalXP: number;
+}
+
+interface LoginWithOAuthProps {
+  xpStats?: XPStats | null;
+}
+
+export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
   const { user, authenticated, logout, getAccessToken } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { connectWallet } = useConnectWallet({
@@ -271,8 +281,19 @@ export default function LoginWithOAuth() {
                             @{twitterAccount.username}
                           </div>
                           {connectedWallet && (
-                            <div className="text-sm text-primary">
+                            <div className="text-xs text-primary mb-2">
                               {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
+                            </div>
+                          )}
+                          {xpStats && (
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/5">
+                              <div className="bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                {xpStats.level}
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-400">Level {xpStats.level}</span>
+                                <span className="text-xs font-semibold text-primary">{xpStats.currentSeasonXP} XP</span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -316,7 +337,7 @@ export default function LoginWithOAuth() {
                 <div className="hidden lg:flex items-center relative ">
                   <button
                     onClick={() => setDialogOpen(!dialogOpen)}
-                    className="w-[48px] h-[48px] selected-gradient rounded-xl cursor-pointer hover:opacity-80 transition-opacity"
+                    className="w-[48px] h-[48px] selected-gradient rounded-xl cursor-pointer hover:opacity-80 transition-opacity relative"
                   >
                     {twitterAccount.profilePictureUrl && (
                       <Image
@@ -345,14 +366,21 @@ export default function LoginWithOAuth() {
                         <div className="px-4 py-4 border-b border-white/10 bg-gradient-to-br from-primary/5 to-secondary/5">
                           <div className="flex items-center gap-3 mb-3">
                             {twitterAccount.profilePictureUrl && (
-                              <Image
-                                unoptimized
-                                src={twitterAccount.profilePictureUrl}
-                                alt={twitterAccount.username || 'Twitter Profile'}
-                                width={40}
-                                height={40}
-                                className="rounded-full border-2 border-primary/50"
-                              />
+                              <div className="relative">
+                                <Image
+                                  unoptimized
+                                  src={twitterAccount.profilePictureUrl}
+                                  alt={twitterAccount.username || 'Twitter Profile'}
+                                  width={40}
+                                  height={40}
+                                  className="rounded-full border-2 border-primary/50"
+                                />
+                                {xpStats && (
+                                  <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-black">
+                                    {xpStats.level}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-bold truncate">
@@ -365,6 +393,18 @@ export default function LoginWithOAuth() {
                               )}
                             </div>
                           </div>
+                          {xpStats && (
+                            <div className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-400">Season XP</span>
+                                <span className="text-sm font-bold text-primary">{xpStats.currentSeasonXP}</span>
+                              </div>
+                              <div className="flex flex-col text-right">
+                                <span className="text-xs text-gray-400">Level</span>
+                                <span className="text-sm font-bold text-purple-400">{xpStats.level}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Menu Options */}

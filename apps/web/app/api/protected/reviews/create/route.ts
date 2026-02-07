@@ -5,6 +5,7 @@ import Review from '@/utils/schemas/Review';
 import User from '@/utils/schemas/User';
 import PendingDelivery from '@/utils/schemas/PendingDelivery';
 import { authenticateRequest } from '@/utils/authService';
+import { awardXP, XP_REWARDS } from '@/utils/xpService';
 
 export async function POST(req: NextRequest) {
   const authResult = await authenticateRequest(req);
@@ -99,6 +100,20 @@ export async function POST(req: NextRequest) {
     await User.findByIdAndUpdate(hostId, {
       averageRating: Math.round(averageRating * 100) / 100, // Round to 2 decimal places
       totalReviews,
+    });
+
+    // Award XP for leaving review (non-blocking)
+    awardXP({
+      userId: auction.winningBid,
+      amount: XP_REWARDS.LEAVE_REVIEW,
+      action: 'LEAVE_REVIEW',
+      metadata: {
+        auctionId: auction._id,
+        rating,
+        reviewId: review._id,
+      },
+    }).catch((err) => {
+      console.error('⚠️ Failed to award XP for review:', err);
     });
 
     return NextResponse.json({ 

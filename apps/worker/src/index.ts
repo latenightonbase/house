@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Worker } from 'bullmq';
 import { autoEnd } from "../handlers/autoEnd";
+import { handleSeasonRollover } from "../handlers/seasonRollover";
 import mongoose from 'mongoose';
 import {
   QUEUES,
@@ -8,6 +9,7 @@ import {
   sendNotification,
   type AuctionReminderJobData,
   type AuctionLifecycleJobData,
+  type SeasonRolloverJobData,
 } from '@repo/queue';
 
 // ============ MongoDB Setup ============
@@ -133,6 +135,33 @@ auctionLifecycleWorker.on('completed', (job, result) => {
 
 auctionLifecycleWorker.on('failed', (job, err) => {
   console.error(`❌ Lifecycle job ${job?.id} failed:`, err.message);
+});
+
+// ============ Season Rollover Worker ============
+const seasonRolloverWorker = new Worker<SeasonRolloverJobData>(
+  QUEUES.SEASON_ROLLOVER,
+  async (job) => {
+    const { scheduledFor } = job.data;
+    console.log(`🔄 Processing season rollover scheduled for: ${scheduledFor}`);
+
+    await connectDB();
+    
+    const result = await handleSeasonRollover();
+    
+    return result;
+  },
+  {
+    connection: redisConnection,
+    concurrency: 1, // Only one rollover at a time
+  }
+);
+
+seasonRolloverWorker.on('completed', (job, result) => {
+  console.log(`✅ Season rollover job ${job.id} completed:`, result);
+});
+
+seasonRolloverWorker.on('failed', (job, err) => {
+  console.error(`❌ Season rollover job ${job?.id} failed:`, err.message);
 });
 
 console.log('✅ Workers started and listening for jobs');

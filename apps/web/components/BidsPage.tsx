@@ -580,6 +580,7 @@ export default function BidPage() {
       }
 
       toast.success("Bid placed!");
+      window.location.reload();
 
       // Refresh the auction data to show updated bid data
       if (blockchainAuctionId) {

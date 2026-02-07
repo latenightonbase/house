@@ -40,6 +40,7 @@ export const redisConnection = REDIS_URL
 export const QUEUES = {
   AUCTION_REMINDER: 'auction-reminder',
   AUCTION_LIFECYCLE: 'auction-lifecycle',
+  SEASON_ROLLOVER: 'season-rollover',
 } as const;
 
 // Job data types
@@ -57,9 +58,14 @@ export interface AuctionLifecycleJobData {
   event: 'ended'; // Add more events as needed
 }
 
+export interface SeasonRolloverJobData {
+  scheduledFor: Date;
+}
+
 // Queue instances
 let _auctionReminderQueue: Queue<AuctionReminderJobData> | null = null;
 let _auctionLifecycleQueue: Queue<AuctionLifecycleJobData> | null = null;
+let _seasonRolloverQueue: Queue<SeasonRolloverJobData> | null = null;
 
 export function getAuctionReminderQueue() {
   if (!_auctionReminderQueue) {
@@ -77,6 +83,15 @@ export function getAuctionLifecycleQueue() {
     });
   }
   return _auctionLifecycleQueue;
+}
+
+export function getSeasonRolloverQueue() {
+  if (!_seasonRolloverQueue) {
+    _seasonRolloverQueue = new Queue<SeasonRolloverJobData>(QUEUES.SEASON_ROLLOVER, {
+      connection: redisConnection,
+    });
+  }
+  return _seasonRolloverQueue;
 }
 
 // Helper to schedule reminder jobs for an auction
@@ -169,3 +184,40 @@ export async function scheduleAuctionEnd(
   };
 }
 
+// Schedule season rollover job for the 1st of next month at midnight
+export async function scheduleSeasonRollover(seasonEndDate: Date) {
+  const queue = getSeasonRolloverQueue();
+  
+  // Calculate first day of next month at midnight
+  const nextMonth = new Date(seasonEndDate);
+  nextMonth.setDate(1);
+  nextMonth.setMonth(nextMonth.getMonth() + 1);
+  nextMonth.setHours(0, 0, 0, 0);
+  
+  const now = Date.now();
+  const delay = Math.max(0, nextMonth.getTime() - now);
+  
+  if (delay === 0) {
+    console.log('Season rollover date has passed, triggering immediately');
+    return { scheduled: false, reason: 'date_passed' };
+  }
+  
+  // Use repeat pattern for monthly rollover
+  await queue.add(
+    'season-rollover',
+    { scheduledFor: nextMonth },
+    {
+      repeat: {
+        pattern: '0 0 1 * *', // Cron: At 00:00 on day-of-month 1
+      },
+      removeOnComplete: true,
+      attempts: 3,
+    }
+  );
+  
+  return {
+    scheduled: true,
+    nextRollover: nextMonth.toISOString(),
+    pattern: 'Monthly on 1st at midnight',
+  };
+}

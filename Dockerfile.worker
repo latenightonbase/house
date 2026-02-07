@@ -16,6 +16,8 @@ RUN npm ci
 COPY packages/queue ./packages/queue
 COPY packages/contracts ./packages/contracts
 COPY apps/worker ./apps/worker
+# Include shared web utils (xpService + schemas) used by the worker
+COPY apps/web/utils ./apps/web/utils
 
 # Build queue package (worker imports from here via npm workspaces)
 WORKDIR /app/packages/queue

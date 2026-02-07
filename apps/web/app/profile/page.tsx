@@ -79,6 +79,13 @@ interface ProfileStatistics {
   totalBids: number
 }
 
+interface XPStats {
+  level: number
+  currentSeasonXP: number
+  totalXP: number
+  xpToNextLevel: number
+}
+
 export default function ProfilePage() {
   const { user } = useGlobalContext()
   const { authenticated } = usePrivy()
@@ -90,6 +97,7 @@ export default function ProfilePage() {
   const [recentBids, setRecentBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
   const [showTwitterModal, setShowTwitterModal] = useState(false)
+  const [xpStats, setXpStats] = useState<XPStats | null>(null)
 
   const {context} = useMiniKit()
 
@@ -134,6 +142,23 @@ export default function ProfilePage() {
           const bidsData = await bidsResponse.json()
           if (bidsData.success) {
             setRecentBids(bidsData.bids)
+          }
+
+          // Fetch XP stats
+          const xpResponse = await fetch('/api/leaderboard/user-stats', {
+            headers: {
+              'x-user-social-id': user?.socialId || '',
+              'Authorization': `Bearer ${accessToken}`
+            }
+          })
+          const xpData = await xpResponse.json()
+          if (xpData.success) {
+            setXpStats({
+              level: xpData.stats.level,
+              currentSeasonXP: xpData.stats.currentSeasonXP,
+              totalXP: xpData.stats.totalXP,
+              xpToNextLevel: xpData.stats.xpToNextLevel
+            })
           }
         }
       } catch (error) {
@@ -261,14 +286,63 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+
+             {/* XP Stats Cards */}
+          {xpStats && (() => {
+            const xpForNextLevel = xpStats.xpToNextLevel;
+            const seasonXP = xpStats.currentSeasonXP;
+            const progressPercentage = xpForNextLevel > 0
+              ? Math.min((seasonXP / xpForNextLevel) * 100, 100)
+              : 100;
+            
+            return (
+              <div className="space-y-4 mt-4">
+                {/* XP Progress Bar */}
+                <div className="bg-gradient-to-br from-secondary/30 to-secondary/10 rounded-xl lg:p-6 p-4 border border-secondary/30 ">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-gradient-to-br from-primary to-secondary text-white text-lg font-bold rounded-full w-12 h-12 flex items-center justify-center border-2 border-purple-300">
+                        {xpStats.level}
+                      </div>
+                      <div>
+                        <div className="text-white font-bold text-lg">Level {xpStats.level}</div>
+                        <div className="text-sm text-purple-200">
+                          {seasonXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-white">{Math.floor(progressPercentage)}%</div>
+                      <div className="text-xs text-purple-200">Progress</div>
+                    </div>
+                  </div>
+                  <div className="relative w-full h-4 bg-black/30 rounded-full overflow-hidden">
+                    <div 
+                      className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${progressPercentage}%` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 text-xs text-purple-200">
+                    <span>Current Level</span>
+                    <span>{xpForNextLevel > 0 ? `${xpForNextLevel.toLocaleString()} XP to Level ${xpStats.level + 1}` : 'Max Level Progress'}</span>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })()}
         </div>
+
+     
 
         {/* Statistics */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-4">Statistics</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-3">
+              <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center mb-3">
                 <RiAuctionLine className="text-2xl text-purple-400" />
               </div>
               <div className="text-3xl max-lg:text-2xl font-bold text-white mb-1">{profileData?.hostedAuctions.length || 0}</div>

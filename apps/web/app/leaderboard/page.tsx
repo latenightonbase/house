@@ -5,7 +5,7 @@ import PageLayout from "@/components/UI/PageLayout"
 import { RiLoader5Fill } from "react-icons/ri"
 import { cn } from "@/lib/utils"
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
-import { ChartLineIcon, Medal } from 'lucide-react'
+import { ChartLineIcon, Medal, Trophy, Zap } from 'lucide-react'
 
 interface TopRevenueUser {
   _id: string;
@@ -44,12 +44,29 @@ interface HighestBid {
   currency: string;
 }
 
+interface XPLeaderboardEntry {
+  userId: string;
+  username?: string;
+  socialId?: string;
+  socialPlatform?: string;
+  currentSeasonXP: number;
+  totalXP: number;
+  level: number;
+  rank: number;
+  pfp_url?: string;
+  display_name?: string;
+}
+
 export default function LeaderboardPage() {
   const [topRevenue, setTopRevenue] = useState<TopRevenueUser[]>([]);
   const [highestBids, setHighestBids] = useState<HighestBid[]>([]);
+  const [seasonXP, setSeasonXP] = useState<XPLeaderboardEntry[]>([]);
+  const [allTimeXP, setAllTimeXP] = useState<XPLeaderboardEntry[]>([]);
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const [loadingBids, setLoadingBids] = useState(true);
-  const [activeTab, setActiveTab] = useState<'revenue' | 'bids'>('revenue');
+  const [loadingSeasonXP, setLoadingSeasonXP] = useState(true);
+  const [loadingAllTimeXP, setLoadingAllTimeXP] = useState(true);
+  const [activeTab, setActiveTab] = useState<'season-xp' | 'alltime-xp' | 'revenue' | 'bids'>('season-xp');
   const navigate = useNavigateWithLoader();
 
   useEffect(() => {
@@ -81,8 +98,38 @@ export default function LeaderboardPage() {
       }
     };
 
+    const fetchSeasonXP = async () => {
+      try {
+        const response = await fetch('/api/leaderboard/season?type=season&limit=100');
+        const result = await response.json();
+        if (result.success) {
+          setSeasonXP(result.leaderboard);
+        }
+      } catch (error) {
+        console.error('Error fetching season XP:', error);
+      } finally {
+        setLoadingSeasonXP(false);
+      }
+    };
+
+    const fetchAllTimeXP = async () => {
+      try {
+        const response = await fetch('/api/leaderboard/season?type=alltime&limit=100');
+        const result = await response.json();
+        if (result.success) {
+          setAllTimeXP(result.leaderboard);
+        }
+      } catch (error) {
+        console.error('Error fetching all-time XP:', error);
+      } finally {
+        setLoadingAllTimeXP(false);
+      }
+    };
+
     fetchTopRevenue();
     fetchHighestBids();
+    fetchSeasonXP();
+    fetchAllTimeXP();
   }, []);
 
   const formatWallet = (wallet: string) => {
@@ -131,11 +178,41 @@ export default function LeaderboardPage() {
           <p className="text-sm max-lg:text-xs text-gray-400">Top performers in the HOUSE community</p>
         </div>
 
-        <div className="flex gap-4 mb-8 border-b border-gray-800 w-full">
+        <div className="flex gap-2 mb-8 border-b border-gray-800 w-full overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('season-xp')}
+            className={cn(
+              "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
+              activeTab === 'season-xp'
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
+            )}
+          >
+            <Zap className="w-5 h-5" />
+            <span>Season XP</span>
+            {activeTab === 'season-xp' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('alltime-xp')}
+            className={cn(
+              "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
+              activeTab === 'alltime-xp'
+                ? "text-white"
+                : "text-gray-400 hover:text-gray-300"
+            )}
+          >
+            <Trophy className="w-5 h-5" />
+            <span>All-Time XP</span>
+            {activeTab === 'alltime-xp' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
           <button
             onClick={() => setActiveTab('revenue')}
             className={cn(
-              "pb-3 px-2 font-medium transition-colors relative flex items-center gap-2 flex-1 justify-center max-lg:text-sm",
+              "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'revenue'
                 ? "text-white"
                 : "text-gray-400 hover:text-gray-300"
@@ -150,7 +227,7 @@ export default function LeaderboardPage() {
           <button
             onClick={() => setActiveTab('bids')}
             className={cn(
-              "pb-3 px-2 font-medium transition-colors relative flex items-center gap-2 flex-1 justify-center max-lg:text-sm",
+              "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'bids'
                 ? "text-white"
                 : "text-gray-400 hover:text-gray-300"
@@ -165,6 +242,137 @@ export default function LeaderboardPage() {
         </div>
 
         <div className="w-full ">
+          {activeTab === 'season-xp' && (
+            <div className="space-y-3">
+              {loadingSeasonXP ? (
+                <div className="flex items-center justify-center py-16">
+                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                </div>
+              ) : seasonXP.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  No XP data available yet for this season
+                </div>
+              ) : (
+                seasonXP.slice(0, 100).map((entry, index) => (
+                  <div
+                    key={entry.userId}
+                    onClick={() => handleCardClick(entry.userId, entry.socialId)}
+                    className={cn(
+                      "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
+                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
+                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm lg:text-base",
+                      getRankBadgeColor(index)
+                    )}>
+                      #{entry.rank}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
+                      {entry.pfp_url && (
+                        <img
+                          src={entry.pfp_url}
+                          alt={entry.display_name || entry.username || 'User'}
+                          className="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex-shrink-0 object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-white truncate text-sm lg:text-base">
+                          {entry.display_name || entry.username || entry.userId.slice(0, 8) + '...'}
+                        </div>
+                        {entry.username && (
+                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                            @{entry.username}
+                          </div>
+                        )}
+                        <div className="text-xs text-purple-400 mt-0.5">
+                          Level {entry.level}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
+                        {formatNumber(entry.currentSeasonXP)} XP
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {activeTab === 'alltime-xp' && (
+            <div className="space-y-3">
+              {loadingAllTimeXP ? (
+                <div className="flex items-center justify-center py-16">
+                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                </div>
+              ) : allTimeXP.length === 0 ? (
+                <div className="text-center py-16 text-gray-400">
+                  No XP data available yet
+                </div>
+              ) : (
+                allTimeXP.slice(0, 100).map((entry, index) => (
+                  <div
+                    key={entry.userId}
+                    onClick={() => handleCardClick(entry.userId, entry.socialId)}
+                    className={cn(
+                      "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
+                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
+                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm lg:text-base",
+                      getRankBadgeColor(index)
+                    )}>
+                      #{entry.rank}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 lg:gap-3 flex-1 min-w-0">
+                      {entry.pfp_url && (
+                        <img
+                          src={entry.pfp_url}
+                          alt={entry.display_name || entry.username || 'User'}
+                          className="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex-shrink-0 object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-white truncate text-sm lg:text-base">
+                          {entry.display_name || entry.username || entry.userId.slice(0, 8) + '...'}
+                        </div>
+                        {entry.username && (
+                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                            @{entry.username}
+                          </div>
+                        )}
+                        <div className="text-xs text-purple-400 mt-0.5">
+                          Level {entry.level}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
+                        {formatNumber(entry.totalXP)} XP
+                      </div>
+                      <div className="text-xs lg:text-sm text-gray-400">
+                        {formatNumber(entry.currentSeasonXP)} this season
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {activeTab === 'revenue' && (
             <div className="space-y-3">
               {loadingRevenue ? (

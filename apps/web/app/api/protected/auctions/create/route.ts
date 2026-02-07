@@ -8,6 +8,7 @@ import Whitelist from '@/utils/schemas/Whitelist';
 import { checkTokenAmount } from '@/utils/checkTokenAmount';
 import { generatePresignedUrl } from '@/utils/s3/generatePresignedUrl';
 import { validateImageType, validateImageSize } from '@/utils/s3/imageValidation';
+import { awardXP, XP_REWARDS } from '@/utils/xpService';
 
 export async function POST(req: NextRequest) {
   console.log('Verifying token in auction creation route');
@@ -170,6 +171,19 @@ export async function POST(req: NextRequest) {
     user.hostedAuctions.push(newAuction._id);
 
     await user.save();
+
+    // Award XP for creating auction (non-blocking)
+    awardXP({
+      userId: user._id,
+      amount: XP_REWARDS.CREATE_AUCTION,
+      action: 'CREATE_AUCTION',
+      metadata: {
+        auctionId: newAuction._id,
+        auctionName: newAuction.auctionName,
+      },
+    }).catch((err) => {
+      console.error('⚠️ Failed to award XP for auction creation:', err);
+    });
 
     // Schedule jobs (non-blocking)
     try {

@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${poppins.className} antialiased text-white`}
+        className={`${poppins.className} antialiased text-white max-lg:pb-10`}
       >
         <NProgressProvider>
           <MiniKitContextProvider>

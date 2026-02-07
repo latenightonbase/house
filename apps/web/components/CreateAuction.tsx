@@ -685,6 +685,15 @@ if (context?.client.clientFid === 309857) {
     minBidAmount.trim() !== "" &&
     !isNaN(parseFloat(minBidAmount));
 
+  const formatDateTimeLocal = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const canGoNext = () => {
     switch (currentStep) {
       case 0:
@@ -867,12 +876,12 @@ if (context?.client.clientFid === 309857) {
                   </label>
                   <input
                     type="datetime-local"
-                    value={endTime ? endTime.toISOString().slice(0, 16) : ''}
+                    value={endTime ? formatDateTimeLocal(endTime) : ''}
                     onChange={(e) => {
                       const date = new Date(e.target.value);
                       setEndTime(date);
                     }}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={formatDateTimeLocal(new Date())}
                     className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

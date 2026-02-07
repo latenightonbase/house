@@ -1,9 +1,20 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
-import { unique } from 'next/dist/build/utils';
 
 enum SocialPlatform {
   TWITTER = 'TWITTER',
   FARCASTER = 'FARCASTER',
+}
+
+// Interface for XP History entry
+export interface IXPHistory {
+  amount: number;
+  action: string;
+  timestamp: Date;
+  metadata?: {
+    auctionId?: Types.ObjectId;
+    usdValue?: number;
+    [key: string]: any;
+  };
 }
 
 // Interface for the User document
@@ -25,6 +36,12 @@ export interface IUser extends Document {
   participatedAuctions: Types.ObjectId[];
   averageRating?: number;
   totalReviews?: number;
+  // XP and Level System
+  totalXP: number;
+  currentSeasonXP: number;
+  level: number;
+  lastXPUpdate?: Date;
+  xpHistory: IXPHistory[];
   twitterProfile?: {
     id: string;
     username: string;
@@ -101,6 +118,44 @@ const UserSchema: Schema = new Schema(
       type: Number,
       default: 0,
     },
+    totalXP: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    currentSeasonXP: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    level: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    lastXPUpdate: {
+      type: Date,
+      default: null,
+    },
+    xpHistory: [{
+      amount: {
+        type: Number,
+        required: true,
+      },
+      action: {
+        type: String,
+        required: true,
+        trim: true,
+      },
+      timestamp: {
+        type: Date,
+        default: Date.now,
+      },
+      metadata: {
+        type: Schema.Types.Mixed,
+        default: {},
+      },
+    }],
     twitterProfile: {
       id: {
         type: String,
@@ -140,6 +195,9 @@ const UserSchema: Schema = new Schema(
 );
 
 UserSchema.index({ username: 1 });
+UserSchema.index({ currentSeasonXP: -1 });
+UserSchema.index({ totalXP: -1 });
+UserSchema.index({ level: -1 });
 
 // Export the model
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
