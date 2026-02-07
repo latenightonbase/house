@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
         auction.winningBid = "no_bids";
       }
     } else if (auction.bidders && auction.bidders.length > 0) {
-      const highestBid = auction.bidders.reduce((prev, current) => {
+      const highestBid = auction.bidders.reduce((prev:any, current:any) => {
         const prevValue = prev.usdcValue ?? prev.bidAmount;
         const currentValue = current.usdcValue ?? current.bidAmount;
         return currentValue > prevValue ? current : prev;
