@@ -135,8 +135,6 @@ export async function GET(req: NextRequest) {
         console.log('Using Neynar data for host:', hostDoc.socialId);
         // Use Neynar data
         const neynarUser = neynarUsersMap[hostDoc.socialId];
-
-        console.log('Neynar user data:', neynarUser);
         if (neynarUser) {
           enhancedHostedBy.username = neynarUser.username as string;
           enhancedHostedBy.display_name = neynarUser.display_name as string;

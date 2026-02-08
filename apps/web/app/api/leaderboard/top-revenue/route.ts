@@ -168,20 +168,16 @@ export async function GET() {
       const fidsArray = Array.from(uniqueFids);
       console.log('Fetching Neynar data for FIDs:', fidsArray);
       neynarUsers = await getFidsWithCache(fidsArray);
-      console.log('Neynar users fetched from cache:', Object.keys(neynarUsers));
     }
 
     // Enhance users with Neynar data
     const enhancedUsers = topRevenueUsers.map(user => {
-
-      console.log('Processing top rev earner:', user);
 
       let enhancedUser = { ...user };
       
       if (user.socialId && user.socialId !== '' && user.socialPlatform !== "TWITTER") {
         // For valid FIDs, use data from Neynar API
         const neynarUser = neynarUsers[user.socialId];
-        console.log('Neynar user data:', neynarUser);
         const fallbackWallet = user.wallet;
         const truncatedWallet = fallbackWallet ? `${fallbackWallet.slice(0, 6)}...${fallbackWallet.slice(-4)}` : fallbackWallet;
         

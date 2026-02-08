@@ -94,7 +94,6 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
       console.log('User logged in successfully', user);
       
       if (isNewUser && user.twitter?.subject) {
-        console.log('New user detected, creating user in database');
         try {
           const accessToken = await getAccessToken();
           const response = await fetch('/api/protected/user/create', {
@@ -139,6 +138,7 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
               'Authorization': `Bearer ${accessToken}`,
             },
             body: JSON.stringify({
+              privyId: user.id,
               twitterProfile: {
                 id: user.twitter.subject,
                 username: user.twitter.username,

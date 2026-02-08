@@ -153,7 +153,6 @@ export async function GET() {
     if (uniqueFids.size > 0) {
       const fidsArray = Array.from(uniqueFids);
       neynarUsers = await getFidsWithCache(fidsArray);
-      console.log('Neynar users fetched from cache:', Object.keys(neynarUsers));
     }
 
     // Enhance bids with Neynar data

@@ -12,21 +12,22 @@ export async function POST(request: NextRequest) {
       return authResult.response;
     }
     
-    const { twitterProfile } = await request.json();
+    const { twitterProfile, privyId } = await request.json();
 
-    if (!twitterProfile || !twitterProfile.id || !twitterProfile.username) {
+    if (!twitterProfile || !twitterProfile.id || !twitterProfile.username || !privyId) {
       return NextResponse.json({ error: 'Invalid Twitter profile data' }, { status: 400 });
     }
 
     await dbConnect();
 
-    console.log('Updating Twitter profile for socialId:', twitterProfile.id);
+    console.log('Updating Twitter profile for socialId:', twitterProfile.id, 'with privyId:', privyId);
 
     const user = await User.findOneAndUpdate(
       { socialId: twitterProfile.id },
       {
         $set: {
           username: twitterProfile.username,
+          privyId: privyId,
           twitterProfile: {
             id: twitterProfile.id,
             username: twitterProfile.username,

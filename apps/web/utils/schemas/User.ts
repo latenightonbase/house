@@ -41,6 +41,7 @@ export interface IUser extends Document {
   currentSeasonXP: number;
   level: number;
   lastXPUpdate?: Date;
+  lastDailyLoginReward?: Date;
   xpHistory: IXPHistory[];
   twitterProfile?: {
     id: string;
@@ -134,6 +135,10 @@ const UserSchema: Schema = new Schema(
       min: 1,
     },
     lastXPUpdate: {
+      type: Date,
+      default: null,
+    },
+    lastDailyLoginReward: {
       type: Date,
       default: null,
     },

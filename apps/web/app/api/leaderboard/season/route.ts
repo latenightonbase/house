@@ -7,6 +7,7 @@ import {
   getCurrentSeason,
 } from '@/utils/xpService';
 import dbConnect from '@/utils/db';
+import { getFidsWithCache } from '@/utils/fidCache';
 
 export async function GET(req: NextRequest) {
   try {
@@ -58,6 +59,58 @@ export async function GET(req: NextRequest) {
           seasonInfo = { message: 'No active season' };
         }
       }
+    }
+
+    // Enhance leaderboard with Neynar data for Farcaster users
+    if (leaderboard.length > 0) {
+      const farcasterFids: string[] = [];
+      leaderboard.forEach((entry: any) => {
+        if (
+          entry.socialPlatform === 'FARCASTER' &&
+          entry.socialId &&
+          !entry.socialId.startsWith('none') &&
+          !entry.socialId.startsWith('0x')
+        ) {
+          farcasterFids.push(entry.socialId);
+        }
+      });
+
+      let neynarUsersMap: Record<string, any> = {};
+      if (farcasterFids.length > 0) {
+        try {
+          neynarUsersMap = await getFidsWithCache(farcasterFids);
+        } catch (error) {
+          console.error('Error fetching Neynar data:', error);
+        }
+      }
+
+      // Enhance each entry with profile data
+      leaderboard = leaderboard.map((entry: any) => {
+        console.log('Processing leaderboard entry for userId:', entry.userId, 'socialId:', entry.socialId, 'socialPlatform:', entry);
+        let displayName = 'Anonymous';
+        let pfpUrl = `https://api.dicebear.com/5.x/identicon/svg?seed=${entry.userId}`;
+
+        if (entry.socialPlatform === 'FARCASTER' && entry.socialId) {
+          const neynarUser = neynarUsersMap[entry.socialId];
+          if (neynarUser) {
+            displayName = neynarUser.display_name || neynarUser.username || displayName;
+            pfpUrl = neynarUser.pfp_url || pfpUrl;
+          } else if (entry.username) {
+            displayName = entry.username;
+          }
+        } else if (entry.socialPlatform === 'TWITTER') {
+          displayName = entry?.username || displayName;
+          pfpUrl = entry.pfpUrl || pfpUrl;
+        } else if (entry.username) {
+          displayName = entry.username;
+        }
+
+        return {
+          ...entry,
+          display_name: displayName,
+          pfp_url: pfpUrl,
+        };
+      });
     }
 
     return NextResponse.json({

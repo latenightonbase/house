@@ -506,6 +506,59 @@ export default function LeaderboardPage() {
               )}
             </div>
           )}
+
+          {activeTab === 'season-table' && (
+            <LeaderboardTable
+              title="Current Season Leaderboard"
+              loading={loadingSeasonXP}
+              data={seasonXP.map((entry, index) => ({
+                ...entry,
+                _id: entry.userId,
+                displayName: entry.username || entry.socialId || 'Anonymous',
+                rank: index + 1,
+              }))}
+              emptyMessage="No seasonal XP data available yet"
+              columns={[
+                {
+                  key: 'displayName',
+                  label: 'Player',
+                  className: 'font-medium',
+                  render: (value: any, row: any) => (
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center">
+                        <span className="text-sm font-bold">
+                          {row.displayName?.charAt(0)?.toUpperCase() || '?'}
+                        </span>
+                      </div>
+                      <span className="truncate max-w-[200px]">{row.displayName}</span>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'currentSeasonXP',
+                  label: 'Season XP',
+                  className: 'text-right font-bold text-primary',
+                  render: (value: number) => formatNumber(value),
+                },
+                {
+                  key: 'level',
+                  label: 'Level',
+                  className: 'text-center',
+                  render: (value: number) => (
+                    <div className="inline-flex items-center justify-center bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-bold">
+                      Lv. {value}
+                    </div>
+                  ),
+                },
+                {
+                  key: 'totalXP',
+                  label: 'Total XP',
+                  className: 'text-right text-gray-400',
+                  render: (value: number) => formatNumber(value),
+                },
+              ]}
+            />
+          )}
         </div>
       </div>
     </div>

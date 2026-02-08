@@ -12,6 +12,7 @@ export const XP_REWARDS = {
   WIN_AUCTION_BASE: 100,
   WIN_AUCTION_USD_MULTIPLIER: 0.2, // Additional XP per USD won
   LEAVE_REVIEW: 25,
+  DAILY_LOGIN: 5,
 } as const;
 
 // Level calculation: exponential formula (level² × 100)
@@ -183,6 +184,7 @@ export async function awardXP({
 export interface LeaderboardEntry {
   userId: string;
   username?: string;
+  pfpUrl?: string;
   socialId?: string;
   socialPlatform?: string;
   currentSeasonXP: number;
@@ -206,11 +208,12 @@ export async function getSeasonLeaderboard(
       .sort({ totalXP: -1 })
       .skip(offset)
       .limit(limit)
-      .populate('user', 'username socialId socialPlatform level totalXP');
+      .populate('user', 'username socialId socialPlatform level totalXP twitterProfile');
     
     return leaderboardEntries.map((entry, index) => ({
       userId: entry.user._id.toString(),
-      username: (entry.user as any).username,
+      username: (entry.user as any).twitterProfile?.username,
+      pfpUrl: (entry.user as any).twitterProfile?.profileImageUrl,
       socialId: (entry.user as any).socialId,
       socialPlatform: (entry.user as any).socialPlatform,
       currentSeasonXP: entry.totalXP,
@@ -224,12 +227,13 @@ export async function getSeasonLeaderboard(
       .sort({ currentSeasonXP: -1 })
       .skip(offset)
       .limit(limit)
-      .select('username socialId socialPlatform currentSeasonXP totalXP level');
+      .select('username socialId socialPlatform currentSeasonXP totalXP level twitterProfile');
     
     return users.map((user, index) => ({
       userId: user._id.toString(),
-      username: user.username,
+      username: user.twitterProfile?.username || user.username,
       socialId: user.socialId,
+      pfpUrl: user.twitterProfile?.profileImageUrl,
       socialPlatform: user.socialPlatform,
       currentSeasonXP: user.currentSeasonXP,
       totalXP: user.totalXP,
@@ -250,11 +254,12 @@ export async function getAllTimeLeaderboard(
     .sort({ totalXP: -1 })
     .skip(offset)
     .limit(limit)
-    .select('username socialId socialPlatform currentSeasonXP totalXP level');
+    .select('username socialId socialPlatform currentSeasonXP totalXP level twitterProfile');
   
   return users.map((user, index) => ({
     userId: user._id.toString(),
-    username: user.username,
+    username: user.twitterProfile?.username || user.username,
+    pfpUrl: user.twitterProfile?.profileImageUrl,
     socialId: user.socialId,
     socialPlatform: user.socialPlatform,
     currentSeasonXP: user.currentSeasonXP,
@@ -396,4 +401,92 @@ export async function resetSeason(): Promise<void> {
   });
   
   console.log(`Season ${currentSeason.seasonNumber} ended. Season ${nextSeasonNumber} started.`);
+}
+
+// Check if two dates are the same UTC day (ignoring time)
+export function isSameUTCDay(date1: Date, date2: Date): boolean {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  
+  return (
+    d1.getUTCFullYear() === d2.getUTCFullYear() &&
+    d1.getUTCMonth() === d2.getUTCMonth() &&
+    d1.getUTCDate() === d2.getUTCDate()
+  );
+}
+
+// Award daily login XP
+export interface DailyLoginResult {
+  awarded: boolean;
+  xp?: number;
+  nextRewardDate?: Date;
+  alreadyClaimedToday?: boolean;
+  error?: string;
+}
+
+export async function awardDailyLoginXP(
+  userId: string | Types.ObjectId
+): Promise<DailyLoginResult> {
+  try {
+    await dbConnect();
+    
+    const userObjectId = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+    
+    // Get user's current state
+    const user = await User.findById(userObjectId);
+    if (!user) {
+      return { awarded: false, error: 'User not found' };
+    }
+    
+    const now = new Date();
+    
+    // Check if user has already claimed today
+    if (user.lastDailyLoginReward && isSameUTCDay(user.lastDailyLoginReward, now)) {
+      // Already claimed today - calculate next reward date (tomorrow at 00:00 UTC)
+      const nextReward = new Date(now);
+      nextReward.setUTCDate(nextReward.getUTCDate() + 1);
+      nextReward.setUTCHours(0, 0, 0, 0);
+      
+      return {
+        awarded: false,
+        alreadyClaimedToday: true,
+        nextRewardDate: nextReward,
+      };
+    }
+    
+    // Award daily login XP
+    const result = await awardXP({
+      userId: userObjectId,
+      amount: XP_REWARDS.DAILY_LOGIN,
+      action: 'DAILY_LOGIN',
+      metadata: {
+        timestamp: now,
+      },
+    });
+    
+    if (!result.success) {
+      return { awarded: false, error: result.error };
+    }
+    
+    // Update lastDailyLoginReward
+    await User.findByIdAndUpdate(userObjectId, {
+      $set: {
+        lastDailyLoginReward: now,
+      },
+    });
+    
+    // Calculate next reward date (tomorrow at 00:00 UTC)
+    const nextReward = new Date(now);
+    nextReward.setUTCDate(nextReward.getUTCDate() + 1);
+    nextReward.setUTCHours(0, 0, 0, 0);
+    
+    return {
+      awarded: true,
+      xp: XP_REWARDS.DAILY_LOGIN,
+      nextRewardDate: nextReward,
+    };
+  } catch (error) {
+    console.error('Error awarding daily login XP:', error);
+    return { awarded: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
