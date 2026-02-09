@@ -11,6 +11,7 @@ import {
   type AuctionLifecycleJobData,
   type SeasonRolloverJobData,
 } from '@repo/queue';
+import User from '../../web/utils/schemas/User';
 
 // ============ MongoDB Setup ============
 const MONGO_URI = process.env.MONGO_URI || '';
@@ -22,11 +23,7 @@ async function connectDB() {
   console.log('✅ MongoDB connected');
 }
 
-// User model - reuse if already registered, cast to any to avoid complex union type
-const User: any = mongoose.models['User'] || mongoose.model('User', new mongoose.Schema({
-  notificationDetails: { url: String, token: String },
-}));
-
+// Auction model for notifications
 const Auction: any = mongoose.models['Auction'] || mongoose.model('Auction', new mongoose.Schema({
   blockchainAuctionId: String,
   name: String,
