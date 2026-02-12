@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Heading from '@/components/UI/Heading'
 import RatingCircle from '@/components/UI/RatingCircle'
 import { MdWallet } from 'react-icons/md'
-import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill } from 'react-icons/ri'
+import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill, RiRobot2Line } from 'react-icons/ri'
 import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
 import { useState, useEffect } from 'react'
 import TwitterAuthModal from '@/components/UI/TwitterAuthModal'
@@ -271,7 +271,7 @@ export default function ProfilePage() {
               </div>
             </div>
             
-            <div className="flex gap-3 max-lg:w-full max-lg:justify-center">
+            <div className="flex gap-3 max-lg:w-full max-lg:justify-center flex-wrap">
               <button
                 onClick={() => navigateWithLoader('/my-auctions')}
                 className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-semibold hover:opacity-90 transition-opacity"
@@ -280,9 +280,16 @@ export default function ProfilePage() {
               </button>
               <button
                 onClick={() => navigateWithLoader('/won-bids')}
-                className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/10 transition-colors"
+                className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-colors"
               >
                 Won Bids
+              </button>
+              <button
+                onClick={() => navigateWithLoader('/settings')}
+                className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-colors flex items-center gap-2"
+              >
+                <RiRobot2Line className="text-lg" />
+                Bot Settings
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ import {
   User,
   PlusCircle,
   Clock,
+  Settings,
 } from "lucide-react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import LoginWithOAuth from "../utils/twitterConnect";
@@ -347,6 +348,25 @@ export default function Navbar() {
                 : "text-white/30"
             } w-5 h-5`} />
           </a>
+
+          {/* Settings - Bot API Keys */}
+          {authenticated && (
+            <a
+              href="/settings"
+              onClick={(e) => handleNavClick(e, "/settings")}
+              className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
+                pathname === "/settings"
+                  ? "text-white selected-gradient"
+                  : "text-white hover:text-white hover:bg-white/10 bg-white/5"
+              }`}
+            >
+              <Settings className={` ${
+                pathname === "/settings"
+                  ? "text-white"
+                  : "text-white/30"
+              } w-5 h-5`} />
+            </a>
+          )}
 
           {/* Reviews */}
           <ReviewFlowManager isMobile={false} />
