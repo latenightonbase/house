@@ -71,26 +71,26 @@ export async function POST(req: NextRequest) {
 
     // Check whitelist / token balance
     const botWalletAddress = authResult.botWallet.address;
-    const checkWl = await Whitelist.findOne({
-      walletAddress: botWalletAddress.toLowerCase(),
-    });
+    // const checkWl = await Whitelist.findOne({
+    //   walletAddress: botWalletAddress.toLowerCase(),
+    // });
 
-    if (!checkWl) {
-      try {
-        const hasEnough = await checkTokenAmount(botWalletAddress);
-        if (!hasEnough.allow) {
-          return NextResponse.json(
-            { error: 'Insufficient token balance in bot wallet to create auctions' },
-            { status: 403 }
-          );
-        }
-      } catch {
-        return NextResponse.json(
-          { error: 'Failed to verify token balance' },
-          { status: 500 }
-        );
-      }
-    }
+    // if (!checkWl) {
+    //   try {
+    //     const hasEnough = await checkTokenAmount(botWalletAddress);
+    //     if (!hasEnough.allow) {
+    //       return NextResponse.json(
+    //         { error: 'Insufficient token balance in bot wallet to create auctions' },
+    //         { status: 403 }
+    //       );
+    //     }
+    //   } catch {
+    //     return NextResponse.json(
+    //       { error: 'Failed to verify token balance' },
+    //       { status: 500 }
+    //     );
+    //   }
+    // }
 
     // Get token info
     const [tokenDecimals, tokenSymbol] = await Promise.all([
