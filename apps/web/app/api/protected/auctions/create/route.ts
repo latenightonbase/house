@@ -94,19 +94,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const checkWl = await Whitelist.findOne({
-      walletAddress: startingWallet.toLowerCase(),
-    })
+    // const checkWl = await Whitelist.findOne({
+    //   walletAddress: startingWallet.toLowerCase(),
+    // })
 
-    if (!checkWl) {
-      await checkTokenAmount(startingWallet).then((hasEnough) => {
-      if (hasEnough.allow == false) {
-        throw new Error('Insufficient token balance in starting wallet');
-      }}).catch((err) => {
-        console.error('Token amount check failed:', err);
-        return NextResponse.json({ error: 'Insufficient token balance in starting wallet' }, { status: 403 });
-      });
-    }
+    // if (!checkWl) {
+    //   await checkTokenAmount(startingWallet).then((hasEnough) => {
+    //   if (hasEnough.allow == false) {
+    //     throw new Error('Insufficient token balance in starting wallet');
+    //   }}).catch((err) => {
+    //     console.error('Token amount check failed:', err);
+    //     return NextResponse.json({ error: 'Insufficient token balance in starting wallet' }, { status: 403 });
+    //   });
+    // }
 
     console.log('Creating auction with data:', {
       auctionName,
