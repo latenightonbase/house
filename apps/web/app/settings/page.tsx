@@ -58,6 +58,7 @@ export default function SettingsPage() {
   const [keyName, setKeyName] = useState('My Bot')
   const [copiedKey, setCopiedKey] = useState(false)
   const [copiedWallet, setCopiedWallet] = useState(false)
+  const [copiedConfig, setCopiedConfig] = useState(false)
   const [showKey, setShowKey] = useState(false)
   const [revoking, setRevoking] = useState<string | null>(null)
 
@@ -156,17 +157,20 @@ export default function SettingsPage() {
   }
 
   // Copy to clipboard
-  const copyToClipboard = async (text: string, type: 'key' | 'wallet') => {
+  const copyToClipboard = async (text: string, type: 'key' | 'wallet' | 'config') => {
     try {
       await navigator.clipboard.writeText(text)
       if (type === 'key') {
         setCopiedKey(true)
         setTimeout(() => setCopiedKey(false), 2000)
-      } else {
+      } else if (type === 'wallet') {
         setCopiedWallet(true)
         setTimeout(() => setCopiedWallet(false), 2000)
+      } else {
+        setCopiedConfig(true)
+        setTimeout(() => setCopiedConfig(false), 2000)
       }
-      toast.success(`${type === 'key' ? 'API Key' : 'Wallet address'} copied!`)
+      toast.success(`${type === 'key' ? 'API Key' : type === 'wallet' ? 'Wallet address' : 'Config'} copied!`)
     } catch {
       toast.error('Failed to copy')
     }
@@ -213,17 +217,21 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto pt-4 lg:pt-6 max-lg:pb-20 px-4">
+      <div className="max-w-5xl mx-auto pt-4 lg:pt-6 max-lg:pb-24 ">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl border border-primary/30 lg:p-8 p-6 mb-6">
+        <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-2xl border border-primary/30 lg:p-8 p-4 mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <RiRobot2Line className="text-3xl text-white" />
-            </div>
+            
             <div>
-              <Heading size="lg" gradient={true}>
+              <div className='flex items-center gap-2'>
+                <div className="lg:w-16 lg:h-16 w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+              <RiRobot2Line className="text-3xl max-lg:text-xl text-white" />
+            </div>
+            <Heading size="lg" gradient={true}>
                 Bot Settings
               </Heading>
+              </div>
+              
               <p className="text-gray-400 mt-1">
                 Manage API keys for your AI agents to interact with House
               </p>
@@ -284,7 +292,7 @@ export default function SettingsPage() {
               className="flex items-center gap-2"
             >
               <RiAddLine />
-              Generate New Key
+              New Key
             </Button>
           </div>
 
@@ -383,7 +391,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Instructions */}
-        <div className="bg-secondary/10 rounded-xl border border-secondary/20 p-6">
+        <div className="bg-secondary/10 rounded-xl border border-secondary/20 p-4">
           <h3 className="text-lg font-semibold text-white mb-4">
             How to use with OpenClaw or other AI agents
           </h3>
@@ -406,9 +414,10 @@ export default function SettingsPage() {
               <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                 3
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <p className="mb-2">Add to your MCP config:</p>
-                <pre className="bg-black/40 rounded-lg p-3 text-xs overflow-x-auto">
+                <div className="relative">
+                  <pre className="bg-black/40 rounded-lg p-3 pr-12 text-xs overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap break-all">
 {`{
   "auction-house": {
     "command": "npx",
@@ -418,7 +427,26 @@ export default function SettingsPage() {
     }
   }
 }`}
-                </pre>
+                  </pre>
+                  <button
+                    onClick={() => copyToClipboard(`{
+  "auction-house": {
+    "command": "npx",
+    "args": ["auction-house-mcp"],
+    "env": {
+      "AUCTION_HOUSE_API_KEY": "your-api-key-here"
+    }
+  }
+}`, 'config')}
+                    className="absolute top-2 right-2 p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                  >
+                    {copiedConfig ? (
+                      <RiCheckLine className="text-green-400" />
+                    ) : (
+                      <RiFileCopyLine className="text-gray-400" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="flex gap-3">
