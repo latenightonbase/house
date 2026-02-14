@@ -44,6 +44,7 @@ import { ethers } from "ethers";
 import { Drawer, DrawerContent } from "./UI/Drawer";
 import sdk from "@farcaster/frame-sdk";
 import { checkTokenAmount } from "@/utils/checkTokenAmount";
+import { useXPNotification } from "@/utils/providers/xpNotificationContext";
 
 interface CurrencyOption {
   name: string;
@@ -61,6 +62,7 @@ export default function CreateAuction() {
   );
 
   const { user } = useGlobalContext();
+  const { showXPGain, triggerRefresh } = useXPNotification();
   const address =
     externalWallets.length > 0 ? externalWallets[0].address : null;
   const { getAccessToken } = usePrivy();
@@ -292,6 +294,14 @@ export default function CreateAuction() {
           .catch(() => ({ error: "Unknown error" }));
         console.error("API Error Response:", errorData);
         throw new Error(errorData.error || "Failed to save auction details");
+      }
+
+      const responseData = await response.json();
+
+      // Trigger XP animation if XP was awarded
+      if (responseData.xpAwarded && responseData.xpAwarded > 0) {
+        showXPGain(responseData.xpAwarded, 'CREATE_AUCTION');
+        triggerRefresh();
       }
 
       toast.success("Created!", {

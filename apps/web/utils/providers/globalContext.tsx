@@ -116,37 +116,7 @@ useEffect(() => {
   createUser();
 },[privyUser, address, getAccessToken])
 
-// Check daily login reward
-useEffect(() => {
-  const checkDailyLogin = async () => {
-    if (authenticated && privyUser) {
-      try {
-        const accessToken = await getAccessToken();
-        const response = await fetch('/api/protected/user/daily-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.awarded) {
-            console.log(`Daily login XP awarded: ${result.xp} XP`);
-            // Optional: Show toast notification
-            // toast.success(`+${result.xp} XP for logging in today!`);
-          }
-        }
-      } catch (error) {
-        // Silently fail - don't disrupt user experience
-        console.error('Failed to check daily login:', error);
-      }
-    }
-  };
-  
-  checkDailyLogin();
-}, [authenticated, privyUser, getAccessToken])
+// Daily login XP is now handled by DailyLoginHandler component
 
 useEffect(() => {
   if(context){

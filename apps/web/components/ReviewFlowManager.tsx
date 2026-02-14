@@ -152,8 +152,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
   };
 
   const handleReviewSuccess = () => {
-    toast.success('Thank you for your review!');
-    setSelectedReviewAuction(null);
+    handleCloseDrawer();
     fetchPendingDeliveries();
   };
 

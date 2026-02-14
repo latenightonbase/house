@@ -62,6 +62,7 @@ import sdk from "@farcaster/miniapp-sdk";
 import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import AggregateConnector from "./utils/aggregateConnector";
+import { useXPNotification } from "@/utils/providers/xpNotificationContext";
 
 interface Bidder {
   displayName: string;
@@ -170,6 +171,7 @@ export default function BidPage() {
   const [storedAuction, setStoredAuction] = useState<Auction | null>(null);
   const [storedBidAmountInWei, setStoredBidAmountInWei] = useState<bigint>(BigInt(0));
   const { user } = useGlobalContext();
+  const { showXPGain, triggerRefresh } = useXPNotification();
   const { getAccessToken } = usePrivy();
 
   const { wallets } = useWallets();
@@ -579,6 +581,12 @@ export default function BidPage() {
         throw new Error(
           data.error || `API request failed with status ${response.status}`
         );
+      }
+
+      // Trigger XP animation if XP was awarded
+      if (data.xpAwarded && data.xpAwarded > 0) {
+        showXPGain(data.xpAwarded, 'BID');
+        triggerRefresh();
       }
 
       toast.success("Bid placed!");
