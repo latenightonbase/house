@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import Image from "next/image";
-import { Users } from "lucide-react";
+import { Users, Bot, User } from "lucide-react";
 import ScrollingName from "./utils/ScrollingName";
 import { fetchTokenPrice } from "@/utils/tokenPrice";
 
@@ -48,6 +48,7 @@ interface Auction {
   participantCount: number;
   hoursRemaining: number;
   bidCount: number;
+  createdByType?: 'human' | 'bot';
 }
 
 interface AuctionCardProps {
@@ -112,6 +113,21 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
           className="w-full h-full object-cover"
           unoptimized
         />
+        {/* Bot/Human Tag */}
+        {auction.createdByType === 'bot' && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-blue-500/90 text-white text-xs font-medium px-2 py-1 rounded-full">
+            <Bot className="w-3 h-3" />
+            <span>Bot</span>
+          </div>
+        )}
+
+        {/* Bot/Human Tag */}
+        {auction.createdByType === 'human' && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-green-500/90 text-white text-xs font-medium px-2 py-1 rounded-full">
+            <User className="w-3 h-3" />
+            <span>Human</span>
+          </div>
+        )}
       </div>
 
       {/* Content */}

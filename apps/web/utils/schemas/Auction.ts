@@ -6,6 +6,7 @@ export interface IBidder {
   bidAmount: number;
   usdcValue?: number;
   bidTimestamp: Date;
+  source?: 'human' | 'bot';
 }
 
 // Interface for the Auction document
@@ -30,6 +31,7 @@ export interface IAuction extends Document {
   status: 'ongoing' | 'ended' | 'paused';
   imageUrl?: string;
   imageKey?: string;
+  createdByType: 'human' | 'bot';
 }
 
 // Sub-schema for bidders
@@ -54,6 +56,11 @@ const BidderSchema = new Schema({
     type: Date,
     required: true,
     default: Date.now,
+  },
+  source: {
+    type: String,
+    enum: ['human', 'bot'],
+    default: 'human',
   },
 }, { _id: false }); // _id: false to prevent automatic _id generation for subdocuments
 
@@ -155,6 +162,11 @@ const AuctionSchema: Schema = new Schema(
       type: String,
       required: false,
       trim: true,
+    },
+    createdByType: {
+      type: String,
+      enum: ['human', 'bot'],
+      default: 'human',
     },
   },
   {

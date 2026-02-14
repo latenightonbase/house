@@ -138,7 +138,8 @@ export async function POST(req: NextRequest) {
       user: user._id,
       bidAmount,
       usdcValue,
-      bidTimestamp: new Date()
+      bidTimestamp: new Date(),
+      source: 'human' as const,
     };
     auction.bidders.push(newBid);
     console.log("📋 New bid object:", newBid);
@@ -161,6 +162,7 @@ export async function POST(req: NextRequest) {
         tokenAddress: auction.tokenAddress,
         blockchainAuctionId,
         bidTimestamp: new Date(),
+        source: 'human',
       });
       console.log("✅ Bid document created successfully:", createdBid._id);
     } catch (bidError) {

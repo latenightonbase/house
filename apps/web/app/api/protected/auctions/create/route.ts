@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
       startingWallet: startingWallet,
       imageUrl: imageUrl || undefined,
       imageKey: imageKey || undefined,
+      createdByType: 'human',
     });
 
     await newAuction.save();

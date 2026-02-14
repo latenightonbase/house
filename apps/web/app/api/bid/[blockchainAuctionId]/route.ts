@@ -25,6 +25,7 @@ interface ProcessedBidder {
   usdValue?: number;
   walletAddress: string;
   userId?: string;
+  source?: 'human' | 'bot';
 }
 
 // Helper function to handle ended auctions using database data
@@ -161,7 +162,8 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
       bidAmount: bidAmountInWei,
       usdValue: bidder.usdcValue,
       walletAddress: user?.wallet || '',
-      userId: user?._id?.toString() || user?._id
+      userId: user?._id?.toString() || user?._id,
+      source: bidder.source || 'human'
     };
   });
 
@@ -208,7 +210,8 @@ async function handleEndedAuction(auction: any, auctionStatus: string) {
     minimumBid: (BigInt(Math.floor(auction.minimumBid * Math.pow(10, decimals)))).toString(),
     bidders: processedBidders,
     hostedBy: enhancedHostedBy,
-    imageUrl: auction.imageUrl
+    imageUrl: auction.imageUrl,
+    createdByType: auction.createdByType || 'human'
   });
 }
 
@@ -351,6 +354,10 @@ export async function POST(
         numericFids.push(bidder.fid);
       }
 
+      // Get source from database bidders if available
+      const dbBidder = auction.bidders?.[i] as any;
+      const source = dbBidder?.source || 'human';
+
       // Build initial bidder object with userId always set
       processedBidders.push({
         displayName: '',
@@ -358,7 +365,8 @@ export async function POST(
         bidAmount: bidder.bidAmount,
         usdValue,
         walletAddress: bidder.bidder,
-        userId: userData?._id?.toString() || userData?._id
+        userId: userData?._id?.toString() || userData?._id,
+        source
       });
     }
 
@@ -500,7 +508,8 @@ export async function POST(
       minimumBid: auction.minimumBid.toString(),
       bidders: processedBidders,
       hostedBy: enhancedHostedBy,
-      imageUrl: auction.imageUrl
+      imageUrl: auction.imageUrl,
+      createdByType: auction.createdByType || 'human'
     };
 
     return NextResponse.json(response);

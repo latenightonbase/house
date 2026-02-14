@@ -87,6 +87,7 @@ export async function GET() {
         usdcValue: bid.usdcValue,
         currency: bid.currency,
         bidTimestamp: bid.bidTimestamp,
+        source: bid.source,
       };
     });
 

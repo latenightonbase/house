@@ -17,7 +17,7 @@ import {
 import { RiLoader5Fill, RiShareBoxLine, RiFileCopyLine } from "react-icons/ri";
 import { IoShareOutline, IoLinkOutline, IoCopyOutline } from "react-icons/io5";
 import { FaShare } from "react-icons/fa";
-import { Users, Clock, TrendingUp } from "lucide-react";
+import { Users, Clock, TrendingUp, Bot, User } from "lucide-react";
 import { Button } from "@/components/UI/button";
 import Input from "@/components/UI/Input";
 import {
@@ -70,6 +70,7 @@ interface Bidder {
   usdValue?: number;
   walletAddress: string;
   userId?: string;
+  source?: 'human' | 'bot';
 }
 
 interface ContractBidder {
@@ -89,6 +90,7 @@ interface AuctionData {
   minimumBid: string;
   bidders: Bidder[];
   imageUrl?: string;
+  createdByType?: 'human' | 'bot';
   hostedBy: {
     _id?: string;
     username: string;
@@ -697,6 +699,8 @@ export default function BidPage() {
 
       let bidAmount: number;
 
+      console.log("Handling bid with params:", bidAmountParam);
+
       if (bidAmountParam) {
         bidAmount = bidAmountParam;
       } else {
@@ -863,9 +867,14 @@ export default function BidPage() {
           await processSuccess(auctionId, bidAmount);
           return;
         } catch (walletSendError) {
-
-          toast.error("Transaction failed", { id: toastId });
-          setIsLoading(false);
+          console.log("wallet_sendCalls failed, falling back to external wallet method:", walletSendError);
+         await handleFallbackTransaction(
+            auctionId,
+            bidAmount,
+            bidAmountInWei,
+            auction,
+            toastId
+          );
         }
       } else {
         toast.loading(`Preparing ${bidAmount} ${auction.currency} bid...`, {
@@ -1083,9 +1092,23 @@ export default function BidPage() {
             <div className="mb-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-white mb-2">
-                    {auctionData.auctionName}
-                  </h1>
+                  <div className="flex flex-col items-start gap-2 mb-2">
+                    <h1 className="text-2xl lg:text-3xl font-bold text-white">
+                      {auctionData.auctionName}
+                    </h1>
+                    {auctionData.createdByType === 'bot' && (
+                      <span className="flex items-center gap-1 bg-blue-500/20 text-blue-400 text-xs font-medium px-2 py-1 rounded-full">
+                        <Bot className="w-3 h-3" />
+                        Bot
+                      </span>
+                    )}
+                    {auctionData.createdByType === 'human' && (
+                      <span className="flex items-center gap-1 bg-green-500/20 text-green-400 text-xs font-medium px-2 py-1 rounded-full">
+                        <User className="w-3 h-3" />
+                        Human
+                      </span>
+                    )}
+                  </div>
                   {auctionData.description && (
                     <p className="text-gray-400 text-xs">
                       {auctionData.description}
@@ -1293,9 +1316,24 @@ export default function BidPage() {
                             </div>
                           )}
                           <div>
-                            <p className="text-white text-sm font-medium">
-                              {bidder.displayName}
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-white text-sm font-medium">
+                                {bidder.displayName}
+                              </p>
+                              {bidder.source === 'bot' && (
+                                <span className="flex items-center gap-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                  <Bot className="w-2.5 h-2.5" />
+                                  Bot
+                                </span>
+                              )}
+                              
+                              {bidder.source && bidder.source !== 'bot' && (
+                                <span className="flex items-center gap-0.5 bg-green-500/20 text-green-400 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                  <User className="w-2.5 h-2.5" />
+                                  Human
+                                </span>
+                              )}
+                            </div>
                             <p className="text-gray-400 text-[10px]">
                               @{bidder.displayName.toLowerCase().replace(/\s+/g, '_')}
                             </p>

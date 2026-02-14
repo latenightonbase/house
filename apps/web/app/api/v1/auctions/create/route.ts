@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
       hostedBy: authResult.user._id,
       minimumBid: parseFloat(minimumBid.toString()),
       startingWallet: botWalletAddress,
+      createdByType: 'bot',
     });
 
     await newAuction.save();

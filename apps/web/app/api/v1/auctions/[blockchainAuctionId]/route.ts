@@ -48,6 +48,7 @@ export async function GET(
         startDate: auctionData.startDate,
         endDate: auctionData.endDate,
         imageUrl: auctionData.imageUrl,
+        createdByType: auctionData.createdByType || 'human',
         biddersCount: auctionData.bidders?.length || 0,
         highestBid: auctionData.bidders?.length
           ? Math.max(...auctionData.bidders.map((b: any) => b.bidAmount))
@@ -67,6 +68,7 @@ export async function GET(
         usdcValue: b.usdcValue,
         currency: b.currency,
         bidTimestamp: b.bidTimestamp,
+        source: b.source || 'human',
         bidder: b.user
           ? {
               username: b.user.twitterProfile?.username || b.user.username,

@@ -82,6 +82,7 @@ interface RecentBid {
   usdcValue: number;
   currency: string;
   bidTimestamp: string;
+  source?: 'human' | 'bot' | null;
 }
 
 export default function LeaderboardSidebar() {

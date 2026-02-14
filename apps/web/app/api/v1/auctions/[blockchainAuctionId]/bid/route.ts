@@ -147,6 +147,7 @@ export async function POST(
       bidAmount: amount,
       usdcValue,
       bidTimestamp: new Date(),
+      source: 'bot' as const,
     };
     auction.bidders.push(newBid);
     await auction.save();
@@ -164,6 +165,7 @@ export async function POST(
         tokenAddress: auction.tokenAddress,
         blockchainAuctionId,
         bidTimestamp: new Date(),
+        source: 'bot',
       });
     } catch (bidError) {
       console.error('Failed to create Bid document (non-blocking):', bidError);

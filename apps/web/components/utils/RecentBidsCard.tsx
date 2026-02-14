@@ -2,6 +2,7 @@ import React from 'react';
 import { RiLoader5Fill } from 'react-icons/ri';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import { Bot, User } from 'lucide-react';
 
 interface RecentBid {
   _id: string;
@@ -16,6 +17,7 @@ interface RecentBid {
   usdcValue: number;
   currency: string;
   bidTimestamp: string;
+  source?: 'human' | 'bot' | null;
 }
 
 interface RecentBidsCardProps {
@@ -86,9 +88,23 @@ export default function RecentBidsCard({ bids, loading }: RecentBidsCardProps) {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                  {bid.bidderName}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                    {bid.bidderName}
+                  </p>
+                  {bid.source === 'bot' && (
+                    <span className="flex items-center gap-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
+                      <Bot className="w-2.5 h-2.5" />
+                      
+                    </span>
+                  )}
+                  {bid.source && bid.source === 'human' && (
+                    <span className="flex items-center gap-0.5 bg-green-500/20 text-green-400 text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
+                      <User className="w-2.5 h-2.5" />
+                      
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-caption truncate">
                   {bid.auctionName}
                 </p>

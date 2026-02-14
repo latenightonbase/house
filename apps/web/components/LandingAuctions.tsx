@@ -106,6 +106,7 @@ interface Auction {
   participantCount: number;
   hoursRemaining: number;
   bidCount: number;
+  createdByType?: 'human' | 'bot';
 }
 
 interface ApiResponse {

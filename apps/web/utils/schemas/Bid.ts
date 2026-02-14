@@ -11,6 +11,7 @@ export interface IBid extends Document {
   tokenAddress: string;              // Token contract address
   blockchainAuctionId: string;       // Blockchain auction ID for quick lookups
   bidTimestamp: Date;                // When the bid was placed
+  source: 'human' | 'bot';           // Whether bid was placed by human or bot
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +66,11 @@ const BidSchema: Schema = new Schema(
       type: Date,
       required: true,
       default: Date.now,
+    },
+    source: {
+      type: String,
+      enum: ['human', 'bot'],
+      default: 'human',
     },
   },
   {
