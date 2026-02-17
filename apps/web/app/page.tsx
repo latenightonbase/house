@@ -59,7 +59,7 @@ export default function Page() {
             className="flex items-center justify-center gap-2"
           >
             <RiRobot2Line />
-            Setup a bot
+            I&apos;m a bot
           </Button>
           <Button
             variant={mode === 'human' ? 'default' : 'outline'}
