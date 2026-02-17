@@ -4,6 +4,7 @@ import { useGlobalContext } from '@/utils/providers/globalContext'
 import { getAccessToken, usePrivy, useWallets } from '@privy-io/react-auth'
 import Image from 'next/image'
 import Heading from '@/components/UI/Heading'
+import AccessDenied from '@/components/UI/AccessDenied'
 import RatingCircle from '@/components/UI/RatingCircle'
 import { MdWallet } from 'react-icons/md'
 import { RiUserLine, RiAuctionLine, RiMedalLine, RiCalendarLine, RiTwitterLine, RiLoader5Fill, RiRobot2Line } from 'react-icons/ri'
@@ -172,14 +173,7 @@ export default function ProfilePage() {
   }, [authenticated, user])
 
   if (!authenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Heading size="md" gradient={false} className="text-white mb-4">Access Denied</Heading>
-          <p className="text-caption">Please login to view your profile.</p>
-        </div>
-      </div>
-    )
+    return <AccessDenied message="Please login to view your profile." />
   }
 
   if (loading) {

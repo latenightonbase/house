@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePrivy, getAccessToken } from '@privy-io/react-auth'
 import { useGlobalContext } from '@/utils/providers/globalContext'
 import Heading from '@/components/UI/Heading'
+import AccessDenied from '@/components/UI/AccessDenied'
 import { Button } from '@/components/UI/button'
 import {
   Dialog,
@@ -189,16 +190,7 @@ export default function SettingsPage() {
   }
 
   if (!authenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Heading size="md" gradient={false} className="text-white mb-4">
-            Access Denied
-          </Heading>
-          <p className="text-caption">Please login to access settings.</p>
-        </div>
-      </div>
-    )
+    return <AccessDenied message="Please login to access settings." />
   }
 
   if (loading) {
