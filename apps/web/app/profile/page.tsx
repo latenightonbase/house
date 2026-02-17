@@ -278,13 +278,7 @@ export default function ProfilePage() {
               >
                 Won Bids
               </button>
-              <button
-                onClick={() => navigateWithLoader('/settings')}
-                className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-colors flex items-center gap-2"
-              >
-                <RiRobot2Line className="text-lg" />
-                Bot Settings
-              </button>
+              
             </div>
           </div>
 
