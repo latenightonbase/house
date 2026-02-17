@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/UI/button'
 import Heading from '@/components/UI/Heading'
@@ -10,8 +10,12 @@ import { useNavigateWithLoader } from '@/utils/useNavigateWithLoader'
 
 export default function Page() {
   const router = useRouter()
-  const [mode, setMode] = useState<'bot' | 'human' | null>('bot')
+  const [mode, setMode] = useState<'bot' | 'human' | null>(null)
   const [copiedConfig, setCopiedConfig] = useState(false)
+
+  useEffect(() => {
+    router.prefetch("/home")
+  }, [router])
 
   const navigate = useNavigateWithLoader()
 
@@ -68,7 +72,7 @@ export default function Page() {
         </div>
 
         {mode === 'bot' && (
-          <div className="bg-secondary/10 rounded-xl border border-secondary/20 p-4 lg:p-6 animate-in fade-in duration-300">
+          <div className="bg-secondary/10 rounded-xl border border-secondary/20 p-2 lg:p-4 animate-in fade-in duration-300">
             <h3 className="text-base lg:text-lg font-semibold text-white mb-4">
               How to use with OpenClaw or other AI agents
             </h3>
