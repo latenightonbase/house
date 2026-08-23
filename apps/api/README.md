@@ -4,15 +4,15 @@ Bun + Elysia + Prisma API for wallet SIWE sessions and social OAuth linking.
 
 ## Setup
 
-1. Copy `.env.example` → `.env` (a Claimable Neon DB may already be in `.env`).
-2. Claim the DB if using Claimable Neon: see claim URL printed at provision time.
+1. Copy `.env.example` → `.env`.
+2. Set `DATABASE_URL` / `DIRECT_URL` to your **Railway Postgres** connection strings (Prisma needs both; they can be the same public URL). Append `?sslmode=require` if TLS fails.
 3. Install & migrate:
 
 ```bash
 cd apps/api
 bun install
-bunx prisma db push
-bun run dev   # http://localhost:3001
+bunx prisma db push   # or: bunx prisma migrate deploy
+bun run dev           # http://localhost:3001
 ```
 
 ## Endpoints
