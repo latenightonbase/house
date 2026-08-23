@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <g fill="#3B5BFD">
+    <!-- vertical blade -->
+    <polygon points="470,165 648,115 648,510 470,560" />
+    <!-- lower-left blade -->
+    <polygon points="450,610 531,691 326,896 245,815" />
+    <!-- lower-right blade -->
+    <polygon points="585,615 972,802 922,906 535,719" />
+  </g>
+</svg>

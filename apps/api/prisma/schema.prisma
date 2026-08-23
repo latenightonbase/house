@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum SocialPlatform {
+  YOUTUBE
+  TWITTER
+  INSTAGRAM
+  TIKTOK
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallets  Wallet[]
+  sessions Session[]
+  socials  SocialAccount[]
+  oauthStates OAuthState[]
+}
+
+model Wallet {
+  id         String   @id @default(cuid())
+  address    String   @unique
+  chainId    Int
+  isPrimary  Boolean  @default(true)
+  verifiedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SiweNonce {
+  id        String   @id @default(cuid())
+  nonce     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model OAuthState {
+  id           String         @id @default(cuid())
+  state        String         @unique
+  platform     SocialPlatform
+  codeVerifier String?
+  expiresAt    DateTime
+  createdAt    DateTime       @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model SocialAccount {
+  id                     String         @id @default(cuid())
+  platform               SocialPlatform
+  platformUserId         String
+  username               String?
+  displayName            String?
+  avatarUrl              String?
+  followerCount          Int?
+  followerCountSyncedAt  DateTime?
+  accessTokenEncrypted   String
+  refreshTokenEncrypted  String?
+  tokenExpiresAt         DateTime?
+  scopes                 String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, platform])
+  @@unique([platform, platformUserId])
+  @@index([userId])
+}

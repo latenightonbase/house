@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+:root {
+  /* ── House design tokens ─────────────────────────────
+     Near-black canvas, deep navy surfaces, electric blue
+     accent drawn from the House logo mark. */
+  --primary: #2f6bff;
+  --primary-light: #7ea2ff;
+  --secondary: #1d4ed8;
+  --caption: #7d8699;
+  --button: #2f6bff;
+  --button-hover: #4680ff;
+  --disabled: #232c42;
+
+  --background: #06080f;
+  --surface: #0b0f1a;
+  --surface-2: #111726;
+  --line: #1a2133;
+  --line-strong: #263049;
+
+  --positive: #34d399;
+  --negative: #f87171;
+  --warning: #fbbf24;
+
+  --foreground: #f2f5fc;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-caption: var(--caption);
+  --color-disabled: var(--disabled);
+  --color-button: var(--button);
+  --color-button-hover: var(--button-hover);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-inter);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-b from-white to-[#aabaf5] text-transparent bg-clip-text;
+}
+
+.accent-text {
+  @apply bg-gradient-to-b from-primary-light to-primary text-transparent bg-clip-text;
+}
+
+.gradient-button {
+  background: linear-gradient(180deg, #4b69ff 0%, #3b5bfd 55%, #2f4be0 100%);
+  border: 1px solid rgba(125, 147, 255, 0.35);
+  box-shadow: 0 4px 18px rgba(59, 91, 253, 0.25);
+}
+
+.gradient-button:hover {
+  background: linear-gradient(180deg, #5a76ff 0%, #4a68ff 55%, #3b5bfd 100%);
+}
+
+.card {
+  @apply bg-surface border border-line rounded-xl;
+}
+
+.tile {
+  @apply bg-surface-2 border border-line rounded-lg;
+}
+
+.panel-label {
+  @apply text-[10px] font-semibold uppercase tracking-[0.13em] text-caption;
+}
+
+.row-hover {
+  @apply transition-colors hover:bg-white/[0.025];
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.btn-primary {
+  @apply bg-primary text-white font-semibold rounded-lg transition-colors;
+}
+.btn-primary:hover {
+  background: var(--button-hover);
+}
+
+.btn-accent-outline {
+  @apply bg-primary/12 border border-primary/45 text-white font-semibold rounded-lg transition-colors;
+}
+.btn-accent-outline:hover {
+  @apply bg-primary/25 border-primary/70;
+}
+
+.badge {
+  @apply inline-flex items-center border rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em];
+}
+.badge-neutral {
+  @apply bg-white/[0.04] border-line-strong text-caption;
+}
+.badge-accent {
+  @apply bg-primary/12 border-primary/40 text-primary-light;
+}
+.badge-positive {
+  @apply bg-positive/10 border-positive/30 text-positive;
+}
+.badge-negative {
+  @apply bg-negative/10 border-negative/30 text-negative;
+}
+.badge-warning {
+  @apply bg-warning/10 border-warning/30 text-warning;
+}

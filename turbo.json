@@ -17,7 +17,14 @@
         "STAKING_CONTRACT",
         "PRIVY_APP_SECRET",
         "PRIVY_VERIFICATION_KEY",
-        "REDIS_URL"
+        "REDIS_URL",
+        "DATABASE_URL",
+        "DIRECT_URL",
+        "SESSION_SECRET",
+        "TOKEN_ENCRYPTION_KEY",
+        "APP_ORIGIN",
+        "API_ORIGIN",
+        "NEXT_PUBLIC_REOWN_PROJECT_ID"
       ]
     },
     "dev": {

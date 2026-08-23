@@ -10,6 +10,8 @@
     "build": "turbo build",
     "dev:web": "turbo dev --filter=web",
     "dev:worker": "turbo dev --filter=worker",
+    "dev:api": "turbo dev --filter=api",
+    "dev:app": "turbo dev --filter=app",
     "contracts:build": "npm run build --prefix packages/contracts",
     "postinstall": "node scripts/postinstall-contracts.js"
   },
