@@ -21,7 +21,10 @@
     "paths": {
       "@/*": ["./*"],
       "@repo/contracts": ["../../packages/contracts/src"],
-      "@repo/queue": ["../../packages/queue/src"]
+      "@repo/queue": ["../../packages/queue/src"],
+
+      "@privy-io/react-auth": ["./utils/demo/privyMock.tsx"],
+      "@privy-io/react-auth/farcaster": ["./utils/demo/privyMock.tsx"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

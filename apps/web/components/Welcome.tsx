@@ -26,6 +26,7 @@ import {
 } from "@/components/UI/Dialog";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
 import { getAccessToken, useWallets } from '@privy-io/react-auth';
+import PlatformStats from "@/components/utils/PlatformStats";
 
 export default function Welcome() {
 
@@ -133,16 +134,37 @@ export default function Welcome() {
 
     
     return (
-            <div className="space-y-4 flex flex-col  max-lg:justify-center w-full">
-                <div className="text-left text-caption flex gap-1 mb-4 text-3xl max-lg:text-2xl">
-                    Welcome to <span className="gradient-text font-bold">The House!</span>
-                </div>
-                <div className="bg-white/10 w-fit rounded-full px-2 py-1 text-xs flex items-center justify-center gap-1 text-white">Powered by <a href="https://dexscreener.com/base/0x51f77b39db5b14605abb569647a9a33e733ab3e018e79325a44c07aadd927686" target="_blank" className="gradient-text font-bold">$AUCTION</a></div>
+            <div className="w-full">
+                <div className="card p-6 max-lg:p-4 space-y-5">
+                    <div className="flex max-md:flex-col md:items-center justify-between gap-6">
+                        <div className="space-y-3">
+                            <span className="panel-label">The exchange for attention</span>
+                            <h1 className="text-3xl max-lg:text-2xl font-bold tracking-tight">
+                                <span className="gradient-text">Your House. Their Bids.</span>
+                            </h1>
+                            <div className="tile w-fit rounded-full px-3 py-1 text-xs flex items-center gap-1.5 text-caption">
+                                Powered by
+                                <a
+                                    href="https://dexscreener.com/base/0x51f77b39db5b14605abb569647a9a33e733ab3e018e79325a44c07aadd927686"
+                                    target="_blank"
+                                    className="accent-text font-bold"
+                                >
+                                    $AUCTION
+                                </a>
+                            </div>
+                        </div>
 
-                <div className="flex flex-wrap gap-3">
-                    <button onClick={()=>{navigate('/create')}} className= "max-lg:w-full w-80 px-6 py-3 hover:-translate-y-1 duration-200 gradient-button flex gap-2 items-center justify-center text-white rounded-md hover:bg-green-700 transition font-bold">
-                        <FaPlus/> Create Auction
-                    </button>
+                        <button
+                            onClick={() => { navigate('/create') }}
+                            className="max-md:w-full md:w-56 shrink-0 px-6 py-3 gradient-button flex gap-2 items-center justify-center text-white rounded-lg transition-all font-semibold hover:-translate-y-0.5 duration-200"
+                        >
+                            <FaPlus/> Create Auction
+                        </button>
+                    </div>
+
+                    <div className="border-t border-line pt-5">
+                        <PlatformStats />
+                    </div>
                 </div>
 
                 {hasNotifications === false && context && (
@@ -153,25 +175,25 @@ export default function Welcome() {
                                         <DrawerTitle className="text-center gradient-text text-2xl">
                                             Enable Notifications
                                         </DrawerTitle>
-                                        <DrawerDescription className="text-center text-white/70">
+                                        <DrawerDescription className="text-center text-caption">
                                             Stay updated on your auctions
                                         </DrawerDescription>
                                     </DrawerHeader>
                                     <div className="p-6 space-y-4">
                                         <div className="flex items-start gap-3">
-                                            <IoMdNotifications className="text-blue-500 text-2xl flex-shrink-0 mt-1" />
+                                            <IoMdNotifications className="text-primary-light text-2xl flex-shrink-0 mt-1" />
                                             <div>
                                                 <h3 className="font-semibold text-white mb-1">Get Real-time Updates</h3>
-                                                <p className="text-sm text-white/70">
+                                                <p className="text-sm text-caption">
                                                     Receive instant notifications when you're outbid, when your auction receives bids, or when you win an auction.
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3">
-                                            <FaPlus className="text-green-500 text-xl flex-shrink-0 mt-1" />
+                                            <FaPlus className="text-positive text-xl flex-shrink-0 mt-1" />
                                             <div>
                                                 <h3 className="font-semibold text-white mb-1">Never Miss Out</h3>
-                                                <p className="text-sm text-white/70">
+                                                <p className="text-sm text-caption">
                                                     Be the first to know about important auction events and act quickly on opportunities.
                                                 </p>
                                             </div>
@@ -201,25 +223,25 @@ export default function Welcome() {
                                         <DialogTitle className="text-center gradient-text text-2xl">
                                             Enable Notifications
                                         </DialogTitle>
-                                        <DialogDescription className="text-center text-white/70">
+                                        <DialogDescription className="text-center text-caption">
                                             Stay updated on your auctions
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="py-4 space-y-4">
                                         <div className="flex items-start gap-3">
-                                            <IoMdNotifications className="text-blue-500 text-2xl flex-shrink-0 mt-1" />
+                                            <IoMdNotifications className="text-primary-light text-2xl flex-shrink-0 mt-1" />
                                             <div>
                                                 <h3 className="font-semibold text-white mb-1">Get Real-time Updates</h3>
-                                                <p className="text-sm text-white/70">
+                                                <p className="text-sm text-caption">
                                                     Receive instant notifications when you're outbid, when your auction receives bids, or when you win an auction.
                                                 </p>
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-3">
-                                            <FaPlus className="text-green-500 text-xl flex-shrink-0 mt-1" />
+                                            <FaPlus className="text-positive text-xl flex-shrink-0 mt-1" />
                                             <div>
                                                 <h3 className="font-semibold text-white mb-1">Never Miss Out</h3>
-                                                <p className="text-sm text-white/70">
+                                                <p className="text-sm text-caption">
                                                     Be the first to know about important auction events and act quickly on opportunities.
                                                 </p>
                                             </div>

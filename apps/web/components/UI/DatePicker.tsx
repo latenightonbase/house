@@ -136,7 +136,7 @@ export default function DatePicker({
             'p-2 text-sm rounded transition-colors',
             isSelected && 'bg-primary text-white',
             !isSelected && !isDisabled && 'hover:bg-primary/10 text-foreground',
-            isDisabled && 'text-gray-300 cursor-not-allowed'
+            isDisabled && 'text-caption cursor-not-allowed'
           )}
         >
           {day}
@@ -161,7 +161,7 @@ export default function DatePicker({
           !disabled && !isOpen && 'border-gray-300 hover:border-gray-400'
         )}
       >
-        <span className={value ? 'text-foreground' : 'text-gray-500'}>
+        <span className={value ? 'text-foreground' : 'text-caption'}>
           {formatDisplayDate(value)}
         </span>
       </button>
@@ -171,8 +171,8 @@ export default function DatePicker({
         className={twMerge(
           'absolute left-4 transition-all duration-200 pointer-events-none select-none',
           disabled && 'text-disabled',
-          !disabled && (isOpen || value) && 'text-primary -top-2 text-sm bg-background px-1',
-          !disabled && !(isOpen || value) && 'text-gray-500 top-3 text-base'
+          !disabled && (isOpen || value) && 'text-primary-light -top-2 text-sm bg-background px-1',
+          !disabled && !(isOpen || value) && 'text-caption top-3 text-base'
         )}
       >
         {label}
@@ -188,7 +188,7 @@ export default function DatePicker({
               onClick={() => navigateMonth('prev')}
               className="p-1 hover:bg-primary/10 rounded transition-colors"
             >
-              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
@@ -200,7 +200,7 @@ export default function DatePicker({
               onClick={() => navigateMonth('next')}
               className="p-1 hover:bg-primary/10 rounded transition-colors"
             >
-              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -209,7 +209,7 @@ export default function DatePicker({
           {/* Week Days Header */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-              <div key={day} className="p-2 text-xs font-medium text-gray-500 text-center">
+              <div key={day} className="p-2 text-xs font-medium text-caption text-center">
                 {day}
               </div>
             ))}

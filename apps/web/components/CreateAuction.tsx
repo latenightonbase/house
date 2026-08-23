@@ -732,7 +732,7 @@ if (context?.client.clientFid === 309857) {
   if (!address)
     return (
       <div className=" max-lg:mx-auto mt-4">
-        <div className="bg-white/10 rounded-lg shadow-md border border-white/20 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-line p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg
@@ -782,7 +782,7 @@ if (context?.client.clientFid === 309857) {
                       ? "bg-gradient-to-r from-primary to-secondary text-white shadow-lg"
                       : idx < currentStep
                       ? "bg-gradient-to-r from-primary to-secondary text-white"
-                      : "bg-white/10 text-gray-400 border border-gray-600"
+                      : "bg-white/10 text-caption border border-line"
                   }`}
                 >
                   {step}
@@ -864,7 +864,7 @@ if (context?.client.clientFid === 309857) {
                   type="number"
                 />
                 {minBidAmount && tokenPrice !== null && !loadingPrice && (
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-caption">
                     ≈ {formatUSDAmount(calculateUSDValue(parseFloat(minBidAmount), tokenPrice))}
                   </div>
                 )}
@@ -881,7 +881,7 @@ if (context?.client.clientFid === 309857) {
                 className="space-y-6"
               >
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-caption mb-2">
                     End Date & Time
                   </label>
                   <input
@@ -892,26 +892,26 @@ if (context?.client.clientFid === 309857) {
                       setEndTime(date);
                     }}
                     min={formatDateTimeLocal(new Date())}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-3 bg-white/10 border border-line rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
 
-                <div className="bg-white/10 border border-white/10 rounded-lg p-4 space-y-3">
+                <div className="bg-white/10 border border-line rounded-lg p-4 space-y-3">
                   <h3 className="text-lg font-semibold text-white mb-4">Auction Summary</h3>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Title:</span>
+                    <span className="text-caption">Title:</span>
                     <span className="text-white font-medium">{auctionTitle || 'Not set'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Currency:</span>
+                    <span className="text-caption">Currency:</span>
                     <span className="text-white font-medium">{selectedCurrency?.symbol || 'ETH'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Minimum Bid:</span>
+                    <span className="text-caption">Minimum Bid:</span>
                     <span className="text-white font-medium">{minBidAmount || '0'} {selectedCurrency?.symbol || 'ETH'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">End Date:</span>
+                    <span className="text-caption">End Date:</span>
                     <span className="text-white font-medium">{endTime ? endTime.toLocaleDateString() : 'Not set'}</span>
                   </div>
                 </div>
@@ -920,14 +920,14 @@ if (context?.client.clientFid === 309857) {
           </AnimatePresence>
         </div>
 
-        <div className="flex justify-between items-center pt-6 border-t border-white/10">
+        <div className="flex justify-between items-center pt-6 border-t border-line">
           <button
             type="button"
             onClick={handlePrev}
             disabled={currentStep === 0}
             className={`px-6 py-3 rounded-lg font-semibold transition-all ${
               currentStep === 0
-                ? 'bg-white/10 text-gray-600 cursor-not-allowed'
+                ? 'bg-white/10 text-caption cursor-not-allowed'
                 : 'bg-white/10 text-white hover:bg-gray-600'
             }`}
           >
@@ -990,7 +990,7 @@ if (context?.client.clientFid === 309857) {
                     composeCast();
                     setIsSuccessDrawerOpen(false);
                   }}
-                  className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg font-semibold transition-all hover:bg-purple-700"
+                  className="w-full px-4 py-3 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary"
                 >
                   Share on App
                 </button>
@@ -1008,7 +1008,7 @@ if (context?.client.clientFid === 309857) {
                   }
                   setIsSuccessDrawerOpen(false);
                 }}
-                className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-semibold transition-all hover:bg-blue-600"
+                className="w-full px-4 py-3 bg-primary text-white rounded-lg font-semibold transition-all hover:bg-primary"
               >
                 Share on X
               </button>

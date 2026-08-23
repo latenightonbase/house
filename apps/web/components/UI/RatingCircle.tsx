@@ -23,11 +23,11 @@ const RatingCircle: React.FC<RatingCircleProps> = ({
   const { text, icon, padding } = sizes[size];
 
   const getColorClasses = () => {
-    if (rating >= 5) return 'bg-green-500/10 text-green-500';
-    if (rating >= 4) return 'bg-green-300/10 text-green-300';
-    if (rating >= 3) return 'bg-yellow-500/10 text-yellow-500';
-    if (rating >= 2) return 'bg-orange-400/10 text-orange-400';
-    return 'bg-red-400/10 text-red-400';
+    if (rating >= 5) return 'bg-positive/10 text-positive';
+    if (rating >= 4) return 'bg-green-300/10 text-positive';
+    if (rating >= 3) return 'bg-warning/10 text-warning';
+    if (rating >= 2) return 'bg-warning/10 text-warning';
+    return 'bg-negative/10 text-negative';
   };
 
   if (totalReviews && totalReviews > 0) {
@@ -39,7 +39,7 @@ const RatingCircle: React.FC<RatingCircleProps> = ({
           <FaStar size={icon} />
         </div>
         {showLabel && totalReviews !== undefined && totalReviews > 0 && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-caption">
             ({totalReviews})
           </span>
         )}

@@ -103,7 +103,7 @@ export default function PastAuctionsCard({ auctions, loading }: PastAuctionsCard
               <img
                 src={auction.imageUrl}
                 alt={auction.auctionName}
-                className="w-12 h-12 rounded-lg object-cover border border-primary/20"
+                className="w-12 h-12 rounded-lg object-cover border border-line"
               />
             )}
             
@@ -123,7 +123,7 @@ export default function PastAuctionsCard({ auctions, loading }: PastAuctionsCard
                   <img
                     src={auction.topBidder.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${auction.topBidder.wallet}`}
                     alt={auction.topBidder.username || 'Winner'}
-                    className="w-5 h-5 rounded-full border border-primary/20"
+                    className="w-5 h-5 rounded-full border border-line"
                   />
                   <span className="text-xs text-caption truncate">
                     Won by {auction.topBidder.username || `${auction.topBidder.wallet.slice(0, 6)}...`}
@@ -132,7 +132,7 @@ export default function PastAuctionsCard({ auctions, loading }: PastAuctionsCard
               )}
               
               <div className="mt-2">
-                <span className="text-sm font-semibold text-primary">
+                <span className="text-sm font-semibold text-primary-light">
                   {formatBidAmount(auction.highestBid, auction.currency)}
                 </span>
               </div>

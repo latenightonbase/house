@@ -51,8 +51,8 @@ export default function AggregateConnector() {
 
         return (
     <>
-        <button onClick={() => navigate(`/profile`)} className="bg-white/10 rounded-lg p-1 flex items-center justify-start gap-2">
-            <Image unoptimized src={user?.pfp_url as string} alt="Profile" className="border-2 border-primary rounded-full w-8 h-8 aspect-square" />
+        <button onClick={() => navigate(`/profile`)} className="tile p-1.5 flex items-center justify-start gap-2 hover:border-primary/40 transition-colors">
+            <Image unoptimized src={user?.pfp_url as string} alt="Profile" width={32} height={32} className="border border-primary/60 rounded-full w-8 h-8 aspect-square object-cover" />
         </button>
     </>)
     }

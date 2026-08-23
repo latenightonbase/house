@@ -392,21 +392,21 @@ function BotCreateContent() {
     return (
       <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
         <Toaster position="top-center" />
-        <div className="max-w-md w-full bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
+        <div className="max-w-md w-full bg-white/5 border border-line rounded-2xl p-8 text-center">
           <h1 className="text-2xl font-bold mb-2">Create Auction</h1>
-          <p className="text-gray-400 mb-6">Connect your wallet to continue</p>
+          <p className="text-caption mb-6">Connect your wallet to continue</p>
 
           <div className="bg-white/5 rounded-xl p-4 mb-6 text-left space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-400">Name:</span>
+              <span className="text-caption">Name:</span>
               <span className="font-medium">{auctionName || "-"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Min Bid:</span>
+              <span className="text-caption">Min Bid:</span>
               <span className="font-medium">{minBidStr} {tokenInfo.symbol}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Duration:</span>
+              <span className="text-caption">Duration:</span>
               <span className="font-medium">{durationStr} hours</span>
             </div>
           </div>
@@ -420,13 +420,13 @@ function BotCreateContent() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
       <Toaster position="top-center" />
-      <div className="max-w-md w-full bg-white/5 border border-white/10 rounded-2xl p-8">
+      <div className="max-w-md w-full bg-white/5 border border-line rounded-2xl p-8">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold mb-2">
             {txStatus === "success" ? "🎉 Auction Created!" : "Creating Auction"}
           </h1>
-          <p className="text-gray-400">
+          <p className="text-caption">
             {txStatus === "idle" && "Preparing..."}
             {txStatus === "pending" && "Please confirm the transaction in your wallet"}
             {txStatus === "success" && "Your auction is now live!"}
@@ -437,22 +437,22 @@ function BotCreateContent() {
         {/* Auction Details */}
         <div className="bg-white/5 rounded-xl p-4 mb-6 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Auction Name</span>
+            <span className="text-caption">Auction Name</span>
             <span className="font-semibold text-lg">{auctionName}</span>
           </div>
-          <div className="border-t border-white/10" />
+          <div className="border-t border-line" />
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Minimum Bid</span>
+            <span className="text-caption">Minimum Bid</span>
             <span className="font-semibold">{minBidStr} {tokenInfo.symbol}</span>
           </div>
-          <div className="border-t border-white/10" />
+          <div className="border-t border-line" />
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Duration</span>
+            <span className="text-caption">Duration</span>
             <span className="font-semibold">{durationStr} hours</span>
           </div>
-          <div className="border-t border-white/10" />
+          <div className="border-t border-line" />
           <div className="flex justify-between items-center">
-            <span className="text-gray-400">Token</span>
+            <span className="text-caption">Token</span>
             <span className="font-semibold text-sm font-mono">
               {tokenAddress.slice(0, 6)}...{tokenAddress.slice(-4)}
             </span>
@@ -463,13 +463,13 @@ function BotCreateContent() {
         <div className="flex flex-col items-center gap-4">
           {(txStatus === "idle" || txStatus === "pending") && (
             <>
-              <div className="flex items-center gap-3 text-yellow-400">
+              <div className="flex items-center gap-3 text-warning">
                 <RiLoader5Fill className="text-3xl animate-spin" />
                 <span className="text-lg font-medium">
                   {txStatus === "idle" ? "Initializing..." : "Waiting for confirmation..."}
                 </span>
               </div>
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-caption text-center">
                 A transaction request should appear in your wallet
               </p>
             </>
@@ -478,14 +478,14 @@ function BotCreateContent() {
           {txStatus === "success" && (
             <div className="text-center space-y-4">
               <div className="text-6xl">✅</div>
-              <p className="text-green-400 font-medium">
+              <p className="text-positive font-medium">
                 Your auction is now live on House!
               </p>
               <button
                 onClick={() => {
                   window.location.href = "https://farcaster.xyz/miniapps/0d5aS3cWVprk/house/my-auctions";
                 }}
-                className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-semibold transition-colors"
+                className="w-full px-6 py-3 bg-primary hover:bg-primary rounded-xl font-semibold transition-colors"
               >
                 View My Auctions
               </button>
@@ -495,14 +495,14 @@ function BotCreateContent() {
           {txStatus === "error" && (
             <div className="text-center space-y-4">
               <div className="text-6xl">❌</div>
-              <p className="text-red-400 font-medium">Transaction failed or was cancelled</p>
+              <p className="text-negative font-medium">Transaction failed or was cancelled</p>
               <button
                 onClick={() => {
                   hasInitiated.current = false;
                   setTxStatus("idle");
                   initiateTransaction();
                 }}
-                className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-semibold transition-colors"
+                className="w-full px-6 py-3 bg-primary hover:bg-primary rounded-xl font-semibold transition-colors"
               >
                 Try Again
               </button>

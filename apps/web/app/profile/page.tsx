@@ -180,7 +180,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <RiLoader5Fill className='text-primary animate-spin text-4xl mb-4 mx-auto' />
+          <RiLoader5Fill className='text-primary-light animate-spin text-4xl mb-4 mx-auto' />
           <p className="text-caption">Loading profile...</p>
         </div>
       </div>
@@ -215,7 +215,7 @@ export default function ProfilePage() {
                 />
               ) : (
                 <div className="w-20 h-20 lg:w-24 lg:h-24 border-2 border-primary rounded-2xl bg-white/10 flex items-center justify-center">
-                  <MdWallet className="text-4xl text-primary" />
+                  <MdWallet className="text-4xl text-primary-light" />
                 </div>
               )}
               
@@ -234,12 +234,12 @@ export default function ProfilePage() {
                     />
                   )}
                 </div>
-                <p className="text-secondary mb-2 text-sm">
+                <p className="text-primary-light mb-2 text-sm">
                   @{profileData?.twitterProfile?.username || user.username || 'artcollector'}
                 </p>
                 <div className="flex flex-wrap gap-3">
                   {!context && profileData && profileData?.wallets.length > 0 && (
-                    <span className="text-xs bg-white/10 px-3 py-1 rounded-full text-gray-300">
+                    <span className="text-xs bg-white/10 px-3 py-1 rounded-full text-caption">
                       {profileData.wallets[0].slice(0, 6)}...{profileData.wallets[0].slice(-4)}
                     </span>
                   )}
@@ -248,7 +248,7 @@ export default function ProfilePage() {
                       href={`https://twitter.com/${profileData.twitterProfile.username}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full hover:bg-blue-500/30 transition-colors flex items-center gap-1"
+                      className="text-xs bg-primary/20 text-primary-light px-3 py-1 rounded-full hover:bg-primary/30 transition-colors flex items-center gap-1"
                     >
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -257,7 +257,7 @@ export default function ProfilePage() {
                     </a>
                   )}
                   {/* {!context && (
-                    <button className="text-xs bg-white/10 text-gray-300 px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
+                    <button className="text-xs bg-white/10 text-caption px-3 py-1 rounded-full hover:bg-gray-600 transition-colors">
                       🔔 Enable Notifications
                     </button>
                   )} */}
@@ -293,25 +293,25 @@ export default function ProfilePage() {
             return (
               <div className="space-y-4 mt-4">
                 {/* XP Progress Bar */}
-                <div className="bg-gradient-to-br from-secondary/30 to-secondary/10 rounded-xl lg:p-6 p-4 border border-secondary/30 ">
+                <div className="bg-gradient-to-br from-secondary/30 to-secondary/10 rounded-xl lg:p-6 p-4 border border-line ">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="bg-gradient-to-br from-primary to-secondary text-white text-lg font-bold rounded-full w-12 h-12 flex items-center justify-center border-2 border-purple-300">
+                      <div className="bg-gradient-to-br from-primary to-secondary text-white text-lg font-bold rounded-full w-12 h-12 flex items-center justify-center border-2 border-primary/50">
                         {xpStats.level}
                       </div>
                       <div>
                         <div className="text-white font-bold text-lg">Level {xpStats.level}</div>
-                        <div className="text-sm text-purple-200">
+                        <div className="text-sm text-primary-light">
                           {seasonXP.toLocaleString()} / {xpForNextLevel.toLocaleString()} XP
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-white">{Math.floor(progressPercentage)}%</div>
-                      <div className="text-xs text-purple-200">Progress</div>
+                      <div className="text-xs text-primary-light">Progress</div>
                     </div>
                   </div>
-                  <div className="relative w-full h-4 bg-black/30 rounded-full overflow-hidden">
+                  <div className="relative w-full h-4 bg-surface rounded-full overflow-hidden">
                     <div 
                       className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-500 ease-out"
                       style={{ width: `${progressPercentage}%` }}
@@ -319,7 +319,7 @@ export default function ProfilePage() {
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
                     </div>
                   </div>
-                  <div className="flex items-center justify-between mt-2 text-xs text-purple-200">
+                  <div className="flex items-center justify-between mt-2 text-xs text-primary-light">
                     <span>Current Level</span>
                     <span>{xpForNextLevel > 0 ? `${xpForNextLevel.toLocaleString()} XP to Level ${xpStats.level + 1}` : 'Max Level Progress'}</span>
                   </div>
@@ -336,53 +336,53 @@ export default function ProfilePage() {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-4">Statistics</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-white/10">
+            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-line">
               <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center mb-3">
-                <RiAuctionLine className="text-2xl text-purple-400" />
+                <RiAuctionLine className="text-2xl text-primary-light" />
               </div>
               <div className="text-3xl max-lg:text-2xl font-bold text-white mb-1">{profileData?.hostedAuctions.length || 0}</div>
-              <div className="text-sm text-gray-400">Auctions Created</div>
+              <div className="text-sm text-caption">Auctions Created</div>
             </div>
 
-            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-3">
-                <RiMedalLine className="text-2xl text-pink-400" />
+            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-line">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-3">
+                <RiMedalLine className="text-2xl text-primary-light" />
               </div>
               <div className="text-3xl max-lg:text-2xl font-bold text-white mb-1">{profileData?.bidsWon.length || 0}</div>
-              <div className="text-sm text-gray-400">Auctions Won</div>
+              <div className="text-sm text-caption">Auctions Won</div>
             </div>
 
-            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-line">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-primary-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               </div>
               <div className="text-3xl max-lg:text-2xl font-bold text-white mb-1">{statistics?.totalBids || 0}</div>
-              <div className="text-sm text-gray-400">Total Bids</div>
+              <div className="text-sm text-caption">Total Bids</div>
             </div>
 
-            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-white/10">
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white/10 rounded-xl lg:p-6 p-4 border border-line">
+              <div className="w-12 h-12 rounded-xl bg-positive/20 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-positive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div className="text-3xl max-lg:text-2xl font-bold text-white mb-1">{statistics?.activeAuctions || 0}</div>
-              <div className="text-sm text-gray-400">Active Auctions</div>
+              <div className="text-sm text-caption">Active Auctions</div>
             </div>
           </div>
 
           {/* Total Trading Volume */}
-          <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl lg:p-6 p-4 border border-green-500/30">
+          <div className="bg-gradient-to-r from-positive/30 to-emerald-900/30 rounded-xl lg:p-6 p-4 border border-positive/30">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm text-gray-400 mb-1">Total Trading Volume</div>
+                <div className="text-sm text-caption mb-1">Total Trading Volume</div>
                 <div className="lg:text-4xl text-2xl font-bold text-white">{formatVolume(statistics?.totalTradingVolume || 0)}</div>
-                <div className="text-sm text-gray-400 mt-1">Across all auctions</div>
+                <div className="text-sm text-caption mt-1">Across all auctions</div>
               </div>
-              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 rounded-full bg-positive/20 flex items-center justify-center">
+                <svg className="w-8 h-8 text-positive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -394,7 +394,7 @@ export default function ProfilePage() {
         {reviews.length > 0 && (
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-white mb-4">Reviews ({reviews.filter(r => r.auction).length})</h2>
-            <div className="bg-secondary/10 rounded-xl border border-secondary/10 lg:p-6 p-4">
+            <div className="bg-secondary/10 rounded-xl border border-line lg:p-6 p-4">
               <div className="space-y-4">
               {reviews.filter(review => review.auction).map((review) => (
                 <ReviewCard
@@ -424,14 +424,14 @@ export default function ProfilePage() {
         {/* Recent Activity */}
         <div>
           <h2 className="text-2xl font-bold text-white mb-4">Recent Activity</h2>
-          <div className="bg-secondary/10 rounded-xl border border-secondary/10 lg:p-6 p-4">
+          <div className="bg-secondary/10 rounded-xl border border-line lg:p-6 p-4">
             {recentBids.length > 0 ? (
               <div className="space-y-4">
                 {recentBids.map((bid) => (
                   <div
                     key={bid._id}
                     onClick={() => navigateWithLoader(`/bid/${bid.auction.blockchainAuctionId}`)}
-                    className="bg-primary/5 rounded-xl p-4 border border-primary/10 hover:bg-primary/10 transition-colors cursor-pointer"
+                    className="bg-primary/5 rounded-xl p-4 border border-line hover:bg-primary/10 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
@@ -447,7 +447,7 @@ export default function ProfilePage() {
                         )}
                         <div>
                           <p className="text-white font-semibold">{bid.auction.auctionName}</p>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-caption">
                             {new Date(bid.bidTimestamp).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
@@ -460,14 +460,14 @@ export default function ProfilePage() {
                       </div>
                       <div className="text-right">
                         <p className="text-white font-bold">${bid.usdcValue.toFixed(2)}</p>
-                        <p className="text-sm text-gray-400">{bid.bidAmount} {bid.currency}</p>
+                        <p className="text-sm text-caption">{bid.bidAmount} {bid.currency}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-500 py-6">
+              <div className="text-center text-caption py-6">
                 <svg className="w-16 h-16 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>

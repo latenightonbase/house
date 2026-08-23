@@ -56,7 +56,7 @@ export default function InfoCarousel() {
       <div className="hidden lg:flex gap-6 lg:justify-start lg:items-center w-full">
         {cards.map((card, index) => (
           <div key={index} className="w-80">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-xl h-full">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-line shadow-xl h-full">
               <div className="flex items-start gap-4 mb-4">
                 <div className="text-4xl">{card.icon}</div>
                 <h3 className="text-xl font-bold text-white flex-1 gradient-text">
@@ -65,8 +65,8 @@ export default function InfoCarousel() {
               </div>
               <ul className="space-y-2">
                 {card.bullets.map((bullet, idx) => (
-                  <li key={idx} className="text-gray-200 leading-relaxed flex items-start">
-                    <span className="mr-2 text-primary">•</span>
+                  <li key={idx} className="text-foreground leading-relaxed flex items-start">
+                    <span className="mr-2 text-primary-light">•</span>
                     <span>{bullet}</span>
                   </li>
                 ))}
@@ -106,7 +106,7 @@ export default function InfoCarousel() {
                 }}
                 className="absolute w-full"
               >
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-xl">
+                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-line shadow-xl">
                   <div className="flex items-start gap-4 mb-4">
                     <div className="text-2xl">{cards[currentIndex].icon}</div>
                     <h3 className="text-xl font-bold text-white flex-1 gradient-text">
@@ -115,8 +115,8 @@ export default function InfoCarousel() {
                   </div>
                   <ul className="space-y-2">
                     {cards[currentIndex].bullets.map((bullet, idx) => (
-                      <li key={idx} className="text-gray-200 leading-relaxed flex items-start">
-                        <span className="mr-2 text-primary">•</span>
+                      <li key={idx} className="text-foreground leading-relaxed flex items-start">
+                        <span className="mr-2 text-primary-light">•</span>
                         <span>{bullet}</span>
                       </li>
                     ))}
@@ -154,7 +154,7 @@ export default function InfoCarousel() {
                 />
               ))}
             </div>
-            <div className="text-white/60 text-sm">
+            <div className="text-caption text-sm">
               {currentIndex + 1} / {cards.length}
             </div>
           </div>

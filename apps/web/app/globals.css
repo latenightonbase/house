@@ -31,18 +31,31 @@
 }
 
 :root {
-  /* Main Colors based on #032e15 */
-  --secondary: #a620ff;
-  --primary: #ff64ff;
-  --caption: #707070;
-  --button: #399768;
-  --button-hover: #4ab17d;
-  --disabled: #bce5ce;
+  /* ── House design tokens ─────────────────────────────
+     Near-black canvas, deep navy surfaces, electric blue
+     accent drawn from the House logo mark. */
+  --primary: #2f6bff;
+  --primary-light: #7ea2ff;
+  --secondary: #1d4ed8;
+  --caption: #7d8699;
+  --button: #2f6bff;
+  --button-hover: #4680ff;
+  --disabled: #232c42;
 
-  /* Background - Dark mode by default */
-  --background: #0a0a0a;
-  --foreground: #f0f9f4;
-  
+  /* Surfaces — each step is a small, even lift off the canvas */
+  --background: #06080f;
+  --surface: #0b0f1a;
+  --surface-2: #111726;
+  --line: #1a2133;
+  --line-strong: #263049;
+
+  /* Semantic */
+  --positive: #34d399;
+  --negative: #f87171;
+  --warning: #fbbf24;
+
+  --foreground: #f2f5fc;
+
   /* Viewport height fallback for older browsers */
   --vh: 1vh;
 }
@@ -51,10 +64,19 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
   --color-secondary: var(--secondary);
+  --color-caption: var(--caption);
   --color-disabled: var(--disabled);
   --color-button: var(--button);
   --color-button-hover: var(--button-hover);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -62,7 +84,9 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   /* Prevent scroll when virtual keyboard appears */
   overflow-x: hidden;
   /* Fix for iOS Safari viewport handling */
@@ -131,12 +155,12 @@ select {
 }
 
 .drawer-content::-webkit-scrollbar-thumb {
-  background: rgba(75, 184, 120, 0.3);
+  background: rgba(59, 91, 253, 0.35);
   border-radius: 2px;
 }
 
 .drawer-content::-webkit-scrollbar-thumb:hover {
-  background: rgba(75, 184, 120, 0.5);
+  background: rgba(59, 91, 253, 0.55);
 }
 
 /* NProgress Loader Styles */
@@ -189,19 +213,83 @@ select {
   100% { transform: rotate(360deg); }
 }
 
-/* Gradient Text Class */
+/* Gradient Text Class — subtle white→periwinkle, dashboard heading style */
 .gradient-text {
-  @apply bg-gradient-to-b from-primary to-secondary text-transparent bg-clip-text;
+  @apply bg-gradient-to-b from-white to-[#aabaf5] text-transparent bg-clip-text;
 }
 
-/* Gradient Button Class */
+/* Accent Text Class — electric blue gradient for highlights */
+.accent-text {
+  @apply bg-gradient-to-b from-primary-light to-primary text-transparent bg-clip-text;
+}
+
+/* Gradient Button Class — primary blue action */
 .gradient-button {
-  @apply bg-gradient-to-r from-primary to-secondary;
+  background: linear-gradient(180deg, #4b69ff 0%, #3b5bfd 55%, #2f4be0 100%);
+  border: 1px solid rgba(125, 147, 255, 0.35);
+  box-shadow: 0 4px 18px rgba(59, 91, 253, 0.25);
 }
 
-/* Selected Gradient Class */
+.gradient-button:hover {
+  background: linear-gradient(180deg, #5a76ff 0%, #4a68ff 55%, #3b5bfd 100%);
+}
+
+/* Selected Gradient Class — active nav / selected states */
 .selected-gradient {
-  @apply bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/20;
+  @apply bg-gradient-to-br from-primary to-secondary shadow-lg shadow-primary/25;
+}
+
+/* ── Dashboard surfaces ─────────────────────────────── */
+
+/* Standard panel/card */
+.card {
+  @apply bg-surface border border-line rounded-xl;
+}
+
+/* Nested tile inside a card (stat cells, list rows) */
+.tile {
+  @apply bg-surface-2 border border-line rounded-lg;
+}
+
+/* Micro label — uppercase tracking, panel headers */
+.panel-label {
+  @apply text-[10px] font-semibold uppercase tracking-[0.13em] text-caption;
+}
+
+/* Row that lights up on hover — table rows, list items */
+.row-hover {
+  @apply transition-colors hover:bg-white/[0.025];
+}
+
+/* Numeric display — aligns digits in tables and stat tiles */
+.numeric {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Solid accent action */
+.btn-primary {
+  @apply bg-primary text-white font-semibold rounded-lg transition-colors;
+}
+.btn-primary:hover {
+  background: var(--button-hover);
+}
+
+/* Bordered accent action — the reference's "VIEW AUCTION" treatment */
+.btn-accent-outline {
+  @apply bg-primary/12 border border-primary/45 text-white font-semibold rounded-lg transition-colors;
+}
+.btn-accent-outline:hover {
+  @apply bg-primary/25 border-primary/70;
+}
+
+/* Hide scrollbar but keep scrolling (horizontal strips) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Custom scrollbar */
@@ -210,15 +298,15 @@ select {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(59, 91, 253, 0.35);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(59, 91, 253, 0.55);
 }

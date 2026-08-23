@@ -87,9 +87,9 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl">
+    <div className="w-full max-w-2xl mx-auto p-6 bg-surface backdrop-blur-md border border-line rounded-xl">
       <Heading className="text-2xl font-bold mb-2">Leave a Review</Heading>
-      <p className="text-gray-400 mb-6">
+      <p className="text-caption mb-6">
         Rate your experience with the auction: <span className="text-white font-semibold">{auctionName}</span>
       </p>
 
@@ -97,7 +97,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
         {/* Rating Section */}
         <div>
           <label className="block text-sm font-medium text-white mb-3">
-            Your Rating <span className="text-red-500">*</span>
+            Your Rating <span className="text-negative">*</span>
           </label>
           <div className="flex items-center gap-4">
             <RatingStars
@@ -126,7 +126,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
             rows={5}
             disabled={isSubmitting}
           />
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-caption mt-1">
             {comment.length}/500 characters
           </p>
         </div>

@@ -154,10 +154,10 @@ export default function LeaderboardPage() {
   };
 
   const getRankBadgeColor = (index: number) => {
-    if (index === 0) return 'bg-yellow-500/90';
+    if (index === 0) return 'bg-warning/90';
     if (index === 1) return 'bg-gray-400/90';
-    if (index === 2) return 'bg-orange-600/90';
-    return 'bg-gray-700/90';
+    if (index === 2) return 'bg-warning/90';
+    return 'bg-surface-2/90';
   };
 
   const handleCardClick = (userId: string, socialId?: string) => {
@@ -167,25 +167,25 @@ export default function LeaderboardPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start">
-      <div className="w-full lg:min-w-[1000px] mx-auto lg:px-4 pb-16">
+      <div className="w-full mx-auto pb-16">
         <div className="flex flex-col items-center mb-8 mt-4">
-          <div className="lg:w-20 lg:h-20 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-2 border-yellow-500/50 flex items-center justify-center mb-4">
-            <svg className="lg:w-10 lg:h-10 w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+          <div className="lg:w-20 lg:h-20 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 border-2 border-warning/50 flex items-center justify-center mb-4">
+            <svg className="lg:w-10 lg:h-10 w-8 h-8 text-warning" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
           </div>
           <h1 className="lg:text-4xl text-2xl font-bold mb-2">Leaderboard</h1>
-          <p className="text-sm max-lg:text-xs text-gray-400">Top performers in the HOUSE community</p>
+          <p className="text-sm max-lg:text-xs text-caption">Top performers in the HOUSE community</p>
         </div>
 
-        <div className="flex gap-2 mb-8 border-b border-gray-800 w-full overflow-x-auto">
+        <div className="flex gap-2 mb-8 border-b border-line w-full overflow-x-auto">
           <button
             onClick={() => setActiveTab('season-xp')}
             className={cn(
               "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'season-xp'
                 ? "text-white"
-                : "text-gray-400 hover:text-gray-300"
+                : "text-caption hover:text-caption"
             )}
           >
             <Zap className="w-5 h-5" />
@@ -200,7 +200,7 @@ export default function LeaderboardPage() {
               "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'alltime-xp'
                 ? "text-white"
-                : "text-gray-400 hover:text-gray-300"
+                : "text-caption hover:text-caption"
             )}
           >
             <Trophy className="w-5 h-5" />
@@ -215,7 +215,7 @@ export default function LeaderboardPage() {
               "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'revenue'
                 ? "text-white"
-                : "text-gray-400 hover:text-gray-300"
+                : "text-caption hover:text-caption"
             )}
           >
             <ChartLineIcon className="w-5 h-5" />
@@ -230,7 +230,7 @@ export default function LeaderboardPage() {
               "pb-3 px-3 font-medium transition-colors relative flex items-center gap-2 whitespace-nowrap max-lg:text-sm",
               activeTab === 'bids'
                 ? "text-white"
-                : "text-gray-400 hover:text-gray-300"
+                : "text-caption hover:text-caption"
             )}
           >
             <Medal className="w-5 h-5 " />
@@ -246,10 +246,10 @@ export default function LeaderboardPage() {
             <div className="space-y-3">
               {loadingSeasonXP ? (
                 <div className="flex items-center justify-center py-16">
-                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                  <RiLoader5Fill className="text-primary-light animate-spin text-3xl" />
                 </div>
               ) : seasonXP.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
+                <div className="text-center py-16 text-caption">
                   No XP data available yet for this season
                 </div>
               ) : (
@@ -259,10 +259,10 @@ export default function LeaderboardPage() {
                     onClick={() => handleCardClick(entry.userId, entry.socialId)}
                     className={cn(
                       "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
-                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
-                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
-                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
-                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-warning/30",
+                      index === 1 && "bg-gradient-to-r from-white/10 to-white/5 border-line-strong",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-warning/30",
+                      index > 2 && "bg-white/5 border-line/50 hover:bg-white/10"
                     )}
                   >
                     <div className={cn(
@@ -285,11 +285,11 @@ export default function LeaderboardPage() {
                           {entry.display_name || entry.username || entry.userId.slice(0, 8) + '...'}
                         </div>
                         {entry.username && (
-                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                          <div className="text-xs lg:text-sm text-caption truncate">
                             @{entry.username}
                           </div>
                         )}
-                        <div className="text-xs text-purple-400 mt-0.5">
+                        <div className="text-xs text-primary-light mt-0.5">
                           Level {entry.level}
                         </div>
                       </div>
@@ -310,10 +310,10 @@ export default function LeaderboardPage() {
             <div className="space-y-3">
               {loadingAllTimeXP ? (
                 <div className="flex items-center justify-center py-16">
-                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                  <RiLoader5Fill className="text-primary-light animate-spin text-3xl" />
                 </div>
               ) : allTimeXP.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
+                <div className="text-center py-16 text-caption">
                   No XP data available yet
                 </div>
               ) : (
@@ -323,10 +323,10 @@ export default function LeaderboardPage() {
                     onClick={() => handleCardClick(entry.userId, entry.socialId)}
                     className={cn(
                       "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
-                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
-                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
-                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
-                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-warning/30",
+                      index === 1 && "bg-gradient-to-r from-white/10 to-white/5 border-line-strong",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-warning/30",
+                      index > 2 && "bg-white/5 border-line/50 hover:bg-white/10"
                     )}
                   >
                     <div className={cn(
@@ -349,11 +349,11 @@ export default function LeaderboardPage() {
                           {entry.display_name || entry.username || entry.userId.slice(0, 8) + '...'}
                         </div>
                         {entry.username && (
-                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                          <div className="text-xs lg:text-sm text-caption truncate">
                             @{entry.username}
                           </div>
                         )}
-                        <div className="text-xs text-purple-400 mt-0.5">
+                        <div className="text-xs text-primary-light mt-0.5">
                           Level {entry.level}
                         </div>
                       </div>
@@ -363,7 +363,7 @@ export default function LeaderboardPage() {
                       <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
                         {formatNumber(entry.totalXP)} XP
                       </div>
-                      <div className="text-xs lg:text-sm text-gray-400">
+                      <div className="text-xs lg:text-sm text-caption">
                         {formatNumber(entry.currentSeasonXP)} this season
                       </div>
                     </div>
@@ -377,10 +377,10 @@ export default function LeaderboardPage() {
             <div className="space-y-3">
               {loadingRevenue ? (
                 <div className="flex items-center justify-center py-16">
-                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                  <RiLoader5Fill className="text-primary-light animate-spin text-3xl" />
                 </div>
               ) : topRevenue.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
+                <div className="text-center py-16 text-caption">
                   No revenue data available yet
                 </div>
               ) : (
@@ -390,10 +390,10 @@ export default function LeaderboardPage() {
                     onClick={() => handleCardClick(user._id, user.socialId)}
                     className={cn(
                       "rounded-xl p-4 lg:p-5 flex items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
-                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
-                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
-                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
-                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-warning/30",
+                      index === 1 && "bg-gradient-to-r from-white/10 to-white/5 border-line-strong",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-warning/30",
+                      index > 2 && "bg-white/5 border-line/50 hover:bg-white/10"
                     )}
                   >
                     <div className={cn(
@@ -416,7 +416,7 @@ export default function LeaderboardPage() {
                           {user.display_name || user.username || formatWallet(user.wallet)}
                         </div>
                         {user.username && (
-                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                          <div className="text-xs lg:text-sm text-caption truncate">
                             @{user.username}
                           </div>
                         )}
@@ -427,7 +427,7 @@ export default function LeaderboardPage() {
                       <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
                         ${formatNumber(user.totalRevenue)}
                       </div>
-                      <div className="text-xs lg:text-sm text-gray-400">
+                      <div className="text-xs lg:text-sm text-caption">
                         {user.auctionCount} auction{user.auctionCount !== 1 ? 's' : ''}
                       </div>
                     </div>
@@ -441,10 +441,10 @@ export default function LeaderboardPage() {
             <div className="space-y-3">
               {loadingBids ? (
                 <div className="flex items-center justify-center py-16">
-                  <RiLoader5Fill className="text-primary animate-spin text-3xl" />
+                  <RiLoader5Fill className="text-primary-light animate-spin text-3xl" />
                 </div>
               ) : highestBids.length === 0 ? (
-                <div className="text-center py-16 text-gray-400">
+                <div className="text-center py-16 text-caption">
                   No bids placed yet
                 </div>
               ) : (
@@ -454,10 +454,10 @@ export default function LeaderboardPage() {
                     onClick={() => handleCardClick(bid.userId, bid.socialId)}
                     className={cn(
                       "rounded-xl p-4 lg:p-5 flex items-start lg:items-center gap-3 lg:gap-4 transition-all border cursor-pointer w-full",
-                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-yellow-500/30",
-                      index === 1 && "bg-gradient-to-r from-gray-400/10 to-gray-500/5 border-gray-400/30",
-                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-orange-500/30",
-                      index > 2 && "bg-white/5 border-gray-700/50 hover:bg-white/10"
+                      index === 0 && "bg-gradient-to-r from-yellow-500/10 to-yellow-600/5 border-warning/30",
+                      index === 1 && "bg-gradient-to-r from-white/10 to-white/5 border-line-strong",
+                      index === 2 && "bg-gradient-to-r from-orange-500/10 to-orange-600/5 border-warning/30",
+                      index > 2 && "bg-white/5 border-line/50 hover:bg-white/10"
                     )}
                   >
                     <div className={cn(
@@ -480,11 +480,11 @@ export default function LeaderboardPage() {
                           {bid.display_name || bid.username || formatWallet(bid.wallet)}
                         </div>
                         {bid.username && (
-                          <div className="text-xs lg:text-sm text-gray-400 truncate">
+                          <div className="text-xs lg:text-sm text-caption truncate">
                             @{bid.username}
                           </div>
                         )}
-                        <div className="text-xs text-gray-500 truncate mt-0.5 lg:hidden">
+                        <div className="text-xs text-caption truncate mt-0.5 lg:hidden">
                           {bid.auctionName}
                         </div>
                       </div>
@@ -494,10 +494,10 @@ export default function LeaderboardPage() {
                       <div className="text-lg lg:text-2xl font-bold text-white whitespace-nowrap">
                         ${formatNumber(bid.bidAmount)}
                       </div>
-                      <div className="text-xs lg:text-sm text-gray-400 hidden lg:block">
+                      <div className="text-xs lg:text-sm text-caption hidden lg:block">
                         {formatDate(bid.bidTimestamp)}
                       </div>
-                      <div className="text-xs text-gray-500 lg:hidden">
+                      <div className="text-xs text-caption lg:hidden">
                         {bid.auctionName.length > 15 ? bid.auctionName.slice(0, 15) + '...' : bid.auctionName}
                       </div>
                     </div>

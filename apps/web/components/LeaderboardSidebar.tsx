@@ -181,65 +181,62 @@ export default function LeaderboardSidebar() {
   };
 
   return (
-    <div className="w-full ml-4 space-y-4 lg:sticky lg:top-4 lg:self-start max-lg:hidden">
+    <aside className="w-full space-y-4 xl:sticky xl:top-8 xl:self-start max-xl:hidden">
       {/* Header with refresh button */}
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-lg font-semibold">At a Glance</h2>
+      <div className="flex items-center justify-between">
+        <span className="panel-label">At a Glance</span>
         <button
           onClick={handleManualRefresh}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+          className="p-1.5 text-caption hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
           title="Refresh data"
         >
-          <RiRefreshLine className={`text-primary ${loadingRevenue || loadingBids || loadingAuctions || loadingRecentBids ? 'animate-spin' : ''}`} />
+          <RiRefreshLine className={loadingRevenue || loadingBids || loadingAuctions || loadingRecentBids ? 'animate-spin' : ''} />
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-sm text-red-500">
+        <div className="bg-negative/10 border border-negative/30 rounded-lg p-3 text-sm text-negative">
           {error}
         </div>
       )}
 
       {/* Top Revenue Earners */}
-      <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <span className="text-yellow-500 bg-yellow-500/20 rounded-lg p-2"><TrophyIcon className='w-6 h-6' /></span>
+      <section className="card p-4">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2.5">
+          <span className="text-warning bg-warning/10 border border-warning/25 rounded-md p-1.5">
+            <TrophyIcon className="w-4 h-4" />
+          </span>
           Top Revenue Earners
         </h3>
         <TopRevenueCard users={topRevenue} loading={loadingRevenue} />
-      </div>
-
-      {/* Highest Bidders */}
-      {/* <div className="bg-primary/5 border border-primary/10 rounded-lg p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <span className="text-blue-500 bg-blue-500/20 rounded-lg p-2"><DiamondIcon className='w-6 h-6' /></span>
-          Highest Bidders
-        </h3>
-        <HighestBiddersCard bids={highestBids} loading={loadingBids} />
-      </div> */}
+      </section>
 
       {/* Recent Bids */}
-      <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <span className="text-green-500 bg-green-500/20 rounded-lg p-2"><ActivityIcon className='w-6 h-6' /></span>
+      <section className="card p-4">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2.5">
+          <span className="text-positive bg-positive/10 border border-positive/25 rounded-md p-1.5">
+            <ActivityIcon className="w-4 h-4" />
+          </span>
           Recent Activity
         </h3>
         <RecentBidsCard bids={recentBids} loading={loadingRecentBids} />
-      </div>
+      </section>
 
       {/* Past Auctions */}
-      <div className="bg-primary/5 border border-primary/10 rounded-xl p-4">
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <span className="text-gray-400 bg-gray-400/20 rounded-lg p-2"><ClockIcon className='w-6 h-6' /></span>
+      <section className="card p-4">
+        <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2.5">
+          <span className="text-primary-light bg-primary/10 border border-primary/25 rounded-md p-1.5">
+            <ClockIcon className="w-4 h-4" />
+          </span>
           Last Ended Auctions
         </h3>
         <PastAuctionsCard auctions={pastAuctions} loading={loadingAuctions} />
-      </div>
+      </section>
 
       {/* Last updated timestamp */}
-      <div className="text-xs text-caption text-center">
+      <div className="text-[11px] text-caption text-center">
         Last updated: {lastRefresh.toLocaleTimeString()}
       </div>
-    </div>
+    </aside>
   );
 }

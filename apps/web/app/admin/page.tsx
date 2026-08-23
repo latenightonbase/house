@@ -281,7 +281,7 @@ export default function AdminPage() {
   //         <Heading size="md" gradient={false} className="text-white mb-4">
   //           Access Denied
   //         </Heading>
-  //         <p className="text-white/70">Please login to access admin panel.</p>
+  //         <p className="text-caption">Please login to access admin panel.</p>
   //       </div>
   //     </div>
   //   );
@@ -294,7 +294,7 @@ export default function AdminPage() {
   //         <Heading size="md" gradient={false} className="text-white mb-4">
   //           Unauthorized
   //         </Heading>
-  //         <p className="text-white/70">You do not have permission to access this page.</p>
+  //         <p className="text-caption">You do not have permission to access this page.</p>
   //       </div>
   //     </div>
   //   );
@@ -308,7 +308,7 @@ export default function AdminPage() {
           <Heading size="lg" gradient className="mb-4">
             Platform Settings
           </Heading>
-          <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 p-6">
+          <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-line p-6">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
               <div className="flex-1 max-w-md">
                 <Input
@@ -322,7 +322,7 @@ export default function AdminPage() {
               <Button
                 onClick={handleUpdateMinToken}
                 disabled={savingMinToken || minTokenRequired === originalMinToken}
-                className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {savingMinToken ? (
                   <RiLoader5Fill className="animate-spin text-xl" />
@@ -341,7 +341,7 @@ export default function AdminPage() {
           </Heading>
           <Button
             onClick={() => setShowAddModal(true)}
-            className="bg-linear-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="bg-linear-to-r from-primary to-secondary text-white px-4 py-2 rounded-lg flex items-center gap-2"
           >
             <RiAddLine className="text-xl" />
             Add
@@ -350,25 +350,25 @@ export default function AdminPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <RiLoader5Fill className="animate-spin text-4xl text-purple-500" />
+            <RiLoader5Fill className="animate-spin text-4xl text-primary-light" />
           </div>
         ) : (
-          <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 overflow-hidden">
+          <div className="bg-white/5 backdrop-blur-sm rounded-lg border border-line overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-white/70">Wallet Address</TableHead>
-                  <TableHead className="text-white/70">Nickname</TableHead>
-                  <TableHead className="text-white/70">Status</TableHead>
-                  <TableHead className="text-white/70">Added By</TableHead>
-                  <TableHead className="text-white/70">Date Added</TableHead>
-                  <TableHead className="text-white/70 text-right">Actions</TableHead>
+                  <TableHead className="text-caption">Wallet Address</TableHead>
+                  <TableHead className="text-caption">Nickname</TableHead>
+                  <TableHead className="text-caption">Status</TableHead>
+                  <TableHead className="text-caption">Added By</TableHead>
+                  <TableHead className="text-caption">Date Added</TableHead>
+                  <TableHead className="text-caption text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {whitelists.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-white/50 py-8">
+                    <TableCell colSpan={6} className="text-center text-caption py-8">
                       No whitelisted wallets found
                     </TableCell>
                   </TableRow>
@@ -385,17 +385,17 @@ export default function AdminPage() {
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             entry.status === 'ACTIVE'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? 'bg-positive/20 text-positive'
+                              : 'bg-negative/20 text-negative'
                           }`}
                         >
                           {entry.status}
                         </span>
                       </TableCell>
-                      <TableCell className="text-white/70">
+                      <TableCell className="text-caption">
                         {entry.addedBy || <span className="text-white/30 italic">Unknown</span>}
                       </TableCell>
-                      <TableCell className="text-white/70">
+                      <TableCell className="text-caption">
                         {new Date(entry.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right">
@@ -408,7 +408,7 @@ export default function AdminPage() {
                             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                             title="Edit nickname"
                           >
-                            <RiEditLine className="text-blue-400 text-lg" />
+                            <RiEditLine className="text-primary-light text-lg" />
                           </button>
                           <button
                             onClick={() => handleToggleStatus(entry)}
@@ -424,7 +424,7 @@ export default function AdminPage() {
                             className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                             title="Delete"
                           >
-                            <RiDeleteBin6Line className="text-red-400 text-lg" />
+                            <RiDeleteBin6Line className="text-negative text-lg" />
                           </button>
                         </div>
                       </TableCell>
@@ -436,15 +436,15 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="mt-4 text-white/50 text-sm">
+        <div className="mt-4 text-caption text-sm">
           Total Whitelisted Wallets: {whitelists.length}
         </div>
       </div>
 
       {/* Add Wallet Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-white/10 rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-surface backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-2 border border-line rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Add Wallet to Whitelist</h3>
             <div className="space-y-4">
               <div>
@@ -475,13 +475,13 @@ export default function AdminPage() {
                     setNewWallet('');
                     setNewNickname('');
                   }}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600"
+                  className="flex-1 bg-surface-2 hover:bg-gray-600"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleAddWallet}
-                  className="flex-1 bg-linear-to-r from-purple-500 to-pink-500"
+                  className="flex-1 bg-linear-to-r from-primary to-secondary"
                 >
                   Add Wallet
                 </Button>
@@ -493,12 +493,12 @@ export default function AdminPage() {
 
       {/* Edit Nickname Modal */}
       {editingEntry && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-white/10 rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-surface backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-surface-2 border border-line rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Edit Nickname</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-white/70 text-sm mb-2 block">Wallet Address</label>
+                <label className="text-caption text-sm mb-2 block">Wallet Address</label>
                 <div className="text-white font-mono text-sm bg-white/5 p-3 rounded-lg">
                   {editingEntry.walletAddress}
                 </div>
@@ -519,13 +519,13 @@ export default function AdminPage() {
                     setEditingEntry(null);
                     setNewNickname('');
                   }}
-                  className="flex-1 bg-gray-700 hover:bg-gray-600"
+                  className="flex-1 bg-surface-2 hover:bg-gray-600"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleUpdateWallet}
-                  className="flex-1 bg-linear-to-r from-purple-500 to-pink-500"
+                  className="flex-1 bg-linear-to-r from-primary to-secondary"
                 >
                   Update
                 </Button>

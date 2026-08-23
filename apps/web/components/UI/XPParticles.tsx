@@ -52,7 +52,7 @@ function SparkleParticle({ particle }: { particle: Particle }) {
       style={{ left: `calc(50% + ${particle.x}px)` }}
     >
       <Star
-        className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]"
+        className="text-warning drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]"
         size={12 + Math.random() * 8}
         fill="currentColor"
       />
@@ -94,7 +94,7 @@ function XPNumber({
     >
       {/* Glow background */}
       <motion.div
-        className="absolute inset-0 -m-4 rounded-full bg-gradient-to-r from-purple-500/30 via-primary/30 to-secondary/30 blur-xl"
+        className="absolute inset-0 -m-4 rounded-full bg-gradient-to-r from-primary/30 via-primary/30 to-secondary/30 blur-xl"
         animate={{
           scale: [1, 1.2, 1],
           opacity: [0.5, 0.8, 0.5],
@@ -108,7 +108,7 @@ function XPNumber({
       
       {/* XP Amount */}
       <motion.div
-        className="relative flex items-center gap-2 bg-gradient-to-r from-purple-600/90 to-primary/90 px-4 py-2 rounded-full border border-white/30 shadow-lg shadow-purple-500/50"
+        className="relative flex items-center gap-2 bg-gradient-to-r from-primary/90 to-primary/90 px-4 py-2 rounded-full border border-line-strong shadow-lg shadow-purple-500/50"
         animate={{
           boxShadow: [
             "0 0 20px rgba(168, 85, 247, 0.5)",
@@ -122,7 +122,7 @@ function XPNumber({
           ease: "easeInOut",
         }}
       >
-        <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
+        <Zap className="w-5 h-5 text-warning" fill="currentColor" />
         <span className="text-2xl font-bold text-white drop-shadow-lg">
           +{amount}
         </span>
@@ -134,7 +134,7 @@ function XPNumber({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: [0, 1, 1, 0], y: [0, 5, 10, 15] }}
         transition={{ duration: 2, delay: 0.3 }}
-        className="text-sm font-medium text-white/80 bg-black/40 px-3 py-1 rounded-full backdrop-blur-sm"
+        className="text-sm font-medium text-white/80 bg-surface px-3 py-1 rounded-full backdrop-blur-sm"
       >
         {XP_ACTION_LABELS[action as keyof typeof XP_ACTION_LABELS] || action}
       </motion.span>
@@ -182,7 +182,7 @@ export default function XPParticles() {
                 transition={{ duration: 1.5, delay: 0.2 }}
                 className="absolute top-16 left-1/2 -translate-x-1/2"
               >
-                <Sparkles className="w-8 h-8 text-yellow-300 drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]" />
+                <Sparkles className="w-8 h-8 text-warning drop-shadow-[0_0_10px_rgba(253,224,71,0.8)]" />
               </motion.div>
             </motion.div>
           );

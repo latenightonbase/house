@@ -97,7 +97,7 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-surface flex items-center justify-center z-50 p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -106,14 +106,14 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
       >
         <div className="text-center">
           <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaTwitter className="w-8 h-8 text-blue-500" />
+            <FaTwitter className="w-8 h-8 text-primary-light" />
           </div>
           
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Link Your Twitter Account
           </h3>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-caption mb-6">
             To create auctions from your desktop wallet, we need to verify your identity through Twitter.
             This helps us know who you are and prevents spam.
           </p>
@@ -130,7 +130,7 @@ export default function TwitterAuthModal({ isOpen, onClose, onSuccess }: Twitter
             <button
               onClick={handleTwitterAuth}
               disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

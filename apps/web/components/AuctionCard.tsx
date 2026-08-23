@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import Image from "next/image";
-import { Users, Bot, User } from "lucide-react";
+import { Users, Bot, User, Clock } from "lucide-react";
 import ScrollingName from "./utils/ScrollingName";
 import { fetchTokenPrice } from "@/utils/tokenPrice";
 
@@ -92,14 +92,16 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
     getTokenPrice();
   }, [auction]);
 
+  const isEndingSoon = auction.hoursRemaining <= 6;
+
   return (
     <div
       key={auction._id}
-      className="bg-black/40 w-full hover:scale-[1.02] duration-400 hover:shadow-lg shadow-primary/5 text-white border border-primary/10 rounded-2xl transition-all overflow-hidden flex flex-col h-full cursor-pointer"
+      className="card w-full text-white overflow-hidden flex flex-col h-full cursor-pointer transition-colors duration-200 hover:border-primary/40"
       onClick={() => onNavigate(`/bid/${auction.blockchainAuctionId}`)}
     >
       {/* Image */}
-      <div className="relative w-full h-64">
+      <div className="relative w-full h-48 border-b border-line">
         <Image
           src={
             auction.imageUrl ||
@@ -113,38 +115,51 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
           className="w-full h-full object-cover"
           unoptimized
         />
-        {/* Bot/Human Tag */}
-        {auction.createdByType === 'bot' && (
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-blue-500/90 text-white text-xs font-medium px-2 py-1 rounded-full">
+        {/* Fade into the card surface */}
+        <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/20 to-transparent" />
+
+        {/* Origin tag */}
+        {auction.createdByType === "bot" && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-background/80 backdrop-blur-sm border border-primary/40 text-primary-light text-[11px] font-semibold px-2 py-1 rounded-md">
             <Bot className="w-3 h-3" />
             <span>Bot</span>
           </div>
         )}
-
-        {/* Bot/Human Tag */}
-        {auction.createdByType === 'human' && (
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-green-500/90 text-white text-xs font-medium px-2 py-1 rounded-full">
+        {auction.createdByType === "human" && (
+          <div className="absolute top-3 left-3 flex items-center gap-1 bg-background/80 backdrop-blur-sm border border-line-strong text-caption text-[11px] font-semibold px-2 py-1 rounded-md">
             <User className="w-3 h-3" />
             <span>Human</span>
           </div>
         )}
+
+        {/* Time remaining */}
+        <div
+          className={`absolute top-3 right-3 flex items-center gap-1.5 bg-background/80 backdrop-blur-sm border text-[11px] font-semibold px-2 py-1 rounded-md ${
+            isEndingSoon
+              ? "border-warning/40 text-warning"
+              : "border-line-strong text-caption"
+          }`}
+        >
+          <Clock className="w-3 h-3" />
+          <span>{formatTimeRemaining(auction.hoursRemaining)}</span>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="p-6 flex flex-col grow">
-        <ScrollingName 
-          name={auction.auctionName} 
-          className="text-2xl font-bold text-white mb-2"
+      <div className="p-5 flex flex-col grow">
+        <ScrollingName
+          name={auction.auctionName}
+          className="text-lg font-bold text-white mb-1.5"
         />
         {auction.description && renderDescription(auction.description)}
+
         <div
-          className="flex items-center gap-2 mb-4 cursor-pointer"
+          className="flex items-center gap-2 mb-4"
           onClick={(e) => {
             e.stopPropagation();
             onNavigate(`/user/${auction.hostedBy._id}`);
           }}
         >
-          <span className="text-gray-400 text-sm">by</span>
           <Image
             unoptimized
             alt="host"
@@ -156,7 +171,7 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
             height={20}
             className="rounded-full w-5 h-5 aspect-square object-cover"
           />
-          <span className="text-primary text-sm font-medium">
+          <span className="text-caption text-sm hover:text-white transition-colors">
             {auction.hostedBy.username
               ? `@${auction.hostedBy.username}`
               : auction.hostedBy.display_name ||
@@ -164,55 +179,52 @@ const AuctionCard: React.FC<AuctionCardProps> = ({
           </span>
         </div>
 
-        <div className="border-t border-primary/10 pt-4 mt-auto space-y-3">
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-sm">
-              <span className="text-gray-400">Time left: </span>
-              <span className="text-white font-medium">{formatTimeRemaining(auction.hoursRemaining)}</span>
-            </div>
-          </div>
-          <div className="flex justify-between items-center">
-            <div className="flex flex-col justify-center items-start">
-              <span className="text-gray-400 text-sm">
-                {auction.highestBid > 0 ? "Current Bid" : "Minimum Bid"}
-              </span>
-              <div className="text-left">
-                <div className="text-white font-bold text-lg">
-                  {auction.highestBid > 0
-                    ? auction.highestBid
-                    : auction.minimumBid}{" "}
-                  {auction.currency}
-                </div>
-                <div className="text-gray-400 text-xs">
-                  ≈ $
-                  {(
-                    (auction.highestBid > 0
-                      ? auction.highestBid
-                      : auction.minimumBid) *
-                    (auction.currency === "USDC" ? 1 : tokenPrice || 0)
-                  ).toLocaleString()}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center justify-between bg-white/10 rounded-full border border-white/30 px-2 py-1 gap-1">
-              <Users className="w-4 h-4 text-white/50" />
-              <span className="text-white text-sm font-semibold">
-                {auction.participantCount}
+        {/* Stat strip */}
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <div className="tile p-3">
+            <p className="panel-label mb-1">
+              {auction.highestBid > 0 ? "Current Bid" : "Minimum Bid"}
+            </p>
+            <div className="text-white font-bold text-base leading-tight">
+              {auction.highestBid > 0 ? auction.highestBid : auction.minimumBid}{" "}
+              <span className="text-caption font-medium text-sm">
+                {auction.currency}
               </span>
             </div>
+            <div className="text-caption text-xs mt-0.5">
+              ≈ $
+              {(
+                (auction.highestBid > 0
+                  ? auction.highestBid
+                  : auction.minimumBid) *
+                (auction.currency === "USDC" ? 1 : tokenPrice || 0)
+              ).toLocaleString()}
+            </div>
           </div>
-          {onBidClick && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onBidClick(auction);
-              }}
-              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-4 rounded-xl transition-colors"
-            >
-              Place Bid
-            </button>
-          )}
+
+          <div className="tile p-3">
+            <p className="panel-label mb-1">Bidders</p>
+            <div className="flex items-center gap-1.5 text-white font-bold text-base leading-tight">
+              <Users className="w-4 h-4 text-primary-light" />
+              {auction.participantCount}
+            </div>
+            <div className="text-caption text-xs mt-0.5">
+              {auction.bidCount} bid{auction.bidCount !== 1 ? "s" : ""}
+            </div>
+          </div>
         </div>
+
+        {onBidClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onBidClick(auction);
+            }}
+            className="mt-3 w-full gradient-button text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-all"
+          >
+            Place Bid
+          </button>
+        )}
       </div>
     </div>
   );

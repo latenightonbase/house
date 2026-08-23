@@ -257,7 +257,7 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                             />
                         )}
                         {!connectedWallet && (
-                          <div className="flex items-center gap-2 bg-red-500/80 text-nowrap text-xs px-2 py-1 absolute -left-12 top-full mt-2 animate-bounce rounded-full">
+                          <div className="flex items-center gap-2 bg-negative/80 text-nowrap text-xs px-2 py-1 absolute -left-12 top-full mt-2 animate-bounce rounded-full">
                             <MdWallet className="text-sm" />
                             Not Connected
                           </div>
@@ -273,26 +273,26 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute right-0 bottom-[110%] mt-2 bg-black/90 border border-primary/20 backdrop-blur-md rounded-lg shadow-lg overflow-hidden z-50 min-w-[200px]"
+                        className="absolute right-0 bottom-[110%] mt-2 bg-background/90 border border-line backdrop-blur-md rounded-lg shadow-lg overflow-hidden z-50 min-w-[200px]"
                       >
                         {/* User Info */}
-                        <div className="px-4 py-3 border-b border-white/10">
+                        <div className="px-4 py-3 border-b border-line">
                           <div className="text-sm font-medium mb-1">
                             @{twitterAccount.username}
                           </div>
                           {connectedWallet && (
-                            <div className="text-xs text-primary mb-2">
+                            <div className="text-xs text-primary-light mb-2">
                               {connectedWallet.address.slice(0, 6)}...{connectedWallet.address.slice(-4)}
                             </div>
                           )}
                           {xpStats && (
-                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/5">
-                              <div className="bg-purple-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-line">
+                              <div className="bg-primary text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
                                 {xpStats.level}
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-xs text-gray-400">Level {xpStats.level}</span>
-                                <span className="text-xs font-semibold text-primary">{xpStats.currentSeasonXP} XP</span>
+                                <span className="text-xs text-caption">Level {xpStats.level}</span>
+                                <span className="text-xs font-semibold text-primary-light">{xpStats.currentSeasonXP} XP</span>
                               </div>
                             </div>
                           )}
@@ -323,7 +323,7 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                             handleLogout();
                             setMenuOpen(false);
                           }}
-                          className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm border-t border-white/10"
+                          className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-2 text-sm border-t border-line"
                         >
                           <MdLogout className="text-lg" />
                           <span>Logout</span>
@@ -360,10 +360,10 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.15, ease: "easeOut" }}
-                        className="absolute left-0 bottom-[110%] mt-2 bg-[#1a1a1a] border border-primary/20 rounded-xl shadow-2xl overflow-hidden w-[220px] z-50"
+                        className="absolute left-0 bottom-[110%] mt-2 bg-[#1a1a1a] border border-line rounded-xl shadow-2xl overflow-hidden w-[220px] z-50"
                       >
                         {/* User Info Header */}
-                        <div className="px-4 py-4 border-b border-white/10 bg-gradient-to-br from-primary/5 to-secondary/5">
+                        <div className="px-4 py-4 border-b border-line bg-gradient-to-br from-primary/5 to-secondary/5">
                           <div className="flex items-center gap-3 mb-3">
                             {twitterAccount.profilePictureUrl && (
                               <div className="relative">
@@ -376,7 +376,7 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                                   className="rounded-full border-2 border-primary/50"
                                 />
                                 {xpStats && (
-                                  <div className="absolute -bottom-1 -right-1 bg-purple-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-black">
+                                  <div className="absolute -bottom-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-black">
                                     {xpStats.level}
                                   </div>
                                 )}
@@ -394,14 +394,14 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                             </div>
                           </div>
                           {xpStats && (
-                            <div className="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+                            <div className="flex items-center justify-between bg-surface rounded-lg px-3 py-2">
                               <div className="flex flex-col">
-                                <span className="text-xs text-gray-400">Season XP</span>
-                                <span className="text-sm font-bold text-primary">{xpStats.currentSeasonXP}</span>
+                                <span className="text-xs text-caption">Season XP</span>
+                                <span className="text-sm font-bold text-primary-light">{xpStats.currentSeasonXP}</span>
                               </div>
                               <div className="flex flex-col text-right">
-                                <span className="text-xs text-gray-400">Level</span>
-                                <span className="text-sm font-bold text-purple-400">{xpStats.level}</span>
+                                <span className="text-xs text-caption">Level</span>
+                                <span className="text-sm font-bold text-primary-light">{xpStats.level}</span>
                               </div>
                             </div>
                           )}
@@ -448,14 +448,14 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                         </div>
 
                         {/* Disconnect Section */}
-                        <div className="border-t border-white/10">
+                        <div className="border-t border-line">
                           {connectedWallet ? (
                             <button
                               onClick={() => {
                                 connectedWallet.disconnect();
                                 setDialogOpen(false);
                               }}
-                              className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3 text-sm text-red-400"
+                              className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3 text-sm text-negative"
                             >
                               <MdWallet className="text-base" />
                               <span>Disconnect</span>
@@ -477,7 +477,7 @@ export default function LoginWithOAuth({ xpStats }: LoginWithOAuthProps) {
                               handleLogout();
                               setDialogOpen(false);
                             }}
-                            className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3 text-sm border-t border-white/10 text-red-400"
+                            className="w-full px-4 py-2.5 text-left hover:bg-white/5 transition-colors flex items-center gap-3 text-sm border-t border-line text-negative"
                           >
                             <MdLogout className="text-base" />
                             <span>Logout</span>

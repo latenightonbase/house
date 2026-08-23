@@ -477,7 +477,7 @@ export default function MyAuctionCards() {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col gap-2">
-          <RiLoader5Fill className="animate-spin h-8 w-8 text-primary mx-auto" />
+          <RiLoader5Fill className="animate-spin h-8 w-8 text-primary-light mx-auto" />
           <span className="ml-2 text-caption">Loading your auctions...</span>
         </div>
       </div>
@@ -488,7 +488,7 @@ export default function MyAuctionCards() {
     return (
       <div className="w-full overflow-hidden p-4">
         <Heading size="md" className="mb-6">My Auctions</Heading>
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-line p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -524,7 +524,7 @@ export default function MyAuctionCards() {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="flex flex-col gap-2">
-          <RiLoader5Fill className="animate-spin h-8 w-8 text-primary mx-auto" />
+          <RiLoader5Fill className="animate-spin h-8 w-8 text-primary-light mx-auto" />
           <span className="ml-2 text-caption">Loading your auctions...</span>
         </div>
       </div>
@@ -534,7 +534,7 @@ export default function MyAuctionCards() {
   if (error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-500 mb-4">{error}</p>
+        <p className="text-negative mb-4">{error}</p>
         <Button onClick={fetchAuctions} variant="outline">
           Try Again
         </Button>
@@ -549,13 +549,13 @@ export default function MyAuctionCards() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "text-primary";
+        return "text-primary-light";
       case "upcoming":
-        return "text-yellow-500";
+        return "text-warning";
       case "ended":
-        return "text-gray-500";
+        return "text-caption";
       default:
-        return "text-gray-500";
+        return "text-caption";
     }
   };
 
@@ -565,7 +565,7 @@ export default function MyAuctionCards() {
       {/* Success Message */}
       {successMessage && (
         <div className="mb-4 p-4 bg-green-900 border border-green-700 rounded-lg">
-          <p className="text-green-200">{successMessage}</p>
+          <p className="text-positive">{successMessage}</p>
         </div>
       )}
 
@@ -578,7 +578,7 @@ export default function MyAuctionCards() {
             className={cn(
               "px-4 py-2 font-medium transition-colors capitalize whitespace-nowrap flex-shrink-0",
               activeTab === tab
-                ? "text-primary border-b-2 border-primary bg-white/5 rounded-md"
+                ? "text-primary-light border-b-2 border-primary bg-white/5 rounded-md"
                 : "text-caption hover:text-foreground"
             )}
           >
@@ -590,7 +590,7 @@ export default function MyAuctionCards() {
       {/* Auctions Grid */}
       {filteredAuctions.length === 0 ? (
         <div className="w-full max-w-6xl mx-auto mt-8">
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-2 lg:p-8 text-center">
+        <div className="bg-white/10 rounded-lg shadow-md border border-line p-2 lg:p-8 text-center">
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
               <svg 
@@ -621,7 +621,7 @@ export default function MyAuctionCards() {
           {filteredAuctions.map((auction) => auction ? (
             <div
               key={auction._id}
-              className="bg-black/40 w-full hover:scale-[1.02] duration-400 hover:shadow-lg shadow-primary/5 text-white border border-primary/10 rounded-2xl transition-all overflow-hidden flex flex-col h-full cursor-pointer"
+              className="bg-surface w-full hover:scale-[1.02] duration-400 hover:shadow-lg shadow-primary/5 text-white border border-line rounded-2xl transition-all overflow-hidden flex flex-col h-full cursor-pointer"
               onClick={() => viewAuction(auction.blockchainAuctionId)}
             >
               {/* Image */}
@@ -643,8 +643,8 @@ export default function MyAuctionCards() {
                   <span
                     className={cn(
                       "text-xs font-semibold capitalize px-3 py-1 rounded-full backdrop-blur-sm",
-                      auction.status === "active" && "bg-green-500/80 text-white",
-                      auction.status === "upcoming" && "bg-yellow-500/80 text-white",
+                      auction.status === "active" && "bg-positive/80 text-white",
+                      auction.status === "upcoming" && "bg-warning/80 text-white",
                       auction.status === "ended" && "bg-gray-500/80 text-white"
                     )}
                   >
@@ -663,13 +663,13 @@ export default function MyAuctionCards() {
                 <div className="space-y-2 mb-4">
                   {auction.startingWallet && (
                     <div className="flex justify-between items-center w-full">
-                      <span className="text-gray-400 text-sm flex-shrink-0">
+                      <span className="text-caption text-sm flex-shrink-0">
                         Started By:
                       </span>
                       <a 
                         href={`https://basescan.org/address/${auction.startingWallet}`}
                         onClick={(e) => e.stopPropagation()}
-                        className="font-medium text-xs truncate ml-2 text-right text-primary hover:text-primary/80 bg-primary/10 px-2 py-1 rounded-md transition-colors"
+                        className="font-medium text-xs truncate ml-2 text-right text-primary-light hover:text-primary-light/80 bg-primary/10 px-2 py-1 rounded-md transition-colors"
                       >
                         {auction.startingWallet.slice(0, 6)}...{auction.startingWallet.slice(-4)}
                       </a>
@@ -677,7 +677,7 @@ export default function MyAuctionCards() {
                   )}
 
                   <div className="flex justify-between items-center w-full">
-                    <span className="text-gray-400 text-sm flex-shrink-0">
+                    <span className="text-caption text-sm flex-shrink-0">
                       Minimum Bid:
                     </span>
                     <span className="font-medium text-sm text-white">
@@ -686,7 +686,7 @@ export default function MyAuctionCards() {
                   </div>
 
                   <div className="flex justify-between items-center w-full">
-                    <span className="text-gray-400 text-sm flex-shrink-0">
+                    <span className="text-caption text-sm flex-shrink-0">
                       Highest Bid:
                     </span>
                     <span className="font-medium text-sm text-white">
@@ -695,7 +695,7 @@ export default function MyAuctionCards() {
                   </div>
 
                   <div className="flex justify-between items-center w-full">
-                    <span className="text-gray-400 text-sm flex-shrink-0">
+                    <span className="text-caption text-sm flex-shrink-0">
                       Total Bids:
                     </span>
                     <span className="font-medium text-sm text-white">
@@ -704,7 +704,7 @@ export default function MyAuctionCards() {
                   </div>
 
                   <div className="flex justify-between items-center w-full">
-                    <span className="text-gray-400 text-sm flex-shrink-0">
+                    <span className="text-caption text-sm flex-shrink-0">
                       Time:
                     </span>
                     <span className="font-medium text-xs text-right ml-2 text-white/80">
@@ -713,10 +713,10 @@ export default function MyAuctionCards() {
                   </div>
                 </div>
 
-                <div className="border-t border-primary/10 pt-4 mt-auto space-y-3">
+                <div className="border-t border-line pt-4 mt-auto space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex flex-col justify-center items-start">
-                      <span className="text-gray-400 text-sm">
+                      <span className="text-caption text-sm">
                         {auction.highestBid > 0 ? "Current Bid" : "Minimum Bid"}
                       </span>
                       <div className="text-white font-bold text-lg">
@@ -726,8 +726,8 @@ export default function MyAuctionCards() {
                         {auction.currency}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between bg-white/10 rounded-full border border-white/30 px-3 py-1.5 gap-2">
-                      <Users className="w-4 h-4 text-white/50" />
+                    <div className="flex items-center justify-between bg-white/10 rounded-full border border-line-strong px-3 py-1.5 gap-2">
+                      <Users className="w-4 h-4 text-caption" />
                       <span className="text-white text-sm font-semibold">
                         {auction.participantCount}
                       </span>
@@ -772,8 +772,8 @@ export default function MyAuctionCards() {
                   </div>
 
                   {auction.status === "ended" && (
-                    <div className="text-center pt-2 border-t border-primary/10">
-                      <p className="text-gray-400 text-xs">
+                    <div className="text-center pt-2 border-t border-line">
+                      <p className="text-caption text-xs">
                         {auction.highestBid > 0 ? (
                           <>
                             Winner bid: <span className="text-white font-semibold">{auction.highestBid} {auction.currency}</span>

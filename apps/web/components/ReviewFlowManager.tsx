@@ -175,14 +175,14 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
           className="flex flex-col items-center justify-center flex-1"
         >
           <div className={`relative ${isDrawerOpen && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"}`}>
-            <Bell className={`w-5 h-5 mb-0.5 ${isDrawerOpen ? "text-white" : "text-white/60"}`} />
+            <Bell className={`w-5 h-5 mb-0.5 ${isDrawerOpen ? "text-white" : "text-caption"}`} />
             {totalCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-negative text-white text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center">
                 {totalCount}
               </span>
             )}
           </div>
-          <span className={`text-[10px] ${isDrawerOpen ? "text-primary" : "text-white/60"}`}>
+          <span className={`text-[10px] ${isDrawerOpen ? "text-primary-light" : "text-caption"}`}>
             Reviews
           </span>
         </button>
@@ -204,7 +204,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
       >
         <Bell className={`${isDrawerOpen ? "text-white" : "text-white/30"} w-5 h-5`} />
         {totalCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-negative text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
             {totalCount}
           </span>
         )}
@@ -223,7 +223,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
               className={`flex-1 py-2 px-4 rounded-md transition-all flex items-center justify-center gap-2 ${
                 activeView === 'host'
                   ? 'bg-primary text-white'
-                  : 'bg-transparent text-white/70 hover:text-white'
+                  : 'bg-transparent text-caption hover:text-white'
               }`}
             >
               <Package className="w-4 h-4" />
@@ -234,7 +234,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
               className={`flex-1 py-2 px-4 rounded-md transition-all flex items-center justify-center gap-2 ${
                 activeView === 'winner'
                   ? 'bg-primary text-white'
-                  : 'bg-transparent text-white/70 hover:text-white'
+                  : 'bg-transparent text-caption hover:text-white'
               }`}
             >
               <Trophy className="w-4 h-4" />
@@ -256,20 +256,20 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
             asHost.map((delivery) => (
             <div 
               key={delivery._id}
-              className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl p-4 space-y-3"
+              className="bg-surface backdrop-blur-md border border-line rounded-xl p-4 space-y-3"
             >
               <div>
-                <p className="text-white/70 text-sm mb-1">Auction</p>
+                <p className="text-caption text-sm mb-1">Auction</p>
                 <button
                   onClick={() => router.push(`/bid/${delivery.auctionId.blockchainAuctionId}`)}
-                  className="text-white font-semibold text-lg hover:text-primary transition-colors text-left"
+                  className="text-white font-semibold text-lg hover:text-primary-light transition-colors text-left"
                 >
                   {delivery.auctionId.auctionName}
                 </button>
               </div>
 
               <div>
-                <p className="text-white/70 text-sm mb-1">Winner</p>
+                <p className="text-caption text-sm mb-1">Winner</p>
                 <p className="text-white font-semibold">
                   {delivery.winnerId?.username || 'Unknown'}
                 </p>
@@ -301,20 +301,20 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
             asWinner.map((delivery) => (
                 <div 
                   key={delivery._id}
-                  className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-xl p-4 space-y-3"
+                  className="bg-surface backdrop-blur-md border border-line rounded-xl p-4 space-y-3"
                 >
                   <div>
-                    <p className="text-white/70 text-sm mb-1">Auction</p>
+                    <p className="text-caption text-sm mb-1">Auction</p>
                     <button
                       onClick={() => router.push(`/bid/${delivery.auctionId.blockchainAuctionId}`)}
-                      className="text-white font-semibold text-lg hover:text-primary transition-colors text-left"
+                      className="text-white font-semibold text-lg hover:text-primary-light transition-colors text-left"
                     >
                       {delivery.auctionId.auctionName}
                     </button>
                   </div>
 
                   <div>
-                    <p className="text-white/70 text-sm mb-1">Host</p>
+                    <p className="text-caption text-sm mb-1">Host</p>
                     <p className="text-white font-semibold">
                       {delivery.hostId?.username || 'Unknown'}
                     </p>
@@ -354,7 +354,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
                 <DrawerTitle className="text-center gradient-text text-2xl">
                   {selectedReviewAuction ? 'Leave a Review' : 'Review Actions'}
                 </DrawerTitle>
-                <DrawerDescription className="text-center text-white/70">
+                <DrawerDescription className="text-center text-caption">
                   {selectedReviewAuction 
                     ? 'Share your experience with this auction'
                     : 'Manage deliveries and reviews'}
@@ -381,7 +381,7 @@ const ReviewFlowManager: React.FC<ReviewFlowManagerProps> = ({ isMobile = false 
                 <DialogTitle className="text-center gradient-text text-2xl">
                   {selectedReviewAuction ? 'Leave a Review' : 'Review Actions'}
                 </DialogTitle>
-                <DialogDescription className="text-center text-white/70">
+                <DialogDescription className="text-center text-caption">
                   {selectedReviewAuction 
                     ? 'Share your experience with this auction'
                     : 'Manage deliveries and reviews'}

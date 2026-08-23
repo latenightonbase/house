@@ -21,13 +21,13 @@ interface TopRevenueCardProps {
 const getRankBadgeColor = (index: number) => {
   switch (index) {
     case 0:
-      return 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30'; // Gold
+      return 'bg-warning/20 text-warning border-warning/30'; // Gold
     case 1:
-      return 'bg-gray-400/20 text-gray-400 border-gray-400/30'; // Silver
+      return 'bg-gray-400/20 text-caption border-line-strong'; // Silver
     case 2:
-      return 'bg-orange-500/20 text-orange-500 border-orange-500/30'; // Bronze
+      return 'bg-warning/20 text-warning border-warning/30'; // Bronze
     default:
-      return 'bg-primary/20 text-primary border-primary/30';
+      return 'bg-primary/20 text-primary-light border-primary/30';
   }
 };
 
@@ -85,14 +85,14 @@ export default function TopRevenueCard({ users, loading }: TopRevenueCardProps) 
           <img
             src={user.pfp_url || `https://api.dicebear.com/5.x/identicon/svg?seed=${user.wallet || 'unknown'}`}
             alt={user.display_name || user.username || 'User'}
-            className="w-10 h-10 rounded-full border-2 border-primary/20"
+            className="w-10 h-10 rounded-full border-2 border-line"
           />
           
           <div className="flex-1 min-w-0">
             <div className="font-medium text-sm truncate">
               {user.display_name || user.username || (user.wallet ? `${user.wallet.slice(0, 6)}...${user.wallet.slice(-4)}` : 'Unknown')}
             </div>
-            <div className="font-semibold text-primary text-sm">
+            <div className="font-semibold text-primary-light text-sm">
               {formatRevenue(user.totalRevenue)}
               
             </div>

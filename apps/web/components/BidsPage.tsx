@@ -429,7 +429,7 @@ export default function BidPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <RiLoader5Fill className="text-primary animate-spin text-3xl mx-auto" />
+          <RiLoader5Fill className="text-primary-light animate-spin text-3xl mx-auto" />
           <p className="mt-4 text-caption">Loading auction details...</p>
         </div>
       </div>
@@ -440,11 +440,11 @@ export default function BidPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error}</p>
+          <h2 className="text-2xl font-bold text-negative mb-4">Error</h2>
+          <p className="text-caption">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="mt-4 px-4 py-2 bg-primary text-white rounded hover:bg-blue-700"
           >
             Retry
           </button>
@@ -456,7 +456,7 @@ export default function BidPage() {
   if (!auctionData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">No auction data found</p>
+        <p className="text-caption">No auction data found</p>
       </div>
     );
   }
@@ -1060,7 +1060,7 @@ export default function BidPage() {
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-primary-light hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {displayText}
@@ -1105,27 +1105,27 @@ export default function BidPage() {
                       {auctionData.auctionName}
                     </h1>
                     {auctionData.createdByType === 'bot' && (
-                      <span className="flex items-center gap-1 bg-blue-500/20 text-blue-400 text-xs font-medium px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1 bg-primary/20 text-primary-light text-xs font-medium px-2 py-1 rounded-full">
                         <Bot className="w-3 h-3" />
                         Bot
                       </span>
                     )}
                     {auctionData.createdByType === 'human' && (
-                      <span className="flex items-center gap-1 bg-green-500/20 text-green-400 text-xs font-medium px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1 bg-positive/20 text-positive text-xs font-medium px-2 py-1 rounded-full">
                         <User className="w-3 h-3" />
                         Human
                       </span>
                     )}
                   </div>
                   {auctionData.description && (
-                    <p className="text-gray-400 text-xs">
+                    <p className="text-caption text-xs">
                       {auctionData.description}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={handleShareClick}
-                  className="text-gray-400 hover:text-white transition-colors p-2 ml-2 flex-shrink-0"
+                  className="text-caption hover:text-white transition-colors p-2 ml-2 flex-shrink-0"
                 >
                   <RiShareBoxLine className="text-xl" />
                 </button>
@@ -1133,7 +1133,7 @@ export default function BidPage() {
 
               {/* Share Dropdown */}
               {shareDropdownOpen && (
-                <div className="absolute right-8 mt-2 bg-[#2a2435] border border-white/10 rounded-xl shadow-xl z-50 py-2 min-w-[200px]">
+                <div className="absolute right-8 mt-2 bg-[#2a2435] border border-line rounded-xl shadow-xl z-50 py-2 min-w-[200px]">
                   <button
                     onClick={() =>
                       copyToClipboard(
@@ -1161,11 +1161,11 @@ export default function BidPage() {
 
             {/* Current Highest Bid */}
             <div className="bg-[#251d33] bg-secondary/5 rounded-2xl p-5 mb-6">
-              <p className="text-gray-400 text-xs mb-2">
+              <p className="text-caption text-xs mb-2">
                 {parseFloat(auctionData.highestBid) > 0 ? "Current Highest Bid" : "Minimum Bid"}
               </p>
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-primary">
+                <span className="text-3xl font-bold text-primary-light">
                   {parseFloat(auctionData.highestBid) > 0
                     ? formatBidAmount(auctionData.highestBid, auctionData.currency)
                     : auctionData.minimumBid}
@@ -1179,7 +1179,7 @@ export default function BidPage() {
                   ? calculateBidderUSDValue(auctionData.highestBid)
                   : (auctionTokenPrice ? parseFloat(auctionData.minimumBid) * auctionTokenPrice : null);
                 return highestBidValue !== null && (
-                  <p className="text-gray-400 text-sm mt-1">
+                  <p className="text-caption text-sm mt-1">
                     ≈ ${highestBidValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </p>
                 );
@@ -1189,7 +1189,7 @@ export default function BidPage() {
             <button
               onClick={openBidDrawer}
               disabled={auctionData.auctionStatus !== "Running" || isLoading}
-              className="w-full bg-green-500 hover:bg-green-600 mt-4 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 rounded-2xl transition-colors text-base "
+              className="w-full bg-positive hover:bg-positive mt-4 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 rounded-2xl transition-colors text-base "
             >
               {isLoading ? "Processing..." : "Place a Bid"}
             </button>
@@ -1199,7 +1199,7 @@ export default function BidPage() {
             <div className="grid grid-cols-2 gap-3 mb-6">
               {/* Hosted By */}
               <div className="bg-white/5 rounded-xl p-2">
-                <p className="text-gray-400 text-xs mb-1">Hosted By</p>
+                <p className="text-caption text-xs mb-1">Hosted By</p>
                 <div
                   className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => {
@@ -1242,18 +1242,18 @@ export default function BidPage() {
 
               {/* End Date */}
               <div className="bg-white/5 rounded-xl p-2">
-                <p className="text-gray-400 text-xs mb-1">End Date</p>
+                <p className="text-caption text-xs mb-1">End Date</p>
                 <p className="text-white font-medium text-xs">
                   {formatDate(auctionData.endDate).split(',')[0]}
                 </p>
-                <p className="text-gray-400 text-xs">
+                <p className="text-caption text-xs">
                   {formatDate(auctionData.endDate).split(',')[1]}
                 </p>
               </div>
 
               {/* Total Bids */}
               <div className="bg-white/5 rounded-xl p-2">
-                <p className="text-gray-400 text-xs mb-1">Total Bids</p>
+                <p className="text-caption text-xs mb-1">Total Bids</p>
                 <p className="text-white text-xl font-bold">
                   {auctionData.bidders.length}
                 </p>
@@ -1261,7 +1261,7 @@ export default function BidPage() {
 
               {/* Participants */}
               <div className="bg-white/5 rounded-xl p-2">
-                <p className="text-gray-400 text-xs mb-1">Participants</p>
+                <p className="text-caption text-xs mb-1">Participants</p>
                 <p className="text-white text-xl font-bold">
                   {new Set(auctionData.bidders.map(b => b.walletAddress)).size}
                 </p>
@@ -1273,8 +1273,8 @@ export default function BidPage() {
               <span
                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
                   auctionData.auctionStatus === "Running"
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-red-500/20 text-red-400"
+                    ? "bg-positive/20 text-positive"
+                    : "bg-negative/20 text-negative"
                 }`}
               >
                 <span className="w-2 h-2 rounded-full bg-current"></span>
@@ -1290,8 +1290,8 @@ export default function BidPage() {
               <div className="space-y-2 overflow-y-auto flex-1 custom-scrollbar pr-2">
                 {auctionData.bidders.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-gray-400">No bids yet</p>
-                    <p className="text-gray-500 text-sm mt-2">
+                    <p className="text-caption">No bids yet</p>
+                    <p className="text-caption text-sm mt-2">
                       Be the first to place a bid!
                     </p>
                   </div>
@@ -1329,20 +1329,20 @@ export default function BidPage() {
                                 {bidder.displayName}
                               </p>
                               {bidder.source === 'bot' && (
-                                <span className="flex items-center gap-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                <span className="flex items-center gap-0.5 bg-primary/20 text-primary-light text-[10px] font-medium px-1.5 py-0.5 rounded">
                                   <Bot className="w-2.5 h-2.5" />
                                   Bot
                                 </span>
                               )}
                               
                               {bidder.source && bidder.source !== 'bot' && (
-                                <span className="flex items-center gap-0.5 bg-green-500/20 text-green-400 text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                <span className="flex items-center gap-0.5 bg-positive/20 text-positive text-[10px] font-medium px-1.5 py-0.5 rounded">
                                   <User className="w-2.5 h-2.5" />
                                   Human
                                 </span>
                               )}
                             </div>
-                            <p className="text-gray-400 text-[10px]">
+                            <p className="text-caption text-[10px]">
                               @{bidder.displayName.toLowerCase().replace(/\s+/g, '_')}
                             </p>
                           </div>
@@ -1354,7 +1354,7 @@ export default function BidPage() {
                           {(() => {
                             const usdValue = calculateBidderUSDValue(bidder.bidAmount);
                             return usdValue !== null && (
-                              <p className="text-green-400 text-[10px]">
+                              <p className="text-positive text-[10px]">
                                 ${usdValue.toFixed(0)}
                               </p>
                             );
@@ -1387,24 +1387,24 @@ export default function BidPage() {
                 <div className="text-left text-md">
                   {auctionData && (
                     <ul>
-                      <li className="border-b border-b-white/10 py-2 flex ">
+                      <li className="border-b border-b-line py-2 flex ">
                         <span className="text-left w-1/2">Bidding on:</span>
-                        <strong className="text-primary text-right w-1/2">
+                        <strong className="text-primary-light text-right w-1/2">
                           {auctionData.auctionName}
                         </strong>
                       </li>
-                      <li className="border-b border-b-white/10 py-2 flex ">
+                      <li className="border-b border-b-line py-2 flex ">
                         <span className="text-left w-1/2">Currency:</span>
-                        <strong className="text-primary text-right w-1/2">
+                        <strong className="text-primary-light text-right w-1/2">
                           {auctionData.currency}
                         </strong>
                       </li>
                       {parseFloat(auctionData.highestBid) > 0 ? (
-                        <li className="border-b border-b-white/10 py-2 flex ">
+                        <li className="border-b border-b-line py-2 flex ">
                           <span className="text-left w-1/2">
                             Current highest bid:
                           </span>
-                          <strong className="text-primary text-right w-1/2">
+                          <strong className="text-primary-light text-right w-1/2">
                             {formatBidAmount(
                               auctionData.highestBid,
                               auctionData.currency
@@ -1413,9 +1413,9 @@ export default function BidPage() {
                           </strong>
                         </li>
                       ) : (
-                        <li className="border-b border-b-white/10 py-2 flex ">
+                        <li className="border-b border-b-line py-2 flex ">
                           <span className="text-left w-1/2">Minimum bid:</span>
-                          <strong className="text-primary text-right w-1/2">
+                          <strong className="text-primary-light text-right w-1/2">
                             {auctionData.minimumBid} {auctionData.currency}
                           </strong>
                         </li>
@@ -1456,19 +1456,19 @@ export default function BidPage() {
 
                     {/* USD Value Display */}
                     {bidAmount && parseFloat(bidAmount) > 0 && (
-                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-line">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-caption">USD Value:</span>
                           <div className="flex items-center">
                             {tokenPriceLoading ? (
                               <>
-                                <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                                <RiLoader5Fill className="animate-spin text-primary-light mr-1" />
                                 <span className="text-caption">Loading...</span>
                               </>
                             ) : priceError ? (
-                              <span className="text-red-400">{priceError}</span>
+                              <span className="text-negative">{priceError}</span>
                             ) : tokenPrice && getUSDValue() ? (
-                              <span className="text-primary font-medium">
+                              <span className="text-primary-light font-medium">
                                 {formatUSDAmount(getUSDValue()!)}
                               </span>
                             ) : (
@@ -1486,7 +1486,7 @@ export default function BidPage() {
                     )}
 
                     {bidError && (
-                      <p className="text-red-500 text-sm mt-1">{bidError}</p>
+                      <p className="text-negative text-sm mt-1">{bidError}</p>
                     )}
                   </div>
 
@@ -1518,24 +1518,24 @@ export default function BidPage() {
                 <div className="text-left text-sm mt-4">
                   {auctionData && (
                     <ul className="space-y-2">
-                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                      <li className="border-b border-b-line py-2 flex justify-between">
                         <span className="text-caption">Bidding on:</span>
-                        <strong className="text-primary">
+                        <strong className="text-primary-light">
                           {auctionData.auctionName}
                         </strong>
                       </li>
-                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                      <li className="border-b border-b-line py-2 flex justify-between">
                         <span className="text-caption">Currency:</span>
-                        <strong className="text-primary">
+                        <strong className="text-primary-light">
                           {auctionData.currency}
                         </strong>
                       </li>
                       {parseFloat(auctionData.highestBid) > 0 ? (
-                        <li className="border-b border-b-white/10 py-2 flex justify-between">
+                        <li className="border-b border-b-line py-2 flex justify-between">
                           <span className="text-caption">
                             Current highest bid:
                           </span>
-                          <strong className="text-primary">
+                          <strong className="text-primary-light">
                             {formatBidAmount(
                               auctionData.highestBid,
                               auctionData.currency
@@ -1544,9 +1544,9 @@ export default function BidPage() {
                           </strong>
                         </li>
                       ) : (
-                        <li className="border-b border-b-white/10 py-2 flex justify-between">
+                        <li className="border-b border-b-line py-2 flex justify-between">
                           <span className="text-caption">Minimum bid:</span>
-                          <strong className="text-primary">
+                          <strong className="text-primary-light">
                             {auctionData.minimumBid} {auctionData.currency}
                           </strong>
                         </li>
@@ -1587,19 +1587,19 @@ export default function BidPage() {
 
                     {/* USD Value Display */}
                     {bidAmount && parseFloat(bidAmount) > 0 && (
-                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-line">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-caption">USD Value:</span>
                           <div className="flex items-center">
                             {tokenPriceLoading ? (
                               <>
-                                <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                                <RiLoader5Fill className="animate-spin text-primary-light mr-1" />
                                 <span className="text-caption">Loading...</span>
                               </>
                             ) : priceError ? (
-                              <span className="text-red-400">{priceError}</span>
+                              <span className="text-negative">{priceError}</span>
                             ) : tokenPrice && getUSDValue() ? (
-                              <span className="text-primary font-medium">
+                              <span className="text-primary-light font-medium">
                                 {formatUSDAmount(getUSDValue()!)}
                               </span>
                             ) : (
@@ -1617,7 +1617,7 @@ export default function BidPage() {
                     )}
 
                     {bidError && (
-                      <p className="text-red-500 text-sm mt-1">{bidError}</p>
+                      <p className="text-negative text-sm mt-1">{bidError}</p>
                     )}
                   </div>
 

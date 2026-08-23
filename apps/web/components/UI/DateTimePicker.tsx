@@ -212,11 +212,11 @@ export default function DateTimePicker({
           onClick={() => handleDateSelect(day)}
           disabled={isDisabled}
           className={twMerge(
-            'p-2 text-sm rounded-lg transition-all text-white hover:bg-gray-800',
+            'p-2 text-sm rounded-lg transition-all text-white hover:bg-surface-2',
             isSelected && 'bg-primary text-black hover:bg-primary/90',
-            isToday && !isSelected && 'bg-white/10 text-primary font-semibold',
-            isDisabled && 'text-gray-600 cursor-not-allowed hover:bg-transparent',
-            !isSelected && !isToday && !isDisabled && 'hover:bg-gray-800'
+            isToday && !isSelected && 'bg-white/10 text-primary-light font-semibold',
+            isDisabled && 'text-caption cursor-not-allowed hover:bg-transparent',
+            !isSelected && !isToday && !isDisabled && 'hover:bg-surface-2'
           )}
         >
           {day}
@@ -235,12 +235,12 @@ export default function DateTimePicker({
         className={twMerge(
           'block text-sm font-medium mb-2 mt-4',
           disabled && 'text-disabled',
-          showError && 'text-red-500',
-          !showError && 'text-gray-500'
+          showError && 'text-negative',
+          !showError && 'text-caption'
         )}
       >
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-negative ml-1">*</span>}
       </label>
 
       {/* Input Field */}
@@ -263,7 +263,7 @@ export default function DateTimePicker({
           className={twMerge(
             'w-full px-4 py-3 pr-12 rounded-lg border-[1px] bg-transparent transition-all duration-200 cursor-pointer text-foreground',
             disabled && 'border-disabled cursor-not-allowed opacity-60',
-            !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
+            !disabled && (isFocused || hasValue) && showError && 'border-negative/40 outline-red-500',
             !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
             !disabled && !(isFocused || hasValue) && 'border-gray-300 hover:border-gray-400',
             isFocused && 'outline-1 outline-offset-1'
@@ -279,7 +279,7 @@ export default function DateTimePicker({
                 e.stopPropagation()
                 handleClear()
               }}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-caption hover:text-caption transition-colors"
               title="Clear selection"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -287,7 +287,7 @@ export default function DateTimePicker({
               </svg>
             </button>
           )}
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-caption" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
@@ -296,7 +296,7 @@ export default function DateTimePicker({
       {/* Date Picker Dropdown */}
         <div
           ref={datePickerRef}
-          className={`fixed top-0 left-0 w-full h-screen bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-2 transition-all duration-200 ${isDatePickerOpen ? "" : "opacity-0 pointer-events-none"} `}
+          className={`fixed top-0 left-0 w-full h-screen bg-surface bg-opacity-50 flex items-center justify-center z-50 p-2 transition-all duration-200 ${isDatePickerOpen ? "" : "opacity-0 pointer-events-none"} `}
           onClick={(e) => {
             if (e.target === datePickerRef.current) {
               setIsDatePickerOpen(false);
@@ -312,7 +312,7 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={() => handleMonthChange('prev')}
-                className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
+                className="p-1 hover:bg-surface-2 rounded transition-colors text-white"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -324,7 +324,7 @@ export default function DateTimePicker({
               <button
                 type="button"
                 onClick={() => handleMonthChange('next')}
-                className="p-1 hover:bg-gray-800 rounded transition-colors text-white"
+                className="p-1 hover:bg-surface-2 rounded transition-colors text-white"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -335,7 +335,7 @@ export default function DateTimePicker({
             {/* Day Headers */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="p-2 text-center text-sm font-medium text-gray-400">
+                <div key={day} className="p-2 text-center text-sm font-medium text-caption">
                   {day}
                 </div>
               ))}
@@ -347,7 +347,7 @@ export default function DateTimePicker({
             </div>
 
             {/* Time Selection */}
-            <div className="border-t border-gray-700 pt-4">
+            <div className="border-t border-line pt-4">
               <div className="mb-3">
                 <span className="text-sm font-medium text-white mb-2 block">Time:</span>
                 <div className="flex items-center gap-2">
@@ -366,7 +366,7 @@ export default function DateTimePicker({
                     </select>
                   </div>
                   
-                  <span className="text-gray-400 font-medium">:</span>
+                  <span className="text-caption font-medium">:</span>
                   
                   {/* Minute Dropdown */}
                   <div className="relative">
@@ -406,7 +406,7 @@ export default function DateTimePicker({
 
       {/* Error Message */}
       {showError && (
-        <p className="text-red-500 text-sm mt-1 ml-1">
+        <p className="text-negative text-sm mt-1 ml-1">
           {label} is required
         </p>
       )}

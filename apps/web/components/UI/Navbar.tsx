@@ -1,530 +1,280 @@
 "use client";
 
-import { useGlobalContext } from "@/utils/providers/globalContext";
 import Image from "next/image";
-import Link from "next/link";
-import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  Info,
-  Trophy,
-  QrCode,
-  User,
-  PlusCircle,
-  Clock,
-  Settings,
+  Compass,
+  Users,
+  Store,
+  Megaphone,
+  Gavel,
+  Zap,
+  Wallet,
+  LayoutDashboard,
+  Plus,
+  ChevronDown,
+  Bell,
 } from "lucide-react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import LoginWithOAuth from "../utils/twitterConnect";
-import AggregateConnector from "../utils/aggregateConnector";
-import ReviewFlowManager from "@/components/ReviewFlowManager";
-import { useCallback, useState, useEffect } from "react";
-import { getAccessToken } from '@privy-io/react-auth';
-import { useXPNotification } from "@/utils/providers/xpNotificationContext";
-import XPProgressBar from "./XPProgressBar";
+import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import Avatar from "@/components/UI/Avatar";
+import Badge from "@/components/UI/Badge";
+import { DEMO_VIEWER } from "@/utils/demo/mockData";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof Compass;
+  badge?: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { label: "Discover", href: "/", icon: Compass },
+  { label: "Creators", href: "/leaderboard", icon: Users },
+  { label: "Marketplace", href: "/marketplace", icon: Store },
+  { label: "Campaigns", href: "/campaigns", icon: Megaphone },
+  { label: "Auctions", href: "/auctions", icon: Gavel },
+  { label: "Activate", href: "/activate", icon: Zap, badge: "NEW" },
+  { label: "Vaults", href: "/vaults", icon: Wallet },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+];
+
+/**
+ * Mobile tab bar, split either side of the centred "List" action so the
+ * primary action sits under the thumb.
+ */
+const MOBILE_LEFT: NavItem[] = [
+  { label: "Discover", href: "/", icon: Compass },
+  { label: "Creators", href: "/leaderboard", icon: Users },
+];
+
+const MOBILE_RIGHT: NavItem[] = [
+  { label: "Auctions", href: "/auctions", icon: Gavel },
+  { label: "Vaults", href: "/vaults", icon: Wallet },
+];
 
 export default function Navbar() {
-  const { wallets } = useWallets();
-  const externalWallets = wallets.filter(
-    (wallet) => wallet.walletClientType !== "privy"
-  );
-
-  const { user } = useGlobalContext();
-  const address =
-    externalWallets.length > 0 ? externalWallets[0].address : null;
-  const navigateWithLoader = useNavigateWithLoader();
+  const router = useRouter();
   const pathname = usePathname();
+  const navigate = useNavigateWithLoader();
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
 
-  const handleNavClick = (e: React.MouseEvent, path: string) => {
+  const viewer = DEMO_VIEWER;
+
+  const go = (e: React.MouseEvent, href: string) => {
     e.preventDefault();
-    navigateWithLoader(path);
+    navigate(href);
   };
 
-  const router = useRouter();
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  const { authenticated, getAccessToken } = usePrivy();
-  const { refreshCounter, setXPStats } = useXPNotification();
-  const [xpStats, setXpStats] = useState<{ level: number; currentSeasonXP: number; totalXP: number; xpToNextLevel: number } | null>(null);
-
-  const [pastDrawerOpen, setPastDrawerOpen] = useState(false);
-  const [pastAuctions, setPastAuctions] = useState<any[]>([]);
-  const [pastLoading, setPastLoading] = useState(false);
-  const [pastError, setPastError] = useState<string | null>(null);
-
-  const fetchPastAuctions = useCallback(async () => {
-    try {
-      setPastLoading(true);
-      setPastError(null);
-      const response = await fetch('/api/auctions/getEnded?limit=5');
-      const data = await response.json();
-
-      if (data.success) {
-        setPastAuctions(data.auctions || []);
-      } else {
-        setPastError(data.message || data.error || 'Failed to load past auctions');
-      }
-    } catch (error) {
-      console.error('Error fetching past auctions:', error);
-      setPastError('Network error: Unable to load past auctions');
-    } finally {
-      setPastLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (pastDrawerOpen) {
-      fetchPastAuctions();
-    }
-  }, [pastDrawerOpen, fetchPastAuctions]);
-
-  useEffect(() => {
-    if (user) {
-      const fetchXPStats = async () => {
-        try {
-          const accessToken = await getAccessToken();
-          const response = await fetch(`/api/leaderboard/user-stats`, {
-            headers: {
-              "x-user-social-id": user.socialId,
-              'Authorization': `Bearer ${accessToken}`
-            }
-          });
-          const data = await response.json();
-          console.log('Fetched XP stats:', data);
-          if (data.success) {
-            const stats = {
-              xpToNextLevel: data.stats.xpToNextLevel,
-              level: data.stats.level,
-              currentSeasonXP: data.stats.currentSeasonXP,
-              totalXP: data.stats.totalXP
-            };
-            setXpStats(stats);
-            setXPStats(stats); // Also update the context
-          }
-        } catch (err) {
-          console.error('Failed to fetch XP stats:', err);
-        }
-      };
-
-      if(user)
-      fetchXPStats();
-    }
-  }, [user, getAccessToken, refreshCounter, setXPStats]);
-
-  const formatEndedLabel = (endDate: string) => {
-    const end = new Date(endDate);
-    const diffMs = Date.now() - end.getTime();
-    if (diffMs < 3600_000) return 'Just ended';
-    const diffHours = Math.floor(diffMs / 3600_000);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
-    const diffWeeks = Math.floor(diffDays / 7);
-    return `${diffWeeks}w ago`;
+  const renderMobileItem = (item: NavItem) => {
+    const active = isActive(item.href);
+    const Icon = item.icon;
+    return (
+      <a
+        key={item.href}
+        href={item.href}
+        onClick={(e) => go(e, item.href)}
+        className="flex-1 flex flex-col items-center justify-center gap-1"
+      >
+        <span
+          className={`flex items-center justify-center w-10 h-6 rounded-md transition-colors ${
+            active ? "bg-primary/20" : ""
+          }`}
+        >
+          <Icon
+            className={`w-[18px] h-[18px] ${
+              active ? "text-primary-light" : "text-caption"
+            }`}
+          />
+        </span>
+        <span
+          className={`text-[10px] font-medium ${
+            active ? "text-primary-light" : "text-caption"
+          }`}
+        >
+          {item.label}
+        </span>
+      </a>
+    );
   };
 
   return (
     <>
-      {/* XP Stats Bar - Mobile */}
-      {user && xpStats && (
-        <XPProgressBar
-          level={xpStats.level}
-          currentSeasonXP={xpStats.currentSeasonXP}
-          xpToNextLevel={xpStats.xpToNextLevel}
-          variant="mobile"
-        />
-      )}
-      {/* Mobile Bottom Navbar */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-screen h-16 bg-black border-t border-white/30 z-50 lg:hidden">
-        <div className="w-full h-full flex justify-around items-center px-2">
-          {/* Auctions */}
+      {/* ── Mobile top header ─────────────────────────────────── */}
+      <header className="fixed top-0 left-0 right-0 h-14 z-40 lg:hidden bg-background/95 backdrop-blur-md border-b border-line flex items-center justify-between px-4">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2.5"
+          aria-label="House home"
+        >
+          <Image src="/logo.svg" alt="" width={24} height={24} />
+          <span className="flex flex-col items-start leading-none">
+            <span className="text-white font-extrabold tracking-[0.16em] text-[13px]">
+              HOUSE
+            </span>
+          </span>
+        </button>
+
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              router.push("/");
-            }}
-            className="flex flex-col items-center justify-center flex-1"
+            className="relative w-9 h-9 rounded-lg border border-line bg-surface text-caption flex items-center justify-center"
+            aria-label="Notifications"
           >
-            <div className={` ${pathname === "/" && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-              <Image
-                src="/pfp.jpg"
-                alt="Auctions"
-                width={20}
-                height={20}
-                className={`rounded-md mb-0.5 ${pathname === "/" ? "opacity-100" : "opacity-60"}`}
-              />
-            </div>
-            <span className={`text-[10px] ${pathname === "/" ? "text-primary" : "text-white/60"}`}>
-              Auctions
+            <Bell className="w-4 h-4" />
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              2
             </span>
           </button>
-
-          {/* Leaderboard */}
-          <a
-            href="/leaderboard"
-            onClick={(e) => handleNavClick(e, "/leaderboard")}
-            className="flex flex-col items-center justify-center flex-1"
-          ><div className={` ${pathname=== "/leaderboard" && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-            <Trophy className={`w-5 h-5 mb-0.5 ${pathname === "/leaderboard" ? "text-white " : "text-white/60"}`} />
-          </div>
-            
-            <span className={`text-[10px] ${pathname === "/leaderboard" ? "text-primary" : "text-white/60"}`}>
-              Leaderboard
-            </span>
-          </a>
-
-          {/* Reviews */}
-          <ReviewFlowManager isMobile={true} />
-
-          {/* Create */}
-          {authenticated && address && (
-            <a
-              href="/create"
-              onClick={(e) => handleNavClick(e, "/create")}
-              className="flex flex-col items-center justify-center flex-1"
-            >
-              <div className={` ${pathname === "/create" && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-                <PlusCircle className={`w-5 h-5 mb-0.5 ${pathname === "/create" ? "text-white" : "text-primary/70"}`} />
-              </div>
-              <span className={`text-[10px] ${pathname === "/create" ? "text-primary" : "text-primary/60"}`}>
-                Create
-              </span>
-            </a>
-          )}
-
-          {/* Past Auctions
-          <button
-            onClick={() => setPastDrawerOpen(true)}
-            className="flex flex-col items-center justify-center flex-1"
-          >
-            <div className={` ${pastDrawerOpen && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-              <Clock className={`w-5 h-5 mb-0.5 ${pastDrawerOpen ? "text-white" : "text-white/60"}`} />
-            </div>
-            <span className={`text-[10px] ${pastDrawerOpen ? "text-primary" : "text-white/60"}`}>
-              Past
-            </span>
-          </button> */}
-
-          {/* Info */}
-          <a
-            href="/info"
-            onClick={(e) => handleNavClick(e, "/info")}
-            className="flex flex-col items-center justify-center flex-1"
-          >
-            <div className={` ${pathname === "/info" && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-              <Info className={`w-5 h-5 mb-0.5 ${pathname === "/info" ? "text-white" : "text-white/60"}`} />
-            </div>
-            <span className={`text-[10px] ${pathname === "/info" ? "text-primary" : "text-white/60"}`}>
-              Info
-            </span>
-          </a>
-
-          {/* Profile */}
-          <div className="flex flex-col items-center justify-center flex-1">
-            <div className="flex flex-col items-center">
-              <div className={` ${pathname === "/profile" && "selected-gradient w-7 flex items-center justify-center aspect-square rounded-md"} `}>
-                <AggregateConnector/>
-              </div>
-              
-            </div>
-          </div>
-        </div>
-      </div>
-
-
-      {/* Desktop Bottom Navbar */}
-      <div className="hidden lg:flex lg:fixed lg:bottom-0 lg:left-0 lg:right-0 h-24 lg:items-center lg:justify-between lg:px-6 lg:z-50">
-        {/* Left - AggregateConnector */}
-        <div className="flex items-center">
-          <AggregateConnector />
-        </div>
-
-        {/* Center - Floating Mini Navbar */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-xl bg-black/80 border border-white/10 backdrop-blur-md ">
-          {/* House Logo */}
-          <button
-            onClick={() => {
-              router.push("/");
-            }}
-            className={` rounded-xl overflow-hidden transition-all hover:scale-105 duration-200 ${
-              pathname === "/"
-                ? "text-white shadow-lg shadow-primary/30"
-                : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-            }`}
-          >
-            <Image
-              src="/pfp.jpg"
-              alt="Logo"
-              width={48}
-              height={48}
-              className="rounded-xl"
-            />
+          <button onClick={() => navigate("/profile")} aria-label="Profile">
+            <Avatar src={viewer.pfp_url} alt={viewer.display_name} size={34} />
           </button>
-
-          {/* Separator */}
-          <div className="w-[2px] h-8 bg-white/10"></div>
-
-          {/* Leaderboard */}
-          <a
-            href="/leaderboard"
-            onClick={(e) => handleNavClick(e, "/leaderboard")}
-            className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-              pathname === "/leaderboard"
-                ? "text-white selected-gradient"
-                : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-            }`}
-          >
-            <Trophy className={` ${
-              pathname === "/leaderboard"
-                ? "text-white"
-                : "text-white/30"
-            } w-5 h-5`} />
-          </a>
-
-          {/* Past Auctions */}
-          <button
-            onClick={() => setPastDrawerOpen(true)}
-            className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-              pastDrawerOpen
-                ? "text-white selected-gradient"
-                : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-            }`}
-          >
-            <Clock className={` ${
-              pastDrawerOpen
-                ? "text-white"
-                : "text-white/30"
-            } w-5 h-5`} />
-          </button>
-
-          {/* Information */}
-          <a
-            href="/info"
-            onClick={(e) => handleNavClick(e, "/info")}
-            className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-              pathname === "/info"
-                ? "text-white selected-gradient"
-                : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-            }`}
-          >
-            <Info className={` ${
-              pathname === "/info"
-                ? "text-white"
-                : "text-white/30"
-            } w-5 h-5`} />
-          </a>
-
-          {/* Profile */}
-          <a
-            href="/profile"
-            onClick={(e) => handleNavClick(e, "/profile")}
-            className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-              pathname === "/profile"
-                ? "text-white selected-gradient"
-                : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-            }`}
-          >
-            <User className={` ${
-              pathname === "/profile"
-                ? "text-white"
-                : "text-white/30"
-            } w-5 h-5`} />
-          </a>
-
-          {/* Settings - Bot API Keys */}
-          {authenticated && (
-            <a
-              href="/settings"
-              onClick={(e) => handleNavClick(e, "/settings")}
-              className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-                pathname === "/settings"
-                  ? "text-white selected-gradient"
-                  : "text-white hover:text-white hover:bg-white/10 bg-white/5"
-              }`}
-            >
-              <Settings className={` ${
-                pathname === "/settings"
-                  ? "text-white"
-                  : "text-white/30"
-              } w-5 h-5`} />
-            </a>
-          )}
-
-          {/* Reviews */}
-          <ReviewFlowManager isMobile={false} />
-
-          {authenticated && address && (
-            <>
-            {/* Separator */}
-            <div className="w-[2px] h-8 bg-white/10"></div>
-
-            {/* Create Button */}
-            <a
-              href="/create"
-              onClick={(e) => handleNavClick(e, "/create")}
-              className={`p-2 w-[48px] aspect-square flex items-center justify-center rounded-xl transition-all hover:scale-105 duration-200 ${
-                pathname === "/create"
-                  ? "text-white selected-gradient"
-                  : "text-primary/70 bg-primary/10 hover:text-primary/90 hover:bg-primary/30"
-              }`}
-            >
-              <PlusCircle className={` ${
-                pathname === "/create"
-                  ? "text-white"
-                  : "text-primary/70"
-              } w-5 h-5`} />
-            </a>
-          </>)}
-
-          {/* XP Stats - Desktop */}
-          {user && xpStats && (
-            <>
-              <div className="w-[2px] h-8 bg-white/10"></div>
-              <XPProgressBar
-                level={xpStats.level}
-                currentSeasonXP={xpStats.currentSeasonXP}
-                xpToNextLevel={xpStats.xpToNextLevel}
-                variant="desktop"
-              />
-            </>
-          )}
         </div>
+      </header>
 
-        {/* Right - Empty space for balance */}
-        <div className="w-[200px]"></div>
-      </div>
+      {/* ── Mobile bottom tab bar ─────────────────────────────── */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 z-50 lg:hidden bg-[#070a12]/97 backdrop-blur-md border-t border-line">
+        <div className="h-full flex items-stretch px-1">
+          {MOBILE_LEFT.map(renderMobileItem)}
 
-      {/* Past Auctions Drawer */}
-      {pastDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setPastDrawerOpen(false)}
-          />
-          <div className="relative z-50 w-full max-w-3xl bg-background/95 border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-5 max-lg:p-3 border-b border-white/10 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/50 mb-1">Spotlight</p>
-                <h3 className="text-2xl font-bold bg-gradient-to-br from-yellow-400 to-orange-500 bg-clip-text text-transparent">Past Auctions</h3>
-                <p className="text-sm text-white/70">Recently ended auctions and final bids</p>
-              </div>
-              <button
-                onClick={() => setPastDrawerOpen(false)}
-                className="text-white/70 hover:text-white text-sm font-medium"
+          {/* List — the primary action, centred under the thumb */}
+          <a
+            href="/create"
+            onClick={(e) => go(e, "/create")}
+            className="flex-1 flex flex-col items-center justify-center gap-1"
+          >
+            <span className="flex items-center justify-center w-11 h-7 rounded-lg bg-primary shadow-lg shadow-primary/30">
+              <Plus className="w-[19px] h-[19px] text-white" />
+            </span>
+            <span className="text-[10px] font-semibold text-primary-light">
+              List
+            </span>
+          </a>
+
+          {MOBILE_RIGHT.map(renderMobileItem)}
+        </div>
+      </nav>
+
+      {/* ── Desktop sidebar ───────────────────────────────────── */}
+      <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[212px] z-50 flex-col bg-[#070a12] border-r border-line">
+        {/* Brand */}
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2.5 px-5 h-[76px] shrink-0"
+          aria-label="House home"
+        >
+          <Image src="/logo.svg" alt="" width={30} height={30} />
+          <span className="flex flex-col items-start leading-none">
+            <span className="text-white font-extrabold tracking-[0.2em] text-[17px]">
+              HOUSE
+            </span>
+            <span className="text-[8px] tracking-[0.32em] text-caption mt-1">
+              AUCTIONS
+            </span>
+          </span>
+        </button>
+
+        {/* Primary nav */}
+        <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-0.5">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const Icon = item.icon;
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={(e) => go(e, item.href)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                  active
+                    ? "bg-primary text-white"
+                    : "text-caption hover:text-white hover:bg-white/[0.04]"
+                }`}
               >
-                Close
-              </button>
-            </div>
-            <div className="max-h-[70vh] overflow-y-auto px-6 py-5 max-md:p-3 space-y-5">
-              {pastLoading && (
-                <div className="text-center text-white/70 text-sm">Loading past auctions...</div>
-              )}
-
-              {!pastLoading && pastError && (
-                <div className="text-center space-y-3">
-                  <p className="text-red-400 text-sm">{pastError}</p>
-                  <button
-                    onClick={fetchPastAuctions}
-                    className="px-4 py-2 text-sm bg-white/10 hover:bg-white/20 rounded-md"
+                <Icon className="w-[17px] h-[17px] shrink-0" />
+                <span className="truncate">{item.label}</span>
+                {item.badge && (
+                  <Badge
+                    tone={active ? "neutral" : "accent"}
+                    className="ml-auto py-0 px-1 text-[8px]"
                   >
-                    Retry
-                  </button>
-                </div>
-              )}
+                    {item.badge}
+                  </Badge>
+                )}
+              </a>
+            );
+          })}
+        </nav>
 
-              {!pastLoading && !pastError && pastAuctions.length === 0 && (
-                <div className="text-center text-white/70 text-sm">
-                  No past auctions to display yet.
-                </div>
-              )}
-
-              {!pastLoading && !pastError && pastAuctions.length > 0 && (
-                <div className="space-y-4">
-                  {pastAuctions.map((auction) => (
-                    <div key={auction._id} className="bg-black backdrop-blur-lg border border-yellow-400/20 shadow-xl shadow-orange-500/10 rounded-2xl p-5 max-lg:p-3 flex flex-col gap-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs uppercase tracking-wide text-white/50">Ended {formatEndedLabel(auction.endDate)}</p>
-                          <h4 className="text-lg font-semibold text-white">{auction.auctionName}</h4>
-                          <p className="text-xs text-white/60">
-                            Hosted by {auction.hostedBy?.display_name || (auction.hostedBy?.username ? `@${auction.hostedBy.username}` : "Unknown")}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => navigateWithLoader(`/bid/${auction.blockchainAuctionId}`)}
-                          className="text-xs px-3 py-1 bg-white/10 hover:bg-white/20 rounded-md"
-                        >
-                          Details
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-3 text-sm text-white/80">
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                          <p className="text-xs text-white/60">Winning Bid</p>
-                          <p className="text-white font-semibold text-base">
-                            {auction.highestBid.toLocaleString()} {auction.currency}
-                          </p>
-                        </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                          <p className="text-xs text-white/60">Min Bid</p>
-                          <p className="text-white font-semibold text-base">
-                            {auction.minimumBid.toLocaleString()} {auction.currency}
-                          </p>
-                        </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                          <p className="text-xs text-white/60">Participants</p>
-                          <p className="text-white font-semibold text-base">
-                            {auction.participantCount}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 text-sm">
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-white/60">Winner</p>
-                            <p className="text-white font-semibold text-base">
-                              {auction.topBidder?.username || (auction.topBidder?.socialId ? `User ${auction.topBidder.socialId}` : "No winner")}
-                            </p>
-                          </div>
-                          {auction.topBidder && (
-                            <button
-                              onClick={() => navigateWithLoader(`/user/${auction.topBidder?._id}`)}
-                              className="text-xs px-3 py-1 text-white/70 hover:text-white"
-                            >
-                              View
-                            </button>
-                          )}
-                        </div>
-                        <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between">
-                          <div>
-                            <p className="text-xs text-white/60">Host</p>
-                            <p className="text-white font-semibold text-base">
-                              {auction.hostedBy?.display_name || (auction.hostedBy?.username ? `@${auction.hostedBy.username}` : auction.hostedBy?.socialId || "Unknown")}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => navigateWithLoader(`/user/${auction.hostedBy?._id}`)}
-                            className="text-xs px-3 py-1 text-white/70 hover:text-white"
-                          >
-                            View
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => setPastDrawerOpen(false)}
-                className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-md transition"
-              >
-                Done
-              </button>
-            </div>
+        {/* Promo — list your own inventory */}
+        <div className="px-3 pb-3 shrink-0">
+          <div className="card p-3.5">
+            <p className="text-[13px] font-bold text-white leading-snug">
+              List Your Media
+            </p>
+            <p className="text-[11px] text-caption mt-1 leading-snug">
+              Earn with your audience.
+            </p>
+            <a
+              href="/create"
+              onClick={(e) => go(e, "/create")}
+              className="btn-primary mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-[11px] tracking-[0.06em] uppercase"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              List Media
+            </a>
           </div>
         </div>
-      )}
+
+        {/* Account */}
+        <div className="px-3 pb-3 shrink-0 border-t border-line pt-3">
+          <button
+            onClick={() => navigate("/profile")}
+            className="w-full flex items-center gap-2.5 px-1.5 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+          >
+            <Avatar
+              src={viewer.pfp_url}
+              alt={viewer.display_name}
+              size={34}
+              verified
+            />
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block text-[13px] font-semibold text-white truncate">
+                {viewer.display_name}
+              </span>
+              <span className="block text-[10px] text-caption truncate">
+                {viewer.role}
+              </span>
+            </span>
+            <ChevronDown className="w-4 h-4 text-caption shrink-0" />
+          </button>
+        </div>
+
+        {/* Theme toggle */}
+        <div className="px-3 pb-4 shrink-0">
+          <div
+            className="flex p-0.5 rounded-lg bg-surface-2 border border-line"
+            role="group"
+            aria-label="Colour theme"
+          >
+            {(["light", "dark"] as const).map((option) => (
+              <button
+                key={option}
+                onClick={() => setTheme(option)}
+                aria-pressed={theme === option}
+                className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+                  theme === option
+                    ? "bg-primary text-white"
+                    : "text-caption hover:text-white"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
     </>
   );
 }

@@ -106,14 +106,14 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
       />
       
       {isLoading && (
-        <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+        <div className="mt-2 flex items-center gap-2 text-sm text-caption">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
           Resolving token information...
         </div>
       )}
 
       {contractError && (
-        <div className="mt-2 text-sm text-red-500">
+        <div className="mt-2 text-sm text-negative">
           {contractError}
         </div>
       )}
@@ -121,13 +121,13 @@ export default function CurrencySearch({ onSelect, selectedCurrency }: CurrencyS
       {contractTokenInfo && !contractError && (
         <div
           className={twMerge(
-            "mt-3 p-3 bg-primary/10 rounded-lg border border-primary/20",
+            "mt-3 p-3 bg-primary/10 rounded-lg border border-line",
             selectedCurrency?.contractAddress === contractTokenInfo.contractAddress ? "border-primary" : "opacity-70"
           )}
         >
           <div className="flex justify-between items-center">
             <div>
-              <div className="font-semibold text-primary">{contractTokenInfo.symbol}</div>
+              <div className="font-semibold text-primary-light">{contractTokenInfo.symbol}</div>
               <div className="text-sm text-foreground">{contractTokenInfo.name}</div>
             </div>
           </div>

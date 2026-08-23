@@ -31,7 +31,7 @@ export default function ReviewCard({
   const navigate = useNavigateWithLoader()
 
   return (
-    <div className="bg-primary/5 rounded-lg p-2 border border-primary/10 hover:bg-primary/10 transition-all duration-200">
+    <div className="bg-primary/5 rounded-lg p-2 border border-line hover:bg-primary/10 transition-all duration-200">
       <div className="flex items-start gap-2 mb-3">
         {reviewerPfp && (
           <img
@@ -50,7 +50,7 @@ export default function ReviewCard({
                 <RiStarFill
                   key={i}
                   className={`text-sm ${
-                    i < rating ? "text-yellow-400" : "text-gray-600"
+                    i < rating ? "text-warning" : "text-caption"
                   }`}
                 />
               ))}

@@ -70,7 +70,7 @@ const RatingStars: React.FC<RatingStarsProps> = ({
               className={cn(
                 sizeClasses[size],
                 'transition-colors duration-200',
-                isFilled ? 'fill-yellow-400 text-yellow-400' : 'fill-none text-gray-400'
+                isFilled ? 'fill-yellow-400 text-warning' : 'fill-none text-caption'
               )}
             />
           </button>

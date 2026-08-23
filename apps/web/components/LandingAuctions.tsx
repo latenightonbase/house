@@ -962,7 +962,7 @@ const LandingAuctions: React.FC = () => {
                 href={part}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-primary-light hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >
                 {displayText}
@@ -976,73 +976,50 @@ const LandingAuctions: React.FC = () => {
   };
 
   const SkeletonCard = () => (
-    <div className="bg-black/40 w-full max-w-full text-white border border-secondary/10 rounded-2xl transition-all overflow-hidden flex flex-col animate-pulse col-span-1">
+    <div className="card w-full max-w-full overflow-hidden flex flex-col animate-pulse col-span-1">
       {/* Image skeleton */}
-      <div className="relative w-full h-64 bg-secondary/20"></div>
+      <div className="relative w-full h-48 bg-white/[0.04] border-b border-line"></div>
 
       {/* Content skeleton */}
-      <div className="p-6 flex flex-col grow">
-        {/* Title */}
-        <div className="h-8 bg-secondary/20 rounded w-3/4 mb-2"></div>
-        
-        {/* Description with min-h-6 to match actual card */}
+      <div className="p-5 flex flex-col grow">
+        <div className="h-5 bg-white/[0.06] rounded w-3/4 mb-2"></div>
         <div className="mb-3 min-h-6">
-          <div className="h-4 bg-secondary/20 rounded w-full"></div>
+          <div className="h-4 bg-white/[0.04] rounded w-full"></div>
         </div>
 
-        {/* Host info */}
         <div className="flex items-center gap-2 mb-4">
-          <div className="h-3 bg-secondary/20 rounded w-6"></div>
-          <div className="w-5 h-5 bg-secondary/20 rounded-full"></div>
-          <div className="h-3 bg-secondary/20 rounded w-24"></div>
+          <div className="w-5 h-5 bg-white/[0.06] rounded-full"></div>
+          <div className="h-3 bg-white/[0.04] rounded w-24"></div>
         </div>
 
-        {/* Bottom section */}
-        <div className="border-t border-secondary/10 pt-4 mt-auto space-y-3 flex justify-between items-center">
-          <div className="flex flex-col justify-center items-start">
-            <div className="h-4 bg-secondary/20 rounded w-20 mb-1"></div>
-            <div className="h-6 bg-secondary/20 rounded w-28 mb-1"></div>
-            <div className="h-3 bg-secondary/20 rounded w-16"></div>
-          </div>
-          <div className="flex items-center justify-between bg-secondary/20 rounded-full border border-secondary/30 px-2 py-1 w-16">
-            <div className="w-4 h-4 bg-secondary/20 rounded-full"></div>
-            <div className="h-4 bg-secondary/20 rounded w-6"></div>
-          </div>
+        <div className="mt-auto grid grid-cols-2 gap-2">
+          <div className="tile p-3 h-[76px]" />
+          <div className="tile p-3 h-[76px]" />
         </div>
+        <div className="h-10 bg-white/[0.06] rounded-lg mt-3" />
       </div>
     </div>
   );
 
   // Currency Filter Component (reusable)
+  const filterPill = (active: boolean) =>
+    `px-3.5 py-1.5 font-medium text-sm transition-colors duration-200 rounded-md whitespace-nowrap shrink-0 border ${
+      active
+        ? "bg-primary/15 border-primary/40 text-white"
+        : "bg-transparent border-transparent text-caption hover:text-white"
+    }`;
+
   const CurrencyFilterButtons = () => (
-    <div className="flex gap-1 justify-end mb-6 overflow-x-hidden">
-      <button
-        onClick={() => setCurrencyFilter("all")}
-        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
-          currencyFilter === "all"
-            ? "selected-gradient"
-            : "bg-white/5 border "
-        }`}
-      >
+    <div className="flex gap-1 p-1 tile w-fit overflow-x-auto">
+      <button onClick={() => setCurrencyFilter("all")} className={filterPill(currencyFilter === "all")}>
         All
       </button>
-      <button
-        onClick={() => setCurrencyFilter("usdc")}
-        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
-          currencyFilter === "usdc"
-            ? "selected-gradient"
-            : "bg-white/5 border "
-        }`}
-      >
+      <button onClick={() => setCurrencyFilter("usdc")} className={filterPill(currencyFilter === "usdc")}>
         USDC
       </button>
       <button
         onClick={() => setCurrencyFilter("creator-coins")}
-        className={`px-3 py-2 font-medium text-white text-sm transition-colors duration-200 capitalize rounded-lg whitespace-nowrap shrink-0 border-white/10 ${
-          currencyFilter === "creator-coins"
-            ? "selected-gradient"
-            : "bg-white/5 border "
-        }`}
+        className={filterPill(currencyFilter === "creator-coins")}
       >
         Creator Coins
       </button>
@@ -1050,22 +1027,21 @@ const LandingAuctions: React.FC = () => {
   );
 
   return (
-    <div className="w-full lg:mt-10 mt-8 pb-24 ">
+    <div className="w-full">
       {/* Main Content */}
-      <div className="w-full max-lg:mx-auto lg:w-[1000px]">
+      <div className="w-full">
         {/* Recent Activity Ticker - Mobile Only */}
-        <div className="lg:hidden mb-4 overflow-hidden bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 rounded-lg py-2">
+        <div className="lg:hidden mb-4 overflow-hidden card py-2">
           <div className="flex animate-scroll whitespace-nowrap">
             {recentBids.length > 0 ? (
               <>
                 {[...recentBids, ...recentBids, ...recentBids].map((bid, index) => (
                   <div key={index} className="inline-flex items-center mx-4 text-sm">
                     <span className="text-caption">{bid.bidderName}</span>
-                    
                     <span className="mx-2 text-caption">•</span>
                     <span className="text-white font-medium">{bid.auctionName}</span>
-                    <span className="mx-2 text-green-500">→</span>
-                    <span className="text-primary font-semibold">
+                    <span className="mx-2 text-caption">→</span>
+                    <span className="text-primary-light font-semibold">
                       {bid.bidAmount.toLocaleString()} {bid.currency}
                     </span>
                   </div>
@@ -1079,28 +1055,29 @@ const LandingAuctions: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex max-lg:flex-col lg:items-center justify-between lg:mb-4 max-lg:gap-4">
-          <h2 className="text-2xl font-bold gradient-text">Latest Auctions</h2>
+        <div className="flex max-lg:flex-col lg:items-center justify-between mb-4 max-lg:gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="panel-label">Live now</span>
+            <h2 className="text-xl font-bold text-white">Latest Auctions</h2>
+          </div>
           {/* Currency Filter */}
-        <CurrencyFilterButtons />
+          <CurrencyFilterButtons />
         </div>
-
-        
 
       <div className="w-full">
       {loading ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 w-full">
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
           <SkeletonCard />
         </div>
       ) : error ? (
-        <div className="bg-white/10 rounded-lg shadow-md border border-gray-700 p-8 text-center">
+        <div className="card p-8 text-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 bg-red-900 rounded-full flex items-center justify-center">
+            <div className="w-14 h-14 bg-negative/10 border border-negative/30 rounded-full flex items-center justify-center">
               <svg
-                className="w-8 h-8 text-red-400"
+                className="w-7 h-7 text-negative"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1128,11 +1105,11 @@ const LandingAuctions: React.FC = () => {
           </div>
         </div>
       ) : auctions.length === 0 ? (
-        <div className="bg-white/10 rounded-lg shadow-md border border-primary/10 p-8 text-center">
+        <div className="card p-8 text-center">
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 gradient-button rounded-full flex items-center justify-center">
+            <div className="w-14 h-14 bg-primary/10 border border-primary/30 rounded-full flex items-center justify-center">
               <svg
-                className="w-8 h-8 text-white"
+                className="w-7 h-7 text-primary-light"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1165,7 +1142,7 @@ const LandingAuctions: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4 w-full">
         {auctions.map((auction, index) => (
           <AuctionCard
             key={auction._id}
@@ -1194,7 +1171,7 @@ const LandingAuctions: React.FC = () => {
 
         {/* Debug info and manual load more */}
         {/* {process.env.NEXT_PUBLIC_ENV === "DEV" && (
-          <div className="mt-4 p-4 bg-gray-800 rounded">
+          <div className="mt-4 p-4 bg-surface-2 rounded">
             <p>
               Debug: hasMore={String(hasMore)}, loadingMore={String(loadingMore)},
               page={page}, auctionsCount={auctions.length}, filter=
@@ -1233,15 +1210,15 @@ const LandingAuctions: React.FC = () => {
             <div className="text-left text-md">
               {selectedAuction && (
                 <ul>
-                  <li className="border-b border-b-white/10 py-2 flex ">
+                  <li className="border-b border-b-line py-2 flex ">
                     <span className="text-left w-1/2">Bidding on:</span>{" "}
-                    <strong className="text-primary text-right w-1/2">
+                    <strong className="text-primary-light text-right w-1/2">
                       {selectedAuction.auctionName}
                     </strong>
                   </li>
-                  <li className="border-b border-b-white/10 py-2 flex ">
+                  <li className="border-b border-b-line py-2 flex ">
                     <span className="text-left w-1/2">Minimum bid: </span>
-                    <strong className="text-primary text-right w-1/2">
+                    <strong className="text-primary-light text-right w-1/2">
                       {formatBidAmount(
                         selectedAuction.minimumBid,
                         selectedAuction.currency
@@ -1250,11 +1227,11 @@ const LandingAuctions: React.FC = () => {
                   </li>
 
                   {selectedAuction.highestBid > 0 && (
-                    <li className="border-b border-b-white/10 py-2 flex ">
+                    <li className="border-b border-b-line py-2 flex ">
                       <span className="text-left w-1/2">
                         Current highest bid:
                       </span>{" "}
-                      <strong className="text-primary text-right w-1/2">
+                      <strong className="text-primary-light text-right w-1/2">
                         {formatBidAmount(
                           selectedAuction.highestBid,
                           selectedAuction.currency
@@ -1298,19 +1275,19 @@ const LandingAuctions: React.FC = () => {
 
                 {/* USD Value Display */}
                 {bidAmount && parseFloat(bidAmount) > 0 && (
-                  <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                  <div className="mt-2 p-2 bg-white/5 rounded-lg border border-line">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-caption">USD Value:</span>
                       <div className="flex items-center">
                         {tokenPriceLoading ? (
                           <>
-                            <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                            <RiLoader5Fill className="animate-spin text-primary-light mr-1" />
                             <span className="text-caption">Loading...</span>
                           </>
                         ) : priceError ? (
-                          <span className="text-red-400">{priceError}</span>
+                          <span className="text-negative">{priceError}</span>
                         ) : tokenPrice && getUSDValue() ? (
-                          <span className="text-primary font-medium">
+                          <span className="text-primary-light font-medium">
                             {formatUSDAmount(getUSDValue()!)}
                           </span>
                         ) : (
@@ -1328,7 +1305,7 @@ const LandingAuctions: React.FC = () => {
                 )}
 
                 {bidError && (
-                  <p className="text-red-500 text-sm mt-1">{bidError}</p>
+                  <p className="text-negative text-sm mt-1">{bidError}</p>
                 )}
               </div>
 
@@ -1360,15 +1337,15 @@ const LandingAuctions: React.FC = () => {
                 <div className="text-left text-sm mt-4">
                   {selectedAuction && (
                     <ul className="space-y-2">
-                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                      <li className="border-b border-b-line py-2 flex justify-between">
                         <span className="text-caption">Bidding on:</span>
-                        <strong className="text-primary">
+                        <strong className="text-primary-light">
                           {selectedAuction.auctionName}
                         </strong>
                       </li>
-                      <li className="border-b border-b-white/10 py-2 flex justify-between">
+                      <li className="border-b border-b-line py-2 flex justify-between">
                         <span className="text-caption">Minimum bid:</span>
-                        <strong className="text-primary">
+                        <strong className="text-primary-light">
                           {formatBidAmount(
                             selectedAuction.minimumBid,
                             selectedAuction.currency
@@ -1377,11 +1354,11 @@ const LandingAuctions: React.FC = () => {
                       </li>
 
                       {selectedAuction.highestBid > 0 && (
-                        <li className="border-b border-b-white/10 py-2 flex justify-between">
+                        <li className="border-b border-b-line py-2 flex justify-between">
                           <span className="text-caption">
                             Current highest bid:
                           </span>
-                          <strong className="text-primary">
+                          <strong className="text-primary-light">
                             {formatBidAmount(
                               selectedAuction.highestBid,
                               selectedAuction.currency
@@ -1425,19 +1402,19 @@ const LandingAuctions: React.FC = () => {
 
                     {/* USD Value Display */}
                     {bidAmount && parseFloat(bidAmount) > 0 && (
-                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-white/10">
+                      <div className="mt-2 p-2 bg-white/5 rounded-lg border border-line">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-caption">USD Value:</span>
                           <div className="flex items-center">
                             {tokenPriceLoading ? (
                               <>
-                                <RiLoader5Fill className="animate-spin text-primary mr-1" />
+                                <RiLoader5Fill className="animate-spin text-primary-light mr-1" />
                                 <span className="text-caption">Loading...</span>
                               </>
                             ) : priceError ? (
-                              <span className="text-red-400">{priceError}</span>
+                              <span className="text-negative">{priceError}</span>
                             ) : tokenPrice && getUSDValue() ? (
-                              <span className="text-primary font-medium">
+                              <span className="text-primary-light font-medium">
                                 {formatUSDAmount(getUSDValue()!)}
                               </span>
                             ) : (
@@ -1455,7 +1432,7 @@ const LandingAuctions: React.FC = () => {
                     )}
 
                     {bidError && (
-                      <p className="text-red-500 text-sm mt-1">{bidError}</p>
+                      <p className="text-negative text-sm mt-1">{bidError}</p>
                     )}
                   </div>
 

@@ -123,7 +123,7 @@ export default function ImageUpload({
             className="hidden"
           />
 
-          <RiImageAddLine className="text-5xl text-gray-400 mx-auto mb-4" />
+          <RiImageAddLine className="text-5xl text-caption mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">
             Upload Auction Image
           </h3>
@@ -143,7 +143,7 @@ export default function ImageUpload({
           />
           <button
             onClick={handleRemove}
-            className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+            className="absolute top-2 right-2 p-2 bg-negative hover:bg-negative text-white rounded-full transition-colors"
           >
             <RiCloseLine className="text-xl" />
           </button>

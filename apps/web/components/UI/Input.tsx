@@ -53,19 +53,18 @@ export default function Input({
   }
 
   const sharedClassName = twMerge(
-    'w-full px-4 py-3 rounded-lg border-[1px] bg-transparent transition-all outline-0 duration-200 text-foreground peer',
+    'w-full px-4 py-3 rounded-lg border-[1px] bg-surface-2 transition-all outline-0 duration-200 text-foreground placeholder:text-caption/70 peer',
     disabled && 'border-disabled cursor-not-allowed opacity-60',
-    !disabled && (isFocused || hasValue) && showError && 'border-red-500 outline-red-500',
-    !disabled && (isFocused || hasValue) && !showError && 'border-primary outline-primary',
-    !disabled && !(isFocused || hasValue) && 'border-white/30 ',
-    isFocused && 'outline-1 outline-offset-1'
+    !disabled && showError && 'border-negative',
+    !disabled && !showError && isFocused && 'border-primary ring-2 ring-primary/25',
+    !disabled && !showError && !isFocused && 'border-line hover:border-line-strong'
   )
 
   return (
     <div className={twMerge('relative text-white flex flex-col-reverse gap-2', className)}>
       {/* Error Message */}
       {showError && (
-        <p className="text-red-500 text-xs">
+        <p className="text-negative text-xs">
           {label} is required
         </p>
       )}
@@ -105,14 +104,14 @@ export default function Input({
       <label
         htmlFor={inputId}
         className={twMerge(
-          'block text-sm font-medium peer-focus:text-primary ',
+          'block text-xs font-semibold uppercase tracking-[0.12em] peer-focus:text-primary-light',
           disabled && 'text-disabled',
-          showError && 'text-red-500',
-          !showError && 'text-gray-500'
+          showError && 'text-negative',
+          !showError && 'text-caption'
         )}
       >
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-negative ml-1">*</span>}
       </label>
 
     </div>

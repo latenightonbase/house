@@ -110,12 +110,12 @@ export default function DailyLoginClaimDrawer() {
             <h3 className="font-semibold text-white text-xl mb-2">
               Daily Reward Available!
             </h3>
-            <p className="text-white/70">
+            <p className="text-caption">
               Claim your daily login bonus
             </p>
           </div>
           <div className="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2">
-            <FaStar className="text-yellow-500" />
+            <FaStar className="text-warning" />
             <span className="text-white font-bold text-lg">+{xpAmount} XP</span>
           </div>
         </div>

@@ -44,13 +44,13 @@ export default function UserAuctions({ activeAuctions, endedAuctions }: UserAuct
   // }
 
   const AuctionCard = ({ auction, isActive }: { auction: Auction; isActive: boolean }) => (
-    <div className="bg-white/10 rounded-lg p-4 hover:bg-white/15 transition-all duration-200 border border-white/10">
+    <div className="bg-white/10 rounded-lg p-4 hover:bg-white/15 transition-all duration-200 border border-line">
       <div className="flex justify-between items-start mb-3">
         <h3 className="text-lg font-bold text-white truncate flex-1 mr-2">{auction.auctionName}</h3>
         <span className={`px-2 py-1 rounded-full text-xs font-bold ${
           isActive 
-            ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+            ? 'bg-positive/20 text-positive border border-positive/30' 
+            : 'bg-negative/20 text-negative border border-negative/30'
         }`}>
           {isActive ? 'Active' : 'Ended'}
         </span>
@@ -71,7 +71,7 @@ export default function UserAuctions({ activeAuctions, endedAuctions }: UserAuct
 
         <div className="flex justify-between text-sm">
           <span className="text-caption">Highest Bid:</span>
-          <span className="text-primary font-bold">
+          <span className="text-primary-light font-bold">
             {auction.highestBid > 0 
               ? `${auction.highestBid} ${auction.currency}`
               : 'No bids yet'

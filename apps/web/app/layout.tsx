@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { MiniKitContextProvider } from "@/utils/providers/MiniKitProvider";
 import Background from "@/components/UI/Background";
@@ -10,9 +10,10 @@ import { XPNotificationProvider } from "@/utils/providers/xpNotificationContext"
 import XPParticles from "@/components/UI/XPParticles";
 import DailyLoginClaimDrawer from "@/components/DailyLoginClaimDrawer";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-inter",
 });
 
 export default function RootLayout({
@@ -23,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${poppins.className} antialiased text-white max-lg:pb-10`}
+        className={`${inter.variable} ${inter.className} antialiased text-white max-lg:pb-10`}
       >
         <NProgressProvider>
           <MiniKitContextProvider>
@@ -31,29 +32,34 @@ export default function RootLayout({
               <XPParticles />
               <DailyLoginClaimDrawer />
               <Navbar/>
-              <div className=" lg:flex items-start justify-center lg:pt-10 lg:pb-20 pb-32 max-lg:py-4 max-lg:px-3 lg:max-w-[1500px] lg:mx-auto max-lg:w-screen">
-                {children}
-              </div>
+              <main className="lg:pl-[212px] max-lg:pt-14">
+                <div className="lg:px-6 lg:py-6 max-lg:px-3 max-lg:py-4 max-lg:pb-28 lg:max-w-[1560px] lg:mx-auto max-lg:w-screen">
+                  {children}
+                </div>
+              </main>
               <Background />
               <Toaster 
                 position="top-center"
                 toastOptions={{
                   duration: 5000,
                   style: {
-                    background: '#363636',
-                    color: '#fff',
-                    fontSize: '12px',
+                    background: '#0e1422',
+                    color: '#eef1fa',
+                    fontSize: '13px',
+                    border: '1px solid #273049',
                   },
                   success: {
                     style: {
-                      background: '#4bb878',
-                      color: '#fff',
+                      background: '#0e1422',
+                      color: '#eef1fa',
+                      border: '1px solid rgba(47, 211, 131, 0.4)',
                     },
                   },
                   error: {
                     style: {
-                      background: '#ef4444',
-                      color: '#fff',
+                      background: '#0e1422',
+                      color: '#eef1fa',
+                      border: '1px solid rgba(244, 83, 106, 0.4)',
                     },
                   },
                 }}

@@ -42,11 +42,11 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
   return (
     !isDesktop ? (
       <Drawer open={isOpen} onOpenChange={onClose}>
-          <DrawerContent className="bg-black/95 backdrop-blur-sm border-t border-primary/20">
+          <DrawerContent className="bg-background/90 backdrop-blur-sm border-t border-line">
             <DrawerHeader className="flex flex-row items-center justify-between">
               <DrawerTitle className="text-white text-lg font-semibold">Profile</DrawerTitle>
               <DrawerClose asChild>
-                <button className="text-primary hover:text-white transition-colors">
+                <button className="text-primary-light hover:text-white transition-colors">
                   <RiCloseLine className="text-xl" />
                 </button>
               </DrawerClose>
@@ -57,7 +57,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={handleVisitProfile}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-white transition-colors"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary-light hover:text-white transition-colors"
                 >
                   <RiUserLine className="text-xl" />
                   <span className="text-md font-medium">Visit Profile</span>
@@ -65,7 +65,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
                 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-colors"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-negative/10 hover:bg-negative/20 border border-negative/30 text-negative hover:text-negative transition-colors"
                 >
                   <RiLogoutBoxLine className="text-xl" />
                   <span className="text-md font-medium">Logout</span>
@@ -76,7 +76,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
         </Drawer>
     ) : (
       <Dialog open={isOpen} onOpenChange={onClose}>
-          <DialogContent className="sm:max-w-[400px] bg-black/95 backdrop-blur-sm border border-primary/20">
+          <DialogContent className="sm:max-w-[400px] bg-background/90 backdrop-blur-sm border border-line">
             <DialogHeader>
               <DialogTitle className="text-white text-lg font-semibold">Profile</DialogTitle>
             </DialogHeader>
@@ -86,7 +86,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={handleVisitProfile}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary hover:text-white transition-colors"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary-light hover:text-white transition-colors"
                 >
                   <RiUserLine className="text-xl" />
                   <span className="text-md font-medium">Visit Profile</span>
@@ -94,7 +94,7 @@ export default function ProfileDrawer({ isOpen, onClose }: ProfileDrawerProps) {
                 
                 <button
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 transition-colors"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-negative/10 hover:bg-negative/20 border border-negative/30 text-negative hover:text-negative transition-colors"
                 >
                   <RiLogoutBoxLine className="text-xl" />
                   <span className="text-md font-medium">Logout</span>

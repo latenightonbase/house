@@ -77,7 +77,7 @@ export default function RecentBidsCard({ bids, loading }: RecentBidsCardProps) {
             <img
               src={bid.bidderPfp}
               alt={bid.bidderName}
-              className="w-10 h-10 rounded-full object-cover border border-primary/20"
+              className="w-10 h-10 rounded-full object-cover border border-line"
               onError={(e) => {
                 e.currentTarget.src = `https://api.dicebear.com/5.x/identicon/svg?seed=${bid.bidderWallet || 'default'}`;
               }}
@@ -89,17 +89,17 @@ export default function RecentBidsCard({ bids, loading }: RecentBidsCardProps) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                  <p className="text-sm font-medium truncate group-hover:text-primary-light transition-colors">
                     {bid.bidderName}
                   </p>
                   {bid.source === 'bot' && (
-                    <span className="flex items-center gap-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
+                    <span className="flex items-center gap-0.5 bg-primary/20 text-primary-light text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
                       <Bot className="w-2.5 h-2.5" />
                       
                     </span>
                   )}
                   {bid.source && bid.source === 'human' && (
-                    <span className="flex items-center gap-0.5 bg-green-500/20 text-green-400 text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
+                    <span className="flex items-center gap-0.5 bg-positive/20 text-positive text-[10px] font-medium px-1 py-0.5 rounded flex-shrink-0">
                       <User className="w-2.5 h-2.5" />
                       
                     </span>
@@ -110,7 +110,7 @@ export default function RecentBidsCard({ bids, loading }: RecentBidsCardProps) {
                 </p>
               </div>
               <div className="text-right flex-shrink-0">
-                <p className="text-sm font-semibold text-primary">
+                <p className="text-sm font-semibold text-primary-light">
                   {formatAmount(bid.bidAmount, bid.currency)}
                 </p>
                 {bid.usdcValue > 0 && (

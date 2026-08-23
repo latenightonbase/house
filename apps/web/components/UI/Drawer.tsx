@@ -30,7 +30,7 @@ const DrawerOverlay = React.forwardRef<
   return (
     <DrawerPrimitive.Overlay
       ref={ref}
-      className={cn("fixed inset-0 z-50 bg-black/80", className)}
+      className={cn("fixed inset-0 z-50 bg-black/75 backdrop-blur-sm", className)}
       {...props}
     />
   )
@@ -47,7 +47,7 @@ const DrawerContent = React.forwardRef<
       <DrawerPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-[10px] bg-background",
+          "fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-surface border-t border-line",
           "max-h-[90vh] max-w-[800px] mx-auto",
           "min-h-0", // Prevent content from expanding beyond container
           className
@@ -58,7 +58,7 @@ const DrawerContent = React.forwardRef<
         }}
         {...props}
       >
-        <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-primary/20 flex-shrink-0" />
+        <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-line-strong flex-shrink-0" />
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-1 min-h-0">
           {children}
         </div>
@@ -85,7 +85,7 @@ const DrawerFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div 
     className={cn(
-      "flex flex-col gap-2 p-4 flex-shrink-0 bg-background border-t border-white/10", 
+      "flex flex-col gap-2 p-4 flex-shrink-0 bg-surface border-t border-line", 
       // Remove sticky positioning that can cause issues with keyboard
       "mt-auto",
       className

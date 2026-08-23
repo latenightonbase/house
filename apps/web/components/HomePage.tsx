@@ -1,72 +1,101 @@
-'use client'
-import { useEffect, useState } from "react";
+"use client";
+
 import NProgress from "nprogress";
-import LandingAuctions from "@/components/LandingAuctions";
-import PageLayout from "@/components/UI/PageLayout";
-import Heading from "@/components/UI/Heading";
-import Welcome from "@/components/Welcome";
-import InfoCarousel from "@/components/InfoCarousel";
-import LeaderboardSidebar from "./LeaderboardSidebar";
-// import { UsernameManager } from "@/components/UI/UsernameManager";
+import { useNavigateWithLoader } from "@/utils/useNavigateWithLoader";
+import { useDashboardData } from "@/utils/useDashboardData";
+import Topbar from "@/components/dashboard/Topbar";
+import FeaturedAuction from "@/components/dashboard/FeaturedAuction";
+import {
+  TrendingCreatorCard,
+  MostBookedCard,
+  EndingSoonCard,
+  NewCampaignCard,
+} from "@/components/dashboard/SpotlightCards";
+import TrendingCreators from "@/components/dashboard/TrendingCreators";
+import LiveAuctions from "@/components/dashboard/LiveAuctions";
+import RecentlyBooked from "@/components/dashboard/RecentlyBooked";
 
 NProgress.configure({ showSpinner: false });
 
 export default function HomePage() {
-  const [loading, setLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const navigate = useNavigateWithLoader();
+  const {
+    viewer,
+    stats,
+    featured,
+    liveAuctions,
+    endingSoon,
+    creators,
+    trendingCreator,
+    mostBooked,
+    newCampaign,
+    bookings,
+    loading,
+  } = useDashboardData();
 
-  useEffect(() => {
-    // Simulate progress bar loading
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) return prev;
-        return prev + Math.random() * 10;
-      });
-    }, 200);
-    
-    // Complete the progress bar after a short delay
-    const completeTimer = setTimeout(() => {
-      setProgress(100);
-      setTimeout(() => {
-        setLoading(false);
-      }, 300);
-    }, 1000);
-    
-    return () => {
-      clearInterval(interval);
-      clearTimeout(completeTimer);
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen absolute top-0 left-0 w-full flex flex-col items-center justify-center gap-4 z-50">
-        <Heading className="text-center">The House <span className="text-white font-semibold max-lg:block max-lg:text-xl animate-pulse">is loading</span></Heading>
-        <div className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden my-3">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 ease-out" 
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-    );
-  }
-
+  const openAuction = (id: string) => navigate(`/bid/${id}`);
+  const openCreator = (id: string) => navigate(`/user/${id}`);
 
   return (
-    <PageLayout 
-      className="min-h-screen flex flex-col items-start justify-start"
-    >
-      {/* <UsernameManager /> */}
-      <Welcome/>
-      {/* <InfoCarousel/> */}
-      <div className="flex items-start w-full">
-        <LandingAuctions/>
-        {/* Sidebar */}
-              <LeaderboardSidebar />
+    <div className="w-full">
+      <Topbar
+        stats={stats}
+        viewer={viewer}
+        notificationCount={2}
+        onOpenProfile={() => navigate("/profile")}
+      />
+
+      <div className="space-y-4">
+        {/* Row 1 — featured auction beside the spotlight grid */}
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start">
+          {featured && (
+            <FeaturedAuction auction={featured} onView={openAuction} />
+          )}
+
+          {/* Two-up at every width so the four spotlights stay a compact
+              2x2 block rather than a long stack on phones. */}
+          <div className="grid grid-cols-2 gap-3 xl:gap-4">
+            {trendingCreator && (
+              <TrendingCreatorCard
+                creator={trendingCreator}
+                onOpen={openCreator}
+              />
+            )}
+            {mostBooked && (
+              <MostBookedCard
+                creator={mostBooked}
+                bookings={mostBooked.bookingsThisMonth}
+                onOpen={openCreator}
+              />
+            )}
+            {endingSoon && (
+              <EndingSoonCard auction={endingSoon} onOpen={openAuction} />
+            )}
+            {newCampaign && <NewCampaignCard campaign={newCampaign} />}
+          </div>
+        </div>
+
+        {/* Row 2 — creator table beside the live auction list. Both panels are
+            column-dense, so they only sit side by side once there is genuinely
+            room for six table columns plus a full auction row. */}
+        <div className="grid gap-4 grid-cols-1 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-start">
+          <TrendingCreators
+            creators={creators}
+            loading={loading}
+            onOpenCreator={openCreator}
+            onViewAll={() => navigate("/leaderboard")}
+          />
+          <LiveAuctions
+            auctions={liveAuctions}
+            loading={loading}
+            onOpenAuction={openAuction}
+            onViewAll={() => navigate("/")}
+          />
+        </div>
+
+        {/* Row 3 — settled bookings */}
+        <RecentlyBooked bookings={bookings} loading={loading} />
       </div>
-      
-     
-    </PageLayout>
+    </div>
   );
 }

@@ -47,9 +47,9 @@ export default function LeaderboardTable({
     return (
       <div className="w-full">
         <h2 className="text-xl lg:text-2xl font-bold mb-4 gradient-text">{title}</h2>
-        <div className="bg-white/10 rounded-lg border border-gray-700 p-8">
+        <div className="bg-white/10 rounded-lg border border-line p-8">
           <div className="flex items-center justify-center">
-            <RiLoader5Fill className='text-primary animate-spin text-xl' />
+            <RiLoader5Fill className='text-primary-light animate-spin text-xl' />
           </div>
         </div>
       </div>
@@ -83,14 +83,14 @@ export default function LeaderboardTable({
                 data.map((row, index) => (
                   <TableRow
                     key={row._id || index}
-                    className="border-b border-primary/10 cursor-pointer hover:bg-white/5"
+                    className="border-b border-line cursor-pointer hover:bg-white/5"
                     onClick={() => handleRowClick(row)}
                   >
                     <TableCell className="font-medium">
                       <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                        index === 0 ? 'bg-yellow-500/20 text-yellow-500' :
-                        index === 1 ? 'bg-gray-400/20 text-gray-400' :
-                        index === 2 ? 'bg-orange-500/20 text-orange-500' :
+                        index === 0 ? 'bg-warning/20 text-warning' :
+                        index === 1 ? 'bg-gray-400/20 text-caption' :
+                        index === 2 ? 'bg-warning/20 text-warning' :
                         'bg-white/10'
                       }`}>
                         {index + 1}
