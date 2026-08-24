@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import ProfileClient from "./ProfileClient";
+import DashboardClient from "./DashboardClient";
 import { getServerSession } from "@/lib/server-auth";
 
 export default async function Page() {
@@ -10,10 +10,8 @@ export default async function Page() {
   }
 
   return (
-    <Suspense
-      fallback={<p className="text-[13px] text-caption">Loading profile…</p>}
-    >
-      <ProfileClient />
+    <Suspense fallback={<p className="text-[13px] text-caption">Loading dashboard…</p>}>
+      <DashboardClient />
     </Suspense>
   );
 }

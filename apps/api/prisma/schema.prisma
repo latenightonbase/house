@@ -134,8 +134,11 @@ model CreatorProfile {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  auctions Auction[]
-  bookings Booking[]
+  auctions     Auction[]
+  bookings     Booking[]
+  listings     Listing[]
+  applications CampaignApplication[]
+  token        CreatorToken?
 }
 
 model Auction {
@@ -198,10 +201,127 @@ model Booking {
   @@index([creatorId])
 }
 
+enum CampaignStatus {
+  OPEN
+  IN_REVIEW
+  CLOSED
+}
+
+enum ActivationStatus {
+  LIVE
+  UPCOMING
+  ENDED
+}
+
+/// A brand brief: what a brand is buying. The demand side of the marketplace.
 model Campaign {
-  id         String   @id @default(cuid())
+  id         String         @id @default(cuid())
   name       String
+  brandName  String?
   budget     Int
   lookingFor String
-  createdAt  DateTime @default(now())
+  brief      String?
+  platforms  String[]
+  minReach   Int?
+  status     CampaignStatus @default(OPEN)
+  deadline   DateTime?
+  /// Brand mark shown on the campaign card; falls back to a generated monogram.
+  markUrl    String?
+  createdAt  DateTime       @default(now())
+
+  applications CampaignApplication[]
+
+  @@index([status])
+}
+
+model CampaignApplication {
+  id        String   @id @default(cuid())
+  pitch     String?
+  createdAt DateTime @default(now())
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  creatorId String
+  creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, creatorId])
+  @@index([campaignId])
+}
+
+/// Fixed-price media inventory — the Marketplace vertical. Unlike an Auction,
+/// a Listing is bought at its stated price with no bidding.
+model Listing {
+  id             String         @id @default(cuid())
+  title          String
+  description    String?
+  placement      String
+  platform       SocialPlatform
+  price          Int
+  currency       String         @default("USDC")
+  turnaroundDays Int?
+  /// Remaining slots; 0 reads as sold out.
+  slotsAvailable Int            @default(1)
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  creatorId String
+  creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+  @@index([active])
+}
+
+/// Activate vertical — a brand/community activation. Pantheon provides the
+/// underlying reward infrastructure; a Vault is that reward pool, surfaced
+/// beneath its activation rather than as its own top-level concept.
+model Activation {
+  id               String           @id @default(cuid())
+  name             String
+  description      String?
+  brandName        String
+  brandMarkUrl     String?
+  status           ActivationStatus @default(LIVE)
+  participantCount Int              @default(0)
+  startDate        DateTime         @default(now())
+  endDate          DateTime?
+  createdAt        DateTime         @default(now())
+
+  vault Vault?
+
+  @@index([status])
+}
+
+/// Reward pool backing an Activation. Powered by Pantheon.
+model Vault {
+  id           String   @id @default(cuid())
+  name         String
+  /// Total committed reward pool, in whole currency units.
+  totalRewards Int
+  /// Portion already paid out to participants.
+  distributed  Int      @default(0)
+  currency     String   @default("USDC")
+  createdAt    DateTime @default(now())
+
+  activationId String     @unique
+  activation   Activation @relation(fields: [activationId], references: [id], onDelete: Cascade)
+}
+
+/// Creator Studio vertical — a creator's own token economy. Deliberately holds
+/// no market price/TVL fields: the unit of account here is audience and
+/// revenue share, not speculation.
+model CreatorToken {
+  id              String   @id @default(cuid())
+  symbol          String   @unique
+  name            String
+  holders         Int      @default(0)
+  supply          Int
+  /// Percentage of the creator's media revenue routed to holders.
+  revenueSharePct Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  creatorId String         @unique
+  creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 }

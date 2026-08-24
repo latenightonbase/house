@@ -1,6 +1,7 @@
 "use client";
 
-import { BrandAvatar, Countdown, Panel, PanelHeader, ViewAllLink } from "@/components/ui";
+import { BrandAvatar, Panel, PanelHeader, ViewAllLink } from "@/components/ui";
+import { relativeEndLabel } from "@/lib/utils";
 import type { Auction } from "@/lib/marketplace";
 
 interface LiveAuctionsProps {
@@ -10,7 +11,7 @@ interface LiveAuctionsProps {
   onViewAll?: () => void;
 }
 
-/** Live auction rows: mark, title, current bid, countdown, and the action. */
+/** Open bookings: mark, title, starting price, and a calm relative close date. */
 export function LiveAuctions({
   auctions,
   loading = false,
@@ -20,7 +21,7 @@ export function LiveAuctions({
   return (
     <Panel padded={false} className="flex flex-col">
       <div className="p-4">
-        <PanelHeader label="Live Auctions" action={<ViewAllLink onClick={onViewAll} />} />
+        <PanelHeader label="Open auctions" action={<ViewAllLink onClick={onViewAll} />} />
       </div>
 
       {loading ? (
@@ -30,7 +31,7 @@ export function LiveAuctions({
           ))}
         </div>
       ) : auctions.length === 0 ? (
-        <p className="px-4 pb-6 text-sm text-caption">No auctions are live right now.</p>
+        <p className="px-4 pb-6 text-sm text-caption">Nothing open for booking right now.</p>
       ) : (
         <ul className="border-t border-line">
           {auctions.map((auction) => (
@@ -46,28 +47,24 @@ export function LiveAuctions({
 
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold text-white truncate">{auction.title}</p>
-                  <p className="text-[11px] text-caption truncate">{auction.description}</p>
+                  <p className="text-[11px] text-caption truncate">
+                    {relativeEndLabel(auction.endDate)}
+                  </p>
                 </div>
 
                 <div className="shrink-0 text-right">
-                  <p className="panel-label mb-0.5">Current Bid</p>
+                  <p className="text-[11px] text-caption">Starting at</p>
                   <p className="text-[13px] font-bold text-white numeric">
-                    ${auction.highestBid.toLocaleString()}
+                    ${auction.minimumBid.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-caption">{auction.bidCount} bids</p>
-                </div>
-
-                <div className="shrink-0 text-right min-w-[76px]">
-                  <p className="panel-label mb-0.5">Ends In</p>
-                  <Countdown endDate={auction.endDate} className="text-[13px]" />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => onOpenAuction?.(auction.id)}
-                  className="btn-accent-outline shrink-0 px-3 py-2 text-[10px] tracking-[0.08em] uppercase max-sm:w-full"
+                  className="btn-accent-outline shrink-0 px-3 py-2 text-[12px] font-medium max-sm:w-full"
                 >
-                  View Auction
+                  View
                 </button>
               </div>
             </li>

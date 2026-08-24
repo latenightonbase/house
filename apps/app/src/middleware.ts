@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect profile — requires SIWE session, not social links
-  if (pathname === "/profile" || pathname.startsWith("/profile/")) {
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
       const url = request.nextUrl.clone();
@@ -47,5 +47,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/profile", "/profile/:path*"],
+  matcher: ["/dashboard", "/dashboard/:path*"],
 };

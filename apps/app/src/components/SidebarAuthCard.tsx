@@ -41,7 +41,7 @@ export function SidebarAuthCard() {
           <p className="text-[11px] text-caption mt-1 leading-snug">
             Add socials to show verified reach.
           </p>
-          <LinkButton href="/profile" size="sm" className="mt-3 w-full">
+          <LinkButton href="/dashboard" size="sm" className="mt-3 w-full">
             Open profile
           </LinkButton>
         </Card>

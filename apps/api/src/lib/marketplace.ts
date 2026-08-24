@@ -1,4 +1,15 @@
-import type { Bid, Booking, Campaign, CreatorProfile, SocialAccount, Wallet } from "@prisma/client";
+import type {
+  Activation,
+  Bid,
+  Booking,
+  Campaign,
+  CreatorProfile,
+  CreatorToken,
+  Listing,
+  SocialAccount,
+  Vault,
+  Wallet,
+} from "@prisma/client";
 
 const PLATFORM_MAP: Record<string, string> = {
   YOUTUBE: "youtube",
@@ -142,11 +153,97 @@ export function serializeBooking(booking: Booking & { creator: CreatorProfile })
   };
 }
 
-export function serializeCampaign(campaign: Campaign) {
+export function serializeCampaign(
+  campaign: Campaign & { applications?: { id: string }[] },
+) {
   return {
     id: campaign.id,
     name: campaign.name,
+    brandName: campaign.brandName ?? undefined,
     budget: campaign.budget,
     lookingFor: campaign.lookingFor,
+    brief: campaign.brief ?? undefined,
+    platforms: campaign.platforms.map((p) => PLATFORM_MAP[p] ?? p.toLowerCase()),
+    minReach: campaign.minReach ?? undefined,
+    status: campaign.status,
+    deadline: campaign.deadline?.toISOString(),
+    applicantCount: campaign.applications?.length ?? 0,
+    markUrl: campaign.markUrl ?? undefined,
+  };
+}
+
+type ListingWithCreator = Listing & {
+  creator: CreatorProfile & { user: { socials: SocialAccount[]; wallets: Wallet[] } };
+};
+
+export function serializeListing(listing: ListingWithCreator) {
+  return {
+    id: listing.id,
+    title: listing.title,
+    description: listing.description ?? undefined,
+    placement: listing.placement,
+    platform: PLATFORM_MAP[listing.platform],
+    price: listing.price,
+    currency: listing.currency,
+    turnaroundDays: listing.turnaroundDays ?? undefined,
+    slotsAvailable: listing.slotsAvailable,
+    creator: {
+      id: listing.creator.id,
+      displayName: listing.creator.displayName,
+      username: listing.creator.username ?? undefined,
+      avatarUrl: listing.creator.avatarUrl ?? undefined,
+      verified: listing.creator.verified,
+      reach: compact(
+        listing.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),
+      ),
+    },
+  };
+}
+
+export function serializeActivation(activation: Activation & { vault: Vault | null }) {
+  return {
+    id: activation.id,
+    name: activation.name,
+    description: activation.description ?? undefined,
+    brandName: activation.brandName,
+    brandMarkUrl: activation.brandMarkUrl ?? undefined,
+    status: activation.status,
+    participantCount: activation.participantCount,
+    startDate: activation.startDate.toISOString(),
+    endDate: activation.endDate?.toISOString(),
+    vault: activation.vault
+      ? {
+          id: activation.vault.id,
+          name: activation.vault.name,
+          totalRewards: activation.vault.totalRewards,
+          distributed: activation.vault.distributed,
+          currency: activation.vault.currency,
+        }
+      : null,
+  };
+}
+
+type TokenWithCreator = CreatorToken & {
+  creator: CreatorProfile & { user: { socials: SocialAccount[]; wallets: Wallet[] } };
+};
+
+export function serializeCreatorToken(token: TokenWithCreator) {
+  return {
+    id: token.id,
+    symbol: token.symbol,
+    name: token.name,
+    holders: token.holders,
+    supply: token.supply,
+    revenueSharePct: token.revenueSharePct ?? undefined,
+    creator: {
+      id: token.creator.id,
+      displayName: token.creator.displayName,
+      username: token.creator.username ?? undefined,
+      avatarUrl: token.creator.avatarUrl ?? undefined,
+      verified: token.creator.verified,
+      reach: compact(
+        token.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),
+      ),
+    },
   };
 }

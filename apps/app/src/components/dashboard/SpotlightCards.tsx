@@ -1,13 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { BrandAvatar, Countdown, Sparkline } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { BrandAvatar } from "@/components/ui";
+import { cn, relativeEndLabel } from "@/lib/utils";
 import type { Auction, Campaign, Earner } from "@/lib/marketplace";
 
 /**
  * One layout shared by all four spotlights: a label, an identity row, and a
- * footer figure pinned to the bottom so all four cards align in the 2x2 grid.
+ * single figure — no sparkline, no ticking clock, just the one number that
+ * matters for this card.
  */
 interface SpotlightCardProps {
   label: string;
@@ -16,9 +16,8 @@ interface SpotlightCardProps {
   avatarSrc?: string | null;
   showAvatar?: boolean;
   avatarShape?: "circle" | "square";
-  metric: ReactNode;
+  metric: string;
   metricCaption?: string;
-  trend?: number[];
   onClick?: () => void;
 }
 
@@ -31,7 +30,6 @@ function SpotlightCard({
   avatarShape = "circle",
   metric,
   metricCaption,
-  trend,
   onClick,
 }: SpotlightCardProps) {
   const Root = onClick ? "button" : "div";
@@ -41,45 +39,27 @@ function SpotlightCard({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "card p-3.5 xl:p-4 h-full w-full flex flex-col text-left transition-colors",
+        "card p-4 h-full w-full flex flex-col gap-3 text-left transition-colors",
         onClick && "hover:border-line-strong",
       )}
     >
       <span className="panel-label block truncate">{label}</span>
 
-      <div className="mt-3 flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         {showAvatar && (
-          <BrandAvatar src={avatarSrc} alt={title} size={30} shape={avatarShape} fallbackSeed={title} />
+          <BrandAvatar src={avatarSrc} alt={title} size={36} shape={avatarShape} fallbackSeed={title} />
         )}
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-white leading-tight line-clamp-2">
-            {title}
-          </p>
-          {subtitle && (
-            <p className="text-[11px] text-caption truncate leading-tight mt-1">{subtitle}</p>
-          )}
-        </div>
+        <p className="min-w-0 flex-1 text-[13px] font-semibold text-white leading-tight line-clamp-2">
+          {title}
+        </p>
       </div>
 
-      <div className="mt-auto pt-4 flex items-end justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-[15px] font-bold text-white leading-none numeric truncate">
-            {metric}
-          </div>
-          {metricCaption && (
-            <p className="text-[10px] text-caption mt-1.5 truncate">{metricCaption}</p>
-          )}
-        </div>
-
-        {trend && trend.length > 1 && (
-          <Sparkline
-            data={trend}
-            width={72}
-            height={22}
-            filled={false}
-            strokeWidth={1.5}
-            className="shrink-0 opacity-60"
-          />
+      <div className="mt-auto">
+        <div className="text-lg font-bold text-white numeric truncate">{metric}</div>
+        {(subtitle || metricCaption) && (
+          <p className="text-[11px] text-caption mt-0.5 truncate">
+            {metricCaption || subtitle}
+          </p>
         )}
       </div>
     </Root>
@@ -97,11 +77,9 @@ export function TrendingCreatorCard({
     <SpotlightCard
       label="Trending"
       title={creator.displayName || `@${creator.username}`}
-      subtitle={`${creator.reach ?? "—"} reach`}
       avatarSrc={creator.avatarUrl}
       metric={creator.engagement ?? "—"}
-      metricCaption="engagement"
-      trend={creator.trend}
+      metricCaption={`${creator.reach ?? "—"} reach`}
       onClick={onOpen ? () => onOpen(creator.id) : undefined}
     />
   );
@@ -116,12 +94,11 @@ export function MostBookedCard({
 }) {
   return (
     <SpotlightCard
-      label="Most Booked"
+      label="Most booked"
       title={creator.displayName || `@${creator.username}`}
-      subtitle={`${creator.reach ?? "—"} reach`}
       avatarSrc={creator.avatarUrl}
       avatarShape="square"
-      metric={creator.bookingsThisMonth}
+      metric={`${creator.bookingsThisMonth}`}
       metricCaption="bookings this month"
       onClick={onOpen ? () => onOpen(creator.id) : undefined}
     />
@@ -137,13 +114,12 @@ export function EndingSoonCard({
 }) {
   return (
     <SpotlightCard
-      label="Ending Soon"
+      label="Ending soon"
       title={auction.title}
-      subtitle={`${auction.bidCount} bids · top $${auction.highestBid.toLocaleString()}`}
       avatarSrc={auction.imageUrl}
       avatarShape="square"
-      metric={<Countdown endDate={auction.endDate} className="text-[15px] font-bold" />}
-      metricCaption="remaining"
+      metric={relativeEndLabel(auction.endDate)}
+      metricCaption={`from $${auction.minimumBid.toLocaleString()}`}
       onClick={onOpen ? () => onOpen(auction.id) : undefined}
     />
   );
@@ -152,13 +128,12 @@ export function EndingSoonCard({
 export function NewCampaignCard({ campaign }: { campaign: Campaign }) {
   return (
     <SpotlightCard
-      label="New Campaign"
+      label="New campaign"
       title={campaign.name}
-      subtitle={campaign.lookingFor}
-      avatarSrc={null}
+      avatarSrc={campaign.markUrl}
       avatarShape="square"
       metric={`$${campaign.budget.toLocaleString()}`}
-      metricCaption="budget"
+      metricCaption={campaign.lookingFor}
     />
   );
 }

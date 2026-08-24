@@ -2,20 +2,20 @@
 
 import { useEffect, useState } from "react";
 import {
-  fetchAnalytics,
   fetchAuctions,
   fetchBookings,
   fetchCreators,
   fetchLatestCampaign,
+  fetchMarketStats,
   type Auction,
   type Booking,
   type Campaign,
   type Earner,
-  type PlatformAnalytics,
+  type MarketStats,
 } from "@/lib/marketplace";
 
 export interface DashboardData {
-  stats: PlatformAnalytics | null;
+  stats: MarketStats | null;
   featured: Auction | null;
   liveAuctions: Auction[];
   endingSoon: Auction | null;
@@ -50,7 +50,7 @@ export function useDashboardData(): DashboardData {
     let cancelled = false;
 
     Promise.all([
-      fetchAnalytics(),
+      fetchMarketStats(),
       // Fetch beyond the 3 shown in the Live Auctions panel so a pinned
       // `featured` auction is never excluded just for ending later.
       fetchAuctions({ status: "live", limit: 12 }),

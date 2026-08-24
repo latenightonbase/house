@@ -7,6 +7,7 @@ import { useSession } from "@/components/SessionProvider";
 import { useDashboardData } from "@/lib/useDashboardData";
 import { Button, Tile } from "@/components/ui";
 import { Topbar } from "@/components/dashboard/Topbar";
+import { MarketStrip } from "@/components/dashboard/MarketStrip";
 import { FeaturedAuction } from "@/components/dashboard/FeaturedAuction";
 import {
   EndingSoonCard,
@@ -40,7 +41,7 @@ export default function HomeClient() {
 
   useEffect(() => {
     if (authRequired && status === "authenticated") {
-      router.replace("/profile");
+      router.replace("/dashboard");
     }
   }, [authRequired, status, router]);
 
@@ -55,28 +56,25 @@ export default function HomeClient() {
         </Tile>
       ) : null}
 
-      <Topbar stats={stats} notificationCount={2} />
+      <Topbar />
 
       <div className="space-y-4">
-        {/* Row 1 — featured auction beside the spotlight grid */}
-        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start">
-          {featured && <FeaturedAuction auction={featured} />}
+        <MarketStrip stats={stats} />
 
-          <div className="grid grid-cols-2 gap-3 xl:gap-4">
-            {trendingCreator && <TrendingCreatorCard creator={trendingCreator} />}
-            {mostBooked && <MostBookedCard creator={mostBooked} />}
-            {endingSoon && <EndingSoonCard auction={endingSoon} />}
-            {newCampaign && <NewCampaignCard campaign={newCampaign} />}
-          </div>
+        {featured && <FeaturedAuction auction={featured} />}
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {trendingCreator && <TrendingCreatorCard creator={trendingCreator} />}
+          {mostBooked && <MostBookedCard creator={mostBooked} />}
+          {endingSoon && <EndingSoonCard auction={endingSoon} />}
+          {newCampaign && <NewCampaignCard campaign={newCampaign} />}
         </div>
 
-        {/* Row 2 — creator table beside the live auction list */}
-        <div className="grid gap-4 grid-cols-1 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-start">
+        {/* Creator table beside the open auction list */}
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
           <TrendingCreators creators={creators} loading={loading} />
           <LiveAuctions auctions={liveAuctions} loading={loading} />
         </div>
-
-        {/* Row 3 — settled bookings */}
         <RecentlyBooked bookings={bookings} loading={loading} />
       </div>
     </div>

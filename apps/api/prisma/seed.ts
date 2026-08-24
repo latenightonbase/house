@@ -6,6 +6,21 @@ const HOUR = 1000 * 60 * 60;
 const hoursFromNow = (h: number) => new Date(Date.now() + h * HOUR);
 const hoursAgo = (h: number) => new Date(Date.now() - h * HOUR);
 
+/**
+ * Brand marks. Real logos are hotlinked from the brand's own X avatar so no
+ * third-party image files are committed; the rest are placeholders until a
+ * real mark is supplied. `BrandAvatar` falls back to a generated monogram if
+ * any of these fail to load.
+ */
+const BRAND_MARKS = {
+  robinhood: "https://pbs.twimg.com/profile_images/1844399977482813442/1fTlYz2c_400x400.png",
+  base: "https://i.pravatar.cc/150?u=brand-base",
+  coinbase: "https://i.pravatar.cc/150?u=brand-coinbase",
+  phantom: "https://i.pravatar.cc/150?u=brand-phantom",
+  jupiter: "https://i.pravatar.cc/150?u=brand-jupiter",
+  uniswap: "https://i.pravatar.cc/150?u=brand-uniswap",
+} as const;
+
 type SeedSocial = {
   platform: SocialPlatform;
   platformUserId: string;
@@ -215,8 +230,8 @@ const SEED_AUCTIONS: SeedAuction[] = [
     endHoursFromNow: 50,
     createdBy: "HUMAN",
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a001", bidderName: "Base", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-base", amount: 14500 },
-      { bidderWallet: "0xB1d0000000000000000000000000000000a002", bidderName: "Robinhood", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-robinhood", amount: 9000 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a001", bidderName: "Base", bidderAvatarUrl: BRAND_MARKS.base, amount: 14500 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a002", bidderName: "Robinhood", bidderAvatarUrl: BRAND_MARKS.robinhood, amount: 9000 },
     ],
   },
   {
@@ -230,7 +245,7 @@ const SEED_AUCTIONS: SeedAuction[] = [
     endHoursFromNow: 2,
     createdBy: "HUMAN",
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a003", bidderName: "Coinbase", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-coinbase", amount: 4200 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a003", bidderName: "Coinbase", bidderAvatarUrl: BRAND_MARKS.coinbase, amount: 4200 },
     ],
   },
   {
@@ -244,7 +259,7 @@ const SEED_AUCTIONS: SeedAuction[] = [
     endHoursFromNow: 5,
     createdBy: "HUMAN",
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a004", bidderName: "Phantom", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-phantom", amount: 3250 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a004", bidderName: "Phantom", bidderAvatarUrl: BRAND_MARKS.phantom, amount: 3250 },
     ],
   },
   {
@@ -258,7 +273,7 @@ const SEED_AUCTIONS: SeedAuction[] = [
     endHoursFromNow: 64,
     createdBy: "HUMAN",
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a005", bidderName: "Jupiter", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-jupiter", amount: 3500 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a005", bidderName: "Jupiter", bidderAvatarUrl: BRAND_MARKS.jupiter, amount: 3500 },
     ],
   },
   {
@@ -272,7 +287,7 @@ const SEED_AUCTIONS: SeedAuction[] = [
     endHoursFromNow: 1,
     createdBy: "BOT",
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a006", bidderName: "Uniswap", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-uniswap", amount: 1750 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a006", bidderName: "Uniswap", bidderAvatarUrl: BRAND_MARKS.uniswap, amount: 1750 },
     ],
   },
   {
@@ -299,8 +314,8 @@ const SEED_AUCTIONS: SeedAuction[] = [
     createdBy: "HUMAN",
     featured: true,
     bids: [
-      { bidderWallet: "0xB1d0000000000000000000000000000000a007", bidderName: "Base", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-base", amount: 21000 },
-      { bidderWallet: "0xB1d0000000000000000000000000000000a008", bidderName: "Coinbase", bidderAvatarUrl: "https://i.pravatar.cc/150?u=brand-coinbase", amount: 17500 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a007", bidderName: "Base", bidderAvatarUrl: BRAND_MARKS.base, amount: 21000 },
+      { bidderWallet: "0xB1d0000000000000000000000000000000a008", bidderName: "Coinbase", bidderAvatarUrl: BRAND_MARKS.coinbase, amount: 17500 },
     ],
   },
 ];
@@ -318,7 +333,7 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
     brand: "Base",
-    markUrl: "https://i.pravatar.cc/150?u=brand-base",
+    markUrl: BRAND_MARKS.base,
     amount: 6000,
     placement: "Campaign",
     status: "CONFIRMED",
@@ -326,7 +341,7 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0x2e5b3b1a0c9d4f6e8a7c1b2d3e4f5a6b7c8d9e0f",
     brand: "Robinhood",
-    markUrl: "https://i.pravatar.cc/150?u=brand-robinhood",
+    markUrl: BRAND_MARKS.robinhood,
     amount: 3500,
     placement: "X Post + Newsletter",
     status: "CONFIRMED",
@@ -334,7 +349,7 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
     brand: "Coinbase",
-    markUrl: "https://i.pravatar.cc/150?u=brand-coinbase",
+    markUrl: BRAND_MARKS.coinbase,
     amount: 4000,
     placement: "YouTube Integration",
     status: "CONFIRMED",
@@ -342,7 +357,7 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0x9a1b2c3d4e5f60718293a4b5c6d7e8f901234567",
     brand: "Phantom",
-    markUrl: "https://i.pravatar.cc/150?u=brand-phantom",
+    markUrl: BRAND_MARKS.phantom,
     amount: 2500,
     placement: "Reel Sponsor",
     status: "CONFIRMED",
@@ -350,7 +365,7 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0x2e5b3b1a0c9d4f6e8a7c1b2d3e4f5a6b7c8d9e0f",
     brand: "Jupiter",
-    markUrl: "https://i.pravatar.cc/150?u=brand-jupiter",
+    markUrl: BRAND_MARKS.jupiter,
     amount: 1750,
     placement: "Newsletter Feature",
     status: "PENDING",
@@ -358,10 +373,206 @@ const SEED_BOOKINGS: SeedBooking[] = [
   {
     creatorAddress: "0xf06207e32365a4f574fd4dfbe9db5be70002b2a4",
     brand: "Base",
-    markUrl: "https://i.pravatar.cc/150?u=brand-base",
+    markUrl: BRAND_MARKS.base,
     amount: 8000,
     placement: "Live Show Sponsorship",
     status: "CONFIRMED",
+  },
+];
+
+const ALICE = "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063";
+const MARCO = "0x2e5b3b1a0c9d4f6e8a7c1b2d3e4f5a6b7c8d9e0f";
+const PRIYA = "0x9a1b2c3d4e5f60718293a4b5c6d7e8f901234567";
+const BILL = "0xf06207e32365a4f574fd4dfbe9db5be70002b2a4";
+
+/** Fixed-price media inventory — bought outright, no bidding. */
+const SEED_LISTINGS = [
+  {
+    creatorAddress: BILL,
+    title: "Live show mid-roll read",
+    description: "60-second host-read spot during the M–Thu noon PST stream.",
+    placement: "Livestream mid-roll",
+    platform: "TWITTER" as SocialPlatform,
+    price: 3500,
+    turnaroundDays: 5,
+    slotsAvailable: 4,
+  },
+  {
+    creatorAddress: BILL,
+    title: "Pinned post + quote",
+    description: "Pinned announcement post held for 24 hours, plus one quote repost.",
+    placement: "Pinned post",
+    platform: "TWITTER" as SocialPlatform,
+    price: 1200,
+    turnaroundDays: 2,
+    slotsAvailable: 8,
+  },
+  {
+    creatorAddress: ALICE,
+    title: "Long-form video integration",
+    description: "90-second integrated segment inside the next research video.",
+    placement: "YouTube integration",
+    platform: "YOUTUBE" as SocialPlatform,
+    price: 6000,
+    turnaroundDays: 14,
+    slotsAvailable: 2,
+  },
+  {
+    creatorAddress: ALICE,
+    title: "Newsletter lead sponsor",
+    description: "Top-of-send placement with logo, blurb and link.",
+    placement: "Newsletter",
+    platform: "TWITTER" as SocialPlatform,
+    price: 1800,
+    turnaroundDays: 7,
+    slotsAvailable: 3,
+  },
+  {
+    creatorAddress: MARCO,
+    title: "Sponsored reel",
+    description: "Fully produced 30-second vertical reel, brand-approved before posting.",
+    placement: "Instagram reel",
+    platform: "INSTAGRAM" as SocialPlatform,
+    price: 2400,
+    turnaroundDays: 10,
+    slotsAvailable: 5,
+  },
+  {
+    creatorAddress: MARCO,
+    title: "TikTok series slot",
+    description: "Three-part sponsored series across one week.",
+    placement: "TikTok series",
+    platform: "TIKTOK" as SocialPlatform,
+    price: 4200,
+    turnaroundDays: 12,
+    slotsAvailable: 2,
+  },
+  {
+    creatorAddress: PRIYA,
+    title: "Tutorial integration",
+    description: "Tool featured end-to-end in a build-along tutorial.",
+    placement: "YouTube tutorial",
+    platform: "YOUTUBE" as SocialPlatform,
+    price: 2200,
+    turnaroundDays: 14,
+    slotsAvailable: 3,
+  },
+  {
+    creatorAddress: PRIYA,
+    title: "Dev thread feature",
+    description: "Technical breakdown thread with your product as the worked example.",
+    placement: "Thread",
+    platform: "TWITTER" as SocialPlatform,
+    price: 900,
+    turnaroundDays: 4,
+    slotsAvailable: 6,
+  },
+];
+
+const SEED_CAMPAIGNS = [
+  {
+    name: "Robinhood Crypto",
+    brandName: "Robinhood",
+    budget: 15000,
+    lookingFor: "YouTube + TikTok Creators",
+    brief:
+      "Introduce crypto trading to first-time investors. Looking for explainer-style creators who can make custody and fees feel simple.",
+    platforms: ["YOUTUBE", "TIKTOK"],
+    minReach: 50000,
+    status: "OPEN" as const,
+    markUrl: BRAND_MARKS.robinhood,
+  },
+  {
+    name: "Base Builder Season",
+    brandName: "Base",
+    budget: 24000,
+    lookingFor: "Onchain + developer creators",
+    brief:
+      "Spotlight builders shipping on Base. Prefer creators with a live audience and hands-on technical credibility.",
+    platforms: ["TWITTER", "YOUTUBE"],
+    minReach: 15000,
+    status: "OPEN" as const,
+    markUrl: BRAND_MARKS.base,
+  },
+  {
+    name: "Phantom Wallet Launch",
+    brandName: "Phantom",
+    budget: 9000,
+    lookingFor: "Short-form video creators",
+    brief: "Drive installs for the multichain wallet update. Vertical video only.",
+    platforms: ["TIKTOK", "INSTAGRAM"],
+    minReach: 80000,
+    status: "IN_REVIEW" as const,
+    markUrl: BRAND_MARKS.phantom,
+  },
+];
+
+/**
+ * Activate — brand/community activations. Each carries a Vault (its reward
+ * pool), which Pantheon backs; Vaults are surfaced inside an activation
+ * rather than as a standalone destination.
+ */
+const SEED_ACTIVATIONS = [
+  {
+    name: "Base Builder Quests",
+    description:
+      "Community completes onchain quests during Builder Season. Rewards stream from the activation vault as quests are verified.",
+    brandName: "Base",
+    brandMarkUrl: BRAND_MARKS.base,
+    status: "LIVE" as const,
+    participantCount: 1284,
+    endHoursFromNow: 240,
+    vault: { name: "Builder Season Vault", totalRewards: 25000, distributed: 8400 },
+  },
+  {
+    name: "Late Night Listener Rewards",
+    description:
+      "Live-show viewers earn from the vault for attending streams and sharing clips.",
+    brandName: "Late Night Onchain",
+    brandMarkUrl:
+      "https://pbs.twimg.com/profile_images/2040941671605731328/ll5bSeLt_400x400.jpg",
+    status: "LIVE" as const,
+    participantCount: 476,
+    endHoursFromNow: 96,
+    vault: { name: "Listener Vault", totalRewards: 8000, distributed: 2150 },
+  },
+  {
+    name: "Jupiter Trading Cup",
+    description: "Community trading competition with a tiered payout at the close.",
+    brandName: "Jupiter",
+    brandMarkUrl: BRAND_MARKS.jupiter,
+    status: "UPCOMING" as const,
+    participantCount: 0,
+    endHoursFromNow: 720,
+    vault: { name: "Trading Cup Vault", totalRewards: 12000, distributed: 0 },
+  },
+];
+
+/** Creator Studio — audience-and-revenue economics, deliberately no price data. */
+const SEED_TOKENS = [
+  {
+    creatorAddress: BILL,
+    symbol: "LNOC",
+    name: "Late Night Onchain",
+    holders: 3142,
+    supply: 1_000_000,
+    revenueSharePct: 15,
+  },
+  {
+    creatorAddress: ALICE,
+    symbol: "ALICE",
+    name: "Alice Builds",
+    holders: 842,
+    supply: 500_000,
+    revenueSharePct: 10,
+  },
+  {
+    creatorAddress: MARCO,
+    symbol: "FRAMES",
+    name: "Marco Frames",
+    holders: 1276,
+    supply: 750_000,
+    revenueSharePct: 12.5,
   },
 ];
 
@@ -469,7 +680,16 @@ async function seedMarketplace() {
     const existingBooking = await prisma.booking.findFirst({
       where: { creatorId, brand: booking.brand, placement: booking.placement },
     });
-    if (existingBooking) continue;
+    if (existingBooking) {
+      // Keep brand marks current so a swapped logo reaches already-seeded rows.
+      if (existingBooking.markUrl !== booking.markUrl) {
+        await prisma.booking.update({
+          where: { id: existingBooking.id },
+          data: { markUrl: booking.markUrl },
+        });
+      }
+      continue;
+    }
 
     await prisma.booking.create({
       data: {
@@ -484,19 +704,68 @@ async function seedMarketplace() {
   }
   console.log("bookings up to date");
 
-  const existingCampaign = await prisma.campaign.findFirst({
-    where: { name: "Robinhood Crypto" },
-  });
-  if (!existingCampaign) {
-    await prisma.campaign.create({
+  for (const campaign of SEED_CAMPAIGNS) {
+    const existing = await prisma.campaign.findFirst({ where: { name: campaign.name } });
+    if (existing) {
+      await prisma.campaign.update({ where: { id: existing.id }, data: campaign });
+    } else {
+      await prisma.campaign.create({ data: campaign });
+    }
+  }
+  console.log("campaigns up to date");
+
+  await seedListings(profileIdByAddress);
+  await seedActivations();
+  await seedCreatorTokens(profileIdByAddress);
+}
+
+async function seedListings(profileIdByAddress: Map<string, string>) {
+  for (const listing of SEED_LISTINGS) {
+    const creatorId = profileIdByAddress.get(listing.creatorAddress);
+    if (!creatorId) continue;
+
+    const existing = await prisma.listing.findFirst({
+      where: { creatorId, title: listing.title },
+    });
+    if (existing) continue;
+
+    const { creatorAddress: _ignored, ...data } = listing;
+    await prisma.listing.create({ data: { ...data, creatorId } });
+  }
+  console.log("listings up to date");
+}
+
+async function seedActivations() {
+  for (const activation of SEED_ACTIVATIONS) {
+    const existing = await prisma.activation.findFirst({
+      where: { name: activation.name },
+    });
+    if (existing) continue;
+
+    const { vault, endHoursFromNow, ...data } = activation;
+    await prisma.activation.create({
       data: {
-        name: "Robinhood Crypto",
-        budget: 15000,
-        lookingFor: "YouTube + TikTok Creators",
+        ...data,
+        endDate: endHoursFromNow ? hoursFromNow(endHoursFromNow) : null,
+        vault: { create: vault },
       },
     });
-    console.log("seeded campaign");
   }
+  console.log("activations up to date");
+}
+
+async function seedCreatorTokens(profileIdByAddress: Map<string, string>) {
+  for (const token of SEED_TOKENS) {
+    const creatorId = profileIdByAddress.get(token.creatorAddress);
+    if (!creatorId) continue;
+
+    const existing = await prisma.creatorToken.findUnique({ where: { creatorId } });
+    if (existing) continue;
+
+    const { creatorAddress: _ignored, ...data } = token;
+    await prisma.creatorToken.create({ data: { ...data, creatorId } });
+  }
+  console.log("creator tokens up to date");
 }
 
 main()

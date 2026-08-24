@@ -12,8 +12,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "House Identity",
-  description: "Wallet auth + social verification for House",
+  title: "LNOC — Attention Marketplace",
+  description: "The marketplace for attention. Creators sell reach, brands buy it.",
   icons: { icon: "/favicon.ico" },
 };
 

@@ -9,7 +9,7 @@ import { useSession } from "@/components/SessionProvider";
 import { Avatar, Badge, Tile } from "@/components/ui";
 import { shortAddress } from "@/lib/utils";
 
-export default function ProfileClient() {
+export default function DashboardClient() {
   const { address, isConnected } = useAccount();
   const { status, user, refresh } = useSession();
   const searchParams = useSearchParams();

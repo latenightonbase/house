@@ -47,7 +47,7 @@ export function TrendingCreators({
   return (
     <Panel padded={false} className="flex flex-col">
       <div className="p-4 flex items-center justify-between gap-3 flex-wrap">
-        <span className="panel-label">Trending Creators</span>
+        <span className="panel-label">Creators</span>
         <div className="flex items-center gap-3">
           <Tabs items={FILTERS} value={filter} onChange={setFilter} />
           <ViewAllLink onClick={onViewAll} />
@@ -64,6 +64,7 @@ export function TrendingCreators({
         <p className="px-4 pb-6 text-sm text-caption">No creators match this platform yet.</p>
       ) : (
         <>
+          {/* Table — medium screens and up */}
           <div className="max-md:hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -72,7 +73,6 @@ export function TrendingCreators({
                   <th className="panel-label text-left font-semibold px-3 py-2">Platforms</th>
                   <th className="panel-label text-right font-semibold px-3 py-2">Reach</th>
                   <th className="panel-label text-right font-semibold px-3 py-2">Engagement</th>
-                  <th className="panel-label text-right font-semibold px-3 py-2">Inventory</th>
                   <th className="panel-label text-right font-semibold px-4 py-2">From</th>
                 </tr>
               </thead>
@@ -114,9 +114,6 @@ export function TrendingCreators({
                     <td className="px-3 py-2.5 text-right text-positive font-semibold numeric">
                       {creator.engagement ?? "—"}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-white numeric">
-                      {creator.inventory}
-                    </td>
                     <td className="px-4 py-2.5 text-right text-white font-semibold numeric">
                       {creator.fromPrice ? `$${creator.fromPrice.toLocaleString()}` : "—"}
                     </td>
@@ -126,6 +123,7 @@ export function TrendingCreators({
             </table>
           </div>
 
+          {/* Stacked cards — small screens */}
           <div className="md:hidden px-4 pb-4 space-y-2">
             {rows.map((creator) => (
               <button
@@ -156,20 +154,16 @@ export function TrendingCreators({
                     <p className="text-[10px] text-caption">from</p>
                   </div>
                 </div>
-                <div className="mt-2.5 grid grid-cols-3 gap-2 text-center">
+                <div className="mt-2.5 grid grid-cols-2 gap-2 text-center">
                   <div>
                     <p className="panel-label mb-0.5">Reach</p>
                     <p className="text-xs text-white numeric">{creator.reach ?? "—"}</p>
                   </div>
                   <div>
-                    <p className="panel-label mb-0.5">Engmt</p>
+                    <p className="panel-label mb-0.5">Engagement</p>
                     <p className="text-xs text-positive font-semibold numeric">
                       {creator.engagement ?? "—"}
                     </p>
-                  </div>
-                  <div>
-                    <p className="panel-label mb-0.5">Inv</p>
-                    <p className="text-xs text-white numeric">{creator.inventory}</p>
                   </div>
                 </div>
               </button>
