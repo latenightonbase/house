@@ -1,17 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 import { useSession } from "@/components/SessionProvider";
+import { Badge, Card, LinkButton } from "@/components/ui";
+import { shortAddress } from "@/lib/utils";
 
 /**
- * Sidebar footer CTA:
- * - SIWE authenticated → open profile
- * - Otherwise → ConnectButton (RainbowKit SIWE is the only auth)
- * Social linking is never treated as authentication.
+ * SIWE is the only auth. Social linking (below, once signed in) just
+ * refreshes follower data and must never be mistaken for sign-in.
+ *
+ * The SIWE session (cookie) and wagmi's wallet-connector state are tracked
+ * independently, so a session can outlive the wallet connection (extension
+ * disconnected, storage cleared). Showing RainbowKit's own "Connect Wallet"
+ * button in that state would contradict the "signed in" card above it, so
+ * it only renders once wagmi confirms the wallet is actually connected.
  */
 export function SidebarAuthCard() {
-  const { status } = useSession();
+  const { status, user } = useSession();
+  const { isConnected } = useAccount();
 
   if (status === "loading") {
     return (
@@ -23,35 +30,45 @@ export function SidebarAuthCard() {
   }
 
   if (status === "authenticated") {
+    const primary = user?.wallets.find((w) => w.isPrimary) || user?.wallets[0];
+
     return (
       <div className="space-y-3">
-        <div className="card p-3.5">
+        <Card className="p-3.5">
           <p className="text-[13px] font-bold text-white leading-snug">
             Verify Reach
           </p>
           <p className="text-[11px] text-caption mt-1 leading-snug">
-            Link socials anytime — they refresh data, they are not sign-in.
+            Add socials to show verified reach.
           </p>
-          <Link
-            href="/profile"
-            className="btn-primary mt-3 flex h-8 items-center justify-center text-[12px]"
-          >
+          <LinkButton href="/profile" size="sm" className="mt-3 w-full">
             Open profile
-          </Link>
-        </div>
-        <div className="flex justify-center [&_button]:!text-[12px]">
-          <ConnectButton
-            showBalance={false}
-            chainStatus="icon"
-            accountStatus="address"
-          />
-        </div>
+          </LinkButton>
+        </Card>
+        {isConnected ? (
+          <div className="flex justify-center [&_button]:!text-[12px]">
+            <ConnectButton
+              showBalance={false}
+              chainStatus="icon"
+              accountStatus="address"
+            />
+          </div>
+        ) : primary ? (
+          <div className="tile flex items-center justify-between gap-2 px-3 py-2.5">
+            <span className="text-[11px] text-caption truncate">
+              {shortAddress(primary.address)}
+            </span>
+            <Badge variant="positive" className="shrink-0">
+              Signed in
+            </Badge>
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="card p-3.5">
+    <Card className="p-3.5">
       <p className="text-[13px] font-bold text-white leading-snug">
         Connect wallet
       </p>
@@ -66,6 +83,6 @@ export function SidebarAuthCard() {
           accountStatus="address"
         />
       </div>
-    </div>
+    </Card>
   );
 }

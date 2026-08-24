@@ -2,6 +2,7 @@ import { Elysia } from "elysia";
 import { cors } from "@elysiajs/cors";
 import { authRoutes } from "./routes/auth";
 import { socialRoutes } from "./routes/socials";
+import { marketplaceRoutes } from "./routes/marketplace";
 
 const APP_ORIGIN = process.env.APP_ORIGIN || "http://localhost:3002";
 const PORT = Number(process.env.PORT || 3001);
@@ -18,6 +19,7 @@ const app = new Elysia()
   .get("/health", () => ({ ok: true, service: "house-api" }))
   .use(authRoutes)
   .use(socialRoutes)
+  .use(marketplaceRoutes)
   .listen(PORT);
 
 console.log(`House API listening on http://localhost:${PORT}`);

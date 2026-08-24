@@ -5,32 +5,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface IWETH is IERC20 {
-    function deposit() external payable;
-    function withdraw(uint256 amount) external;
-}
-
-interface IUniswapV4Router {
-    struct ExactInputSingleParams {
-        address tokenIn;
-        address tokenOut;
-        uint24 fee;
-        address recipient;
-        uint256 amountIn;
-        uint256 amountOutMinimum;
-        uint160 sqrtPriceLimitX96;
-    }
-
-    function exactInputSingle(ExactInputSingleParams calldata params)
-        external
-        payable
-        returns (uint256 amountOut);
-}
-
-interface IBurnableToken is IERC20 {
-    function burn(uint256 amount) external;
-}
-
 struct Bidders {
     address bidder;
     uint256 bidAmount;
@@ -57,6 +31,8 @@ struct Auction {
     address highestBidder;
     uint256 highestBid;
     uint256 minBidAmount;
+    bool isFixedPrice;
+    bool settled;
     Bidders[] bidders;
     mapping(address => uint256) bids;
     mapping(address => bool) hasBid;
@@ -66,64 +42,42 @@ contract AuctionHouse is Ownable {
     mapping(string => Auction) private auctions;
     string[] private allAuctionIds;
 
+    /// @notice Protocol fee in basis points (100 = 1%, 1000 = 10%). Applied on
+    ///         winning auction bids and on fixed-price purchases.
     uint256 public feePercent;
-    address public feeReceiver; // unused, backward compat
-
-    // Constants
-    address public constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-    address public constant UNISWAP_V4_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-    address public constant BURN_TOKEN = 0x8C32bcFC720FEC35443748A96030cE866d0665ff;
-
-    // Fee split wallets (modifiable)
-    address public feeWallet1;
-    address[3] public feeWalletGroup;
-    address public finalRewardWallet;
+    address public feeReceiver;
 
     event BidPlaced(string indexed auctionId, address indexed bidder, uint256 amount, string fid);
     event AuctionEnded(string indexed auctionId, address winner, uint256 amount, address auctionOwner, uint256 feeTaken);
     event AuctionStarted(string indexed auctionId, address owner, string tokenName, uint256 deadline, uint256 minBidAmount);
-    event BurnAndRewardsHandled(uint256 burnAmount, uint256 rewardAmount);
-    event FeeSettingsUpdated(uint256 newFeePercent);
-    event FeeWalletsUpdated(address wallet1, address[3] group, address rewardWallet);
+    event ListingStarted(string indexed listingId, address owner, string tokenName, uint256 deadline, uint256 price);
+    event ListingSold(string indexed listingId, address buyer, uint256 amount, address listingOwner, uint256 feeTaken);
+    event FeeSettingsUpdated(uint256 newFeePercent, address newFeeReceiver);
 
-    constructor(
-        address _wallet1,
-        address[3] memory _walletGroup,
-        address _finalRewardWallet,
-        uint256 _feePercent
-    ) Ownable(_wallet1) {
+    constructor(address _feeReceiver, uint256 _feePercent, address _owner) Ownable(_owner) {
+        require(_feeReceiver != address(0), "Invalid fee receiver");
         require(_feePercent <= 1000, "Fee too high (>10%)");
-        feeWallet1 = _wallet1;
-        feeWalletGroup = _walletGroup;
-        finalRewardWallet = _finalRewardWallet;
+        feeReceiver = _feeReceiver;
         feePercent = _feePercent;
     }
 
     // ------------------ CONFIGURATION ------------------
 
-    function updateFeeSettings(uint256 _newPercent) external onlyOwner {
+    function updateFeeSettings(address _newReceiver, uint256 _newPercent) external onlyOwner {
+        require(_newReceiver != address(0), "Invalid fee receiver");
         require(_newPercent <= 1000, "Fee too high (>10%)");
+        feeReceiver = _newReceiver;
         feePercent = _newPercent;
-        emit FeeSettingsUpdated(_newPercent);
+        emit FeeSettingsUpdated(_newPercent, _newReceiver);
     }
 
-    function updateFeeWallets(
-        address _wallet1,
-        address[3] calldata _walletGroup,
-        address _finalRewardWallet
-    ) external onlyOwner {
-        require(_wallet1 != address(0), "Invalid wallet1");
-        require(_finalRewardWallet != address(0), "Invalid reward wallet");
-        for (uint256 i = 0; i < 3; i++) {
-            require(_walletGroup[i] != address(0), "Invalid group wallet");
-            feeWalletGroup[i] = _walletGroup[i];
-        }
-        feeWallet1 = _wallet1;
-        finalRewardWallet = _finalRewardWallet;
-        emit FeeWalletsUpdated(_wallet1, _walletGroup, _finalRewardWallet);
+    function setFeeReceiver(address _newReceiver) external onlyOwner {
+        require(_newReceiver != address(0), "Invalid fee receiver");
+        feeReceiver = _newReceiver;
+        emit FeeSettingsUpdated(feePercent, _newReceiver);
     }
 
-    // ------------------ AUCTION LOGIC ------------------
+    // ------------------ CREATE LISTINGS ------------------
 
     function startAuction(
         string calldata _auctionId,
@@ -132,39 +86,70 @@ contract AuctionHouse is Ownable {
         uint256 durationHours,
         uint256 _minBidAmount
     ) external {
-        require(bytes(_auctionId).length > 0, "Auction ID required");
-        require(auctions[_auctionId].owner == address(0), "Auction already exists");
-        require(_activeAuctionCount(msg.sender) < 3, "Max 3 active auctions per owner");
-        require(_minBidAmount > 0, "Min bid > 0");
+        _createListing(_auctionId, _token, _tokenName, durationHours, _minBidAmount, false);
+        emit AuctionStarted(_auctionId, msg.sender, _tokenName, auctions[_auctionId].deadline, _minBidAmount);
+    }
 
-        Auction storage a = auctions[_auctionId];
+    function startFixedPriceListing(
+        string calldata _listingId,
+        address _token,
+        string calldata _tokenName,
+        uint256 durationHours,
+        uint256 _price
+    ) external {
+        _createListing(_listingId, _token, _tokenName, durationHours, _price, true);
+        emit ListingStarted(_listingId, msg.sender, _tokenName, auctions[_listingId].deadline, _price);
+    }
+
+    function _createListing(
+        string calldata _id,
+        address _token,
+        string calldata _tokenName,
+        uint256 durationHours,
+        uint256 _minBidOrPrice,
+        bool _isFixedPrice
+    ) internal {
+        require(bytes(_id).length > 0, "Listing ID required");
+        require(auctions[_id].owner == address(0), "Listing already exists");
+        require(_token != address(0), "Invalid token");
+        require(durationHours > 0, "Duration > 0");
+        require(_minBidOrPrice > 0, "Price/min bid > 0");
+        require(_activeListingCount(msg.sender) < 3, "Max 3 active listings per owner");
+
+        Auction storage a = auctions[_id];
         a.erc20 = IERC20(_token);
         a.tokenPermit = IERC20Permit(_token);
         a.tokenName = _tokenName;
         a.owner = msg.sender;
         a.deadline = block.timestamp + (durationHours * 1 hours);
-        a.minBidAmount = _minBidAmount;
+        a.minBidAmount = _minBidOrPrice;
+        a.isFixedPrice = _isFixedPrice;
 
-        allAuctionIds.push(_auctionId);
-        emit AuctionStarted(_auctionId, msg.sender, _tokenName, a.deadline, _minBidAmount);
+        allAuctionIds.push(_id);
     }
 
-    function _activeAuctionCount(address _owner) internal view returns (uint256 count) {
+    function _activeListingCount(address _owner) internal view returns (uint256 count) {
         for (uint256 i = 0; i < allAuctionIds.length; i++) {
             Auction storage a = auctions[allAuctionIds[i]];
-            if (a.deadline > block.timestamp && a.owner == _owner) count++;
+            if (a.owner == _owner && !a.settled && a.deadline > block.timestamp) count++;
         }
     }
+
+    // ------------------ AUCTION BIDS ------------------
 
     function placeBid(string memory _auctionId, uint256 amount, string memory fid) public {
         Auction storage a = auctions[_auctionId];
         require(a.owner != address(0), "Auction not found");
+        require(!a.isFixedPrice, "Not an auction");
+        require(!a.settled, "Auction settled");
         require(block.timestamp < a.deadline, "Auction ended");
         require(amount >= a.minBidAmount, "Bid below minimum");
         require(amount > a.highestBid, "Bid too low");
 
         require(a.erc20.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
+        // Refund the previous highest bidder in full. Fee is charged only
+        // on the winning bid when the auction is settled.
         if (a.highestBidder != address(0)) {
             uint256 refund = a.highestBid;
             address prevBidder = a.highestBidder;
@@ -191,91 +176,128 @@ contract AuctionHouse is Ownable {
         emit BidPlaced(_auctionId, msg.sender, amount, fid);
     }
 
-    // ------------------ END AUCTION ------------------
+    // ------------------ SETTLE ------------------
 
     function endAuction(string memory _auctionId) external {
         Auction storage a = auctions[_auctionId];
         require(a.owner != address(0), "Auction not found");
+        require(!a.isFixedPrice, "Not an auction");
+        require(!a.settled, "Already settled");
         require(msg.sender == a.owner, "Only auction owner can end");
 
         uint256 feeTaken;
-        uint256 payout;
-
         if (a.highestBid > 0 && a.highestBidder != address(0)) {
-            feeTaken = (a.highestBid * feePercent) / 10000;
-            payout = a.highestBid - feeTaken;
-
-            // 1️⃣ Pay auction owner (sale proceeds)
-            require(a.erc20.transfer(a.owner, payout), "Payout failed");
-
-            // 2️⃣ Swap only feeTaken -> WETH
-            IERC20 token = a.erc20;
-            IUniswapV4Router router = IUniswapV4Router(UNISWAP_V4_ROUTER);
-            token.approve(address(router), feeTaken);
-
-            IUniswapV4Router.ExactInputSingleParams memory params = IUniswapV4Router.ExactInputSingleParams({
-                tokenIn: address(token),
-                tokenOut: WETH_ADDRESS,
-                fee: 3000,
-                recipient: address(this),
-                amountIn: feeTaken,
-                amountOutMinimum: 0,
-                sqrtPriceLimitX96: 0
-            });
-
-            uint256 wethReceived = router.exactInputSingle(params);
-
-            // 3️⃣ Distribute first 37.5%
-            uint256 firstPart = (wethReceived * 3750) / 10000;
-
-
-            uint256 part1 = (firstPart * 1) / 3;
-            uint256 part2 = (firstPart * 2) / 3;
-
-            IERC20 weth = IERC20(WETH_ADDRESS);
-            weth.transfer(feeWallet1, part1);
-            uint256 each = part2 / 3;
-            for (uint256 i = 0; i < 3; i++) {
-                weth.transfer(feeWalletGroup[i], each);
-            }
-
-            // Remaining WETH stays in contract
+            feeTaken = _settle(a, a.highestBid);
             a.bids[a.highestBidder] = 0;
+        } else {
+            a.settled = true;
         }
 
         emit AuctionEnded(_auctionId, a.highestBidder, a.highestBid, a.owner, feeTaken);
-        a.highestBidder = address(0);
-        a.highestBid = 0;
     }
 
-    // ------------------ HANDLE BURN + REWARD ------------------
+    function buyListing(string calldata _listingId, string calldata fid) external {
+        Auction storage a = auctions[_listingId];
+        require(a.owner != address(0), "Listing not found");
+        require(a.isFixedPrice, "Not a fixed-price listing");
+        require(!a.settled, "Already sold");
+        require(block.timestamp < a.deadline, "Listing expired");
+        require(msg.sender != a.owner, "Cannot buy own listing");
 
-    function handleBurnAndRewards() external onlyOwner {
-        IERC20 weth = IERC20(WETH_ADDRESS);
-        uint256 totalWeth = weth.balanceOf(address(this));
-        require(totalWeth > 0, "No WETH to process");
+        uint256 price = a.minBidAmount;
+        require(a.erc20.transferFrom(msg.sender, address(this), price), "Transfer failed");
 
-        uint256 burnPortion = (totalWeth * 3) / 5;
-        uint256 rewardPortion = totalWeth - burnPortion;
+        a.highestBid = price;
+        a.highestBidder = msg.sender;
+        a.bids[msg.sender] = price;
+        a.hasBid[msg.sender] = true;
+        a.bidders.push(Bidders({bidder: msg.sender, bidAmount: price, fid: fid}));
 
-        // 1️⃣ Swap 3/5 WETH -> Burn token, then burn
-        weth.approve(UNISWAP_V4_ROUTER, burnPortion);
-        IUniswapV4Router.ExactInputSingleParams memory params = IUniswapV4Router.ExactInputSingleParams({
-            tokenIn: WETH_ADDRESS,
-            tokenOut: BURN_TOKEN,
-            fee: 3000,
-            recipient: address(this),
-            amountIn: burnPortion,
-            amountOutMinimum: 0,
-            sqrtPriceLimitX96: 0
+        uint256 feeTaken = _settle(a, price);
+        emit ListingSold(_listingId, msg.sender, price, a.owner, feeTaken);
+    }
+
+    /// @dev Takes feePercent of `amount` to feeReceiver and the rest to the listing owner.
+    function _settle(Auction storage a, uint256 amount) internal returns (uint256 feeTaken) {
+        require(!a.settled, "Already settled");
+        a.settled = true;
+
+        feeTaken = (amount * feePercent) / 10000;
+        uint256 payout = amount - feeTaken;
+
+        require(a.erc20.transfer(a.owner, payout), "Payout failed");
+        if (feeTaken > 0) {
+            require(a.erc20.transfer(feeReceiver, feeTaken), "Fee transfer failed");
+        }
+    }
+
+    // ------------------ VIEWS ------------------
+
+    function getAuctionMeta(string memory _auctionId) external view returns (AuctionMeta memory) {
+        return _toMeta(_auctionId, auctions[_auctionId]);
+    }
+
+    function getBidders(string memory _auctionId) external view returns (Bidders[] memory) {
+        return auctions[_auctionId].bidders;
+    }
+
+    function getListingType(string calldata _id) external view returns (bool isFixedPrice, bool settled) {
+        Auction storage a = auctions[_id];
+        return (a.isFixedPrice, a.settled);
+    }
+
+    function getActiveAuctions() external view returns (AuctionMeta[] memory) {
+        uint256 activeCount;
+        for (uint256 i = 0; i < allAuctionIds.length; i++) {
+            if (_isActive(auctions[allAuctionIds[i]])) activeCount++;
+        }
+
+        AuctionMeta[] memory result = new AuctionMeta[](activeCount);
+        uint256 idx;
+        for (uint256 i = 0; i < allAuctionIds.length; i++) {
+            string storage id = allAuctionIds[i];
+            if (_isActive(auctions[id])) {
+                result[idx] = _toMeta(id, auctions[id]);
+                idx++;
+            }
+        }
+        return result;
+    }
+
+    function getActiveAuctionsByOwner(address _owner) external view returns (AuctionMeta[] memory) {
+        uint256 activeCount;
+        for (uint256 i = 0; i < allAuctionIds.length; i++) {
+            Auction storage a = auctions[allAuctionIds[i]];
+            if (a.owner == _owner && _isActive(a)) activeCount++;
+        }
+
+        AuctionMeta[] memory result = new AuctionMeta[](activeCount);
+        uint256 idx;
+        for (uint256 i = 0; i < allAuctionIds.length; i++) {
+            string storage id = allAuctionIds[i];
+            Auction storage a = auctions[id];
+            if (a.owner == _owner && _isActive(a)) {
+                result[idx] = _toMeta(id, a);
+                idx++;
+            }
+        }
+        return result;
+    }
+
+    function _isActive(Auction storage a) internal view returns (bool) {
+        return a.owner != address(0) && !a.settled && a.deadline > block.timestamp;
+    }
+
+    function _toMeta(string memory id, Auction storage a) internal view returns (AuctionMeta memory) {
+        return AuctionMeta({
+            caInUse: address(a.erc20),
+            tokenName: a.tokenName,
+            deadline: a.deadline,
+            auctionId: id,
+            auctionOwner: a.owner,
+            highestBid: a.highestBid,
+            highestBidder: a.highestBidder,
+            minBidAmount: a.minBidAmount
         });
-
-        uint256 tokensBought = IUniswapV4Router(UNISWAP_V4_ROUTER).exactInputSingle(params);
-        IBurnableToken(BURN_TOKEN).burn(tokensBought);
-
-        // 2️⃣ Send 2/5 WETH to final reward wallet
-        weth.transfer(finalRewardWallet, rewardPortion);
-
-        emit BurnAndRewardsHandled(burnPortion, rewardPortion);
     }
 }

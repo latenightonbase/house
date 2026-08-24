@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Check } from "lucide-react";
 import { useSession } from "@/components/SessionProvider";
+import { Avatar, Button, Card, Tile } from "@/components/ui";
 import {
   formatCount,
   refreshSocial,
@@ -23,7 +25,6 @@ const PLATFORMS: Array<{
 ];
 
 function SocialCard({
-  platform,
   label,
   metric,
   color,
@@ -44,7 +45,7 @@ function SocialCard({
   onUnlink: () => void;
 }) {
   return (
-    <div className="card p-4 space-y-4">
+    <Card className="p-4 flex h-full flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <span
@@ -56,27 +57,25 @@ function SocialCard({
           </h3>
         </div>
         {linked ? (
-          <span className="badge badge-positive shrink-0">Verified</span>
+          <span className="flex items-center gap-1 text-[11px] font-medium text-positive shrink-0">
+            <Check className="h-3.5 w-3.5" />
+            Verified
+          </span>
         ) : (
-          <span className="badge badge-neutral shrink-0">Not linked</span>
+          <span className="text-[11px] text-caption shrink-0">Not linked</span>
         )}
       </div>
 
       {linked ? (
-        <div className="space-y-3">
+        <>
           <div className="flex items-center gap-3">
-            {linked.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={linked.avatarUrl}
-                alt=""
-                className="h-11 w-11 rounded-full object-cover border border-line-strong"
-              />
-            ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-line-strong bg-surface-2 text-[12px] text-caption">
-                {label[0]}
-              </div>
-            )}
+            <Avatar
+              src={linked.avatarUrl}
+              alt={linked.displayName || linked.username || label}
+              fallback={label[0]}
+              size={40}
+              className="text-[12px]"
+            />
             <div className="min-w-0">
               <p className="text-[13px] font-semibold text-foreground truncate">
                 {linked.displayName || linked.username || linked.platformUserId}
@@ -89,56 +88,48 @@ function SocialCard({
             </div>
           </div>
 
-          <div className="tile px-3.5 py-3">
-            <p className="panel-label">{metric}</p>
-            <p className="mt-1 numeric text-[22px] font-bold text-foreground">
+          <div>
+            <p className="numeric text-2xl font-bold text-foreground">
               {formatCount(linked.followerCount)}
             </p>
-            {linked.followerCountSyncedAt ? (
-              <p className="mt-1 text-[11px] text-caption">
-                Synced {new Date(linked.followerCountSyncedAt).toLocaleString()}
-              </p>
-            ) : null}
+            <p className="text-[11px] text-caption mt-0.5">
+              {metric}
+              {linked.followerCountSyncedAt
+                ? ` · synced ${new Date(linked.followerCountSyncedAt).toLocaleDateString()}`
+                : ""}
+            </p>
           </div>
 
-          <div className="flex gap-2">
-            <button
-              type="button"
+          <div className="mt-auto flex gap-2">
+            <Button
+              variant="accent-outline"
               disabled={busy}
               onClick={onRefresh}
-              className="btn-accent-outline flex-1 h-9 text-[12px] disabled:opacity-50"
+              className="h-9 flex-1"
             >
               Refresh
-            </button>
+            </Button>
             <button
               type="button"
               disabled={busy}
               onClick={onUnlink}
-              className="h-9 rounded-lg border border-negative/40 bg-negative/10 px-3 text-[12px] font-semibold text-negative hover:bg-negative/15 disabled:opacity-50"
+              className="h-9 rounded-lg border border-line-strong px-3 text-[12px] font-medium text-caption hover:text-negative hover:border-negative/40 transition-colors disabled:opacity-50"
             >
               Unlink
             </button>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="space-y-3">
+        <>
           <p className="text-[12px] text-caption leading-relaxed">
-            Verify your {label} account to show your latest {metric}.
+            Verify {label} to show your {metric}.
           </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onVerify}
-            className="btn-primary h-9 w-full text-[12px] disabled:opacity-50"
-          >
+          <Button disabled={busy} onClick={onVerify} className="mt-auto h-9 w-full">
             Verify {label}
-          </button>
-          <p className="text-[10px] text-caption/70">
-            Requires {platform} OAuth credentials on the API.
-          </p>
-        </div>
+          </Button>
+        </>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -199,15 +190,14 @@ export function SocialCards() {
   return (
     <div className="space-y-3">
       {!authenticated ? (
-        <div className="tile border-dashed px-4 py-3 text-[12px] text-caption">
-          SIWE session required. Social verify/refresh only syncs follower data —
-          it is not authentication.
-        </div>
+        <Tile className="border-dashed px-4 py-3 text-[12px] text-caption">
+          Connect your wallet to link socials — they sync follower data, not sign-in.
+        </Tile>
       ) : null}
       {error ? (
-        <div className="tile border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
+        <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
           {error}
-        </div>
+        </Tile>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         {PLATFORMS.map((p) => (

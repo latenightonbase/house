@@ -20,10 +20,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  wallets  Wallet[]
-  sessions Session[]
-  socials  SocialAccount[]
-  oauthStates OAuthState[]
+  wallets        Wallet[]
+  sessions       Session[]
+  socials        SocialAccount[]
+  oauthStates    OAuthState[]
+  creatorProfile CreatorProfile?
 }
 
 model Wallet {
@@ -79,20 +80,20 @@ model OAuthState {
 }
 
 model SocialAccount {
-  id                     String         @id @default(cuid())
-  platform               SocialPlatform
-  platformUserId         String
-  username               String?
-  displayName            String?
-  avatarUrl              String?
-  followerCount          Int?
-  followerCountSyncedAt  DateTime?
-  accessTokenEncrypted   String
-  refreshTokenEncrypted  String?
-  tokenExpiresAt         DateTime?
-  scopes                 String?
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  platform              SocialPlatform
+  platformUserId        String
+  username              String?
+  displayName           String?
+  avatarUrl             String?
+  followerCount         Int?
+  followerCountSyncedAt DateTime?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  tokenExpiresAt        DateTime?
+  scopes                String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -100,4 +101,107 @@ model SocialAccount {
   @@unique([userId, platform])
   @@unique([platform, platformUserId])
   @@index([userId])
+}
+
+enum CreatorType {
+  HUMAN
+  BOT
+}
+
+enum BookingStatus {
+  CONFIRMED
+  PENDING
+}
+
+/**
+ * Public marketplace identity for a User — separate from wallet/social auth data.
+ */
+model CreatorProfile {
+  id            String   @id @default(cuid())
+  displayName   String
+  username      String?
+  avatarUrl     String?
+  verified      Boolean  @default(false)
+  tags          String[]
+  engagementPct Float?
+  trend         Int[]
+  fromPrice     Int?
+  averageRating Float?
+  totalReviews  Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  auctions Auction[]
+  bookings Booking[]
+}
+
+model Auction {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  currency    String      @default("USDC")
+  minimumBid  Int
+  startDate   DateTime
+  endDate     DateTime
+  imageUrl    String?
+  tags        String[]
+  avgViews    String?
+  createdBy   CreatorType @default(HUMAN)
+  /**
+   * Pins this auction as the dashboard's top featured spot, overriding the highest-bid fallback.
+   */
+  featured    Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  hostId String
+  host   CreatorProfile @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  bids Bid[]
+
+  @@index([hostId])
+  @@index([endDate])
+}
+
+model Bid {
+  id              String      @id @default(cuid())
+  amount          Int
+  currency        String      @default("USDC")
+  bidderWallet    String
+  bidderName      String
+  bidderAvatarUrl String?
+  source          CreatorType @default(HUMAN)
+  createdAt       DateTime    @default(now())
+
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId])
+  @@index([createdAt])
+}
+
+model Booking {
+  id        String        @id @default(cuid())
+  brand     String
+  markUrl   String?
+  amount    Int
+  placement String
+  status    BookingStatus @default(CONFIRMED)
+  createdAt DateTime      @default(now())
+
+  creatorId String
+  creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId])
+}
+
+model Campaign {
+  id         String   @id @default(cuid())
+  name       String
+  budget     Int
+  lookingFor String
+  createdAt  DateTime @default(now())
 }

@@ -3,8 +3,20 @@
 import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import Link from "next/link";
 import { useSession } from "@/components/SessionProvider";
+import { useDashboardData } from "@/lib/useDashboardData";
+import { Button, Tile } from "@/components/ui";
+import { Topbar } from "@/components/dashboard/Topbar";
+import { FeaturedAuction } from "@/components/dashboard/FeaturedAuction";
+import {
+  EndingSoonCard,
+  MostBookedCard,
+  NewCampaignCard,
+  TrendingCreatorCard,
+} from "@/components/dashboard/SpotlightCards";
+import { TrendingCreators } from "@/components/dashboard/TrendingCreators";
+import { LiveAuctions } from "@/components/dashboard/LiveAuctions";
+import { RecentlyBooked } from "@/components/dashboard/RecentlyBooked";
 
 export default function HomeClient() {
   const searchParams = useSearchParams();
@@ -13,6 +25,19 @@ export default function HomeClient() {
   const { openConnectModal } = useConnectModal();
   const authRequired = searchParams.get("auth") === "required";
 
+  const {
+    stats,
+    featured,
+    liveAuctions,
+    endingSoon,
+    creators,
+    trendingCreator,
+    mostBooked,
+    newCampaign,
+    bookings,
+    loading,
+  } = useDashboardData();
+
   useEffect(() => {
     if (authRequired && status === "authenticated") {
       router.replace("/profile");
@@ -20,99 +45,40 @@ export default function HomeClient() {
   }, [authRequired, status, router]);
 
   return (
-    <div className="space-y-4 max-w-3xl">
+    <div className="w-full space-y-4">
       {authRequired && status !== "authenticated" ? (
-        <div className="tile border-warning/30 bg-warning/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-[13px] text-warning">
-            Profile requires a wallet SIWE session. Social links are not sign-in.
-          </p>
-          <button
-            type="button"
-            onClick={() => openConnectModal?.()}
-            className="btn-primary h-8 px-4 text-[12px] shrink-0"
-          >
+        <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-[13px] text-warning">Connect your wallet to continue.</p>
+          <Button onClick={() => openConnectModal?.()} size="sm" className="shrink-0">
             Connect wallet
-          </button>
-        </div>
+          </Button>
+        </Tile>
       ) : null}
 
-      <section className="card p-6 max-lg:p-4 space-y-5">
-        <p className="panel-label">Wallet · Social reach</p>
-        <h1 className="gradient-text text-3xl sm:text-4xl font-bold tracking-tight max-w-xl">
-          Connect your wallet. Verify your socials. Show real reach.
-        </h1>
-        <p className="text-[13px] text-caption max-w-lg leading-relaxed">
-          Authentication is RainbowKit Sign-In with Ethereum only. Linking
-          YouTube, X, Instagram, or TikTok stores reach data — it does not log
-          you in.
-        </p>
+      <Topbar stats={stats} notificationCount={2} />
 
-        <div className="flex flex-wrap gap-2">
-          <span className="tile rounded-full px-3 py-1 text-[11px] font-semibold">
-            <span className="accent-text">SIWE</span>
-            <span className="text-caption"> auth</span>
-          </span>
-          <span className="tile rounded-full px-3 py-1 text-[11px] font-semibold text-caption">
-            Socials = data refresh
-          </span>
-          <span className="tile rounded-full px-3 py-1 text-[11px] font-semibold text-caption">
-            Base-first wallets
-          </span>
-        </div>
+      <div className="space-y-4">
+        {/* Row 1 — featured auction beside the spotlight grid */}
+        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] items-start">
+          {featured && <FeaturedAuction auction={featured} />}
 
-        <div className="flex flex-wrap gap-3 pt-1">
-          {status === "authenticated" ? (
-            <Link
-              href="/profile"
-              className="gradient-button inline-flex h-10 items-center justify-center rounded-lg px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-            >
-              Open profile
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => openConnectModal?.()}
-              className="gradient-button inline-flex h-10 items-center justify-center rounded-lg px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-            >
-              Connect wallet
-            </button>
-          )}
-          <a
-            href="https://docs.base.org/base-account/guides/rainbowkit"
-            target="_blank"
-            rel="noreferrer"
-            className="btn-accent-outline inline-flex h-10 items-center justify-center px-5 text-sm"
-          >
-            Base + RainbowKit
-          </a>
-        </div>
-      </section>
-
-      <section className="grid gap-4 sm:grid-cols-3">
-        {[
-          {
-            step: "01",
-            title: "Connect + SIWE",
-            body: "RainbowKit connects your wallet and prompts a signature. That session is your only auth.",
-          },
-          {
-            step: "02",
-            title: "Open profile",
-            body: "Middleware blocks /profile without a valid SIWE cookie validated by the API.",
-          },
-          {
-            step: "03",
-            title: "Refresh socials",
-            body: "OAuth links are one-time or periodic data syncs for follower counts — never login.",
-          },
-        ].map((item) => (
-          <div key={item.step} className="card p-4 space-y-3">
-            <p className="panel-label">Step {item.step}</p>
-            <h2 className="text-[15px] font-bold text-foreground">{item.title}</h2>
-            <p className="text-[12px] text-caption leading-relaxed">{item.body}</p>
+          <div className="grid grid-cols-2 gap-3 xl:gap-4">
+            {trendingCreator && <TrendingCreatorCard creator={trendingCreator} />}
+            {mostBooked && <MostBookedCard creator={mostBooked} />}
+            {endingSoon && <EndingSoonCard auction={endingSoon} />}
+            {newCampaign && <NewCampaignCard campaign={newCampaign} />}
           </div>
-        ))}
-      </section>
+        </div>
+
+        {/* Row 2 — creator table beside the live auction list */}
+        <div className="grid gap-4 grid-cols-1 2xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] items-start">
+          <TrendingCreators creators={creators} loading={loading} />
+          <LiveAuctions auctions={liveAuctions} loading={loading} />
+        </div>
+
+        {/* Row 3 — settled bookings */}
+        <RecentlyBooked bookings={bookings} loading={loading} />
+      </div>
     </div>
   );
 }
