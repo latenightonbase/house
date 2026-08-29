@@ -82,6 +82,11 @@ export function parseCookie(cookieHeader: string | null | undefined, name: strin
   return undefined;
 }
 
+/** Session user for a request, or null when the cookie is missing/expired. */
+export async function getUserFromRequest(request: Request) {
+  return getUserFromSessionToken(parseCookie(request.headers.get("cookie"), COOKIE_NAME));
+}
+
 export function publicUser(user: NonNullable<Awaited<ReturnType<typeof getUserFromSessionToken>>>) {
   return {
     id: user.id,

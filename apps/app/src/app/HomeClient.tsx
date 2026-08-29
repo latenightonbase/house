@@ -18,6 +18,7 @@ import {
 import { TrendingCreators } from "@/components/dashboard/TrendingCreators";
 import { LiveAuctions } from "@/components/dashboard/LiveAuctions";
 import { RecentlyBooked } from "@/components/dashboard/RecentlyBooked";
+import { MediaListings } from "@/components/dashboard/MediaListings";
 
 export default function HomeClient() {
   const searchParams = useSearchParams();
@@ -36,6 +37,7 @@ export default function HomeClient() {
     mostBooked,
     newCampaign,
     bookings,
+    listings,
     loading,
   } = useDashboardData();
 
@@ -69,6 +71,8 @@ export default function HomeClient() {
           {endingSoon && <EndingSoonCard auction={endingSoon} />}
           {newCampaign && <NewCampaignCard campaign={newCampaign} />}
         </div>
+
+        <MediaListings listings={listings} loading={loading} />
 
         {/* Creator table beside the open auction list */}
         <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">

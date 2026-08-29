@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
+import { CreateListingButton } from "@/components/CreateListingButton";
 import { ListingCard } from "@/components/ListingCard";
 import { Panel, Tabs, type Platform, type TabItem } from "@/components/ui";
 import { fetchListings, type Listing } from "@/lib/marketplace";
@@ -43,7 +44,8 @@ export default function MarketplacePage() {
     <div className="space-y-4">
       <PageHeader
         title="Marketplace"
-        subtitle="Fixed-price media inventory. Pick a placement, pay the listed price — no bidding."
+        subtitle="Creator media inventory. Book a flat-price placement outright, or bid on the ones open to auction."
+        action={<CreateListingButton />}
       />
 
       <Panel>

@@ -1,4 +1,4 @@
-import { PrismaClient, SocialPlatform } from "@prisma/client";
+import { PrismaClient, SocialPlatform, type ListingCategory, type PricingType } from "@prisma/client";
 import { encrypt } from "../src/lib/crypto";
 
 const prisma = new PrismaClient();
@@ -385,87 +385,126 @@ const MARCO = "0x2e5b3b1a0c9d4f6e8a7c1b2d3e4f5a6b7c8d9e0f";
 const PRIYA = "0x9a1b2c3d4e5f60718293a4b5c6d7e8f901234567";
 const BILL = "0xf06207e32365a4f574fd4dfbe9db5be70002b2a4";
 
-/** Fixed-price media inventory — bought outright, no bidding. */
+/** Media inventory a creator sells — fixed price or by auction. */
+
+/** Days from now, as a listing end date. */
+const inDays = (days: number) => new Date(Date.now() + days * 86_400_000);
+
 const SEED_LISTINGS = [
   {
     creatorAddress: BILL,
     title: "Live show mid-roll read",
     description: "60-second host-read spot during the M–Thu noon PST stream.",
+    category: "LIVESTREAM" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "Livestream mid-roll",
     platform: "TWITTER" as SocialPlatform,
     price: 3500,
     turnaroundDays: 5,
     slotsAvailable: 4,
+    endDate: inDays(21),
   },
   {
     creatorAddress: BILL,
     title: "Pinned post + quote",
     description: "Pinned announcement post held for 24 hours, plus one quote repost.",
+    category: "SPONSORED_POST" as ListingCategory,
+    pricingType: "AUCTION" as PricingType,
     placement: "Pinned post",
     platform: "TWITTER" as SocialPlatform,
     price: 1200,
     turnaroundDays: 2,
     slotsAvailable: 8,
+    endDate: inDays(3),
   },
   {
     creatorAddress: ALICE,
     title: "Long-form video integration",
     description: "90-second integrated segment inside the next research video.",
+    category: "VIDEO_INTEGRATION" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "YouTube integration",
     platform: "YOUTUBE" as SocialPlatform,
     price: 6000,
     turnaroundDays: 14,
     slotsAvailable: 2,
+    endDate: inDays(30),
   },
   {
     creatorAddress: ALICE,
     title: "Newsletter lead sponsor",
     description: "Top-of-send placement with logo, blurb and link.",
+    category: "NEWSLETTER" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "Newsletter",
     platform: "TWITTER" as SocialPlatform,
     price: 1800,
     turnaroundDays: 7,
     slotsAvailable: 3,
+    endDate: inDays(14),
   },
   {
     creatorAddress: MARCO,
     title: "Sponsored reel",
     description: "Fully produced 30-second vertical reel, brand-approved before posting.",
+    category: "SPONSORED_POST" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "Instagram reel",
     platform: "INSTAGRAM" as SocialPlatform,
     price: 2400,
     turnaroundDays: 10,
     slotsAvailable: 5,
+    endDate: inDays(18),
   },
   {
     creatorAddress: MARCO,
     title: "TikTok series slot",
     description: "Three-part sponsored series across one week.",
+    category: "DEDICATED_VIDEO" as ListingCategory,
+    pricingType: "AUCTION" as PricingType,
     placement: "TikTok series",
     platform: "TIKTOK" as SocialPlatform,
     price: 4200,
     turnaroundDays: 12,
     slotsAvailable: 2,
+    endDate: inDays(5),
   },
   {
     creatorAddress: PRIYA,
     title: "Tutorial integration",
     description: "Tool featured end-to-end in a build-along tutorial.",
+    category: "VIDEO_INTEGRATION" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "YouTube tutorial",
     platform: "YOUTUBE" as SocialPlatform,
     price: 2200,
     turnaroundDays: 14,
     slotsAvailable: 3,
+    endDate: inDays(25),
   },
   {
     creatorAddress: PRIYA,
     title: "Dev thread feature",
     description: "Technical breakdown thread with your product as the worked example.",
+    category: "SPONSORED_POST" as ListingCategory,
+    pricingType: "FIXED" as PricingType,
     placement: "Thread",
     platform: "TWITTER" as SocialPlatform,
     price: 900,
     turnaroundDays: 4,
     slotsAvailable: 6,
+    endDate: inDays(10),
+  },
+  {
+    creatorAddress: PRIYA,
+    title: "Office hours — 1:1 architecture review",
+    description: "A 60-minute working session on your stack, recorded for your team.",
+    category: "CONSULTING" as ListingCategory,
+    pricingType: "AUCTION" as PricingType,
+    price: 500,
+    turnaroundDays: 3,
+    slotsAvailable: 1,
+    endDate: inDays(4),
   },
 ];
 
@@ -727,9 +766,14 @@ async function seedListings(profileIdByAddress: Map<string, string>) {
     const existing = await prisma.listing.findFirst({
       where: { creatorId, title: listing.title },
     });
-    if (existing) continue;
 
     const { creatorAddress: _ignored, ...data } = listing;
+    // Re-applied rather than skipped so rows seeded before categories and
+    // pricing types existed pick them up.
+    if (existing) {
+      await prisma.listing.update({ where: { id: existing.id }, data });
+      continue;
+    }
     await prisma.listing.create({ data: { ...data, creatorId } });
   }
   console.log("listings up to date");

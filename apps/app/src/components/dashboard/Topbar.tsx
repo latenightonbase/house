@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/components/SessionProvider";
+import { CreateListingButton } from "@/components/CreateListingButton";
 import { BrandAvatar } from "@/components/ui";
 
 /** Desktop topbar: search and the viewer's avatar — no ticker, no chrome. */
@@ -44,11 +45,13 @@ export function Topbar() {
         </kbd>
       </form>
 
+      <CreateListingButton size="sm" className="shrink-0 ml-auto" />
+
       {status === "authenticated" && primaryWallet ? (
         <button
           type="button"
           onClick={() => router.push("/dashboard")}
-          className="shrink-0 rounded-full ml-auto"
+          className="shrink-0 rounded-full"
           aria-label="Open profile"
         >
           <BrandAvatar

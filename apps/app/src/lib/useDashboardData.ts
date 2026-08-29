@@ -6,11 +6,13 @@ import {
   fetchBookings,
   fetchCreators,
   fetchLatestCampaign,
+  fetchListings,
   fetchMarketStats,
   type Auction,
   type Booking,
   type Campaign,
   type Earner,
+  type Listing,
   type MarketStats,
 } from "@/lib/marketplace";
 
@@ -24,6 +26,7 @@ export interface DashboardData {
   mostBooked: Earner | null;
   newCampaign: Campaign | null;
   bookings: Booking[];
+  listings: Listing[];
   loading: boolean;
   error: string | null;
 }
@@ -38,6 +41,7 @@ const EMPTY: DashboardData = {
   mostBooked: null,
   newCampaign: null,
   bookings: [],
+  listings: [],
   loading: true,
   error: null,
 };
@@ -57,8 +61,9 @@ export function useDashboardData(): DashboardData {
       fetchCreators(8),
       fetchBookings(5),
       fetchLatestCampaign(),
+      fetchListings({ limit: 60 }),
     ])
-      .then(([stats, allLiveAuctions, creators, bookings, newCampaign]) => {
+      .then(([stats, allLiveAuctions, creators, bookings, newCampaign, listings]) => {
         if (cancelled) return;
 
         const liveAuctions = allLiveAuctions.slice(0, 3);
@@ -84,6 +89,7 @@ export function useDashboardData(): DashboardData {
           mostBooked,
           newCampaign,
           bookings,
+          listings,
           loading: false,
           error: null,
         });

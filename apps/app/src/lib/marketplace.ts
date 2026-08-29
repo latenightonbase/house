@@ -1,4 +1,5 @@
 import type { Platform } from "@/components/ui/PlatformIcons";
+import type { ListingCategory } from "@/lib/listingCategories";
 
 export type { Platform };
 
@@ -112,18 +113,56 @@ export interface ListingCreator {
   reach: string;
 }
 
-/** Fixed-price media inventory — bought outright, no bidding. */
+export type PricingType = "FIXED" | "AUCTION";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "SOLD" | "CANCELLED";
+
+/**
+ * A unit of media or service on sale. `price` is the asking price for a FIXED
+ * listing and the minimum bid for an AUCTION — the same split the AuctionHouse
+ * contract makes with its single `isFixedPrice` flag.
+ */
 export interface Listing {
   id: string;
   title: string;
   description?: string;
-  placement: string;
-  platform: Platform;
+  category: ListingCategory;
+  pricingType: PricingType;
   price: number;
   currency: string;
+  placement?: string;
+  platform?: Platform;
   turnaroundDays?: number;
   slotsAvailable: number;
+  endDate?: string;
+  status: ListingStatus;
+  chainId?: number;
+  contractAddress?: string;
+  tokenAddress?: string;
+  tokenName?: string;
+  txHash?: string;
   creator: ListingCreator;
+}
+
+/** What the create form sends after the AuctionHouse transaction confirms. */
+export interface NewListingInput {
+  /** Same string passed to `startAuction` / `startFixedPriceListing`. */
+  id: string;
+  title: string;
+  description?: string;
+  category: ListingCategory;
+  pricingType: PricingType;
+  price: number;
+  currency?: string;
+  endDate: string;
+  placement?: string;
+  platform?: "YOUTUBE" | "TWITTER" | "INSTAGRAM" | "TIKTOK";
+  turnaroundDays?: number;
+  slotsAvailable?: number;
+  txHash: string;
+  chainId: number;
+  contractAddress: string;
+  tokenAddress: string;
+  tokenName?: string;
 }
 
 export interface Vault {
@@ -197,13 +236,66 @@ export async function fetchMarketStats(): Promise<MarketStats> {
 }
 
 export async function fetchListings(
-  params: { platform?: string; limit?: number } = {},
+  params: {
+    platform?: string;
+    category?: string;
+    pricingType?: PricingType | "all";
+    limit?: number;
+  } = {},
 ): Promise<Listing[]> {
   const qs = new URLSearchParams();
   if (params.platform) qs.set("platform", params.platform);
+  if (params.category) qs.set("category", params.category);
+  if (params.pricingType) qs.set("pricingType", params.pricingType);
   if (params.limit) qs.set("limit", String(params.limit));
   const data = await getJson<{ listings: Listing[] }>(`/backend/listings?${qs.toString()}`);
   return data.listings;
+}
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as { error?: string }).error || `Request failed: ${path}`);
+  }
+  return data as T;
+}
+
+/**
+ * Persists a listing after its AuctionHouse transaction has confirmed.
+ * The `id` is the same string already written on-chain.
+ */
+export async function createListing(input: NewListingInput): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>("/backend/listings", input);
+  return data.listing;
+}
+
+/** Publishes a draft once its AuctionHouse transaction has confirmed. */
+export async function activateListing(
+  id: string,
+  onchain: {
+    txHash: string;
+    chainId: number;
+    contractAddress: string;
+    tokenAddress: string;
+    tokenName?: string;
+  },
+): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(
+    `/backend/listings/${id}/activate`,
+    onchain,
+  );
+  return data.listing;
+}
+
+/** Drops a draft whose transaction was rejected or never landed. */
+export async function cancelListing(id: string): Promise<void> {
+  await postJson(`/backend/listings/${id}/cancel`, {});
 }
 
 export async function fetchCampaigns(limit = 30): Promise<Campaign[]> {

@@ -249,28 +249,79 @@ model CampaignApplication {
   @@index([campaignId])
 }
 
-/// Fixed-price media inventory — the Marketplace vertical. Unlike an Auction,
-/// a Listing is bought at its stated price with no bidding.
+enum PricingType {
+  FIXED
+  AUCTION
+}
+
+/// What a creator is selling. Drives the category sections on the discover page.
+enum ListingCategory {
+  SHOUTOUT
+  SPONSORED_POST
+  VIDEO_INTEGRATION
+  DEDICATED_VIDEO
+  LIVESTREAM
+  PODCAST
+  NEWSLETTER
+  AMA
+  COLLAB
+  CONSULTING
+  OTHER
+}
+
+/// DRAFT is written before the AuctionHouse transaction is sent, so a listing
+/// id exists to pass on-chain. It only becomes ACTIVE once that tx confirms —
+/// or immediately, when the marketplace runs without a deployed contract.
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+/// A unit of media or service a creator sells. Mirrors the AuctionHouse
+/// contract, which stores fixed-price listings and auctions in one mapping and
+/// distinguishes them with a single `isFixedPrice` flag — so both live here,
+/// separated by `pricingType`, and share one on-chain id (this row's `id`).
 model Listing {
-  id             String         @id @default(cuid())
+  id             String          @id @default(cuid())
   title          String
   description    String?
-  placement      String
-  platform       SocialPlatform
+  category       ListingCategory @default(OTHER)
+  pricingType    PricingType     @default(FIXED)
+  /// The asking price when pricingType is FIXED, the minimum bid when AUCTION —
+  /// the contract takes the same `_minBidOrPrice` argument for both.
   price          Int
-  currency       String         @default("USDC")
+  currency       String          @default("USDC")
+  /// Short placement label ("Pinned post"); falls back to the category name.
+  placement      String?
+  platform       SocialPlatform?
   turnaroundDays Int?
   /// Remaining slots; 0 reads as sold out.
-  slotsAvailable Int            @default(1)
-  active         Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  slotsAvailable Int             @default(1)
+  /// When bidding closes / the offer expires. The contract only accepts whole
+  /// hours of duration, so this is rounded up to the next hour on-chain.
+  endDate        DateTime?
+  status         ListingStatus   @default(ACTIVE)
+
+  /// Chain wiring, written once the AuctionHouse tx confirms. Null while the
+  /// contract is unset — the listing is then marketplace-only.
+  chainId      Int?
+  contractAddress String?
+  tokenAddress String?
+  tokenName    String?
+  txHash       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   creatorId String
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@index([creatorId])
-  @@index([active])
+  @@index([status])
+  @@index([category])
+  @@index([pricingType])
 }
 
 /// Activate vertical — a brand/community activation. Pantheon provides the
