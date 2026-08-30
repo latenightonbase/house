@@ -16,11 +16,11 @@ export const config = getDefaultConfig({
   wallets: [
     {
       groupName: "Recommended",
-      wallets: [baseAccount],
+      wallets: [metaMaskWallet, rainbowWallet, walletConnectWallet],
     },
     {
       groupName: "Other",
-      wallets: [metaMaskWallet, rainbowWallet, walletConnectWallet],
+      wallets: [baseAccount],
     },
   ],
 });

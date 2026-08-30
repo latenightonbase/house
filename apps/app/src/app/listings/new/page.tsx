@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { parseUnits } from "viem";
+import { BaseError, UserRejectedRequestError, parseUnits } from "viem";
 import {
   useAccount,
   usePublicClient,
@@ -80,13 +80,35 @@ function toLocalInputValue(date: Date) {
   )}:${pad(date.getMinutes())}`;
 }
 
-type Step = "form" | "signing" | "confirming" | "publishing" | "done";
+type Step = "form" | "switching" | "signing" | "confirming" | "publishing" | "done";
 
 const STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
+  switching: "Switch your wallet to Robinhood Chain…",
   signing: "Confirm the transaction in your wallet…",
   confirming: "Waiting for the transaction to confirm…",
   publishing: "Publishing to the marketplace…",
 };
+
+function listingWriteError(err: unknown): string {
+  if (err instanceof UserRejectedRequestError) {
+    return "You rejected the transaction in your wallet.";
+  }
+  if (err instanceof BaseError) {
+    if (err.walk((e) => e instanceof UserRejectedRequestError)) {
+      return "You rejected the transaction in your wallet.";
+    }
+    const msg = err.shortMessage || err.message;
+    if (/Account type|smart/i.test(msg)) {
+      return "This wallet can't sign on Robinhood Chain. Connect MetaMask or Rainbow and try again.";
+    }
+    if (/chain/i.test(msg) && /mismatch|supported|unrecognized|switch/i.test(msg)) {
+      return "Switch your wallet to Robinhood Chain and try again.";
+    }
+    return msg;
+  }
+  if (err instanceof Error) return err.message;
+  return "Could not create the listing.";
+}
 
 const LISTING_CHAIN_ID = robinhood.id;
 
@@ -403,7 +425,11 @@ export default function NewListingPage() {
       return;
     }
     if (!address) {
-      openConnectModal?.();
+      if (openConnectModal) {
+        openConnectModal();
+      } else {
+        setError("Reconnect your wallet to sign the listing transaction.");
+      }
       return;
     }
     setError(null);
@@ -424,21 +450,36 @@ export default function NewListingPage() {
 
     const listingId = crypto.randomUUID();
     try {
-      if (!chainSupported) await switchChainAsync({ chainId: LISTING_CHAIN_ID });
+      // Don't pass `chainId` into writeContract — viem asserts the connector
+      // chain first and throws before eth_sendTransaction, so the wallet
+      // never opens. Switch here, then request the signature on the
+      // connector's current chain.
+      if (!chainSupported) {
+        setStep("switching");
+        if (!switchChainAsync) {
+          throw new Error("Switch your wallet to Robinhood Chain and try again.");
+        }
+        await switchChainAsync({ chainId: LISTING_CHAIN_ID });
+      }
 
       setStep("signing");
       const amount = parseUnits(String(priceNumber), token.decimals);
       const hours = BigInt(durationHoursUntil(parsedEnd));
       const args = [listingId, token.address, token.symbol, hours, amount] as const;
-
-      const hash = await writeContractAsync({
+      const request = {
         address: contractAddress,
         abi: auctionHouseAbi,
-        functionName:
-          pricingType === "AUCTION" ? "startAuction" : "startFixedPriceListing",
         args,
-        chainId: LISTING_CHAIN_ID,
-      });
+        account: address,
+      } as const;
+
+      const hash =
+        pricingType === "AUCTION"
+          ? await writeContractAsync({ ...request, functionName: "startAuction" })
+          : await writeContractAsync({
+              ...request,
+              functionName: "startFixedPriceListing",
+            });
 
       setStep("confirming");
       if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
@@ -460,7 +501,7 @@ export default function NewListingPage() {
         setStep("form");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create the listing.");
+      setError(listingWriteError(err));
       setStep("form");
     }
   }
@@ -529,18 +570,28 @@ export default function NewListingPage() {
 
   return (
     <div className="space-y-4 max-w-6xl">
-      <Link
-        href="/marketplace"
-        className="inline-flex items-center gap-1.5 text-[12px] text-caption hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Back to marketplace
-      </Link>
-
+      
       <PageHeader
         title="Create a listing"
         subtitle="Sell a piece of your media or your time. Set a flat price for instant booking, or open it to bids."
       />
+
+      {!address && (
+        <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
+          <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+          <div className="space-y-2">
+            <p className="text-[12px] text-warning leading-relaxed">
+              Your session is signed in, but the wallet is disconnected. Reconnect
+              it to confirm the listing transaction.
+            </p>
+            {openConnectModal && (
+              <Button size="sm" variant="accent-outline" onClick={openConnectModal}>
+                Reconnect wallet
+              </Button>
+            )}
+          </div>
+        </Tile>
+      )}
 
       {address && !chainSupported && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
