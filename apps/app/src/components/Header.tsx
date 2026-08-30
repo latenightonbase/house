@@ -29,17 +29,17 @@ import { useSession } from "@/components/SessionProvider";
  */
 const NAV = [
   { href: "/", label: "Discover", icon: Compass },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
   { href: "/creators", label: "Creators", icon: Users },
   { href: "/marketplace", label: "Marketplace", icon: Store },
   { href: "/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/auctions", label: "Auctions", icon: Gavel },
-  { href: "/activate", label: "Activate", icon: Sparkles },
-  { href: "/studio", label: "Creator Studio", icon: Wand2 },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
+  // { href: "/activate", label: "Activate", icon: Sparkles },
+  // { href: "/studio", label: "Creator Studio", icon: Wand2 },
 ];
 
 /** Mobile tab bar carries only the highest-traffic destinations. */
-const MOBILE_NAV = [NAV[0], NAV[1], NAV[2], NAV[7]];
+const MOBILE_NAV = [NAV[0], NAV[1], NAV[2], NAV[3]];
 
 function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
@@ -110,9 +110,9 @@ export function Header() {
               <Link
                 key={item.href}
                 href={hrefFor(item)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-2.5 transition-all duration-200 rounded-lg text-[13px] font-medium transition-colors ${
                   active
-                    ? "bg-primary text-white"
+                    ? "bg-primary/20 font-bold text-white"
                     : "text-caption hover:text-white hover:bg-white/[0.04]"
                 }`}
               >
@@ -132,7 +132,7 @@ export function Header() {
       {/* Mobile bottom tabs */}
       <nav className="fixed bottom-0 left-0 right-0 h-16 z-50 lg:hidden bg-[#070a12]/97 backdrop-blur-md border-t border-line">
         <div className="h-full flex items-stretch px-1">
-          {MOBILE_NAV.map((item) => {
+          {MOBILE_NAV.map((item) => { if (!item) return null;
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
