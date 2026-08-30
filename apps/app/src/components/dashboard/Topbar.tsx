@@ -2,15 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useSession } from "@/components/SessionProvider";
 import { CreateListingButton } from "@/components/CreateListingButton";
-import { BrandAvatar } from "@/components/ui";
 
-/** Desktop topbar: search and the viewer's avatar — no ticker, no chrome. */
+/** Desktop topbar: search only — the viewer lives in the sidebar wallet button. */
 export function Topbar() {
-  const router = useRouter();
-  const { status, user } = useSession();
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -24,9 +19,6 @@ export function Topbar() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  const primaryWallet = user?.wallets.find((w) => w.isPrimary) || user?.wallets[0];
-  const primarySocial = user?.socials.find((s) => s.avatarUrl);
 
   return (
     <div className="max-lg:hidden flex items-center gap-4 mb-6">
@@ -46,22 +38,6 @@ export function Topbar() {
       </form>
 
       <CreateListingButton size="sm" className="shrink-0 ml-auto" />
-
-      {status === "authenticated" && primaryWallet ? (
-        <button
-          type="button"
-          onClick={() => router.push("/dashboard")}
-          className="shrink-0 rounded-full"
-          aria-label="Open profile"
-        >
-          <BrandAvatar
-            src={primarySocial?.avatarUrl}
-            alt={primarySocial?.displayName || primaryWallet.address}
-            fallbackSeed={primaryWallet.address}
-            size={40}
-          />
-        </button>
-      ) : null}
     </div>
   );
 }

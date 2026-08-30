@@ -6,6 +6,11 @@ export function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+/** Dicebear blobs — used when no social avatar (seed is the wallet, or `"wallet"`). */
+export function walletFallbackAvatar(seed?: string | null) {
+  return `https://api.dicebear.com/10.x/blobs/svg?seed=${encodeURIComponent(seed || "wallet")}`;
+}
+
 /** Calm relative label ("Ends in 3d") — no ticking clock, just a computed string. */
 export function relativeEndLabel(endDateIso: string) {
   const ms = new Date(endDateIso).getTime() - Date.now();

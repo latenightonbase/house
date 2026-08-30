@@ -1,14 +1,18 @@
 import { Elysia, t } from "elysia";
+import { Prisma } from "@prisma/client";
 import type { Hex } from "viem";
+import { prisma } from "../db";
 import { issueNonce, verifyAndUpsertUser } from "../lib/siwe";
 import {
   createSession,
   getCookieName,
+  getUserFromRequest,
   getUserFromSessionToken,
   parseCookie,
   publicUser,
   revokeSession,
 } from "../lib/session";
+import { normalizeUsername, parseAvatarDataUrl } from "../lib/profile";
 
 function serializeCookie(
   name: string,
@@ -87,4 +91,59 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
       return { error: "Unauthorized" };
     }
     return { user: publicUser(user) };
-  });
+  })
+  .patch(
+    "/profile",
+    async ({ request, body, set }) => {
+      const sessionUser = await getUserFromRequest(request);
+      if (!sessionUser) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+
+      const username = normalizeUsername(body.username);
+      if (!username) {
+        set.status = 400;
+        return {
+          error:
+            "Username must be 3–20 characters, start with a letter, and use only letters, numbers, or underscores.",
+        };
+      }
+
+      const avatarUrl = parseAvatarDataUrl(body.avatarUrl);
+      if (body.avatarUrl !== undefined && body.avatarUrl !== null && avatarUrl === undefined) {
+        set.status = 400;
+        return { error: "Profile picture must be a JPEG, PNG, or WebP under 200KB." };
+      }
+
+      try {
+        const updated = await prisma.user.update({
+          where: { id: sessionUser.id },
+          data: {
+            username,
+            ...(body.avatarUrl !== undefined ? { avatarUrl: avatarUrl ?? null } : {}),
+          },
+          include: {
+            wallets: { orderBy: { createdAt: "asc" } },
+            socials: { orderBy: { platform: "asc" } },
+          },
+        });
+        return { user: publicUser(updated) };
+      } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+          set.status = 409;
+          return { error: "That username is taken." };
+        }
+        set.status = 500;
+        return {
+          error: err instanceof Error ? err.message : "Failed to save profile",
+        };
+      }
+    },
+    {
+      body: t.Object({
+        username: t.String(),
+        avatarUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    },
+  );

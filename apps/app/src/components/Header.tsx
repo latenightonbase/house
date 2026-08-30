@@ -14,6 +14,7 @@ import {
   Wand2,
   LayoutDashboard,
 } from "lucide-react";
+import { CreateListingButton } from "@/components/CreateListingButton";
 import { SidebarAuthCard } from "@/components/SidebarAuthCard";
 import { useSession } from "@/components/SessionProvider";
 
@@ -80,12 +81,15 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2.5" aria-label="LNOC home">
           <Wordmark compact />
         </Link>
-        <ConnectButton
-          showBalance={false}
-          chainStatus="none"
-          accountStatus={status === "authenticated" ? "avatar" : "address"}
-          label="Connect"
-        />
+        <div className="flex items-center gap-2">
+          <CreateListingButton size="sm" label="Create" />
+          <ConnectButton
+            showBalance={false}
+            chainStatus="none"
+            accountStatus={status === "authenticated" ? "avatar" : "address"}
+            label="Connect"
+          />
+        </div>
       </header>
 
       {/* Desktop sidebar */}
@@ -119,7 +123,8 @@ export function Header() {
           })}
         </nav>
 
-        <div className="px-3 pb-4 shrink-0">
+        <div className="px-3 pb-4 shrink-0 space-y-3">
+          <CreateListingButton size="sm" className="w-full" />
           <SidebarAuthCard />
         </div>
       </aside>

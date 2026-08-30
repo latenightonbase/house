@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Header } from "@/components/Header";
 import { Background } from "@/components/Background";
+import { NavigationProgress } from "@/components/NavigationProgress";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
         className={`${inter.variable} ${inter.className} antialiased text-white max-lg:pb-10`}
       >
         <Providers>
+          <NavigationProgress />
           <Header />
           <main className="lg:pl-[212px] max-lg:pt-14">
             <div className="lg:px-6 lg:py-6 max-lg:px-3 max-lg:py-4 max-lg:pb-28 lg:max-w-[1560px] lg:mx-auto max-lg:w-screen">

@@ -13,6 +13,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 import { config } from "@/lib/wagmi";
 import { authenticationAdapter } from "@/lib/auth-adapter";
 import { SessionProvider, useSession } from "@/components/SessionProvider";
+import { SetupUsernameDialog } from "@/components/SetupUsernameDialog";
 
 function RainbowKitAuthBridge({ children }: { children: ReactNode }) {
   const { status, refresh, setUnauthenticated } = useSession();
@@ -54,7 +55,10 @@ export function Providers({ children }: { children: ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <RainbowKitAuthBridge>{children}</RainbowKitAuthBridge>
+          <RainbowKitAuthBridge>
+            {children}
+            <SetupUsernameDialog />
+          </RainbowKitAuthBridge>
         </SessionProvider>
       </QueryClientProvider>
     </WagmiProvider>

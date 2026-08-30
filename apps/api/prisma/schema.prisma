@@ -20,6 +20,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  username  String?  @unique
+  avatarUrl String?
+
   wallets        Wallet[]
   sessions       Session[]
   socials        SocialAccount[]

@@ -6,8 +6,8 @@ import { useAccount } from "wagmi";
 import { Check, Copy } from "lucide-react";
 import { SocialCards } from "@/components/SocialCards";
 import { useSession } from "@/components/SessionProvider";
-import { Avatar, Badge, Tile } from "@/components/ui";
-import { shortAddress } from "@/lib/utils";
+import { Badge, BrandAvatar, Tile } from "@/components/ui";
+import { shortAddress, walletFallbackAvatar } from "@/lib/utils";
 
 export default function DashboardClient() {
   const { address, isConnected } = useAccount();
@@ -26,9 +26,12 @@ export default function DashboardClient() {
   const primary = user?.wallets.find((w) => w.isPrimary) || user?.wallets[0];
   const primarySocial = user?.socials.find((s) => s.avatarUrl) || user?.socials[0];
   const identityName =
+    (user?.username ? `@${user.username}` : null) ||
     primarySocial?.displayName ||
     primarySocial?.username ||
     (primary ? shortAddress(primary.address) : "Your profile");
+  const identityAvatar =
+    user?.avatarUrl || primarySocial?.avatarUrl || walletFallbackAvatar(primary?.address);
 
   const copyAddress = () => {
     if (!primary) return;
@@ -41,10 +44,11 @@ export default function DashboardClient() {
     <div className="space-y-4 max-w-4xl">
       <section className="card p-5 sm:p-6">
         <div className="flex items-center gap-4">
-          <Avatar
-            src={primarySocial?.avatarUrl}
+          <BrandAvatar
+            src={identityAvatar}
             alt={identityName}
-            fallback={primary ? primary.address.slice(2, 4).toUpperCase() : "??"}
+            shape="square"
+            fallbackSeed={primary?.address || identityName}
             size={56}
           />
           <div className="min-w-0 flex-1">

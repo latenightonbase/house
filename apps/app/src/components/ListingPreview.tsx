@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Eye } from "lucide-react";
 import { ListingCard } from "@/components/ListingCard";
 import { Tile } from "@/components/ui";
@@ -14,12 +15,21 @@ interface Row {
  * The card as buyers will meet it, rendered from the same component the
  * marketplace uses — so the preview cannot drift from the real thing.
  */
-export function ListingPreview({ listing, rows }: { listing: Listing; rows: Row[] }) {
+export function ListingPreview({
+  listing,
+  rows,
+  action,
+}: {
+  listing: Listing;
+  rows: Row[];
+  action?: ReactNode;
+}) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Eye className="w-3.5 h-3.5 text-caption" />
         <span className="panel-label">Preview</span>
+        {action ? <div className="ml-auto shrink-0">{action}</div> : null}
       </div>
 
       <ListingCard listing={listing} />

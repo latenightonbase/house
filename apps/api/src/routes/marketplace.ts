@@ -55,11 +55,12 @@ async function ensureCreatorProfile(userId: string) {
     data: {
       userId,
       displayName:
+        user.username ??
         social?.displayName ??
         social?.username ??
         (wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : "New creator"),
-      username: social?.username ?? undefined,
-      avatarUrl: social?.avatarUrl ?? undefined,
+      username: user.username ?? social?.username ?? undefined,
+      avatarUrl: user.avatarUrl ?? social?.avatarUrl ?? undefined,
       tags: [],
       trend: [],
     },

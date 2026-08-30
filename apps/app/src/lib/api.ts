@@ -13,6 +13,8 @@ export type PublicSocial = {
 export type PublicUser = {
   id: string;
   createdAt: string;
+  username?: string | null;
+  avatarUrl?: string | null;
   wallets: Array<{
     address: string;
     chainId: number;
@@ -41,6 +43,28 @@ export async function refreshSocial(platform: SocialPlatform) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Refresh failed");
   return data.social as PublicSocial;
+}
+
+export async function updateProfile(input: {
+  username: string;
+  avatarUrl?: string | null;
+}): Promise<PublicUser> {
+  const res = await fetch("/backend/auth/profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(input),
+  });
+  const text = await res.text();
+  let data: { error?: string; user?: PublicUser } = {};
+  try {
+    data = text ? (JSON.parse(text) as { error?: string; user?: PublicUser }) : {};
+  } catch {
+    throw new Error(text.trim().slice(0, 160) || "Failed to save profile");
+  }
+  if (!res.ok) throw new Error(data.error || "Failed to save profile");
+  if (!data.user) throw new Error("Failed to save profile");
+  return data.user;
 }
 
 export async function unlinkSocial(platform: SocialPlatform) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { parseUnits } from "viem";
@@ -45,7 +45,7 @@ import {
   paymentTokens,
 } from "@/lib/contracts/auctionHouse";
 import { robinhood } from "@/lib/chains";
-import { cn, shortAddress } from "@/lib/utils";
+import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
 import type { Platform } from "@/components/ui";
 
 const PLATFORMS = [
@@ -90,6 +90,85 @@ const STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
 
 const LISTING_CHAIN_ID = robinhood.id;
 
+const CATEGORY_VALUES = new Set<string>(LISTING_CATEGORIES.map((c) => c.value));
+
+type ListingDraft = {
+  title: string;
+  description: string;
+  category: ListingCategory;
+  pricingType: PricingType;
+  price: string;
+  endDate: string;
+  placement: string;
+  platform: string;
+  turnaroundDays: string;
+  slots: string;
+  tokenAddress: string;
+};
+
+function defaultDraft(): ListingDraft {
+  return {
+    title: "",
+    description: "",
+    category: "SHOUTOUT",
+    pricingType: "FIXED",
+    price: "",
+    endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
+    placement: "",
+    platform: "",
+    turnaroundDays: "",
+    slots: "1",
+    tokenAddress: "",
+  };
+}
+
+function draftKey(userId: string) {
+  return `house:listing-draft:${userId}`;
+}
+
+function loadDraft(userId: string): ListingDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ListingDraft>;
+    const base = defaultDraft();
+    return {
+      title: typeof parsed.title === "string" ? parsed.title : base.title,
+      description: typeof parsed.description === "string" ? parsed.description : base.description,
+      category: CATEGORY_VALUES.has(parsed.category ?? "")
+        ? (parsed.category as ListingCategory)
+        : base.category,
+      pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
+      price: typeof parsed.price === "string" ? parsed.price : base.price,
+      endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
+      placement: typeof parsed.placement === "string" ? parsed.placement : base.placement,
+      platform: typeof parsed.platform === "string" ? parsed.platform : base.platform,
+      turnaroundDays:
+        typeof parsed.turnaroundDays === "string" ? parsed.turnaroundDays : base.turnaroundDays,
+      slots: typeof parsed.slots === "string" ? parsed.slots : base.slots,
+      tokenAddress: typeof parsed.tokenAddress === "string" ? parsed.tokenAddress : base.tokenAddress,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(userId: string, draft: ListingDraft) {
+  try {
+    localStorage.setItem(draftKey(userId), JSON.stringify(draft));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function dropDraft(userId: string) {
+  try {
+    localStorage.removeItem(draftKey(userId));
+  } catch {
+    /* ignore */
+  }
+}
+
 export default function NewListingPage() {
   const router = useRouter();
   const { status, user } = useSession();
@@ -112,12 +191,33 @@ export default function NewListingPage() {
   const [turnaroundDays, setTurnaroundDays] = useState("");
   const [slots, setSlots] = useState("1");
   const [tokenAddress, setTokenAddress] = useState<string>("");
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<Listing | null>(null);
   /** Set when the chain write landed but the marketplace persist failed. */
   const [pendingPersist, setPendingPersist] = useState<NewListingInput | null>(null);
+
+  const applyDraft = (draft: ListingDraft) => {
+    setTitle(draft.title);
+    setDescription(draft.description);
+    setCategory(draft.category);
+    setPricingType(draft.pricingType);
+    setPrice(draft.price);
+    setEndDate(draft.endDate);
+    setPlacement(draft.placement);
+    setPlatform(draft.platform);
+    setTurnaroundDays(draft.turnaroundDays);
+    setSlots(draft.slots);
+    setTokenAddress(draft.tokenAddress);
+  };
+
+  const resetForm = () => {
+    applyDraft(defaultDraft());
+    setError(null);
+    if (user?.id) dropDraft(user.id);
+  };
 
   const contractAddress = auctionHouseAddress(LISTING_CHAIN_ID);
   const tokens = paymentTokens(LISTING_CHAIN_ID);
@@ -138,6 +238,44 @@ export default function NewListingPage() {
   const activeCount = activeOnchain?.length ?? 0;
   const atListingCap = Boolean(contractAddress) && activeCount >= MAX_ACTIVE_LISTINGS;
 
+  useEffect(() => {
+    if (!user?.id || hydratedFor === user.id) return;
+    const draft = loadDraft(user.id);
+    if (draft) applyDraft(draft);
+    setHydratedFor(user.id);
+  }, [user?.id, hydratedFor]);
+
+  useEffect(() => {
+    if (!user?.id || hydratedFor !== user.id) return;
+    saveDraft(user.id, {
+      title,
+      description,
+      category,
+      pricingType,
+      price,
+      endDate,
+      placement,
+      platform,
+      turnaroundDays,
+      slots,
+      tokenAddress,
+    });
+  }, [
+    user?.id,
+    hydratedFor,
+    title,
+    description,
+    category,
+    pricingType,
+    price,
+    endDate,
+    placement,
+    platform,
+    turnaroundDays,
+    slots,
+    tokenAddress,
+  ]);
+
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
   const priceNumber = Number(price);
 
@@ -157,18 +295,19 @@ export default function NewListingPage() {
 
   /** Identity shown on the preview card — the profile a listing is created under. */
   const previewCreator = useMemo(() => {
-    const social = user?.socials.find((s) => s.avatarUrl) ?? user?.socials[0];
+    const social = user?.socials.find((s) => s.displayName || s.username) ?? user?.socials[0];
     const wallet = user?.wallets.find((w) => w.isPrimary) ?? user?.wallets[0];
     const reach = user?.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0) ?? 0;
 
     return {
       id: "preview",
-      displayName:
-        social?.displayName ||
-        social?.username ||
-        (wallet ? shortAddress(wallet.address) : "You"),
-      username: social?.username ?? undefined,
-      avatarUrl: social?.avatarUrl ?? undefined,
+      displayName: user?.username
+        ? `@${user.username}`
+        : social?.displayName ||
+          social?.username ||
+          (wallet ? shortAddress(wallet.address) : "You"),
+      username: user?.username ?? social?.username ?? undefined,
+      avatarUrl: user?.avatarUrl || walletFallbackAvatar(wallet?.address),
       verified: false,
       reach: reach ? formatCount(reach) : "—",
     };
@@ -251,6 +390,7 @@ export default function NewListingPage() {
     setPendingPersist(null);
     setCreated(listing);
     setStep("done");
+    if (user?.id) dropDraft(user.id);
   }
 
   async function handleSubmit() {
@@ -375,10 +515,7 @@ export default function NewListingPage() {
               onClick={() => {
                 setCreated(null);
                 setPendingPersist(null);
-                setTitle("");
-                setDescription("");
-                setPrice("");
-                setPlacement("");
+                resetForm();
                 setStep("form");
               }}
             >
@@ -666,7 +803,29 @@ export default function NewListingPage() {
         </div>
 
         <aside className="xl:sticky xl:top-6">
-          <ListingPreview listing={previewListing} rows={previewRows} />
+          <ListingPreview
+            listing={previewListing}
+            rows={previewRows}
+            action={
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "Clear this listing draft? Your form will reset and this cannot be undone.",
+                    )
+                  ) {
+                    return;
+                  }
+                  resetForm();
+                }}
+                className="text-[12px] font-medium text-caption hover:text-white transition-colors disabled:opacity-50"
+              >
+                Clear
+              </button>
+            }
+          />
         </aside>
       </div>
 
