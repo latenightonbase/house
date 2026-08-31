@@ -135,14 +135,14 @@ function SetupUsernameForm({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/70 px-0 sm:px-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-labelledby="setup-profile-title"
     >
       <form
         onSubmit={onSubmit}
-        className="card w-full max-w-md p-6 shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+        className="card w-full max-w-md max-h-[min(92dvh,100%)] overflow-y-auto rounded-b-none sm:rounded-xl p-5 sm:p-6 pb-[max(1.25rem,var(--safe-bottom))] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
       >
         <h2 id="setup-profile-title" className="text-lg font-bold tracking-tight text-white">
           Set up your profile
@@ -165,7 +165,7 @@ function SetupUsernameForm({
               fallbackSeed={primary?.address || username || user.id}
               size={72}
             />
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
               <Camera className="h-5 w-5 text-white" />
             </span>
           </button>

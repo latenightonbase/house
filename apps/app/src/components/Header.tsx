@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 import {
   Compass,
   Users,
@@ -69,18 +70,15 @@ export function Header() {
   return (
     <>
       {/* Mobile top bar */}
-      <header className="fixed top-0 left-0 right-0 h-14 z-40 lg:hidden bg-background/95 backdrop-blur-md border-b border-line flex items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2.5" aria-label="LNOC home">
-          <Wordmark compact />
-        </Link>
-        <div className="flex items-center gap-2">
-          {canCreate ? <CreateListingButton size="sm" label="Create" /> : null}
-          <ConnectButton
-            showBalance={false}
-            chainStatus="none"
-            accountStatus={status === "authenticated" ? "avatar" : "address"}
-            label="Connect"
-          />
+      <header className="fixed top-0 left-0 right-0 z-40 lg:hidden bg-background/95 backdrop-blur-md border-b border-line pt-[var(--safe-top)]">
+        <div className="h-14 flex items-center justify-between gap-2 px-3.5">
+          <Link href="/" className="flex items-center gap-2 min-w-0" aria-label="LNOC home">
+            <Wordmark compact />
+          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            {canCreate ? <CreateListingButton size="sm" label="Create" /> : null}
+            <MobileConnectButton />
+          </div>
         </div>
       </header>
 
@@ -137,26 +135,26 @@ export function Header() {
       </aside>
 
       {/* Mobile bottom tabs */}
-      <nav className="fixed bottom-0 left-0 right-0 h-16 z-50 lg:hidden bg-[#070a12]/97 backdrop-blur-md border-t border-line">
-        <div className="h-full flex items-stretch px-1">
-          {MOBILE_NAV.map((item) => { if (!item) return null;
+      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[#070a12]/97 backdrop-blur-md border-t border-line pb-[var(--safe-bottom)]">
+        <div className="h-16 flex items-stretch px-1">
+          {MOBILE_NAV.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
               <Link
                 key={item.href}
                 href={hrefFor(item)}
-                className="flex-1 flex flex-col items-center justify-center gap-1"
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0"
               >
                 <span
-                  className={`flex items-center justify-center w-10 h-7 rounded-lg ${
+                  className={`flex items-center justify-center w-11 h-8 rounded-lg ${
                     active ? "bg-primary/20 text-primary-light" : "text-caption"
                   }`}
                 >
                   <Icon className="w-[18px] h-[18px]" />
                 </span>
                 <span
-                  className={`text-[10px] font-semibold ${
+                  className={`text-[10px] font-semibold truncate max-w-full px-1 ${
                     active ? "text-primary-light" : "text-caption"
                   }`}
                 >
@@ -168,5 +166,63 @@ export function Header() {
         </div>
       </nav>
     </>
+  );
+}
+
+function MobileConnectButton() {
+  const { openConnectModal } = useConnectModal();
+  const { isConnected } = useAccount();
+
+  if (!isConnected) {
+    return (
+      <button
+        type="button"
+        onClick={() => openConnectModal?.()}
+        className="btn-primary h-8 px-3 text-[12px] font-semibold"
+      >
+        Connect
+      </button>
+    );
+  }
+
+  return (
+    <ConnectButton.Custom>
+      {({ account, chain, openAccountModal, openChainModal, mounted }) => {
+        if (!mounted || !account || !chain) {
+          return (
+            <button
+              type="button"
+              onClick={() => openConnectModal?.()}
+              className="btn-primary h-8 px-3 text-[12px] font-semibold"
+            >
+              Connect
+            </button>
+          );
+        }
+
+        if (chain.unsupported) {
+          return (
+            <button
+              type="button"
+              onClick={openChainModal}
+              className="h-8 px-2.5 text-[12px] font-semibold rounded-lg bg-negative/15 text-negative border border-negative/40"
+            >
+              Network
+            </button>
+          );
+        }
+
+        return (
+          <button
+            type="button"
+            onClick={openAccountModal}
+            className="tile h-8 px-2.5 text-[12px] font-medium text-white numeric max-w-[7.5rem] truncate"
+            aria-label="Open wallet"
+          >
+            {account.displayName}
+          </button>
+        );
+      }}
+    </ConnectButton.Custom>
   );
 }

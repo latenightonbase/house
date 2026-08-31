@@ -47,19 +47,19 @@ function TokenCard({
       </div>
 
       <div className="grid grid-cols-3 gap-2">
-        <div className="tile px-3 py-2.5">
+        <div className="tile min-w-0 px-2 sm:px-3 py-2.5">
           <p className="panel-label mb-1">Holders</p>
-          <p className="text-[15px] font-bold text-white numeric">
+          <p className="text-[15px] font-bold text-white numeric truncate">
             {token.holders.toLocaleString()}
           </p>
         </div>
-        <div className="tile px-3 py-2.5">
+        <div className="tile min-w-0 px-2 sm:px-3 py-2.5">
           <p className="panel-label mb-1">Supply</p>
-          <p className="text-[15px] font-bold text-white numeric">{compact(token.supply)}</p>
+          <p className="text-[15px] font-bold text-white numeric truncate">{compact(token.supply)}</p>
         </div>
-        <div className="tile px-3 py-2.5">
+        <div className="tile min-w-0 px-2 sm:px-3 py-2.5">
           <p className="panel-label mb-1">Rev share</p>
-          <p className="text-[15px] font-bold text-positive numeric">
+          <p className="text-[15px] font-bold text-positive numeric truncate">
             {token.revenueSharePct != null ? `${token.revenueSharePct}%` : "—"}
           </p>
         </div>

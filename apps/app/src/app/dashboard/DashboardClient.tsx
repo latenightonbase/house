@@ -126,8 +126,8 @@ export default function DashboardClient() {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <section className="card p-5 sm:p-6">
-        <div className="flex items-center gap-4">
+      <section className="card p-4 sm:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           <BrandAvatar
             src={user?.avatarUrl || walletFallbackAvatar(primary?.address)}
             alt={identityName}
@@ -136,7 +136,7 @@ export default function DashboardClient() {
             size={56}
           />
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground truncate">
               {status === "authenticated" ? identityName : "Your profile"}
             </h1>
             {status === "loading" ? (
@@ -168,7 +168,7 @@ export default function DashboardClient() {
             )}
           </div>
           {status === "authenticated" ? (
-            <Badge variant="positive" className="shrink-0">
+            <Badge variant="positive" className="shrink-0 self-start sm:self-auto">
               Signed in
             </Badge>
           ) : null}
@@ -176,7 +176,7 @@ export default function DashboardClient() {
       </section>
 
       {status === "authenticated" ? (
-        <form onSubmit={onSave} className="card p-5 sm:p-6 space-y-5">
+        <form onSubmit={onSave} className="card p-4 sm:p-6 space-y-5">
           <div>
             <h2 className="text-[15px] font-bold text-foreground">Profile</h2>
             <p className="text-[12px] text-caption mt-0.5">
@@ -198,7 +198,7 @@ export default function DashboardClient() {
                 fallbackSeed={primary?.address || username || user?.id}
                 size={72}
               />
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
                 <Camera className="h-5 w-5 text-white" />
               </span>
             </button>
@@ -280,11 +280,12 @@ export default function DashboardClient() {
           {notice ? <p className="text-[12px] text-positive">{notice}</p> : null}
           {error ? <p className="text-[12px] text-negative">{error}</p> : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
             {emailChanged && emailValid ? (
               <Button
                 type="button"
                 variant="accent-outline"
+                className="w-full sm:w-auto"
                 disabled={sendingOtp}
                 onClick={() => void onSendOtp()}
               >
@@ -293,6 +294,7 @@ export default function DashboardClient() {
             ) : null}
             <Button
               type="submit"
+              className="w-full sm:w-auto"
               disabled={!usernameValid || !emailValid || saving}
             >
               {saving ? "Saving…" : "Save profile"}

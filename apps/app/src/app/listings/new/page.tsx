@@ -542,7 +542,9 @@ export default function NewListingPage() {
             Connect and sign in with your wallet to list — it is the account buyers pay out
             to.
           </p>
-          <Button onClick={() => openConnectModal?.()}>Connect wallet</Button>
+          <Button onClick={() => openConnectModal?.()} className="w-full sm:w-auto">
+            Connect wallet
+          </Button>
         </Panel>
       </div>
     );
@@ -946,9 +948,10 @@ export default function NewListingPage() {
         </aside>
       </div>
 
-      <Panel className="space-y-3">
+      <div className="max-lg:sticky max-lg:bottom-[var(--mobile-nav-offset)] max-lg:z-30">
+      <Panel className="space-y-3 max-lg:shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-[12px] text-caption">
+          <div className="flex items-center gap-2 text-[12px] text-caption min-w-0">
             <Badge variant="accent">On-chain</Badge>
             <span>
               Settles on {CHAIN_LABELS[LISTING_CHAIN_ID]} · {activeCount}/
@@ -959,7 +962,7 @@ export default function NewListingPage() {
           <Button
             onClick={handleSubmit}
             disabled={busy || atListingCap || Boolean(validationError) || !token}
-            className="min-w-[190px]"
+            className="w-full sm:w-auto sm:min-w-[190px]"
           >
             {busy
               ? "Working…"
@@ -981,6 +984,7 @@ export default function NewListingPage() {
         )}
         {error && <p className="text-[12px] text-negative">{error}</p>}
       </Panel>
+      </div>
     </div>
   );
 }

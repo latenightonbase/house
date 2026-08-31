@@ -349,7 +349,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         }
       />
 
-      <Card className="p-5 sm:p-6 space-y-5">
+      <Card className="p-4 sm:p-6 space-y-5">
         <div className="flex items-center gap-3 text-left">
           <BrandAvatar
             src={avatarSrc}
@@ -371,21 +371,21 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <div className="tile px-3.5 py-3">
+          <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
             <p className="panel-label mb-1">{isAuction ? "Minimum bid" : "Price"}</p>
-            <p className="text-[17px] font-bold text-white numeric">
+            <p className="text-[16px] sm:text-[17px] font-bold text-white numeric truncate">
               ${listing.price.toLocaleString()}
             </p>
           </div>
-          <div className="tile px-3.5 py-3">
+          <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
             <p className="panel-label mb-1">Closes</p>
-            <p className="text-[15px] font-semibold text-white">
+            <p className="text-[14px] sm:text-[15px] font-semibold text-white truncate">
               {listing.endDate ? relativeEndLabel(listing.endDate) : "Open"}
             </p>
           </div>
-          <div className="tile px-3.5 py-3">
+          <div className="tile min-w-0 px-3 sm:px-3.5 py-3 col-span-2 sm:col-span-1">
             <p className="panel-label mb-1">{isAuction ? "Settlement" : "Slots"}</p>
-            <p className="text-[15px] font-semibold text-white">
+            <p className="text-[14px] sm:text-[15px] font-semibold text-white truncate">
               {isAuction
                 ? `${listing.tokenName ?? listing.currency} · ${CHAIN_LABELS[chainForListing] ?? "on-chain"}`
                 : soldOut
@@ -408,7 +408,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm text-caption">
               Connect and sign in with your wallet to {isAuction ? "place a bid" : "book this slot"}.
             </p>
-            <Button onClick={() => openConnectModal?.()}>Connect wallet</Button>
+            <Button onClick={() => openConnectModal?.()} className="w-full sm:w-auto">
+              Connect wallet
+            </Button>
           </Panel>
         ) : unavailable ? (
           <Tile className="px-4 py-3 text-[13px] text-caption">
@@ -478,7 +480,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <Button
               onClick={() => void handleCheckout()}
               disabled={busy || bidInvalid}
-              className="w-full sm:w-auto"
+              className="w-full"
             >
               {busy
                 ? STEP_LABEL[step]

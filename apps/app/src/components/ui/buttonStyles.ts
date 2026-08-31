@@ -17,5 +17,5 @@ export function buttonClass(
   size: ButtonSize = "md",
   className = "",
 ) {
-  return `inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]} ${className}`;
+  return `inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition touch-manipulation ${SIZE_CLASS[size]} ${VARIANT_CLASS[variant]} ${className}`;
 }

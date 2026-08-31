@@ -26,7 +26,7 @@ interface PanelHeaderProps {
 
 export function PanelHeader({ label, icon, action, className }: PanelHeaderProps) {
   return (
-    <header className={cn("flex items-center justify-between gap-3", className)}>
+    <header className={cn("flex items-center justify-between gap-3 flex-wrap", className)}>
       <div className="flex items-center gap-2 min-w-0">
         {icon && <span className="text-caption shrink-0">{icon}</span>}
         <span className="panel-label leading-tight">{label}</span>

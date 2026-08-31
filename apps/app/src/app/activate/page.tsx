@@ -56,7 +56,7 @@ function ActivationCard({ activation }: { activation: Activation }) {
 
       {vault && (
         <div className="tile p-3.5">
-          <div className="flex items-baseline justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-2">
             <p className="panel-label">{vault.name}</p>
             <p className="text-[11px] text-caption">
               {formatMoney(vault.distributed)} of {formatMoney(vault.totalRewards)} paid out
