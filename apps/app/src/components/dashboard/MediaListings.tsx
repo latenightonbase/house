@@ -132,7 +132,8 @@ export function MediaListings({
                     <ListingCard
                       key={listing.id}
                       listing={listing}
-                      onOpenCreator={(id) => router.push(`/creators/${id}`)}
+                      onOpenCreator={() => {}}
+                      onBook={(id) => router.push(`/listings/${id}`)}
                     />
                   ))}
                 </div>

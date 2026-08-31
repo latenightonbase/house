@@ -106,6 +106,7 @@ export interface MarketStats {
 
 export interface ListingCreator {
   id: string;
+  wallet?: string;
   displayName: string;
   username?: string;
   avatarUrl?: string;
@@ -140,6 +141,9 @@ export interface Listing {
   tokenAddress?: string;
   tokenName?: string;
   txHash?: string;
+  isDaily?: boolean;
+  winnerWallet?: string;
+  settledAt?: string;
   creator: ListingCreator;
 }
 
@@ -163,6 +167,7 @@ export interface NewListingInput {
   contractAddress: string;
   tokenAddress: string;
   tokenName?: string;
+  isDaily?: boolean;
 }
 
 export interface Vault {
@@ -252,6 +257,25 @@ export async function fetchListings(
   return data.listings;
 }
 
+export async function fetchListing(id: string): Promise<Listing> {
+  const data = await getJson<{ listing: Listing }>(`/backend/listings/${id}`);
+  return data.listing;
+}
+
+export async function fetchDailyListing(): Promise<Listing | null> {
+  const data = await getJson<{ listing: Listing | null }>("/backend/listings/daily");
+  return data.listing;
+}
+
+/** Persists an on-chain bid so outbid emails can fire. */
+export async function recordListingBid(id: string, amount: number, txHash: string): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/bid`, {
+    amount,
+    txHash,
+  });
+  return data.listing;
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: "POST",
@@ -296,6 +320,12 @@ export async function activateListing(
 /** Drops a draft whose transaction was rejected or never landed. */
 export async function cancelListing(id: string): Promise<void> {
   await postJson(`/backend/listings/${id}/cancel`, {});
+}
+
+/** Persists a fixed-price purchase after `buyListing` confirms on-chain. */
+export async function bookListing(id: string, txHash: string): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/book`, { txHash });
+  return data.listing;
 }
 
 export async function fetchCampaigns(limit = 30): Promise<Campaign[]> {

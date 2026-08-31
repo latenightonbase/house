@@ -13,6 +13,18 @@ import {
   revokeSession,
 } from "../lib/session";
 import { normalizeUsername, parseAvatarDataUrl } from "../lib/profile";
+import { requestEmailOtp, verifyEmailOtp } from "../lib/otp";
+import { sendWelcome } from "../lib/email";
+
+async function maybeSendWelcome(userId: string, wasIncomplete: boolean) {
+  if (!wasIncomplete) return;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (user?.email && user.emailVerifiedAt && user.username) {
+    await sendWelcome(user.email, user.username).catch((err) => {
+      console.error("[email] welcome failed:", err);
+    });
+  }
+}
 
 function serializeCookie(
   name: string,
@@ -116,6 +128,8 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
         return { error: "Profile picture must be a JPEG, PNG, or WebP under 200KB." };
       }
 
+      const wasIncomplete = !sessionUser.username || !sessionUser.emailVerifiedAt;
+
       try {
         const updated = await prisma.user.update({
           where: { id: sessionUser.id },
@@ -128,6 +142,15 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
             socials: { orderBy: { platform: "asc" } },
           },
         });
+        await prisma.creatorProfile.updateMany({
+          where: { userId: sessionUser.id },
+          data: {
+            username,
+            displayName: username,
+            ...(body.avatarUrl !== undefined ? { avatarUrl: avatarUrl ?? null } : {}),
+          },
+        });
+        await maybeSendWelcome(sessionUser.id, wasIncomplete);
         return { user: publicUser(updated) };
       } catch (err) {
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -144,6 +167,60 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
       body: t.Object({
         username: t.String(),
         avatarUrl: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
+    },
+  )
+  .post(
+    "/email/request-otp",
+    async ({ request, body, set }) => {
+      const sessionUser = await getUserFromRequest(request);
+      if (!sessionUser) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+      try {
+        const { email } = await requestEmailOtp(sessionUser.id, body.email);
+        return { ok: true, email };
+      } catch (err) {
+        set.status = 400;
+        return { error: err instanceof Error ? err.message : "Could not send code." };
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/email/verify-otp",
+    async ({ request, body, set }) => {
+      const sessionUser = await getUserFromRequest(request);
+      if (!sessionUser) {
+        set.status = 401;
+        return { error: "Unauthorized" };
+      }
+      const wasIncomplete = !sessionUser.username || !sessionUser.emailVerifiedAt;
+      try {
+        await verifyEmailOtp(sessionUser.id, body.email, body.code);
+        await maybeSendWelcome(sessionUser.id, wasIncomplete);
+        const full = await prisma.user.findUnique({
+          where: { id: sessionUser.id },
+          include: {
+            wallets: { orderBy: { createdAt: "asc" } },
+            socials: { orderBy: { platform: "asc" } },
+          },
+        });
+        return { ok: true, user: full ? publicUser(full) : null };
+      } catch (err) {
+        set.status = 400;
+        return { error: err instanceof Error ? err.message : "Could not verify code." };
+      }
+    },
+    {
+      body: t.Object({
+        email: t.String(),
+        code: t.String(),
       }),
     },
   );

@@ -10,36 +10,27 @@ import {
   Store,
   Megaphone,
   Gavel,
-  Sparkles,
-  Wand2,
   LayoutDashboard,
 } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { SidebarAuthCard } from "@/components/SidebarAuthCard";
 import { useSession } from "@/components/SessionProvider";
+import { isSuperadmin } from "@/lib/api";
 
 /**
- * The verticals of the marketplace, ordered by how a visitor meets them:
- * browse the market, then its two sides (creators selling, brands buying),
- * then the tools layered on top.
- *
- * Vaults are deliberately not a nav item — they are Pantheon infrastructure
- * surfaced inside Activate, so nobody has to understand the plumbing before
- * they understand what they're accomplishing.
+ * v1 only ships Discover and Dashboard. Other verticals stay visible so the
+ * product map is obvious, but they are disabled until they go live.
  */
 const NAV = [
   { href: "/", label: "Discover", icon: Compass },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, requiresAuth: true },
-  { href: "/creators", label: "Creators", icon: Users },
-  { href: "/marketplace", label: "Marketplace", icon: Store },
-  { href: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/auctions", label: "Auctions", icon: Gavel },
-  // { href: "/activate", label: "Activate", icon: Sparkles },
-  // { href: "/studio", label: "Creator Studio", icon: Wand2 },
+  { href: "/creators", label: "Creators", icon: Users, comingSoon: true },
+  { href: "/marketplace", label: "Marketplace", icon: Store, comingSoon: true },
+  { href: "/campaigns", label: "Campaigns", icon: Megaphone, comingSoon: true },
+  { href: "/auctions", label: "Auctions", icon: Gavel, comingSoon: true },
 ];
 
-/** Mobile tab bar carries only the highest-traffic destinations. */
-const MOBILE_NAV = [NAV[0], NAV[1], NAV[2], NAV[3]];
+const MOBILE_NAV = NAV.filter((item) => !item.comingSoon);
 
 function Wordmark({ compact = false }: { compact?: boolean }) {
   return (
@@ -65,7 +56,8 @@ function Wordmark({ compact = false }: { compact?: boolean }) {
 
 export function Header() {
   const pathname = usePathname();
-  const { status } = useSession();
+  const { status, user } = useSession();
+  const canCreate = isSuperadmin(user);
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
@@ -82,7 +74,7 @@ export function Header() {
           <Wordmark compact />
         </Link>
         <div className="flex items-center gap-2">
-          <CreateListingButton size="sm" label="Create" />
+          {canCreate ? <CreateListingButton size="sm" label="Create" /> : null}
           <ConnectButton
             showBalance={false}
             chainStatus="none"
@@ -106,6 +98,21 @@ export function Header() {
           {NAV.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
+            if (item.comingSoon) {
+              return (
+                <span
+                  key={item.href}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium text-caption/60 cursor-not-allowed"
+                  aria-disabled="true"
+                >
+                  <Icon className="w-[17px] h-[17px] shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                  <span className="ml-auto text-[9px] uppercase tracking-wider font-semibold text-caption/80">
+                    Soon
+                  </span>
+                </span>
+              );
+            }
             return (
               <Link
                 key={item.href}
@@ -124,7 +131,7 @@ export function Header() {
         </nav>
 
         <div className="px-3 pb-4 shrink-0 space-y-3">
-          <CreateListingButton size="sm" className="w-full" />
+          {canCreate ? <CreateListingButton size="sm" className="w-full" /> : null}
           <SidebarAuthCard />
         </div>
       </aside>

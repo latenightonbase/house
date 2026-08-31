@@ -29,7 +29,7 @@ import {
   Tile,
 } from "@/components/ui";
 import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listingCategories";
-import { formatCount } from "@/lib/api";
+import { formatCount, isSuperadmin } from "@/lib/api";
 import {
   createListing,
   type Listing,
@@ -126,6 +126,7 @@ type ListingDraft = {
   turnaroundDays: string;
   slots: string;
   tokenAddress: string;
+  isDaily: boolean;
 };
 
 function defaultDraft(): ListingDraft {
@@ -141,6 +142,7 @@ function defaultDraft(): ListingDraft {
     turnaroundDays: "",
     slots: "1",
     tokenAddress: "",
+    isDaily: false,
   };
 }
 
@@ -169,6 +171,7 @@ function loadDraft(userId: string): ListingDraft | null {
         typeof parsed.turnaroundDays === "string" ? parsed.turnaroundDays : base.turnaroundDays,
       slots: typeof parsed.slots === "string" ? parsed.slots : base.slots,
       tokenAddress: typeof parsed.tokenAddress === "string" ? parsed.tokenAddress : base.tokenAddress,
+      isDaily: parsed.isDaily === true,
     };
   } catch {
     return null;
@@ -213,6 +216,7 @@ export default function NewListingPage() {
   const [turnaroundDays, setTurnaroundDays] = useState("");
   const [slots, setSlots] = useState("1");
   const [tokenAddress, setTokenAddress] = useState<string>("");
+  const [isDaily, setIsDaily] = useState(false);
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>("form");
@@ -233,6 +237,11 @@ export default function NewListingPage() {
     setTurnaroundDays(draft.turnaroundDays);
     setSlots(draft.slots);
     setTokenAddress(draft.tokenAddress);
+    setIsDaily(draft.isDaily);
+    if (draft.isDaily) {
+      setPricingType("AUCTION");
+      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
+    }
   };
 
   const resetForm = () => {
@@ -281,6 +290,7 @@ export default function NewListingPage() {
       turnaroundDays,
       slots,
       tokenAddress,
+      isDaily,
     });
   }, [
     user?.id,
@@ -296,6 +306,7 @@ export default function NewListingPage() {
     turnaroundDays,
     slots,
     tokenAddress,
+    isDaily,
   ]);
 
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
@@ -323,6 +334,7 @@ export default function NewListingPage() {
 
     return {
       id: "preview",
+      wallet: wallet?.address,
       displayName: user?.username
         ? `@${user.username}`
         : social?.displayName ||
@@ -393,7 +405,10 @@ export default function NewListingPage() {
       pricingType,
       price: priceNumber,
       currency: token?.symbol ?? "USDG",
-      endDate: parsedEnd!.toISOString(),
+      endDate: (isDaily
+        ? new Date(Date.now() + 24 * 3_600_000)
+        : parsedEnd!
+      ).toISOString(),
       placement: placement.trim() || undefined,
       platform: (platform || undefined) as never,
       turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
@@ -403,6 +418,7 @@ export default function NewListingPage() {
       contractAddress: contractAddress!,
       tokenAddress: token!.address,
       tokenName: token!.symbol,
+      isDaily,
     };
   }
 
@@ -434,6 +450,10 @@ export default function NewListingPage() {
     }
     setError(null);
 
+    if (isDaily) {
+      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
+    }
+
     if (pendingPersist) {
       try {
         await persistListing(pendingPersist);
@@ -464,7 +484,7 @@ export default function NewListingPage() {
 
       setStep("signing");
       const amount = parseUnits(String(priceNumber), token.decimals);
-      const hours = BigInt(durationHoursUntil(parsedEnd));
+      const hours = BigInt(isDaily ? 24 : durationHoursUntil(parsedEnd));
       const args = [listingId, token.address, token.symbol, hours, amount] as const;
       const request = {
         address: contractAddress,
@@ -523,6 +543,26 @@ export default function NewListingPage() {
             to.
           </p>
           <Button onClick={() => openConnectModal?.()}>Connect wallet</Button>
+        </Panel>
+      </div>
+    );
+  }
+
+  if (!isSuperadmin(user)) {
+    return (
+      <div className="space-y-4 max-w-2xl">
+        <PageHeader
+          title="Create a listing"
+          subtitle="v1 listings are created by the platform operator only."
+        />
+        <Panel>
+          <p className="text-sm text-caption">
+            This account cannot create listings or auctions. You can still buy listings and
+            bid from Discover.
+          </p>
+          <Button className="mt-3" onClick={() => router.push("/")}>
+            Back to Discover
+          </Button>
         </Panel>
       </div>
     );
@@ -718,8 +758,11 @@ export default function NewListingPage() {
             <div className="grid sm:grid-cols-2 gap-2">
               <PricingOption
                 active={pricingType === "FIXED"}
-                onClick={() => setPricingType("FIXED")}
-                disabled={busy}
+                onClick={() => {
+                  setIsDaily(false);
+                  setPricingType("FIXED");
+                }}
+                disabled={busy || isDaily}
                 icon={<Tag className="w-4 h-4" />}
                 title="Flat price"
                 body="Buyers book instantly at your price. First to pay wins the slot."
@@ -733,6 +776,29 @@ export default function NewListingPage() {
                 body="Buyers bid above your minimum. Highest bid at close takes it."
               />
             </div>
+
+            <label className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 px-3.5 py-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={isDaily}
+                disabled={busy}
+                onChange={(e) => {
+                  const next = e.target.checked;
+                  setIsDaily(next);
+                  if (next) {
+                    setPricingType("AUCTION");
+                    setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
+                  }
+                }}
+              />
+              <span>
+                <span className="block text-[13px] font-semibold text-white">Daily auction</span>
+                <span className="block mt-0.5 text-[11px] text-caption leading-relaxed">
+                  24-hour auction that the operator wallet settles and recreates every day.
+                </span>
+              </span>
+            </label>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <Field
@@ -821,33 +887,33 @@ export default function NewListingPage() {
               hint="Rounded up to a whole hour on-chain — it never closes early."
             >
               <div className="space-y-2">
-                <TextInput
-                  id="endDate"
-                  type="datetime-local"
-                  value={endDate}
-                  min={toLocalInputValue(new Date(Date.now() + 3_600_000))}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  disabled={busy}
-                />
-                <div className="flex flex-wrap gap-1.5">
-                  {DURATION_PRESETS.map((preset) => (
-                    <button
-                      key={preset.hours}
-                      type="button"
-                      disabled={busy}
-                      onClick={() =>
-                        setEndDate(
-                          toLocalInputValue(
-                            new Date(Date.now() + preset.hours * 3_600_000),
-                          ),
-                        )
-                      }
-                      className="tile px-2.5 py-1 text-[11px] font-medium text-caption hover:text-white transition-colors disabled:opacity-50"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+                  <TextInput
+                    id="endDate"
+                    type="datetime-local"
+                    value={endDate}
+                    min={toLocalInputValue(new Date(Date.now() + 3_600_000))}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    disabled={busy || isDaily}
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {DURATION_PRESETS.map((preset) => (
+                      <button
+                        key={preset.hours}
+                        type="button"
+                        disabled={busy || isDaily}
+                        onClick={() =>
+                          setEndDate(
+                            toLocalInputValue(
+                              new Date(Date.now() + preset.hours * 3_600_000),
+                            ),
+                          )
+                        }
+                        className="tile px-2.5 py-1 text-[11px] font-medium text-caption hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
               </div>
             </Field>
           </Panel>

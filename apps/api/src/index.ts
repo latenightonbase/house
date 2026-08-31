@@ -3,6 +3,8 @@ import { cors } from "@elysiajs/cors";
 import { authRoutes } from "./routes/auth";
 import { socialRoutes } from "./routes/socials";
 import { marketplaceRoutes } from "./routes/marketplace";
+import { cronRoutes } from "./routes/cron";
+import { startDailyAuctionTicker } from "./lib/dailyAuction";
 
 const APP_ORIGIN = process.env.APP_ORIGIN || "http://localhost:3002";
 const PORT = Number(process.env.PORT || 3001);
@@ -12,7 +14,7 @@ const app = new Elysia()
     cors({
       origin: [APP_ORIGIN, "http://localhost:3002", "http://127.0.0.1:3002"],
       credentials: true,
-      allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+      allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-cron-secret"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     }),
   )
@@ -20,7 +22,10 @@ const app = new Elysia()
   .use(authRoutes)
   .use(socialRoutes)
   .use(marketplaceRoutes)
+  .use(cronRoutes)
   .listen(PORT);
+
+startDailyAuctionTicker();
 
 console.log(`House API listening on http://localhost:${PORT}`);
 

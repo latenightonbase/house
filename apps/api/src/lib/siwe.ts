@@ -12,6 +12,7 @@ import {
 } from "viem";
 import { base, baseSepolia } from "viem/chains";
 import { prisma } from "../db";
+import { isSuperadminWallet } from "./roles";
 
 const NONCE_TTL_MS = 1000 * 60 * 10; // 10 minutes
 
@@ -96,16 +97,25 @@ export async function verifyAndUpsertUser(message: string, signature: Hex) {
     include: { user: true },
   });
 
+  const role = isSuperadminWallet(address) ? "SUPERADMIN" : "USER";
+
   if (existingWallet) {
     await prisma.wallet.update({
       where: { id: existingWallet.id },
       data: { chainId, verifiedAt: new Date(), isPrimary: true },
     });
+    if (existingWallet.user.role !== role) {
+      return prisma.user.update({
+        where: { id: existingWallet.user.id },
+        data: { role },
+      });
+    }
     return existingWallet.user;
   }
 
   const user = await prisma.user.create({
     data: {
+      role,
       wallets: {
         create: {
           address,
