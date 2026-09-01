@@ -29,4 +29,5 @@ startDailyAuctionTicker();
 
 console.log(`House API listening on http://localhost:${PORT}`);
 
+
 export type App = typeof app;

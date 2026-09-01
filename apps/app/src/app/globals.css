@@ -1,33 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  /* ── House design tokens ─────────────────────────────
-     Near-black canvas, deep navy surfaces, electric blue
-     accent drawn from the House logo mark. */
-  --primary: #2f6bff;
-  --primary-light: #7ea2ff;
-  --secondary: #1d4ed8;
-  --caption: #7d8699;
-  --button: #2f6bff;
-  --button-hover: #4680ff;
-  --disabled: #232c42;
+  /* ── LNOC design tokens ──────────────────────────────
+     Pure-black canvas with violet neon. The accent is the
+     billboard glow from the Late Night Onchain key art;
+     surfaces stay near-black so it reads as light, not fill. */
+  --primary: #8b5cf6;
+  --primary-light: #c4b5fd;
+  --primary-bright: #a855f7;
+  --secondary: #6d28d9;
+  --caption: #8b8ba7;
+  --button: #7c3aed;
+  --button-hover: #8b5cf6;
+  --disabled: #221a33;
 
-  --background: #06080f;
-  --surface: #0b0f1a;
-  --surface-2: #111726;
-  --line: #1a2133;
-  --line-strong: #263049;
+  --background: #050208;
+  --surface: #0b0710;
+  --surface-2: #120c1c;
+  --line: #221a2e;
+  --line-strong: #33264a;
 
   --positive: #34d399;
   --negative: #f87171;
   --warning: #fbbf24;
+  --live: #ef4444;
 
-  --foreground: #f2f5fc;
+  --foreground: #f5f3ff;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --mobile-header-offset: calc(3.5rem + var(--safe-top));
   --mobile-nav-offset: calc(4rem + var(--safe-bottom));
+
+  --sidebar-width: 264px;
+  --topbar-height: 72px;
 }
 
 @theme inline {
@@ -35,6 +41,7 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-light: var(--primary-light);
+  --color-primary-bright: var(--primary-bright);
   --color-secondary: var(--secondary);
   --color-caption: var(--caption);
   --color-disabled: var(--disabled);
@@ -47,7 +54,9 @@
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
+  --color-live: var(--live);
   --font-sans: var(--font-inter);
+  --font-display: var(--font-display);
 }
 
 body {
@@ -86,38 +95,33 @@ input[type="datetime-local"] {
   display: none;
 }
 
+/* ── Type ───────────────────────────────────────────── */
+
+/* The wide-tracked uppercase that carries the whole layout: nav, labels, meta. */
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.16em];
+}
+
+.panel-label {
+  @apply text-[10px] font-semibold uppercase tracking-[0.16em] text-caption;
+}
+
+/* Headline face: a heavy, tightly-tracked grotesque. Deliberately NOT the
+   marker face — that belongs to the wordmark alone, which is why this sets
+   Inter explicitly rather than inheriting --font-display. */
+.display {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+}
+
 .gradient-text {
-  @apply bg-gradient-to-b from-white to-[#aabaf5] text-transparent bg-clip-text;
+  @apply bg-gradient-to-b from-white to-[#c4b5fd] text-transparent bg-clip-text;
 }
 
 .accent-text {
   @apply bg-gradient-to-b from-primary-light to-primary text-transparent bg-clip-text;
-}
-
-.gradient-button {
-  background: linear-gradient(180deg, #4b69ff 0%, #3b5bfd 55%, #2f4be0 100%);
-  border: 1px solid rgba(125, 147, 255, 0.35);
-  box-shadow: 0 4px 18px rgba(59, 91, 253, 0.25);
-}
-
-.gradient-button:hover {
-  background: linear-gradient(180deg, #5a76ff 0%, #4a68ff 55%, #3b5bfd 100%);
-}
-
-.card {
-  @apply bg-surface border border-line rounded-xl;
-}
-
-.tile {
-  @apply bg-surface-2 border border-line rounded-lg;
-}
-
-.panel-label {
-  @apply text-[10px] font-semibold uppercase tracking-[0.13em] text-caption;
-}
-
-.row-hover {
-  @apply transition-colors hover:bg-white/[0.025];
 }
 
 .numeric {
@@ -125,11 +129,56 @@ input[type="datetime-local"] {
   letter-spacing: -0.01em;
 }
 
+/* ── Surfaces ───────────────────────────────────────── */
+
+.card {
+  @apply bg-surface border border-line rounded-2xl;
+}
+
+.tile {
+  @apply bg-surface-2 border border-line rounded-xl;
+}
+
+/* The hero and auction shells: a hairline violet edge over near-black. */
+.panel-glow {
+  background: linear-gradient(160deg, rgba(139, 92, 246, 0.07), rgba(5, 2, 8, 0) 55%),
+    var(--surface);
+  border: 1px solid rgba(139, 92, 246, 0.22);
+  border-radius: 1rem;
+}
+
+.row-hover {
+  @apply transition-colors hover:bg-white/[0.03];
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+
 .btn-primary {
-  @apply bg-primary text-white font-semibold rounded-lg transition-colors;
+  @apply bg-button text-white font-semibold rounded-lg transition-colors;
 }
 .btn-primary:hover {
   background: var(--button-hover);
+}
+
+.gradient-button {
+  background: linear-gradient(180deg, #a855f7 0%, #8b5cf6 55%, #7c3aed 100%);
+  border: 1px solid rgba(196, 181, 253, 0.35);
+  box-shadow: 0 4px 24px rgba(139, 92, 246, 0.3);
+}
+
+.gradient-button:hover {
+  background: linear-gradient(180deg, #b96ffa 0%, #9b6bf8 55%, #8b5cf6 100%);
+}
+
+/* The outlined violet control used for Connect Wallet and secondary actions. */
+.btn-outline-accent {
+  @apply bg-transparent border text-primary-light font-semibold rounded-lg transition-colors;
+  border-color: rgba(139, 92, 246, 0.5);
+}
+.btn-outline-accent:hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.85);
+  color: #fff;
 }
 
 .btn-accent-outline {
@@ -138,6 +187,8 @@ input[type="datetime-local"] {
 .btn-accent-outline:hover {
   @apply bg-primary/25 border-primary/70;
 }
+
+/* ── Badges ─────────────────────────────────────────── */
 
 .badge {
   @apply inline-flex items-center border rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em];
@@ -157,6 +208,30 @@ input[type="datetime-local"] {
 .badge-warning {
   @apply bg-warning/10 border-warning/30 text-warning;
 }
+
+/* The pulsing red dot on "LIVE NOW". */
+.live-dot {
+  @apply inline-block w-2 h-2 rounded-full bg-live shrink-0;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: live-pulse 2s infinite;
+}
+
+@keyframes live-pulse {
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot {
+    animation: none;
+  }
+}
+
+/* ── Nav progress ───────────────────────────────────── */
 
 #nprogress {
   pointer-events: none;

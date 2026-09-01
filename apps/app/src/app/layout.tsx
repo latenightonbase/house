@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { Header } from "@/components/Header";
 import { Background } from "@/components/Background";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { Sidebar } from "@/components/nav/Sidebar";
+import { MobileNav } from "@/components/nav/MobileNav";
+import { Footer } from "@/components/nav/Footer";
+import { SITE } from "@/lib/constants";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -12,9 +15,16 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+/** Only the wordmark uses this — loaded once so the lockup never reflows. */
+const display = Permanent_Marker({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-display",
+});
+
 export const metadata: Metadata = {
-  title: "LNOC — Attention Marketplace",
-  description: "The marketplace for attention. Creators sell reach, brands buy it.",
+  title: `${SITE.shortName} — ${SITE.tagline}`,
+  description: `${SITE.strapline} ${SITE.keywords}`,
   icons: { icon: "/favicon.ico" },
 };
 
@@ -22,7 +32,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#06080f",
+  themeColor: "#050208",
 };
 
 export default function RootLayout({
@@ -33,14 +43,16 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${inter.className} antialiased text-white`}
+        className={`${inter.variable} ${display.variable} ${inter.className} antialiased text-white`}
       >
         <Providers>
           <NavigationProgress />
-          <Header />
-          <main className="min-w-0 lg:pl-[212px] max-lg:pt-[var(--mobile-header-offset)]">
-            <div className="min-w-0 w-full lg:mx-auto lg:max-w-[1560px] lg:px-6 lg:py-6 max-lg:px-3.5 max-lg:py-4 max-lg:pb-[calc(var(--mobile-nav-offset)+1.25rem)]">
+          <Sidebar />
+          <MobileNav />
+          <main className="min-w-0 lg:pl-[var(--sidebar-width)] max-lg:pt-[var(--mobile-header-offset)]">
+            <div className="min-w-0 w-full mx-auto max-w-[1560px] lg:px-8 lg:py-8 max-lg:px-4 max-lg:py-4 max-lg:pb-10">
               {children}
+              <Footer />
             </div>
           </main>
           <Background />

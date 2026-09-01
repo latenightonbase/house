@@ -42,6 +42,7 @@ model User {
   creatorProfile CreatorProfile?
   emailOtps      EmailOtp[]
   listingBids    ListingBid[]
+  dailyProjects  DailyProject[]
 }
 
 model EmailOtp {
@@ -325,7 +326,8 @@ model Listing {
   pricingType    PricingType     @default(FIXED)
   /// The asking price when pricingType is FIXED, the minimum bid when AUCTION —
   /// the contract takes the same `_minBidOrPrice` argument for both.
-  price          Int
+  /// Fractional USDG (e.g. 0.01) is allowed; six decimals matches the token.
+  price          Float
   currency       String          @default("USDC")
   /// Short placement label ("Pinned post"); falls back to the category name.
   placement      String?
@@ -357,7 +359,9 @@ model Listing {
   creatorId String
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
-  bids ListingBid[]
+  bids     ListingBid[]
+  /// Project pitches submitted with bids on this daily auction.
+  projects DailyProject[]
 
   @@index([creatorId])
   @@index([status])
@@ -368,7 +372,7 @@ model Listing {
 
 model ListingBid {
   id           String   @id @default(cuid())
-  amount       Int
+  amount       Float
   bidderWallet String
   txHash       String?
   createdAt    DateTime @default(now())
@@ -382,6 +386,37 @@ model ListingBid {
   @@index([listingId])
   @@index([bidderWallet])
   @@index([createdAt])
+}
+
+/// The pitch a bidder attaches to a daily-auction bid: the project that goes
+/// live on the billboard for 24h if they win. One row per (auction, wallet) —
+/// a bidder fills this in once per day's auction and every later re-bid reuses
+/// it, so being outbid never costs them the form again. Redis fronts this table
+/// as a read-through cache keyed by the same pair; Postgres stays the source of
+/// truth and the historical record behind Past Winners.
+model DailyProject {
+  id           String  @id @default(cuid())
+  /// Lowercased — matches ListingBid.bidderWallet and Listing.winnerWallet.
+  bidderWallet String
+  name         String
+  description  String?
+  imageUrl     String?
+  websiteUrl   String?
+  twitterUrl   String?
+  youtubeUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  submittedByUserId String?
+  submittedBy       User?   @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([listingId, bidderWallet])
+  @@index([listingId])
+  @@index([bidderWallet])
 }
 
 /// Activate vertical — a brand/community activation. Pantheon provides the
