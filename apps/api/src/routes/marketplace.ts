@@ -1,6 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../db";
 import { getUserFromRequest } from "../lib/session";
+import { isSuperadmin } from "../lib/roles";
+import { sendListingPurchased, sendOutbid } from "../lib/email";
 import {
   serializeActivation,
   serializeAuction,
@@ -211,6 +213,18 @@ export const marketplaceRoutes = new Elysia()
 
     return { listings: listings.map(serializeListing) };
   })
+  .get("/listings/daily", async () => {
+    const listing = await prisma.listing.findFirst({
+      where: {
+        isDaily: true,
+        status: "ACTIVE",
+        OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
+      },
+      orderBy: { endDate: "asc" },
+      include: { creator: { include: creatorInclude } },
+    });
+    return { listing: listing ? serializeListing(listing) : null };
+  })
   .get("/listings/:id", async ({ params, set }) => {
     const listing = await prisma.listing.findUnique({
       where: { id: params.id },
@@ -235,6 +249,10 @@ export const marketplaceRoutes = new Elysia()
         set.status = 401;
         return { error: "Not authenticated" };
       }
+      if (!isSuperadmin(user)) {
+        set.status = 403;
+        return { error: "Only SUPERADMIN can create listings" };
+      }
 
       const endDate = new Date(body.endDate);
       if (Number.isNaN(endDate.getTime()) || endDate.getTime() <= Date.now()) {
@@ -250,6 +268,21 @@ export const marketplaceRoutes = new Elysia()
       if (existing) {
         set.status = 409;
         return { error: "Listing already exists" };
+      }
+
+      const isDaily = Boolean(body.isDaily);
+      if (isDaily && body.pricingType !== "AUCTION") {
+        set.status = 400;
+        return { error: "The daily auction must be priced as an auction." };
+      }
+      if (isDaily) {
+        const liveDaily = await prisma.listing.findFirst({
+          where: { isDaily: true, status: "ACTIVE", settledAt: null },
+        });
+        if (liveDaily) {
+          set.status = 409;
+          return { error: "A daily auction is already live. Wait for it to close." };
+        }
       }
 
       const creator = await ensureCreatorProfile(user.id);
@@ -269,6 +302,7 @@ export const marketplaceRoutes = new Elysia()
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
           endDate,
           status: "ACTIVE",
+          isDaily,
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
@@ -307,6 +341,7 @@ export const marketplaceRoutes = new Elysia()
         contractAddress: t.String(),
         tokenAddress: t.String(),
         tokenName: t.Optional(t.String()),
+        isDaily: t.Optional(t.Boolean()),
       }),
     },
   )
@@ -316,6 +351,11 @@ export const marketplaceRoutes = new Elysia()
     async ({ params, body, request, set }) => {
       const listing = await requireOwnedListing(request, params.id, set);
       if ("error" in listing) return listing;
+      const owner = await getUserFromRequest(request);
+      if (!isSuperadmin(owner)) {
+        set.status = 403;
+        return { error: "Only SUPERADMIN can activate listings" };
+      }
 
       const updated = await prisma.listing.update({
         where: { id: params.id },
@@ -339,6 +379,164 @@ export const marketplaceRoutes = new Elysia()
         contractAddress: t.String(),
         tokenAddress: t.String(),
         tokenName: t.Optional(t.String()),
+      }),
+    },
+  )
+  /**
+   * Records a confirmed fixed-price purchase after the AuctionHouse
+   * `buyListing` transaction lands. Decrements slots (SOLD at zero) and
+   * writes a Booking so Recently Booked stays in sync.
+   */
+  .post(
+    "/listings/:id/book",
+    async ({ params, body, request, set }) => {
+      const user = await getUserFromRequest(request);
+      if (!user) {
+        set.status = 401;
+        return { error: "Not authenticated" };
+      }
+
+      const listing = await prisma.listing.findUnique({
+        where: { id: params.id },
+        include: { creator: { include: creatorInclude } },
+      });
+      if (!listing) {
+        set.status = 404;
+        return { error: "Listing not found" };
+      }
+      if (listing.creator.userId === user.id) {
+        set.status = 403;
+        return { error: "You cannot book your own listing" };
+      }
+      if (listing.status !== "ACTIVE" || listing.slotsAvailable <= 0) {
+        set.status = 400;
+        return { error: "Listing is not available" };
+      }
+      if (listing.pricingType !== "FIXED") {
+        set.status = 400;
+        return { error: "Auction listings settle by bid, not instant book" };
+      }
+
+      const slotsLeft = Math.max(0, listing.slotsAvailable - 1);
+      const updated = await prisma.listing.update({
+        where: { id: listing.id },
+        data: {
+          slotsAvailable: slotsLeft,
+          status: slotsLeft <= 0 ? "SOLD" : "ACTIVE",
+        },
+        include: { creator: { include: creatorInclude } },
+      });
+
+      const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
+      const social = user.socials.find((s) => s.displayName || s.username || s.avatarUrl);
+      const brand = user.username
+        ? `@${user.username}`
+        : social?.displayName ||
+          social?.username ||
+          (wallet ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}` : "Buyer");
+
+      await prisma.booking.create({
+        data: {
+          brand,
+          markUrl: user.avatarUrl ?? social?.avatarUrl ?? null,
+          amount: listing.price,
+          placement: listing.placement ?? listing.title,
+          status: "CONFIRMED",
+          creatorId: listing.creatorId,
+        },
+      });
+
+      if (user.email && user.emailVerifiedAt) {
+        await sendListingPurchased(user.email, {
+          title: listing.title,
+          listingId: listing.id,
+          amount: listing.price,
+        }).catch((err) => console.error("[email] listing-purchased failed:", err));
+      }
+
+      return { listing: serializeListing(updated), txHash: body.txHash };
+    },
+    {
+      body: t.Object({
+        txHash: t.String(),
+      }),
+    },
+  )
+  .post(
+    "/listings/:id/bid",
+    async ({ params, body, request, set }) => {
+      const user = await getUserFromRequest(request);
+      if (!user) {
+        set.status = 401;
+        return { error: "Not authenticated" };
+      }
+
+      const listing = await prisma.listing.findUnique({
+        where: { id: params.id },
+        include: {
+          creator: { include: creatorInclude },
+          bids: { orderBy: { amount: "desc" }, take: 1 },
+        },
+      });
+      if (!listing) {
+        set.status = 404;
+        return { error: "Listing not found" };
+      }
+      if (listing.pricingType !== "AUCTION" || listing.status !== "ACTIVE") {
+        set.status = 400;
+        return { error: "This listing is not open for bids" };
+      }
+      if (listing.creator.userId === user.id) {
+        set.status = 403;
+        return { error: "You cannot bid on your own listing" };
+      }
+      if (!Number.isFinite(body.amount) || body.amount <= 0) {
+        set.status = 400;
+        return { error: "Bid must be greater than zero" };
+      }
+
+      const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
+      if (!wallet) {
+        set.status = 400;
+        return { error: "No wallet on this account" };
+      }
+
+      const previous = listing.bids[0] ?? null;
+      const bid = await prisma.listingBid.create({
+        data: {
+          listingId: listing.id,
+          bidderUserId: user.id,
+          bidderWallet: wallet.address.toLowerCase(),
+          amount: Math.round(body.amount),
+          txHash: body.txHash,
+        },
+      });
+
+      if (
+        previous &&
+        previous.bidderWallet.toLowerCase() !== wallet.address.toLowerCase() &&
+        previous.bidderUserId
+      ) {
+        const prevUser = await prisma.user.findUnique({
+          where: { id: previous.bidderUserId },
+          select: { email: true, emailVerifiedAt: true },
+        });
+        if (prevUser?.email && prevUser.emailVerifiedAt) {
+          await sendOutbid(prevUser.email, {
+            title: listing.title,
+            listingId: listing.id,
+            previousBid: previous.amount,
+            newBid: Math.round(body.amount),
+          }).catch((err) => console.error("[email] outbid failed:", err));
+        }
+      }
+
+      return { ok: true, bidId: bid.id, listing: serializeListing(listing) };
+    },
+    {
+      body: t.Object({
+        amount: t.Number(),
+        txHash: t.String(),
       }),
     },
   )

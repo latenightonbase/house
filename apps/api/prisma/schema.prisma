@@ -15,19 +15,50 @@ enum SocialPlatform {
   TIKTOK
 }
 
+enum Role {
+  USER
+  SUPERADMIN
+}
+
+enum EmailOtpPurpose {
+  VERIFY_EMAIL
+}
+
 model User {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  username  String?  @unique
-  avatarUrl String?
+  username        String?   @unique
+  avatarUrl       String?
+  role            Role      @default(USER)
+  email           String?   @unique
+  emailVerifiedAt DateTime?
 
   wallets        Wallet[]
   sessions       Session[]
   socials        SocialAccount[]
   oauthStates    OAuthState[]
   creatorProfile CreatorProfile?
+  emailOtps      EmailOtp[]
+  listingBids    ListingBid[]
+}
+
+model EmailOtp {
+  id         String          @id @default(cuid())
+  email      String
+  hashedCode String
+  purpose    EmailOtpPurpose @default(VERIFY_EMAIL)
+  expiresAt  DateTime
+  attempts   Int             @default(0)
+  createdAt  DateTime        @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([email])
+  @@index([expiresAt])
 }
 
 model Wallet {
@@ -315,16 +346,42 @@ model Listing {
   tokenName    String?
   txHash       String?
 
+  /// One rotating 24h auction owned by SUPERADMIN. Cron settles and clones it.
+  isDaily      Boolean   @default(false)
+  winnerWallet String?
+  settledAt    DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   creatorId String
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
+  bids ListingBid[]
+
   @@index([creatorId])
   @@index([status])
   @@index([category])
   @@index([pricingType])
+  @@index([isDaily, status])
+}
+
+model ListingBid {
+  id           String   @id @default(cuid())
+  amount       Int
+  bidderWallet String
+  txHash       String?
+  createdAt    DateTime @default(now())
+
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  bidderUserId String?
+  bidderUser   User?   @relation(fields: [bidderUserId], references: [id], onDelete: SetNull)
+
+  @@index([listingId])
+  @@index([bidderWallet])
+  @@index([createdAt])
 }
 
 /// Activate vertical — a brand/community activation. Pantheon provides the

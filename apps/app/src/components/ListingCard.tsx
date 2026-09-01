@@ -4,7 +4,7 @@ import { BadgeCheck, Gavel } from "lucide-react";
 import { Badge, BrandAvatar, Button, Card, PlatformIcon } from "@/components/ui";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
-import { relativeEndLabel } from "@/lib/utils";
+import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
 /**
  * One unit of media on sale. Reads as a service listing — what you get, from
@@ -14,9 +14,11 @@ import { relativeEndLabel } from "@/lib/utils";
 export function ListingCard({
   listing,
   onOpenCreator,
+  onBook,
 }: {
   listing: Listing;
   onOpenCreator?: (id: string) => void;
+  onBook?: (id: string) => void;
 }) {
   const isAuction = listing.pricingType === "AUCTION";
   const soldOut = !isAuction && listing.slotsAvailable <= 0;
@@ -65,8 +67,9 @@ export function ListingCard({
         className="flex items-center gap-2.5 min-w-0 text-left"
       >
         <BrandAvatar
-          src={listing.creator.avatarUrl}
+          src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
           alt={listing.creator.displayName}
+          fallbackSeed={listing.creator.wallet}
           size={30}
         />
         <div className="min-w-0">
@@ -94,7 +97,12 @@ export function ListingCard({
                 : meta.label}
           </p>
         </div>
-        <Button size="sm" disabled={soldOut} className="shrink-0">
+        <Button
+          size="sm"
+          disabled={soldOut}
+          className="shrink-0"
+          onClick={() => onBook?.(listing.id)}
+        >
           {isAuction ? "Place bid" : soldOut ? "Sold out" : "Book"}
         </Button>
       </div>

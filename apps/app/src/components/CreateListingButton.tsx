@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Plus } from "lucide-react";
 import { useSession } from "@/components/SessionProvider";
+import { isSuperadmin } from "@/lib/api";
 import { Button } from "@/components/ui";
 import type { ButtonSize, ButtonVariant } from "@/components/ui";
 
@@ -24,8 +25,10 @@ export function CreateListingButton({
   className?: string;
 }) {
   const router = useRouter();
-  const { status } = useSession();
+  const { status, user } = useSession();
   const { openConnectModal } = useConnectModal();
+
+  if (!isSuperadmin(user)) return null;
 
   return (
     <Button

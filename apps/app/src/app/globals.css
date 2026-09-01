@@ -23,6 +23,11 @@
   --warning: #fbbf24;
 
   --foreground: #f2f5fc;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-header-offset: calc(3.5rem + var(--safe-top));
+  --mobile-nav-offset: calc(4rem + var(--safe-bottom));
 }
 
 @theme inline {
@@ -54,10 +59,31 @@ body {
   overflow-x: hidden;
   min-height: 100vh;
   min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* iOS zooms any focused control under 16px — keep 16px on phones only. */
+@media (max-width: 1023px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+input[type="datetime-local"] {
+  max-width: 100%;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 .gradient-text {

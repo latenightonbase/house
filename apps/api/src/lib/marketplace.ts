@@ -28,9 +28,25 @@ function primaryWallet(user: { wallets: Wallet[] }) {
   return user.wallets.find((w) => w.isPrimary)?.address ?? user.wallets[0]?.address ?? "";
 }
 
-type ProfileWithUser = CreatorProfile & {
-  user: { wallets: Wallet[]; socials: SocialAccount[] };
+type ProfileUser = {
+  avatarUrl: string | null;
+  wallets: Wallet[];
+  socials: SocialAccount[];
 };
+
+type ProfileWithUser = CreatorProfile & {
+  user: ProfileUser;
+};
+
+/** Saved profile photo, then user upload, then first linked social. */
+function resolvedAvatar(profile: { avatarUrl: string | null; user: ProfileUser }) {
+  return (
+    profile.avatarUrl ??
+    profile.user.avatarUrl ??
+    profile.user.socials.find((s) => s.avatarUrl)?.avatarUrl ??
+    undefined
+  );
+}
 
 function serializeHost(profile: ProfileWithUser) {
   return {
@@ -38,7 +54,7 @@ function serializeHost(profile: ProfileWithUser) {
     wallet: primaryWallet(profile.user),
     username: profile.username ?? undefined,
     displayName: profile.displayName,
-    avatarUrl: profile.avatarUrl ?? undefined,
+    avatarUrl: resolvedAvatar(profile),
     verified: profile.verified,
     averageRating: profile.averageRating ?? undefined,
     totalReviews: profile.totalReviews ?? undefined,
@@ -81,7 +97,7 @@ export function serializeAuction(auction: AuctionWithRelations) {
     minimumBid: auction.minimumBid,
     hostedBy: serializeHost(auction.host),
     highestBid: topBid?.amount ?? 0,
-    imageUrl: auction.imageUrl ?? auction.host.avatarUrl ?? undefined,
+    imageUrl: auction.imageUrl ?? resolvedAvatar(auction.host) ?? undefined,
     topBidder: topBid
       ? {
           wallet: topBid.bidderWallet,
@@ -128,7 +144,7 @@ export function serializeEarner(profile: ProfileWithStats) {
     bookingsThisMonth,
     username: profile.username ?? undefined,
     displayName: profile.displayName,
-    avatarUrl: profile.avatarUrl ?? undefined,
+    avatarUrl: resolvedAvatar(profile),
     verified: profile.verified,
     reach: totalReach ? compact(totalReach) : undefined,
     engagement:
@@ -173,7 +189,7 @@ export function serializeCampaign(
 }
 
 type ListingWithCreator = Listing & {
-  creator: CreatorProfile & { user: { socials: SocialAccount[]; wallets: Wallet[] } };
+  creator: CreatorProfile & { user: ProfileUser };
 };
 
 export function serializeListing(listing: ListingWithCreator) {
@@ -196,11 +212,15 @@ export function serializeListing(listing: ListingWithCreator) {
     tokenAddress: listing.tokenAddress ?? undefined,
     tokenName: listing.tokenName ?? undefined,
     txHash: listing.txHash ?? undefined,
+    isDaily: listing.isDaily,
+    winnerWallet: listing.winnerWallet ?? undefined,
+    settledAt: listing.settledAt?.toISOString(),
     creator: {
       id: listing.creator.id,
+      wallet: primaryWallet(listing.creator.user),
       displayName: listing.creator.displayName,
       username: listing.creator.username ?? undefined,
-      avatarUrl: listing.creator.avatarUrl ?? undefined,
+      avatarUrl: resolvedAvatar(listing.creator),
       verified: listing.creator.verified,
       reach: compact(
         listing.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),
@@ -233,7 +253,7 @@ export function serializeActivation(activation: Activation & { vault: Vault | nu
 }
 
 type TokenWithCreator = CreatorToken & {
-  creator: CreatorProfile & { user: { socials: SocialAccount[]; wallets: Wallet[] } };
+  creator: CreatorProfile & { user: ProfileUser };
 };
 
 export function serializeCreatorToken(token: TokenWithCreator) {
@@ -246,9 +266,10 @@ export function serializeCreatorToken(token: TokenWithCreator) {
     revenueSharePct: token.revenueSharePct ?? undefined,
     creator: {
       id: token.creator.id,
+      wallet: primaryWallet(token.creator.user),
       displayName: token.creator.displayName,
       username: token.creator.username ?? undefined,
-      avatarUrl: token.creator.avatarUrl ?? undefined,
+      avatarUrl: resolvedAvatar(token.creator),
       verified: token.creator.verified,
       reach: compact(
         token.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),

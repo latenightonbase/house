@@ -93,6 +93,9 @@ export function publicUser(user: NonNullable<Awaited<ReturnType<typeof getUserFr
     createdAt: user.createdAt,
     username: user.username,
     avatarUrl: user.avatarUrl,
+    role: user.role ?? "USER",
+    email: user.email,
+    emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
     wallets: user.wallets.map((w) => ({
       address: w.address,
       chainId: w.chainId,

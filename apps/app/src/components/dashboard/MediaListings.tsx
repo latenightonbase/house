@@ -72,7 +72,7 @@ export function MediaListings({
       </div>
 
       {presentCategories.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-0.5">
           <CategoryChip
             label="All categories"
             active={category === "all"}
@@ -132,7 +132,8 @@ export function MediaListings({
                     <ListingCard
                       key={listing.id}
                       listing={listing}
-                      onOpenCreator={(id) => router.push(`/creators/${id}`)}
+                      onOpenCreator={() => {}}
+                      onBook={(id) => router.push(`/listings/${id}`)}
                     />
                   ))}
                 </div>
@@ -161,7 +162,7 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-[11px] font-medium transition-colors",
+        "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors shrink-0",
         active
           ? "border-primary/70 bg-primary/15 text-white"
           : "border-line bg-surface-2 text-caption hover:text-white hover:border-line-strong",

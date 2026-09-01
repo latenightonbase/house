@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -18,6 +18,13 @@ export const metadata: Metadata = {
   icons: { icon: "/favicon.ico" },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#06080f",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,13 +33,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${inter.variable} ${inter.className} antialiased text-white max-lg:pb-10`}
+        className={`${inter.variable} ${inter.className} antialiased text-white`}
       >
         <Providers>
           <NavigationProgress />
           <Header />
-          <main className="lg:pl-[212px] max-lg:pt-14">
-            <div className="lg:px-6 lg:py-6 max-lg:px-3 max-lg:py-4 max-lg:pb-28 lg:max-w-[1560px] lg:mx-auto max-lg:w-screen">
+          <main className="min-w-0 lg:pl-[212px] max-lg:pt-[var(--mobile-header-offset)]">
+            <div className="min-w-0 w-full lg:mx-auto lg:max-w-[1560px] lg:px-6 lg:py-6 max-lg:px-3.5 max-lg:py-4 max-lg:pb-[calc(var(--mobile-nav-offset)+1.25rem)]">
               {children}
             </div>
           </main>

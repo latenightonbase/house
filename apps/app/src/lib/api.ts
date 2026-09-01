@@ -10,11 +10,16 @@ export type PublicSocial = {
   followerCountSyncedAt?: string | null;
 };
 
+export type UserRole = "USER" | "SUPERADMIN";
+
 export type PublicUser = {
   id: string;
   createdAt: string;
   username?: string | null;
   avatarUrl?: string | null;
+  role: UserRole;
+  email?: string | null;
+  emailVerifiedAt?: string | null;
   wallets: Array<{
     address: string;
     chainId: number;
@@ -75,6 +80,35 @@ export async function unlinkSocial(platform: SocialPlatform) {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Unlink failed");
   return data.user as PublicUser | null;
+}
+
+export async function requestEmailOtp(email: string) {
+  const res = await fetch("/backend/auth/email/request-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+  const data = (await res.json()) as { error?: string; email?: string };
+  if (!res.ok) throw new Error(data.error || "Could not send verification code");
+  return data.email ?? email;
+}
+
+export async function verifyEmailOtp(email: string, code: string): Promise<PublicUser> {
+  const res = await fetch("/backend/auth/email/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email, code }),
+  });
+  const data = (await res.json()) as { error?: string; user?: PublicUser };
+  if (!res.ok) throw new Error(data.error || "Could not verify code");
+  if (!data.user) throw new Error("Could not verify code");
+  return data.user;
+}
+
+export function isSuperadmin(user: PublicUser | null | undefined) {
+  return user?.role === "SUPERADMIN";
 }
 
 export function formatCount(n: number | null | undefined) {

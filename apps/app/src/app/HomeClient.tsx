@@ -9,15 +9,6 @@ import { Button, Tile } from "@/components/ui";
 import { Topbar } from "@/components/dashboard/Topbar";
 import { MarketStrip } from "@/components/dashboard/MarketStrip";
 import { FeaturedAuction } from "@/components/dashboard/FeaturedAuction";
-import {
-  EndingSoonCard,
-  MostBookedCard,
-  NewCampaignCard,
-  TrendingCreatorCard,
-} from "@/components/dashboard/SpotlightCards";
-import { TrendingCreators } from "@/components/dashboard/TrendingCreators";
-import { LiveAuctions } from "@/components/dashboard/LiveAuctions";
-import { RecentlyBooked } from "@/components/dashboard/RecentlyBooked";
 import { MediaListings } from "@/components/dashboard/MediaListings";
 
 export default function HomeClient() {
@@ -27,19 +18,7 @@ export default function HomeClient() {
   const { openConnectModal } = useConnectModal();
   const authRequired = searchParams.get("auth") === "required";
 
-  const {
-    stats,
-    featured,
-    liveAuctions,
-    endingSoon,
-    creators,
-    trendingCreator,
-    mostBooked,
-    newCampaign,
-    bookings,
-    listings,
-    loading,
-  } = useDashboardData();
+  const { stats, featured, listings, loading } = useDashboardData();
 
   useEffect(() => {
     if (authRequired && status === "authenticated") {
@@ -63,23 +42,14 @@ export default function HomeClient() {
       <div className="space-y-4">
         <MarketStrip stats={stats} />
 
-        {featured && <FeaturedAuction auction={featured} />}
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {trendingCreator && <TrendingCreatorCard creator={trendingCreator} />}
-          {mostBooked && <MostBookedCard creator={mostBooked} />}
-          {endingSoon && <EndingSoonCard auction={endingSoon} />}
-          {newCampaign && <NewCampaignCard campaign={newCampaign} />}
-        </div>
+        {featured && (
+          <FeaturedAuction
+            listing={featured}
+            onView={(id) => router.push(`/listings/${id}`)}
+          />
+        )}
 
         <MediaListings listings={listings} loading={loading} />
-
-        {/* Creator table beside the open auction list */}
-        <div className="grid gap-4 grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start">
-          <TrendingCreators creators={creators} loading={loading} />
-          <LiveAuctions auctions={liveAuctions} loading={loading} />
-        </div>
-        <RecentlyBooked bookings={bookings} loading={loading} />
       </div>
     </div>
   );

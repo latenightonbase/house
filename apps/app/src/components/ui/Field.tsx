@@ -9,7 +9,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const CONTROL =
-  "w-full rounded-lg bg-surface-2 border border-line text-sm text-foreground placeholder:text-caption outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:opacity-50";
+  "w-full rounded-lg bg-surface-2 border border-line text-base sm:text-sm text-foreground placeholder:text-caption outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:opacity-50";
 
 interface FieldProps {
   label: string;
