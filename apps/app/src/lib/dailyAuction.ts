@@ -1,3 +1,4 @@
+import type { PublicUser } from "@/lib/api";
 import type { Listing } from "@/lib/marketplace";
 
 /**
@@ -30,6 +31,12 @@ export interface AuctionState {
     name: string;
     avatarUrl?: string | null;
     amount: number;
+    project: { name: string; avatarUrl?: string | null } | null;
+    bidder: {
+      wallet: string;
+      name: string;
+      avatarUrl?: string | null;
+    };
   } | null;
 }
 
@@ -94,7 +101,7 @@ export async function fetchMyProject(listingId: string): Promise<SavedDailyProje
 export async function saveMyProject(
   listingId: string,
   project: DailyProject,
-): Promise<SavedDailyProject> {
+): Promise<{ project: SavedDailyProject; auction?: AuctionState }> {
   const res = await fetch(`/backend/listings/${listingId}/project`, {
     method: "PUT",
     credentials: "include",
@@ -103,7 +110,17 @@ export async function saveMyProject(
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as { error?: string }).error || "Could not save details");
-  return (data as { project: SavedDailyProject }).project;
+  return data as { project: SavedDailyProject; auction?: AuctionState };
+}
+
+/** True when one of the signed-in user's wallets is the current auction leader. */
+export function isAuctionLeader(
+  user: PublicUser | null | undefined,
+  leaderWallet: string | null | undefined,
+): boolean {
+  if (!user?.wallets.length || !leaderWallet) return false;
+  const target = leaderWallet.toLowerCase();
+  return user.wallets.some((wallet) => wallet.address.toLowerCase() === target);
 }
 
 /** Records a confirmed on-chain bid, carrying the pitch when one is supplied. */

@@ -35,6 +35,7 @@ export async function getUserFromSessionToken(token: string | undefined) {
         include: {
           wallets: { orderBy: { createdAt: "asc" } },
           socials: { orderBy: { platform: "asc" } },
+          creatorProfile: true,
         },
       },
     },
@@ -87,12 +88,47 @@ export async function getUserFromRequest(request: Request) {
   return getUserFromSessionToken(parseCookie(request.headers.get("cookie"), COOKIE_NAME));
 }
 
-export function publicUser(user: NonNullable<Awaited<ReturnType<typeof getUserFromSessionToken>>>) {
+type PublicUserSource = {
+  id: string;
+  createdAt: Date;
+  username: string | null;
+  avatarUrl: string | null;
+  role?: string | null;
+  email: string | null;
+  emailVerifiedAt: Date | null;
+  wallets: Array<{
+    address: string;
+    chainId: number;
+    isPrimary: boolean;
+    verifiedAt: Date;
+  }>;
+  socials: Array<{
+    platform: string;
+    platformUserId: string;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    followerCount: number | null;
+    followerCountSyncedAt: Date | null;
+  }>;
+  creatorProfile?: { username: string | null; avatarUrl: string | null } | null;
+};
+
+export function publicUser(user: PublicUserSource) {
+  const social = user.socials.find((s) => s.username || s.displayName || s.avatarUrl);
   return {
     id: user.id,
     createdAt: user.createdAt,
-    username: user.username,
-    avatarUrl: user.avatarUrl,
+    username:
+      user.username ??
+      user.creatorProfile?.username ??
+      social?.username ??
+      null,
+    avatarUrl:
+      user.avatarUrl ??
+      user.creatorProfile?.avatarUrl ??
+      social?.avatarUrl ??
+      null,
     role: user.role ?? "USER",
     email: user.email,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,

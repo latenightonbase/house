@@ -40,6 +40,18 @@ export async function fetchMe(): Promise<PublicUser | null> {
   return data.user;
 }
 
+export type WalletIdentity = {
+  username: string | null;
+  avatarUrl: string | null;
+};
+
+export async function fetchWalletIdentity(address: string): Promise<WalletIdentity | null> {
+  const res = await fetch(`/backend/auth/identity/${address}`, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  return (await res.json()) as WalletIdentity;
+}
+
 export async function refreshSocial(platform: SocialPlatform) {
   const res = await fetch(`/backend/socials/${platform.toLowerCase()}/refresh`, {
     method: "POST",

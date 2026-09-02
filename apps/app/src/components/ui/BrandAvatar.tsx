@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { brandMarkDataUri } from "@/lib/brandMark";
@@ -30,6 +30,9 @@ export function BrandAvatar({
   className = "",
 }: Props) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
   const monogram = brandMarkDataUri(fallbackSeed || alt, shape === "circle");
   const resolved = !src || failed ? monogram : src;
 

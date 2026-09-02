@@ -5,9 +5,9 @@ import { createPortal } from "react-dom";
 import { parseUnits } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { Check, Globe, Loader2, Pencil, X, Zap } from "lucide-react";
-import { SocialIcon } from "@/components/nav/SocialIcons";
+import { Check, Loader2, Pencil, X, Zap } from "lucide-react";
 import { useSession } from "@/components/SessionProvider";
+import { Labelled, ProjectPitchFields, pitchInputClass } from "./ProjectPitchFields";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
@@ -51,31 +51,6 @@ function writeError(err: unknown, fallback: string) {
   if (/insufficient/i.test(message)) return "Not enough balance to cover this bid.";
   return message.split("\n")[0]?.slice(0, 180) || fallback;
 }
-
-function Labelled({
-  label,
-  hint,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="panel-label block">
-        {label}
-        {hint && <span className="ml-2 normal-case tracking-normal text-caption/70">{hint}</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const inputClass =
-  "w-full h-11 px-3.5 rounded-lg bg-surface-2 border border-line text-[14px] text-white placeholder:text-caption/60 outline-none transition-colors focus:border-primary/60";
 
 /**
  * Places a bid on the daily auction, carrying the bidder's project pitch.
@@ -381,93 +356,7 @@ export function BidDialog({
                   </p>
                 </div>
 
-                <Labelled label="Project name" htmlFor="project-name">
-                  <input
-                    id="project-name"
-                    value={project.name}
-                    onChange={(e) => set({ name: e.target.value })}
-                    disabled={busy}
-                    maxLength={80}
-                    placeholder="Project XYZ"
-                    className={inputClass}
-                  />
-                </Labelled>
-
-                <Labelled label="Description" hint="optional" htmlFor="project-description">
-                  <textarea
-                    id="project-description"
-                    value={project.description ?? ""}
-                    onChange={(e) => set({ description: e.target.value })}
-                    disabled={busy}
-                    maxLength={600}
-                    rows={3}
-                    placeholder="The next generation trading protocol built for speed, transparency and DeFi."
-                    className={cn(inputClass, "h-auto py-2.5 resize-none leading-relaxed")}
-                  />
-                </Labelled>
-
-                <Labelled label="Image URL" hint="optional" htmlFor="project-image">
-                  <input
-                    id="project-image"
-                    type="url"
-                    inputMode="url"
-                    value={project.imageUrl ?? ""}
-                    onChange={(e) => set({ imageUrl: e.target.value })}
-                    disabled={busy}
-                    maxLength={600}
-                    placeholder="https://…/artwork.png"
-                    className={inputClass}
-                  />
-                </Labelled>
-
-                <div className="space-y-3">
-                  <p className="panel-label">Links · optional</p>
-                  <div className="relative">
-                    <Globe
-                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-caption"
-                      aria-hidden="true"
-                    />
-                    <input
-                      aria-label="Website"
-                      type="url"
-                      inputMode="url"
-                      value={project.websiteUrl ?? ""}
-                      onChange={(e) => set({ websiteUrl: e.target.value })}
-                      disabled={busy}
-                      maxLength={300}
-                      placeholder="projectxyz.io"
-                      className={cn(inputClass, "pl-10")}
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-caption">
-                      <SocialIcon id="x" className="w-3.5 h-3.5" />
-                    </span>
-                    <input
-                      aria-label="X profile"
-                      value={project.twitterUrl ?? ""}
-                      onChange={(e) => set({ twitterUrl: e.target.value })}
-                      disabled={busy}
-                      maxLength={300}
-                      placeholder="x.com/ProjectXYZ"
-                      className={cn(inputClass, "pl-10")}
-                    />
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-caption">
-                      <SocialIcon id="youtube" className="w-4 h-4" />
-                    </span>
-                    <input
-                      aria-label="YouTube channel"
-                      value={project.youtubeUrl ?? ""}
-                      onChange={(e) => set({ youtubeUrl: e.target.value })}
-                      disabled={busy}
-                      maxLength={300}
-                      placeholder="youtube.com/@ProjectXYZ"
-                      className={cn(inputClass, "pl-10")}
-                    />
-                  </div>
-                </div>
+                <ProjectPitchFields project={project} onChange={set} disabled={busy} />
 
                 {hasSavedProject && (
                   <button
@@ -502,7 +391,7 @@ export function BidDialog({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     disabled={busy || !formReady}
-                    className={cn(inputClass, "pl-8 pr-20 numeric text-[16px] font-semibold")}
+                    className={cn(pitchInputClass, "pl-8 pr-20 numeric text-[16px] font-semibold")}
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-caption">
                     {listing.tokenName || listing.currency}

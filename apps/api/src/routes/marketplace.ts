@@ -53,6 +53,35 @@ const creatorInclude = {
   user: { include: { socials: true, wallets: true } },
 } as const;
 
+function shortWallet(wallet: string) {
+  return `${wallet.slice(0, 6)}\u2026${wallet.slice(-4)}`;
+}
+
+/** Username first, then a linked social, then the wallet — never an empty name. */
+function bidderIdentity(
+  wallet: string,
+  user: {
+    username: string | null;
+    avatarUrl: string | null;
+    socials: Array<{
+      displayName: string | null;
+      username: string | null;
+      avatarUrl: string | null;
+    }>;
+  } | null,
+) {
+  const social = user?.socials.find((s) => s.displayName || s.username || s.avatarUrl);
+  return {
+    wallet,
+    name:
+      (user?.username ? `@${user.username}` : null) ||
+      social?.displayName ||
+      (social?.username ? `@${social.username}` : null) ||
+      shortWallet(wallet),
+    avatarUrl: user?.avatarUrl ?? social?.avatarUrl ?? null,
+  };
+}
+
 /** The bid shape the daily-auction UI reads: leader, tally, and current price. */
 async function dailyAuctionState(listingId: string, reservePrice: number) {
   const [bids, bidderRows] = await Promise.all([
@@ -70,22 +99,24 @@ async function dailyAuctionState(listingId: string, reservePrice: number) {
   const top = bids[0] ?? null;
   const bidCount = bidderRows.reduce((sum, row) => sum + row._count, 0);
   const leaderProject = top ? await getDailyProject(listingId, top.bidderWallet) : null;
+  const bidder = top ? bidderIdentity(top.bidderWallet, top.bidderUser) : null;
 
   return {
     currentBid: top?.amount ?? reservePrice,
     reservePrice,
     bidCount,
     bidderCount: bidderRows.length,
-    leader: top
+    leader: top && bidder
       ? {
           wallet: top.bidderWallet,
           /** Prefers the pitched project name — that is what the leaderboard shows. */
-          name:
-            leaderProject?.name ||
-            (top.bidderUser?.username ? `@${top.bidderUser.username}` : null) ||
-            `${top.bidderWallet.slice(0, 6)}\u2026${top.bidderWallet.slice(-4)}`,
-          avatarUrl: leaderProject?.imageUrl ?? top.bidderUser?.avatarUrl ?? null,
+          name: leaderProject?.name || bidder.name,
+          avatarUrl: leaderProject?.imageUrl ?? bidder.avatarUrl,
           amount: top.amount,
+          project: leaderProject
+            ? { name: leaderProject.name, avatarUrl: leaderProject.imageUrl }
+            : null,
+          bidder,
         }
       : null,
   };
@@ -441,13 +472,19 @@ export const marketplaceRoutes = new Elysia()
         set.status = 404;
         return { error: "Listing not found" };
       }
-      if (listing.status !== "ACTIVE") {
+      const closed =
+        listing.status !== "ACTIVE" ||
+        (listing.endDate !== null && listing.endDate.getTime() <= Date.now());
+      if (closed) {
         set.status = 400;
         return { error: "This auction is closed" };
       }
 
       const project = await saveDailyProject(params.id, wallet.address, user.id, body);
-      return { project };
+      const auction = listing.isDaily
+        ? await dailyAuctionState(listing.id, listing.price)
+        : undefined;
+      return { project, auction };
     },
     { body: dailyProjectBody },
   )
