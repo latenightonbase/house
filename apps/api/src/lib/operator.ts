@@ -116,8 +116,8 @@ export function walletClient() {
   });
 }
 
-export function toTokenAmount(whole: number, decimals = 6) {
-  return parseUnits(String(Math.round(whole)), decimals);
+export function toTokenAmount(amount: number, decimals = 6) {
+  return parseUnits(amount.toFixed(decimals), decimals);
 }
 
 export function fromTokenAmount(raw: bigint, decimals = 6) {
