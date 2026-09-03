@@ -1,11 +1,12 @@
 "use client";
 
-import { Info, Trophy, Zap } from "lucide-react";
+import { useState } from "react";
+import { Info, Pencil, Trophy, Zap } from "lucide-react";
 import Link from "next/link";
 import { useCountdown } from "@/lib/useCountdown";
 import type { AuctionState } from "@/lib/dailyAuction";
 import type { Listing } from "@/lib/marketplace";
-import { cn } from "@/lib/utils";
+import { cn, walletFallbackAvatar } from "@/lib/utils";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -43,6 +44,88 @@ function StatTile({
   );
 }
 
+function CurrentLeaderCard({
+  leader,
+  onEdit,
+}: {
+  leader: NonNullable<AuctionState["leader"]>;
+  onEdit?: () => void;
+}) {
+  const [bgFailed, setBgFailed] = useState(false);
+
+  const projectName = leader.project?.name ?? leader.name;
+  const uploaded = leader.project?.avatarUrl ?? leader.avatarUrl;
+  const artwork = !bgFailed && uploaded ? uploaded : null;
+  const bidderAvatar =
+    leader.bidder.avatarUrl || walletFallbackAvatar(leader.bidder.wallet);
+
+  return (
+    <div
+      className={cn(
+        "relative h-full min-h-[13.5rem] overflow-hidden rounded-xl border border-line",
+        !artwork && "bg-[radial-gradient(120%_90%_at_70%_20%,rgba(168,85,247,0.45),transparent_55%),linear-gradient(160deg,#1a0b2e_0%,#2a1148_50%,#0a0410_100%)]",
+      )}
+    >
+      {artwork ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={artwork}
+            alt=""
+            onError={() => setBgFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20"
+          />
+        </>
+      ) : (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/15"
+        />
+      )}
+
+      <div className="relative z-10 flex h-full min-h-[13.5rem] w-full min-w-0 flex-col justify-between p-4">
+        <div className="flex items-center gap-2">
+          <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-white/75">
+            <Trophy className="w-3 h-3 text-warning" aria-hidden="true" />
+            Current leader
+          </p>
+          {onEdit ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-black/35 px-2 py-1 text-[11px] font-semibold text-white/90 hover:bg-black/55 hover:text-white"
+            >
+              <Pencil className="w-3 h-3" aria-hidden="true" />
+              Edit listing
+            </button>
+          ) : null}
+        </div>
+
+        <div className="min-w-0 max-w-full">
+          <div className="max-w-full overflow-x-auto">
+            <p className="display w-max max-w-none whitespace-nowrap text-[clamp(1.4rem,3.4vw,2rem)] uppercase text-white">
+              {projectName}
+            </p>
+          </div>
+          <div className="mt-2.5 flex items-center gap-2 min-w-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={bidderAvatar}
+              alt=""
+              className="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-white/25"
+            />
+            <span className="truncate text-[12px] text-white/80">{leader.bidder.name}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * "Tomorrow's Attention Auction" — the live bidding surface. Bid amount, clock
  * and leader read from the API; the clock is the only thing that ticks, so the
@@ -52,10 +135,12 @@ export function LiveAuctionPanel({
   listing,
   auction,
   onPlaceBid,
+  onEditListing,
 }: {
   listing: Listing;
   auction: AuctionState | null;
   onPlaceBid: () => void;
+  onEditListing?: () => void;
 }) {
   const countdown = useCountdown(listing.endDate);
   const currentBid = auction?.currentBid ?? listing.price;
@@ -130,31 +215,23 @@ export function LiveAuctionPanel({
 
         </div>
 
-        <StatTile label="Current leader">
-          {leader ? (
-            <>
-              <div className="flex items-center justify-center gap-2 min-w-0">
-                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-warning/15 border border-warning/30 shrink-0">
-                  <Trophy className="w-3.5 h-3.5 text-warning" aria-hidden="true" />
-                </span>
-                <span className="text-[14px] font-semibold text-white truncate">
-                  {leader.name}
-                </span>
-              </div>
-              <p className="mt-2 text-[20px] font-bold text-primary-bright numeric">
-                ${leader.amount.toLocaleString()}
-              </p>
-              <p className="mt-1.5 text-[11px] text-caption">Outbid to take the lead.</p>
-            </>
-          ) : (
-            <>
-              <p className="text-[14px] font-semibold text-white">No bids yet</p>
-              <p className="mt-2 text-[11px] text-caption">
-                Open at ${reserve.toLocaleString()} — the lead is yours for the taking.
-              </p>
-            </>
-          )}
-        </StatTile>
+        {leader ? (
+          <CurrentLeaderCard
+            leader={leader}
+            onEdit={!ended && onEditListing ? onEditListing : undefined}
+          />
+        ) : (
+          <div className="tile h-full px-4 py-4 flex flex-col">
+            <p className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-primary-light">
+              <Trophy className="w-3 h-3 text-warning" aria-hidden="true" />
+              Current leader
+            </p>
+            <p className="mt-3 text-[14px] font-semibold text-white">No bids yet</p>
+            <p className="mt-2 text-[11px] text-caption leading-relaxed">
+              Open at ${reserve.toLocaleString()} — the lead is yours for the taking.
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-col justify-end w-full gap-2.5 pl-10">
           <button

@@ -7,7 +7,7 @@ export function SocialRow({ className }: { className?: string }) {
   return (
     <div className={cn("space-y-3", className)}>
       <p className="panel-label">Follow us</p>
-      <ul className="flex items-center gap-2">
+      <ul className="flex items-center gap-2 w-full">
         {SOCIAL_LINKS.map((social) => (
           <li key={social.id}>
             <a

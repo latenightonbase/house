@@ -104,6 +104,49 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
     }
     return { user: publicUser(user) };
   })
+  .get(
+    "/identity/:address",
+    async ({ params, set }) => {
+      const address = params.address.trim().toLowerCase();
+      if (!/^0x[a-f0-9]{40}$/.test(address)) {
+        set.status = 400;
+        return { error: "Invalid address" };
+      }
+      const wallet = await prisma.wallet.findUnique({
+        where: { address },
+        include: {
+          user: {
+            include: {
+              socials: { orderBy: { platform: "asc" } },
+              creatorProfile: true,
+            },
+          },
+        },
+      });
+      if (!wallet) {
+        set.status = 404;
+        return { error: "Not found" };
+      }
+      const social = wallet.user.socials.find((s) => s.username || s.displayName || s.avatarUrl);
+      return {
+        username:
+          wallet.user.username ??
+          wallet.user.creatorProfile?.username ??
+          social?.username ??
+          null,
+        avatarUrl:
+          wallet.user.avatarUrl ??
+          wallet.user.creatorProfile?.avatarUrl ??
+          social?.avatarUrl ??
+          null,
+      };
+    },
+    {
+      params: t.Object({
+        address: t.String(),
+      }),
+    },
+  )
   .patch(
     "/profile",
     async ({ request, body, set }) => {

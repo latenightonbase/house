@@ -7,6 +7,7 @@ import { useSession } from "@/components/SessionProvider";
 import {
   fetchDailyAuction,
   fetchSpotlight,
+  isAuctionLeader,
   type AuctionState,
   type Spotlight,
 } from "@/lib/dailyAuction";
@@ -16,13 +17,14 @@ import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
 import { WinnerBenefits } from "@/components/home/WinnerBenefits";
 import { AuctionEmpty } from "@/components/home/AuctionEmpty";
 import { BidDialog } from "@/components/home/BidDialog";
+import { EditListingDialog } from "@/components/home/EditListingDialog";
 
 /** Poll cadence for the live bid state — fast enough to feel live, cheap enough to leave on. */
 const REFRESH_MS = 20_000;
 
 export default function HomeClient() {
   const searchParams = useSearchParams();
-  const { status } = useSession();
+  const { status, user } = useSession();
   const { openConnectModal } = useConnectModal();
   const authRequired = searchParams.get("auth") === "required";
 
@@ -31,6 +33,7 @@ export default function HomeClient() {
   const [auction, setAuction] = useState<AuctionState | null>(null);
   const [loading, setLoading] = useState(true);
   const [bidOpen, setBidOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [daily, current] = await Promise.all([
@@ -65,6 +68,16 @@ export default function HomeClient() {
     setBidOpen(true);
   }
 
+  function handleEditListing() {
+    if (status !== "authenticated") {
+      openConnectModal?.();
+      return;
+    }
+    setEditOpen(true);
+  }
+
+  const canEditListing = isAuctionLeader(user, auction?.leader?.wallet);
+
   return (
     <div className="w-full space-y-4 pb-4">
       {authRequired && status !== "authenticated" ? (
@@ -95,6 +108,7 @@ export default function HomeClient() {
                 listing={listing}
                 auction={auction}
                 onPlaceBid={handlePlaceBid}
+                onEditListing={canEditListing ? handleEditListing : undefined}
               />
               <WinnerBenefits />
               <BidDialog
@@ -104,6 +118,15 @@ export default function HomeClient() {
                 onClose={() => setBidOpen(false)}
                 onBidPlaced={(next) => {
                   setAuction(next);
+                  void load();
+                }}
+              />
+              <EditListingDialog
+                listing={listing}
+                open={editOpen}
+                onClose={() => setEditOpen(false)}
+                onSaved={(next) => {
+                  if (next) setAuction(next);
                   void load();
                 }}
               />
