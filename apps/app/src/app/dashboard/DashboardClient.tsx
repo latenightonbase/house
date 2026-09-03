@@ -45,9 +45,11 @@ export default function DashboardClient() {
     (user?.username ? `@${user.username}` : null) ||
     (primary ? shortAddress(primary.address) : "Your profile");
   const usernameValid = USERNAME_RE.test(username.trim());
+  const emailBlank = !email.trim();
   const emailValid = EMAIL_RE.test(email.trim());
-  const emailChanged =
-    email.trim().toLowerCase() !== (user?.email ?? "").toLowerCase() || !user?.emailVerifiedAt;
+  const emailDirty = email.trim().toLowerCase() !== (user?.email ?? "").toLowerCase();
+  const needsEmailVerify = !emailBlank && (emailDirty || !user?.emailVerifiedAt);
+  const emailVerified = Boolean(user?.emailVerifiedAt) && !emailDirty;
 
   const copyAddress = () => {
     if (!primary) return;
@@ -80,7 +82,7 @@ export default function DashboardClient() {
     setError(null);
     setNotice(null);
     try {
-      if (emailChanged) {
+      if (needsEmailVerify) {
         if (!otpSent) {
           await requestEmailOtp(email.trim());
           setOtpSent(true);
@@ -161,7 +163,7 @@ export default function DashboardClient() {
           <div>
             <h2 className="text-[15px] font-bold text-foreground">Profile</h2>
             <p className="text-[12px] text-caption mt-0.5">
-              Picture, username, and a verified email. Changing email requires a new code.
+              Picture and username. Email is optional — add one to get bid updates.
             </p>
           </div>
 
@@ -195,6 +197,12 @@ export default function DashboardClient() {
           <Field
             label="Email"
             htmlFor={emailId}
+            optional={!emailVerified}
+            hint={
+              emailVerified
+                ? "Verified. You'll get bid updates at this address."
+                : "Add and verify an email to get updates on your bids."
+            }
             error={email && !emailValid ? "Enter a valid email address." : undefined}
           >
             <TextInput
@@ -211,7 +219,7 @@ export default function DashboardClient() {
             />
           </Field>
 
-          {otpSent && emailChanged ? (
+          {otpSent && needsEmailVerify ? (
             <Field label="Verification code" htmlFor={otpId}>
               <TextInput
                 id={otpId}
@@ -229,7 +237,7 @@ export default function DashboardClient() {
           {error ? <p className="text-[12px] text-negative">{error}</p> : null}
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            {emailChanged && emailValid ? (
+            {needsEmailVerify && emailValid ? (
               <Button
                 type="button"
                 variant="accent-outline"
@@ -243,7 +251,7 @@ export default function DashboardClient() {
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={!usernameValid || !emailValid || saving}
+              disabled={!usernameValid || (!emailBlank && !emailValid) || saving}
             >
               {saving ? "Saving…" : "Save profile"}
             </Button>

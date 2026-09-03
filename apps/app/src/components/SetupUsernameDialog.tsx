@@ -5,15 +5,9 @@ import { useSession } from "@/components/SessionProvider";
 import { ImageUploader } from "@/components/ui/ImageUploader";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/Field";
-import {
-  requestEmailOtp,
-  updateProfile,
-  verifyEmailOtp,
-  type PublicUser,
-} from "@/lib/api";
+import { updateProfile, type PublicUser } from "@/lib/api";
 
 const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{2,19}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function suggestUsername(socialUsername?: string | null): string {
   if (!socialUsername) return "";
@@ -26,7 +20,7 @@ function suggestUsername(socialUsername?: string | null): string {
 }
 
 function needsSetup(user: PublicUser) {
-  return !user.username || !user.emailVerifiedAt;
+  return !user.username;
 }
 
 export function SetupUsernameDialog() {
@@ -43,18 +37,11 @@ function SetupUsernameForm({
   refresh: () => Promise<void>;
 }) {
   const usernameId = useId();
-  const emailId = useId();
-  const otpId = useId();
   const social = user.socials.find((s) => s.username || s.avatarUrl);
   const [username, setUsername] = useState(() => user.username || suggestUsername(social?.username));
   const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
-  const [email, setEmail] = useState(user.email ?? "");
-  const [code, setCode] = useState("");
-  const [otpSent, setOtpSent] = useState(Boolean(user.emailVerifiedAt));
-  const [emailVerified, setEmailVerified] = useState(Boolean(user.emailVerifiedAt));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [sendingOtp, setSendingOtp] = useState(false);
 
   const primary = user.wallets.find((w) => w.isPrimary) || user.wallets[0];
 
@@ -67,23 +54,6 @@ function SetupUsernameForm({
   }, []);
 
   const usernameValid = USERNAME_RE.test(username.trim());
-  const emailValid = EMAIL_RE.test(email.trim());
-
-  const onSendOtp = async () => {
-    if (!emailValid || sendingOtp) return;
-    setSendingOtp(true);
-    setError(null);
-    try {
-      await requestEmailOtp(email.trim());
-      setOtpSent(true);
-      setEmailVerified(false);
-      setCode("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send code.");
-    } finally {
-      setSendingOtp(false);
-    }
-  };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -91,15 +61,6 @@ function SetupUsernameForm({
     setSaving(true);
     setError(null);
     try {
-      if (!emailVerified) {
-        if (!otpSent) {
-          await requestEmailOtp(email.trim());
-          setOtpSent(true);
-          return;
-        }
-        await verifyEmailOtp(email.trim(), code.trim());
-        setEmailVerified(true);
-      }
       await updateProfile({
         username: username.trim(),
         ...(avatarUrl !== undefined ? { avatarUrl } : {}),
@@ -111,8 +72,6 @@ function SetupUsernameForm({
       setSaving(false);
     }
   };
-
-  const canContinue = usernameValid && emailValid && (emailVerified || (otpSent ? /^\d{6}$/.test(code.trim()) : true));
 
   return (
     <div
@@ -129,7 +88,7 @@ function SetupUsernameForm({
           Set up your profile
         </h2>
         <p className="mt-1.5 text-[13px] leading-snug text-caption">
-          Choose a username and verify your email. A photo is optional.
+          Choose a username. A photo is optional.
         </p>
 
         <div className="mt-5">
@@ -164,64 +123,11 @@ function SetupUsernameForm({
           />
         </Field>
 
-        <Field
-          label="Email"
-          htmlFor={emailId}
-          error={email && !emailValid ? "Enter a valid email address." : undefined}
-          className="mt-4"
-        >
-          <TextInput
-            id={emailId}
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setEmailVerified(false);
-              setOtpSent(false);
-              setCode("");
-            }}
-            autoComplete="email"
-            placeholder="you@example.com"
-            disabled={emailVerified}
-          />
-        </Field>
-
-        {otpSent && !emailVerified ? (
-          <Field label="Verification code" htmlFor={otpId} className="mt-4">
-            <TextInput
-              id={otpId}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="6-digit code"
-              maxLength={6}
-            />
-          </Field>
-        ) : null}
-
         {error ? <p className="mt-3 text-[12px] text-negative">{error}</p> : null}
 
-        <div className="mt-5 flex flex-col gap-2">
-          {!emailVerified && emailValid ? (
-            <Button
-              type="button"
-              variant="accent-outline"
-              className="w-full"
-              disabled={sendingOtp}
-              onClick={() => void onSendOtp()}
-            >
-              {sendingOtp ? "Sending…" : otpSent ? "Resend code" : "Send verification code"}
-            </Button>
-          ) : null}
-          <Button type="submit" className="w-full" disabled={!canContinue || saving}>
-            {saving
-              ? "Saving…"
-              : !emailVerified && !otpSent
-                ? "Send code and continue"
-                : !emailVerified
-                  ? "Verify and continue"
-                  : "Continue"}
+        <div className="mt-5">
+          <Button type="submit" className="w-full" disabled={!usernameValid || saving}>
+            {saving ? "Saving…" : "Continue"}
           </Button>
         </div>
       </form>
