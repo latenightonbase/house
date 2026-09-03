@@ -26,24 +26,24 @@ export interface SocialLink {
 /** Bottom-left of the sidebar. Order here is the order rendered. */
 export const SOCIAL_LINKS: SocialLink[] = [
   { id: "x", label: "X", handle: "@latenightonchain", href: "https://x.com/latenightonchain" },
-  {
-    id: "youtube",
-    label: "YouTube",
-    handle: "Late Night Onchain",
-    href: "https://youtube.com/@latenightonchain",
-  },
+  // {
+  //   id: "youtube",
+  //   label: "YouTube",
+  //   handle: "Late Night Onchain",
+  //   href: "https://youtube.com/@latenightonchain",
+  // },
   {
     id: "telegram",
     label: "Telegram",
     handle: "Late Night Onchain",
     href: "https://t.me/latenightonchain",
   },
-  {
-    id: "instagram",
-    label: "Instagram",
-    handle: "@latenightonchain",
-    href: "https://instagram.com/latenightonchain",
-  },
+  // {
+  //   id: "instagram",
+  //   label: "Instagram",
+  //   handle: "@latenightonchain",
+  //   href: "https://instagram.com/latenightonchain",
+  // },
 ];
 
 export interface NavItem {

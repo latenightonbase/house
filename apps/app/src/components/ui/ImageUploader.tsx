@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type MouseEvent } from "react";
+import Image from "next/image";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { BrandAvatar } from "@/components/ui/BrandAvatar";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
 import { resizeImageToFile } from "@/lib/resizeImage";
 import { uploadImage, validateImageFile, type UploadPurpose } from "@/lib/uploadImage";
 import { cn } from "@/lib/utils";
@@ -236,8 +238,16 @@ export function ImageUploader({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt={alt} className="h-40 w-full object-cover" />
+          <div className="relative h-40 w-full">
+            <Image
+              src={preview}
+              alt={alt}
+              fill
+              sizes="400px"
+              unoptimized={isUnoptimizedSrc(preview)}
+              className="object-cover"
+            />
+          </div>
           {uploading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <Loader2 className="h-6 w-6 animate-spin text-white" />

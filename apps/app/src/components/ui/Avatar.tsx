@@ -1,3 +1,6 @@
+import Image from "next/image";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
+
 type Props = {
   src?: string | null;
   alt?: string;
@@ -11,11 +14,12 @@ export function Avatar({ src, alt = "", fallback, size = 44, className = "" }: P
 
   if (src) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <Image
         src={src}
         alt={alt}
-        style={style}
+        width={size}
+        height={size}
+        unoptimized={isUnoptimizedSrc(src)}
         className={`rounded-full object-cover border border-line-strong ${className}`}
       />
     );
