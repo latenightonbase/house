@@ -5,6 +5,7 @@ export { Button } from "./Button";
 export { LinkButton } from "./LinkButton";
 export { Avatar } from "./Avatar";
 export { BrandAvatar } from "./BrandAvatar";
+export { ImageUploader } from "./ImageUploader";
 export { Panel, PanelHeader, ViewAllLink } from "./Panel";
 export { PlatformIcon, PlatformIcons, PLATFORM_LABELS, type Platform } from "./PlatformIcons";
 export { Tabs, type TabItem } from "./Tabs";

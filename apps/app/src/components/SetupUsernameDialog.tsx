@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Camera } from "lucide-react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useSession } from "@/components/SessionProvider";
-import { BrandAvatar } from "@/components/ui/BrandAvatar";
+import { ImageUploader } from "@/components/ui/ImageUploader";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/Field";
 import {
@@ -12,8 +11,6 @@ import {
   verifyEmailOtp,
   type PublicUser,
 } from "@/lib/api";
-import { resizeImageToDataUrl } from "@/lib/resizeImage";
-import { walletFallbackAvatar } from "@/lib/utils";
 
 const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{2,19}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -48,10 +45,9 @@ function SetupUsernameForm({
   const usernameId = useId();
   const emailId = useId();
   const otpId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const social = user.socials.find((s) => s.username || s.avatarUrl);
   const [username, setUsername] = useState(() => user.username || suggestUsername(social?.username));
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [email, setEmail] = useState(user.email ?? "");
   const [code, setCode] = useState("");
   const [otpSent, setOtpSent] = useState(Boolean(user.emailVerifiedAt));
@@ -72,21 +68,6 @@ function SetupUsernameForm({
 
   const usernameValid = USERNAME_RE.test(username.trim());
   const emailValid = EMAIL_RE.test(email.trim());
-  const previewSrc = avatarUrl || user.avatarUrl || social?.avatarUrl || walletFallbackAvatar(primary?.address);
-
-  const onPickFile = async (file: File | undefined) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Choose a JPEG, PNG, or WebP image.");
-      return;
-    }
-    try {
-      setError(null);
-      setAvatarUrl(await resizeImageToDataUrl(file));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not process image.");
-    }
-  };
 
   const onSendOtp = async () => {
     if (!emailValid || sendingOtp) return;
@@ -121,7 +102,7 @@ function SetupUsernameForm({
       }
       await updateProfile({
         username: username.trim(),
-        ...(avatarUrl ? { avatarUrl } : {}),
+        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
       });
       await refresh();
     } catch (err) {
@@ -151,44 +132,13 @@ function SetupUsernameForm({
           Choose a username and verify your email. A photo is optional.
         </p>
 
-        <div className="mt-5 flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-            aria-label="Upload profile picture"
-          >
-            <BrandAvatar
-              key={previewSrc}
-              src={previewSrc}
-              alt={username || "Profile picture"}
-              fallbackSeed={primary?.address || username || user.id}
-              size={72}
-            />
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
-              <Camera className="h-5 w-5 text-white" />
-            </span>
-          </button>
-          <div className="min-w-0">
-            <p className="text-[13px] font-semibold text-white">Profile picture</p>
-            <p className="mt-0.5 text-[11px] text-caption">Optional. JPEG, PNG, or WebP.</p>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-1.5 text-[12px] font-semibold text-primary-light hover:text-white"
-            >
-              {avatarUrl ? "Change photo" : "Upload photo"}
-            </button>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={(e) => {
-              void onPickFile(e.target.files?.[0]);
-              e.target.value = "";
-            }}
+        <div className="mt-5">
+          <ImageUploader
+            variant="avatar"
+            value={avatarUrl === undefined ? user.avatarUrl || social?.avatarUrl : avatarUrl}
+            onUploaded={setAvatarUrl}
+            fallbackSeed={primary?.address || username || user.id}
+            alt={username || "Profile picture"}
           />
         </div>
 

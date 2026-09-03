@@ -12,7 +12,7 @@ import {
   publicUser,
   revokeSession,
 } from "../lib/session";
-import { normalizeUsername, parseAvatarDataUrl } from "../lib/profile";
+import { normalizeUsername, parseAvatarUrl } from "../lib/profile";
 import { requestEmailOtp, verifyEmailOtp } from "../lib/otp";
 import { sendWelcome } from "../lib/email";
 
@@ -165,10 +165,10 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
         };
       }
 
-      const avatarUrl = parseAvatarDataUrl(body.avatarUrl);
+      const avatarUrl = parseAvatarUrl(body.avatarUrl);
       if (body.avatarUrl !== undefined && body.avatarUrl !== null && avatarUrl === undefined) {
         set.status = 400;
-        return { error: "Profile picture must be a JPEG, PNG, or WebP under 200KB." };
+        return { error: "Profile picture must be an uploaded image or a JPEG, PNG, or WebP under 200KB." };
       }
 
       const wasIncomplete = !sessionUser.username || !sessionUser.emailVerifiedAt;

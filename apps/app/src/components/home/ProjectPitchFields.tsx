@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Globe } from "lucide-react";
 import { SocialIcon } from "@/components/nav/SocialIcons";
+import { ImageUploader } from "@/components/ui/ImageUploader";
 import type { DailyProject } from "@/lib/dailyAuction";
 import { cn } from "@/lib/utils";
 
@@ -69,17 +70,14 @@ export function ProjectPitchFields({
         />
       </Labelled>
 
-      <Labelled label="Image URL" hint="optional" htmlFor={`${idPrefix}-image`}>
-        <input
+      <Labelled label="Image" hint="optional" htmlFor={`${idPrefix}-image`}>
+        <ImageUploader
+          variant="artwork"
           id={`${idPrefix}-image`}
-          type="url"
-          inputMode="url"
-          value={project.imageUrl ?? ""}
-          onChange={(e) => onChange({ imageUrl: e.target.value })}
+          value={project.imageUrl}
+          onUploaded={(imageUrl) => onChange({ imageUrl })}
           disabled={disabled}
-          maxLength={600}
-          placeholder="https://…/artwork.png"
-          className={pitchInputClass}
+          alt="Project artwork"
         />
       </Labelled>
 
