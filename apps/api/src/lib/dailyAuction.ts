@@ -370,7 +370,9 @@ async function startDailyAuction(template: DailyTemplate) {
     },
   });
 
-  console.log(`[daily-auction] started ${listing.id} ends ${endDate.toISOString()}`);
+  console.log(
+    `[daily-auction] started ${listing.id} reserve=${template.price} ${template.currency} ends ${endDate.toISOString()}`,
+  );
   return { ok: true as const, listing };
 }
 
@@ -525,6 +527,8 @@ async function runDailyCycle(): Promise<DailyAuctionCycleResult> {
 
   const template = previous ?? defaultTemplate(creator.id);
   template.creatorId = previous?.creatorId ?? creator.id;
+  // Always take the live env reserve — do not inherit yesterday's price.
+  template.price = dailyMinBid();
 
   try {
     const started = await startDailyAuction(template);

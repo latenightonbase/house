@@ -227,6 +227,7 @@ export function ImageUploader({
             {uploading ? "Uploading…" : "Drop an image here"}
           </p>
           <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, AVIF, GIF · 5MB max</p>
+          <p className="mt-0.5 text-[11px] text-caption">{variant === "artwork" && "Recommended size: 1500x300px"}</p>
         </button>
       ) : (
         <div
