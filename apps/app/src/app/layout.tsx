@@ -7,7 +7,19 @@ import { NavigationProgress } from "@/components/NavigationProgress";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Footer } from "@/components/nav/Footer";
-import { SITE } from "@/lib/constants";
+import { SITE, SOCIAL_LINKS } from "@/lib/constants";
+
+function siteUrl() {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  if (explicit) return explicit;
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL ?? process.env.VERCEL_URL;
+  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
+  return "http://localhost:3002";
+}
+
+const title = `${SITE.shortName} — ${SITE.tagline}`;
+const description = `${SITE.strapline} ${SITE.keywords}`;
+const twitterHandle = SOCIAL_LINKS.find((link) => link.id === "x")?.handle;
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,9 +35,39 @@ const display = Permanent_Marker({
 });
 
 export const metadata: Metadata = {
-  title: `${SITE.shortName} — ${SITE.tagline}`,
-  description: `${SITE.strapline} ${SITE.keywords}`,
-  icons: { icon: "/favicon.ico" },
+  metadataBase: new URL(siteUrl()),
+  title,
+  description,
+  applicationName: SITE.name,
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: SITE.name,
+    title,
+    description,
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: `${SITE.name} — ${SITE.tagline}`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    creator: twitterHandle,
+    images: ["/og.png"],
+  },
 };
 
 export const viewport: Viewport = {
