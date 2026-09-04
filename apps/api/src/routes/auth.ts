@@ -69,6 +69,7 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
         const full = await getUserFromSessionToken(token);
         return { ok: true, user: full ? publicUser(full) : null };
       } catch (err) {
+        console.error("[auth/verify]", err instanceof Error ? err.message : err);
         set.status = 401;
         return {
           ok: false,

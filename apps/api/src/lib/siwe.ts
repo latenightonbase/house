@@ -12,6 +12,7 @@ import {
 } from "viem";
 import { base, baseSepolia } from "viem/chains";
 import { prisma } from "../db";
+import { getAllowedDomains, resolveSiweDomain } from "./origins";
 import { isSuperadminWallet } from "./roles";
 
 const NONCE_TTL_MS = 1000 * 60 * 10; // 10 minutes
@@ -58,8 +59,12 @@ export async function verifyAndUpsertUser(message: string, signature: Hex) {
     throw new Error("Invalid SIWE message");
   }
 
-  const appOrigin = process.env.APP_ORIGIN || "http://localhost:3002";
-  const expectedDomain = new URL(appOrigin).host;
+  const expectedDomain = resolveSiweDomain(parsed.domain);
+  if (!expectedDomain) {
+    throw new Error(
+      `SIWE validation failed (domain ${parsed.domain ?? "missing"}; allowed ${getAllowedDomains().join(", ")})`,
+    );
+  }
 
   const fieldsValid = validateSiweMessage({
     message: parsed,

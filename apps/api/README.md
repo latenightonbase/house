@@ -39,3 +39,5 @@ Platforms: `youtube`, `twitter` (or `x`), `instagram`, `tiktok`.
 - TikTok: `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`
 
 Callback URLs must be `{API_ORIGIN}/socials/{platform}/callback`.
+
+SIWE checks the signed `domain` against `APP_ORIGIN` plus optional `APP_ORIGINS` (comma-separated). `www` and apex hosts are both accepted. In production set `APP_ORIGIN` to the canonical app URL (`https://www.lnoc.app`) so email and OAuth redirects land on the custom domain.

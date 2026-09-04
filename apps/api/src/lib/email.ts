@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Resend } from "resend";
+import { getCanonicalOrigin } from "./origins";
 
 const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../emails");
 
@@ -34,7 +35,7 @@ export function emailFrom() {
 }
 
 export function appOrigin() {
-  return process.env.APP_ORIGIN || "http://localhost:3002";
+  return getCanonicalOrigin();
 }
 
 export function listingUrl(id: string) {
