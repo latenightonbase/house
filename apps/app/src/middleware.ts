@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getApiOrigin } from "@/lib/api-origin";
 
 const COOKIE_NAME = process.env.COOKIE_NAME || "house_session";
-const API_ORIGIN = process.env.API_ORIGIN || "http://localhost:3001";
+const API_ORIGIN = getApiOrigin();
 
 /**
  * Auth is SIWE session only (house_session cookie from RainbowKit → API).
