@@ -39,3 +39,10 @@ export function resizeImageToDataUrl(file: File): Promise<string> {
     img.src = objectUrl;
   });
 }
+
+/** Resize, then return a JPEG File ready to PUT to S3. */
+export async function resizeImageToFile(file: File): Promise<File> {
+  const dataUrl = await resizeImageToDataUrl(file);
+  const blob = await (await fetch(dataUrl)).blob();
+  return new File([blob], "avatar.jpg", { type: "image/jpeg" });
+}

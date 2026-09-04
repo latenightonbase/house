@@ -4,6 +4,7 @@ import { authRoutes } from "./routes/auth";
 import { socialRoutes } from "./routes/socials";
 import { marketplaceRoutes } from "./routes/marketplace";
 import { cronRoutes } from "./routes/cron";
+import { uploadRoutes } from "./routes/uploads";
 import { startDailyAuctionTicker } from "./lib/dailyAuction";
 
 const APP_ORIGIN = process.env.APP_ORIGIN || "http://localhost:3002";
@@ -23,6 +24,7 @@ const app = new Elysia()
   .use(socialRoutes)
   .use(marketplaceRoutes)
   .use(cronRoutes)
+  .use(uploadRoutes)
   .listen(PORT);
 
 startDailyAuctionTicker();

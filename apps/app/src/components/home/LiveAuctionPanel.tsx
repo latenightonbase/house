@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useCountdown } from "@/lib/useCountdown";
 import type { AuctionState } from "@/lib/dailyAuction";
 import type { Listing } from "@/lib/marketplace";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
+import Image from "next/image";
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
@@ -68,22 +70,33 @@ function CurrentLeaderCard({
     >
       {artwork ? (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={artwork}
             alt=""
+            fill
+            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+            unoptimized={isUnoptimizedSrc(artwork)}
             onError={() => setBgFailed(true)}
-            className="absolute inset-0 h-full w-full object-cover"
+            className="object-cover grayscale"
+          />
+          {/* Violet night wash — same tokens as the billboard and empty-state card. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(120%_90%_at_70%_15%,rgba(168,85,247,0.34),transparent_56%)]"
           />
           <div
             aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20"
+            className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/20"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-xl ring-1 ring-inset ring-primary/30"
           />
         </>
       ) : (
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/15"
+          className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/20"
         />
       )}
 
@@ -112,10 +125,12 @@ function CurrentLeaderCard({
             </p>
           </div>
           <div className="mt-2.5 flex items-center gap-2 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={bidderAvatar}
+              width={20}
+              height={20}
               alt=""
+              unoptimized={isUnoptimizedSrc(bidderAvatar)}
               className="h-5 w-5 shrink-0 rounded-full object-cover ring-1 ring-white/25"
             />
             <span className="truncate text-[12px] text-white/80">{leader.bidder.name}</span>

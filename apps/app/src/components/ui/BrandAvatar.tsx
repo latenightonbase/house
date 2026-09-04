@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { brandMarkDataUri } from "@/lib/brandMark";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
+import { cn } from "@/lib/utils";
 
 type Props = {
   src?: string | null;
@@ -41,12 +43,12 @@ export function BrandAvatar({
       className={cn("relative inline-block shrink-0", className)}
       style={{ width: size, height: size }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <Image
         src={resolved}
         alt={alt}
         width={size}
         height={size}
+        unoptimized={isUnoptimizedSrc(resolved)}
         onError={() => setFailed(true)}
         className={cn(
           "object-cover w-full h-full border border-line-strong",

@@ -23,11 +23,11 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 w-[var(--sidebar-width)] z-50 flex-col bg-surface/60 border-r border-line">
-      <div className="px-6 pt-7 pb-6 shrink-0">
-        <Link href="/" aria-label={`${SITE.name} home`} className="inline-block">
+      <div className="px-6 pt-7 pb-6 shrink-0 flex flex-col items-center">
+        <Link href="/" aria-label={`${SITE.name} home`} className="block">
           <Wordmark />
         </Link>
-        <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-caption leading-[1.7] max-w-[140px]">
+        <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-caption leading-snug text-nowrap">
           {SITE.tagline}
         </p>
       </div>

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ExternalLink, Trophy } from "lucide-react";
 import { PageShell, Section, Placeholder } from "@/components/PageShell";
 import { SocialIcon } from "@/components/nav/SocialIcons";
 import { billboardPlaceholder } from "@/lib/brandMark";
 import { fetchPastWinners, type PastWinner } from "@/lib/dailyAuction";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
 
 function settledLabel(iso: string | null) {
   if (!iso) return "—";
@@ -26,12 +28,14 @@ function WinnerCard({ winner }: { winner: PastWinner }) {
   return (
     <article className="card overflow-hidden flex flex-col">
       <div className="relative aspect-[16/9] bg-surface-2">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={artwork}
           alt={winner.name}
+          fill
+          sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+          unoptimized={isUnoptimizedSrc(artwork)}
           onError={() => setFailed(true)}
-          className="w-full h-full object-cover"
+          className="object-cover"
         />
         <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-line px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-caption">
           {settledLabel(winner.settledAt)}

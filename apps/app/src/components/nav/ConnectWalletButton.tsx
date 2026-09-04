@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ConnectButton, useConnectModal } from "@rainbow-me/rainbowkit";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Wallet } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useSession } from "@/components/SessionProvider";
@@ -60,7 +60,6 @@ export function ConnectWalletButton({
   showIcon?: boolean;
   className?: string;
 }) {
-  const { openConnectModal } = useConnectModal();
   const { user } = useSession();
   const { address } = useAccount();
   const [lookup, setLookup] = useState<WalletIdentity | null>(null);
@@ -86,12 +85,37 @@ export function ConnectWalletButton({
 
   return (
     <ConnectButton.Custom>
-      {({ account, chain, openAccountModal, openChainModal, mounted }) => {
-        if (!mounted || !account || !chain) {
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        authenticationStatus,
+        mounted,
+      }) => {
+        // RainbowKit only enables the account modal after SIWE. A connected
+        // wallet that never signed must keep the connect/sign path, not the chip.
+        const ready = mounted && authenticationStatus !== "loading";
+        const signedIn =
+          ready &&
+          !!account &&
+          !!chain &&
+          (!authenticationStatus || authenticationStatus === "authenticated");
+
+        if (!signedIn || !account || !chain) {
+          const needsSignature = ready && !!account && authenticationStatus === "unauthenticated";
           return (
-            <button type="button" onClick={() => openConnectModal?.()} className={cn(shell, SIZES[size])}>
+            <button
+              type="button"
+              onClick={openConnectModal}
+              className={cn(shell, SIZES[size])}
+              aria-hidden={!ready}
+              tabIndex={ready ? undefined : -1}
+              style={ready ? undefined : { opacity: 0, pointerEvents: "none", userSelect: "none" }}
+            >
               {showIcon && <Wallet className="w-[14px] h-[14px]" aria-hidden="true" />}
-              Connect Wallet
+              {needsSignature ? "Sign in" : "Connect Wallet"}
             </button>
           );
         }

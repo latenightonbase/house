@@ -6,6 +6,7 @@ import { parseUnits } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Check, Loader2, Pencil, X, Zap } from "lucide-react";
+import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { useSession } from "@/components/SessionProvider";
 import { Labelled, ProjectPitchFields, pitchInputClass } from "./ProjectPitchFields";
 import {
@@ -313,13 +314,20 @@ export function BidDialog({
               <span className="text-white">{project.name}</span> is on-chain. If it holds when the
               clock runs out, your project takes the billboard for 24 hours.
             </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="gradient-button mt-6 h-11 px-6 rounded-lg text-white eyebrow"
-            >
-              Done
-            </button>
+            {!user?.emailVerifiedAt ? (
+              <EmailVerifyPrompt
+                className="mt-6 pt-6 border-t border-line"
+                onSkip={onClose}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="gradient-button mt-6 h-11 px-6 rounded-lg text-white eyebrow"
+              >
+                Done
+              </button>
+            )}
           </div>
         ) : (
           <div className="px-5 sm:px-6 py-5 space-y-5">

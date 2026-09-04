@@ -15,12 +15,12 @@ export function Wordmark({
   const compact = size === "sm";
   return (
     <span
-      className={cn("flex flex-col leading-none select-none", className)}
+      className={cn("flex flex-col items-center leading-none select-none", className)}
       aria-label="Late Night Onchain"
     >
       <span
         className={cn(
-          "font-display text-white -rotate-2 origin-left",
+          "font-display text-white text-center w-full flex justify-center items-center",
           compact ? "text-[15px]" : "text-[26px]",
         )}
         style={{ letterSpacing: compact ? "0.01em" : "0.005em" }}
@@ -29,8 +29,8 @@ export function Wordmark({
       </span>
       <span
         className={cn(
-          "font-display text-primary-bright -rotate-2 origin-left self-end",
-          compact ? "text-[11px] mt-0.5 mr-1" : "text-[19px] mt-1 mr-2",
+          "font-display text-primary-bright",
+          compact ? "text-[11px] mt-0.5" : "text-[19px] mt-1",
         )}
       >
         ONCHAIN

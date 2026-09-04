@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Crown, ExternalLink, Globe } from "lucide-react";
 import { SocialIcon } from "@/components/nav/SocialIcons";
 import { billboardPlaceholder } from "@/lib/brandMark";
 import type { Spotlight } from "@/lib/dailyAuction";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
 import { cn } from "@/lib/utils";
 
 /** "AUG 31, 2026" — the billboard's date line. */
@@ -141,12 +143,15 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 
         {/* Artwork */}
         <div className="relative min-h-[220px] sm:min-h-[300px] lg:min-h-full">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={artwork}
             alt={spotlight.name}
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            unoptimized={isUnoptimizedSrc(artwork)}
             onError={() => setImageFailed(true)}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="object-cover"
+            priority
           />
           {/* Feathers the artwork into the copy column instead of hard-cropping. */}
           <div

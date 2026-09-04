@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useAccount } from "wagmi";
-import { Camera, Check, Copy } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 import { useSession } from "@/components/SessionProvider";
-import { Badge, BrandAvatar, Button, Field, TextInput, Tile } from "@/components/ui";
+import { Badge, BrandAvatar, Button, Field, ImageUploader, TextInput, Tile } from "@/components/ui";
 import {
   requestEmailOtp,
   updateProfile,
   verifyEmailOtp,
 } from "@/lib/api";
-import { resizeImageToDataUrl } from "@/lib/resizeImage";
 import { shortAddress, walletFallbackAvatar } from "@/lib/utils";
 
 const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9_]{2,19}$/;
@@ -22,11 +21,9 @@ export default function DashboardClient() {
   const usernameId = useId();
   const emailId = useId();
   const otpId = useId();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const primary = user?.wallets.find((w) => w.isPrimary) || user?.wallets[0];
   const [username, setUsername] = useState(user?.username ?? "");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null | undefined>(undefined);
   const [email, setEmail] = useState(user?.email ?? "");
   const [code, setCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -39,7 +36,7 @@ export default function DashboardClient() {
   useEffect(() => {
     setUsername(user?.username ?? "");
     setEmail(user?.email ?? "");
-    setAvatarUrl(null);
+    setAvatarUrl(undefined);
     setOtpSent(false);
     setCode("");
   }, [user?.id, user?.username, user?.email, user?.emailVerifiedAt]);
@@ -47,32 +44,18 @@ export default function DashboardClient() {
   const identityName =
     (user?.username ? `@${user.username}` : null) ||
     (primary ? shortAddress(primary.address) : "Your profile");
-  const previewSrc =
-    avatarUrl || user?.avatarUrl || walletFallbackAvatar(primary?.address);
   const usernameValid = USERNAME_RE.test(username.trim());
+  const emailBlank = !email.trim();
   const emailValid = EMAIL_RE.test(email.trim());
-  const emailChanged =
-    email.trim().toLowerCase() !== (user?.email ?? "").toLowerCase() || !user?.emailVerifiedAt;
+  const emailDirty = email.trim().toLowerCase() !== (user?.email ?? "").toLowerCase();
+  const needsEmailVerify = !emailBlank && (emailDirty || !user?.emailVerifiedAt);
+  const emailVerified = Boolean(user?.emailVerifiedAt) && !emailDirty;
 
   const copyAddress = () => {
     if (!primary) return;
     void navigator.clipboard.writeText(primary.address);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  };
-
-  const onPickFile = async (file: File | undefined) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Choose a JPEG, PNG, or WebP image.");
-      return;
-    }
-    try {
-      setError(null);
-      setAvatarUrl(await resizeImageToDataUrl(file));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not process image.");
-    }
   };
 
   const onSendOtp = async () => {
@@ -99,7 +82,7 @@ export default function DashboardClient() {
     setError(null);
     setNotice(null);
     try {
-      if (emailChanged) {
+      if (needsEmailVerify) {
         if (!otpSent) {
           await requestEmailOtp(email.trim());
           setOtpSent(true);
@@ -110,10 +93,10 @@ export default function DashboardClient() {
       }
       await updateProfile({
         username: username.trim(),
-        ...(avatarUrl ? { avatarUrl } : {}),
+        ...(avatarUrl !== undefined ? { avatarUrl } : {}),
       });
       await refresh();
-      setAvatarUrl(null);
+      setAvatarUrl(undefined);
       setOtpSent(false);
       setCode("");
       setNotice("Profile saved.");
@@ -180,50 +163,17 @@ export default function DashboardClient() {
           <div>
             <h2 className="text-[15px] font-bold text-foreground">Profile</h2>
             <p className="text-[12px] text-caption mt-0.5">
-              Picture, username, and a verified email. Changing email requires a new code.
+              Picture and username. Email is optional — add one to get bid updates.
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-              aria-label="Upload profile picture"
-            >
-              <BrandAvatar
-                key={previewSrc}
-                src={previewSrc}
-                alt={username || "Profile picture"}
-                fallbackSeed={primary?.address || username || user?.id}
-                size={72}
-              />
-              <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100">
-                <Camera className="h-5 w-5 text-white" />
-              </span>
-            </button>
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-white">Profile picture</p>
-              <p className="mt-0.5 text-[11px] text-caption">JPEG, PNG, or WebP under 200KB.</p>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="mt-1.5 text-[12px] font-semibold text-primary-light hover:text-white"
-              >
-                {avatarUrl ? "Change photo" : "Upload photo"}
-              </button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={(e) => {
-                void onPickFile(e.target.files?.[0]);
-                e.target.value = "";
-              }}
-            />
-          </div>
+          <ImageUploader
+            variant="avatar"
+            value={avatarUrl === undefined ? user?.avatarUrl : avatarUrl}
+            onUploaded={setAvatarUrl}
+            fallbackSeed={primary?.address || username || user?.id}
+            alt={username || "Profile picture"}
+          />
 
           <Field
             label="Username"
@@ -247,6 +197,12 @@ export default function DashboardClient() {
           <Field
             label="Email"
             htmlFor={emailId}
+            optional={!emailVerified}
+            hint={
+              emailVerified
+                ? "Verified. You'll get bid updates at this address."
+                : "Add and verify an email to get updates on your bids."
+            }
             error={email && !emailValid ? "Enter a valid email address." : undefined}
           >
             <TextInput
@@ -263,7 +219,7 @@ export default function DashboardClient() {
             />
           </Field>
 
-          {otpSent && emailChanged ? (
+          {otpSent && needsEmailVerify ? (
             <Field label="Verification code" htmlFor={otpId}>
               <TextInput
                 id={otpId}
@@ -281,7 +237,7 @@ export default function DashboardClient() {
           {error ? <p className="text-[12px] text-negative">{error}</p> : null}
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-            {emailChanged && emailValid ? (
+            {needsEmailVerify && emailValid ? (
               <Button
                 type="button"
                 variant="accent-outline"
@@ -295,7 +251,7 @@ export default function DashboardClient() {
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={!usernameValid || !emailValid || saving}
+              disabled={!usernameValid || (!emailBlank && !emailValid) || saving}
             >
               {saving ? "Saving…" : "Save profile"}
             </Button>

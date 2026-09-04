@@ -11,6 +11,7 @@ import {
 } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { BadgeCheck, CheckCircle2, Gavel, Info } from "lucide-react";
+import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/components/SessionProvider";
 import {
@@ -321,6 +322,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               </p>
             </div>
           </div>
+          {isAuction && !user?.emailVerifiedAt ? (
+            <EmailVerifyPrompt className="pt-2" />
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => router.push("/")}>Back to Discover</Button>
           </div>

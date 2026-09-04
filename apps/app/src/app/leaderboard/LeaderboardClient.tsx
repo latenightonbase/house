@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Crown } from "lucide-react";
 import { PageShell, Section, Placeholder } from "@/components/PageShell";
 import { brandMarkDataUri } from "@/lib/brandMark";
-import { shortAddress } from "@/lib/utils";
 import { fetchLeaderboard, type Leader } from "@/lib/dailyAuction";
+import { isUnoptimizedSrc } from "@/lib/imageSrc";
+import { shortAddress } from "@/lib/utils";
 
 /** Gold, silver, bronze — everything below rank 3 stays neutral. */
 const RANK_STYLE = [
@@ -31,10 +33,12 @@ function LeaderRow({ leader, rank }: { leader: Leader; rank: number }) {
       </td>
       <td className="py-3.5 px-2">
         <div className="flex items-center gap-3 min-w-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={avatar}
             alt=""
+            width={36}
+            height={36}
+            unoptimized={isUnoptimizedSrc(avatar)}
             onError={() => setFailed(true)}
             className="w-9 h-9 rounded-full object-cover border border-line shrink-0"
           />
