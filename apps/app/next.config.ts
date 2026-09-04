@@ -1,12 +1,5 @@
 import type { NextConfig } from "next";
 
-function apiOrigin() {
-  const raw = (process.env.API_ORIGIN || "").trim();
-  return (raw || (process.env.VERCEL ? "https://api.lnoc.app" : "http://localhost:3001"))
-    .replace(/\/+$/, "")
-    .replace(/\/backend$/i, "");
-}
-
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
@@ -24,17 +17,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.tiktokcdn-eu.com" },
       { protocol: "https", hostname: "i.pravatar.cc" },
     ],
-  },
-  async rewrites() {
-    return {
-      // Edge proxy — Railway also accepts `/backend/*`, so a kept prefix still works.
-      beforeFiles: [
-        {
-          source: "/backend/:path*",
-          destination: `${apiOrigin()}/:path*`,
-        },
-      ],
-    };
   },
 };
 
