@@ -1,7 +1,8 @@
 /** Railway/API host. Never include `/backend` — the app adds that prefix itself. */
 export function getApiOrigin() {
-  return (process.env.API_ORIGIN || "http://localhost:3001")
-    .trim()
+  const raw = (process.env.API_ORIGIN || "").trim();
+  const origin = (raw || (process.env.VERCEL ? "https://api.lnoc.app" : "http://localhost:3001"))
     .replace(/\/+$/, "")
     .replace(/\/backend$/i, "");
+  return origin;
 }
