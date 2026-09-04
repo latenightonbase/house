@@ -1,10 +1,11 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import {
-  baseAccount,
-  injectedWallet,
+  base as baseWallet,
+  coinbaseWallet,
+  metaMaskWallet,
+  phantomWallet,
   rainbowWallet,
   trustWallet,
-  walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { base, baseSepolia } from "wagmi/chains";
 import { robinhood } from "@/lib/chains";
@@ -17,12 +18,15 @@ export const config = getDefaultConfig({
   multiInjectedProviderDiscovery: false,
   wallets: [
     {
-      groupName: "Recommended",
-      wallets: [injectedWallet, rainbowWallet, walletConnectWallet, trustWallet],
-    },
-    {
-      groupName: "Other",
-      wallets: [baseAccount],
+      groupName: "Popular",
+      wallets: [
+        metaMaskWallet,
+        coinbaseWallet,
+        trustWallet,
+        rainbowWallet,
+        phantomWallet,
+        baseWallet,
+      ],
     },
   ],
 });

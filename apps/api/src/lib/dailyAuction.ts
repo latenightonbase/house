@@ -39,6 +39,22 @@ export type DailyAuctionCycleResult =
     }
   | { ok: false; error: string };
 
+type SkipOperator = { skipped: true; reason: "no-operator" };
+type CycleError = { ok: false; error: string };
+
+type SettleExpiredResult =
+  | SkipOperator
+  | CycleError
+  | { ok: true; settled: string; winner: string | null; spotlight: ShowcasePayload | null };
+
+type StartDailyResult = SkipOperator | { ok: true; listing: { id: string } };
+
+type CancelOpenResult = SkipOperator | CycleError | { ok: true; cancelled: string };
+
+function isSkipped(result: object): result is SkipOperator {
+  return "skipped" in result && (result as SkipOperator).skipped === true;
+}
+
 /** What Today's Attention renders for the 24h after settlement. */
 export type ShowcasePayload = {
   listingId: string;
@@ -230,7 +246,7 @@ export function buildShowcase(
   };
 }
 
-async function settleExpired(expired: OpenDaily, now: Date) {
+async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpiredResult> {
   const account = operatorAccount();
   const wallet = walletClient();
   const client = publicClient();
@@ -317,7 +333,7 @@ async function settleExpired(expired: OpenDaily, now: Date) {
   return { ok: true as const, settled: expired.id, winner: hasWinner ? highestBidder : null, spotlight };
 }
 
-async function startDailyAuction(template: DailyTemplate) {
+async function startDailyAuction(template: DailyTemplate): Promise<StartDailyResult> {
   const account = operatorAccount();
   const wallet = walletClient();
   const client = publicClient();
@@ -377,7 +393,7 @@ async function startDailyAuction(template: DailyTemplate) {
 }
 
 /** Ends the live daily auction on-chain with no winner so a replacement can start. */
-async function cancelOpenDaily(open: OpenDaily) {
+async function cancelOpenDaily(open: OpenDaily): Promise<CancelOpenResult> {
   const account = operatorAccount();
   const wallet = walletClient();
   const client = publicClient();
@@ -437,7 +453,7 @@ export async function replaceOpenDailyAuction(): Promise<DailyAuctionCycleResult
     const open = await findOpenDaily();
     if (open) {
       const cancelled = await cancelOpenDaily(open);
-      if ("skipped" in cancelled) return cancelled;
+      if (isSkipped(cancelled)) return cancelled;
       if (!cancelled.ok) return cancelled;
     }
 
@@ -445,7 +461,7 @@ export async function replaceOpenDailyAuction(): Promise<DailyAuctionCycleResult
     if (!creator) return { skipped: true, reason: "no-creator" };
 
     const started = await startDailyAuction(defaultTemplate(creator.id));
-    if ("skipped" in started) return started;
+    if (isSkipped(started)) return started;
     return {
       ok: true,
       settled: open?.id ?? null,
@@ -489,7 +505,7 @@ async function runDailyCycle(): Promise<DailyAuctionCycleResult> {
   let open = await findOpenDaily();
   while (open && isDue(open, now)) {
     const result = await settleExpired(open, now);
-    if ("skipped" in result) return result;
+    if (isSkipped(result)) return result;
     if (!result.ok) return result;
     settled = result.settled;
     winner = result.winner;
@@ -532,7 +548,7 @@ async function runDailyCycle(): Promise<DailyAuctionCycleResult> {
 
   try {
     const started = await startDailyAuction(template);
-    if ("skipped" in started) return started;
+    if (isSkipped(started)) return started;
     return {
       ok: true,
       settled,
