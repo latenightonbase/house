@@ -61,6 +61,8 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
   const { lead, accent } = splitName(spotlight.name);
   const artwork =
     !imageFailed && spotlight.imageUrl ? spotlight.imageUrl : billboardPlaceholder(spotlight.name);
+  const artworkSizes =
+    "(min-width: 1536px) 26rem, (min-width: 1280px) 20rem, (min-width: 640px) 16rem, 100vw";
   const links = [
     spotlight.websiteUrl && {
       key: "web",
@@ -84,6 +86,21 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 
   return (
     <section className="billboard relative overflow-hidden rounded-2xl sm:rounded-[1.5rem]">
+      {/* The poster again, blown up and blurred, so the card is lit by the artwork
+          itself. Scaled past the edges because a blur of this radius would
+          otherwise fade to transparent along them. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <Image
+          src={artwork}
+          alt=""
+          fill
+          sizes={artworkSizes}
+          unoptimized={isUnoptimizedSrc(artwork)}
+          className="scale-125 object-cover blur-2xl"
+        />
+        <span className="billboard-veil absolute inset-0" />
+      </div>
+
       <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
 
       <div className="relative grid items-center gap-5 p-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:gap-6 sm:p-5 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:gap-8 lg:p-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:gap-10">
@@ -93,7 +110,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             src={artwork}
             alt={spotlight.name}
             fill
-            sizes="(min-width: 1536px) 26rem, (min-width: 1280px) 20rem, (min-width: 640px) 16rem, 100vw"
+            sizes={artworkSizes}
             unoptimized={isUnoptimizedSrc(artwork)}
             onError={() => setImageFailed(true)}
             className="object-cover"

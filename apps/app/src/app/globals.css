@@ -197,6 +197,12 @@ input[type="datetime-local"] {
     0 6px 20px rgba(5, 2, 8, 0.5);
 }
 
+/* Holds the blurred artwork back to a wash — enough colour to feel lit by the
+   poster, dark enough that white copy still clears contrast over it. */
+.billboard-veil {
+  background: linear-gradient(105deg, rgba(8, 4, 15, 0.7) 0%, rgba(8, 4, 15, 0.8) 55%, rgba(8, 4, 15, 0.68) 100%);
+}
+
 /* Gold cast off the top-left corner. Radial on both axes so it dissolves into
    the shell rather than ending on an edge the eye can find. */
 .billboard-sheen {
