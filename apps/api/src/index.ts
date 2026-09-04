@@ -6,14 +6,14 @@ import { marketplaceRoutes } from "./routes/marketplace";
 import { cronRoutes } from "./routes/cron";
 import { uploadRoutes } from "./routes/uploads";
 import { startDailyAuctionTicker } from "./lib/dailyAuction";
+import { getAllowedOrigins } from "./lib/origins";
 
-const APP_ORIGIN = process.env.APP_ORIGIN || "http://localhost:3002";
 const PORT = Number(process.env.PORT || 3001);
 
 const app = new Elysia()
   .use(
     cors({
-      origin: [APP_ORIGIN, "http://localhost:3002", "http://127.0.0.1:3002"],
+      origin: getAllowedOrigins(),
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization", "Accept", "x-cron-secret"],
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

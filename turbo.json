@@ -23,6 +23,7 @@
         "SESSION_SECRET",
         "TOKEN_ENCRYPTION_KEY",
         "APP_ORIGIN",
+        "APP_ORIGINS",
         "API_ORIGIN",
         "NEXT_PUBLIC_REOWN_PROJECT_ID"
       ]

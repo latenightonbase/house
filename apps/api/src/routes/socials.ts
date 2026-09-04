@@ -21,6 +21,7 @@ import {
   type OAuthProvider,
   type SocialPlatformName,
 } from "../lib/oauth/types";
+import { getCanonicalOrigin } from "../lib/origins";
 
 const providers: Record<SocialPlatformName, OAuthProvider> = {
   YOUTUBE: youtubeProvider,
@@ -140,7 +141,7 @@ export const socialRoutes = new Elysia({ prefix: "/socials" })
   })
   .get("/:platform/callback", async ({ params, query, set }) => {
     const platform = parsePlatform(params.platform);
-    const appOrigin = process.env.APP_ORIGIN || "http://localhost:3002";
+    const appOrigin = getCanonicalOrigin();
     const fail = (msg: string) => {
       set.redirect = `${appOrigin}/profile?error=${encodeURIComponent(msg)}`;
     };
