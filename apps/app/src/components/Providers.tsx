@@ -9,6 +9,8 @@ import {
   darkTheme,
 } from "@rainbow-me/rainbowkit";
 import "@rainbow-me/rainbowkit/styles.css";
+import { SpeedInsights } from "@vercel/speed-insights/next"
+
 
 import { config } from "@/lib/wagmi";
 import { authenticationAdapter } from "@/lib/auth-adapter";
@@ -56,6 +58,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <RainbowKitAuthBridge>
+            <SpeedInsights />
             {children}
             <SetupUsernameDialog />
           </RainbowKitAuthBridge>

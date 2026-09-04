@@ -3,6 +3,7 @@ import {
   baseAccount,
   metaMaskWallet,
   rainbowWallet,
+  trustWallet,
 } from "@rainbow-me/rainbowkit/wallets";
 import { base, baseSepolia } from "wagmi/chains";
 import { robinhood } from "@/lib/chains";
@@ -15,7 +16,7 @@ export const config = getDefaultConfig({
   wallets: [
     {
       groupName: "Recommended",
-      wallets: [metaMaskWallet, rainbowWallet],
+      wallets: [metaMaskWallet, rainbowWallet, trustWallet],
     },
     {
       groupName: "Other",
