@@ -5,7 +5,7 @@ import Image from "next/image";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { BrandAvatar } from "@/components/ui/BrandAvatar";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
-import { resizeImageToFile } from "@/lib/resizeImage";
+import { processImageForUpload } from "@/lib/resizeImage";
 import { uploadImage, validateImageFile, type UploadPurpose } from "@/lib/uploadImage";
 import { cn } from "@/lib/utils";
 
@@ -27,8 +27,8 @@ function purposeFor(variant: Variant): UploadPurpose {
 
 function acceptFor(variant: Variant) {
   return variant === "avatar"
-    ? "image/jpeg,image/png,image/webp"
-    : "image/jpeg,image/png,image/webp,image/gif";
+    ? "image/jpeg,image/png,image/webp,image/avif"
+    : "image/jpeg,image/png,image/webp,image/avif,image/gif";
 }
 
 export function ImageUploader({
@@ -78,7 +78,7 @@ export function ImageUploader({
       setError(null);
       setUploading(true);
       try {
-        const toUpload = purpose === "avatar" ? await resizeImageToFile(file) : file;
+        const toUpload = await processImageForUpload(file, purpose);
         const publicUrl = await uploadImage(toUpload, purpose);
         onUploaded(publicUrl);
         replaceLocalPreview(null);
@@ -176,7 +176,7 @@ export function ImageUploader({
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-white">Profile picture</p>
           <p className="mt-0.5 text-[11px] text-caption">
-            Drag and drop or click. JPEG, PNG, or WebP.
+            Drag and drop or click. JPEG, PNG, WebP, or AVIF.
           </p>
           <div className="mt-1.5 flex items-center gap-3">
             <button
@@ -226,7 +226,7 @@ export function ImageUploader({
           <p className="text-[13px] font-semibold text-white">
             {uploading ? "Uploading…" : "Drop an image here"}
           </p>
-          <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, GIF · 5MB max</p>
+          <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, AVIF, GIF · 5MB max</p>
         </button>
       ) : (
         <div

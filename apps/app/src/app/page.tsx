@@ -1,16 +1,9 @@
-import { Suspense } from "react";
 import HomeClient from "./HomeClient";
+import { loadHomePageData } from "@/lib/home-data";
 
-export default function HomePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="card p-6">
-          <div className="h-8 w-2/3 rounded bg-white/[0.04] animate-pulse" />
-        </div>
-      }
-    >
-      <HomeClient />
-    </Suspense>
-  );
+export const revalidate = 20;
+
+export default async function HomePage() {
+  const initial = await loadHomePageData();
+  return <HomeClient {...initial} />;
 }

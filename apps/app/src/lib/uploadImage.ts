@@ -1,15 +1,21 @@
 export type UploadPurpose = "avatar" | "project";
 
-export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
-export const AVATAR_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/gif",
+] as const;
+export const AVATAR_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export function validateImageFile(file: File, purpose: UploadPurpose): string | null {
   const allowed = purpose === "avatar" ? AVATAR_IMAGE_TYPES : ALLOWED_IMAGE_TYPES;
   if (!(allowed as readonly string[]).includes(file.type)) {
     return purpose === "avatar"
-      ? "Choose a JPEG, PNG, or WebP image."
-      : "Choose a JPEG, PNG, WebP, or GIF image.";
+      ? "Choose a JPEG, PNG, WebP, or AVIF image."
+      : "Choose a JPEG, PNG, WebP, AVIF, or GIF image.";
   }
   if (file.size > MAX_IMAGE_BYTES) {
     return "Image must be 5MB or smaller.";

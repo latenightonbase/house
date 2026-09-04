@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useSession } from "@/components/SessionProvider";
@@ -11,6 +11,7 @@ import {
   type AuctionState,
   type Spotlight,
 } from "@/lib/dailyAuction";
+import type { HomePageData } from "@/lib/home-data";
 import type { Listing } from "@/lib/marketplace";
 import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysAttention";
 import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
@@ -22,16 +23,39 @@ import { EditListingDialog } from "@/components/home/EditListingDialog";
 /** Poll cadence for the live bid state — fast enough to feel live, cheap enough to leave on. */
 const REFRESH_MS = 20_000;
 
-export default function HomeClient() {
+function AuthRequiredBanner() {
   const searchParams = useSearchParams();
-  const { status, user } = useSession();
+  const { status } = useSession();
   const { openConnectModal } = useConnectModal();
   const authRequired = searchParams.get("auth") === "required";
 
-  const [spotlight, setSpotlight] = useState<Spotlight | null>(null);
-  const [listing, setListing] = useState<Listing | null>(null);
-  const [auction, setAuction] = useState<AuctionState | null>(null);
-  const [loading, setLoading] = useState(true);
+  if (!authRequired || status === "authenticated") return null;
+
+  return (
+    <div className="tile border-warning/30 bg-warning/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <p className="text-[13px] text-warning">Connect your wallet to continue.</p>
+      <button
+        type="button"
+        onClick={() => openConnectModal?.()}
+        className="btn-primary h-9 px-4 text-[12px] shrink-0"
+      >
+        Connect wallet
+      </button>
+    </div>
+  );
+}
+
+export default function HomeClient({
+  listing: initialListing,
+  auction: initialAuction,
+  spotlight: initialSpotlight,
+}: HomePageData) {
+  const { status, user } = useSession();
+  const { openConnectModal } = useConnectModal();
+
+  const [spotlight, setSpotlight] = useState<Spotlight | null>(initialSpotlight);
+  const [listing, setListing] = useState<Listing | null>(initialListing);
+  const [auction, setAuction] = useState<AuctionState | null>(initialAuction);
   const [bidOpen, setBidOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
@@ -46,16 +70,11 @@ export default function HomeClient() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    load().finally(() => !cancelled && setLoading(false));
-
-    // Keeps the leader and bid tally current while the tab is open.
     const id = setInterval(() => {
       if (!document.hidden) void load();
     }, REFRESH_MS);
 
     return () => {
-      cancelled = true;
       clearInterval(id);
     };
   }, [load]);
@@ -80,61 +99,43 @@ export default function HomeClient() {
 
   return (
     <div className="w-full space-y-4 pb-4">
-      {authRequired && status !== "authenticated" ? (
-        <div className="tile border-warning/30 bg-warning/10 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-[13px] text-warning">Connect your wallet to continue.</p>
-          <button
-            type="button"
-            onClick={() => openConnectModal?.()}
-            className="btn-primary h-9 px-4 text-[12px] shrink-0"
-          >
-            Connect wallet
-          </button>
-        </div>
-      ) : null}
+      <Suspense fallback={null}>
+        <AuthRequiredBanner />
+      </Suspense>
 
-      {loading ? (
+      {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
+
+      {listing ? (
         <>
-          <div className="panel-glow h-[420px] animate-pulse" />
-          <div className="panel-glow h-[300px] animate-pulse" />
+          <LiveAuctionPanel
+            listing={listing}
+            auction={auction}
+            onPlaceBid={handlePlaceBid}
+            onEditListing={canEditListing ? handleEditListing : undefined}
+          />
+          <WinnerBenefits />
+          <BidDialog
+            listing={listing}
+            auction={auction}
+            open={bidOpen}
+            onClose={() => setBidOpen(false)}
+            onBidPlaced={(next) => {
+              setAuction(next);
+              void load();
+            }}
+          />
+          <EditListingDialog
+            listing={listing}
+            open={editOpen}
+            onClose={() => setEditOpen(false)}
+            onSaved={(next) => {
+              if (next) setAuction(next);
+              void load();
+            }}
+          />
         </>
       ) : (
-        <>
-          {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
-
-          {listing ? (
-            <>
-              <LiveAuctionPanel
-                listing={listing}
-                auction={auction}
-                onPlaceBid={handlePlaceBid}
-                onEditListing={canEditListing ? handleEditListing : undefined}
-              />
-              <WinnerBenefits />
-              <BidDialog
-                listing={listing}
-                auction={auction}
-                open={bidOpen}
-                onClose={() => setBidOpen(false)}
-                onBidPlaced={(next) => {
-                  setAuction(next);
-                  void load();
-                }}
-              />
-              <EditListingDialog
-                listing={listing}
-                open={editOpen}
-                onClose={() => setEditOpen(false)}
-                onSaved={(next) => {
-                  if (next) setAuction(next);
-                  void load();
-                }}
-              />
-            </>
-          ) : (
-            <AuctionEmpty />
-          )}
-        </>
+        <AuctionEmpty />
       )}
     </div>
   );

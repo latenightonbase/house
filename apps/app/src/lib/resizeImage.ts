@@ -1,36 +1,59 @@
-const MAX_EDGE = 256;
-const MAX_BYTES = 200 * 1024;
+import type { UploadPurpose } from "@/lib/uploadImage";
 
-/** Resize a picked image to a JPEG data URL that fits the profile size cap. */
-export function resizeImageToDataUrl(file: File): Promise<string> {
+const QUALITY_STEPS = [0.85, 0.7, 0.55, 0.4] as const;
+
+const PRESETS = {
+  avatar: { maxEdge: 256, maxBytes: 200 * 1024, basename: "avatar" },
+  project: { maxEdge: 1600, maxBytes: 600 * 1024, basename: "artwork" },
+} as const;
+
+const FORMATS = [
+  { type: "image/avif", ext: "avif" },
+  { type: "image/webp", ext: "webp" },
+] as const;
+
+type Drawable = {
+  width: number;
+  height: number;
+  draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void;
+  close: () => void;
+};
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number,
+): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, type, quality);
+  });
+}
+
+async function encodeToTarget(
+  canvas: HTMLCanvasElement,
+  type: string,
+  maxBytes: number,
+): Promise<Blob | null> {
+  for (const quality of QUALITY_STEPS) {
+    const blob = await canvasToBlob(canvas, type, quality);
+    if (!blob || blob.type !== type || blob.size === 0) return null;
+    if (blob.size <= maxBytes) return blob;
+  }
+  return null;
+}
+
+function loadViaElement(file: File): Promise<Drawable> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(MAX_EDGE / img.width, MAX_EDGE / img.height, 1);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(img.width * scale));
-      canvas.height = Math.max(1, Math.round(img.height * scale));
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        reject(new Error("Could not process image"));
-        return;
-      }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      for (const quality of [0.85, 0.7, 0.55, 0.4]) {
-        const dataUrl = canvas.toDataURL("image/jpeg", quality);
-        const comma = dataUrl.indexOf(",");
-        const b64 = dataUrl.slice(comma + 1);
-        const padding = b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0;
-        const bytes = Math.floor((b64.length * 3) / 4) - padding;
-        if (bytes <= MAX_BYTES) {
-          resolve(dataUrl);
-          return;
-        }
-      }
-      reject(new Error("Image is too large. Try a smaller photo."));
+      resolve({
+        width: img.naturalWidth || img.width,
+        height: img.naturalHeight || img.height,
+        draw: (ctx, width, height) => ctx.drawImage(img, 0, 0, width, height),
+        close: () => undefined,
+      });
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
@@ -40,9 +63,55 @@ export function resizeImageToDataUrl(file: File): Promise<string> {
   });
 }
 
-/** Resize, then return a JPEG File ready to PUT to S3. */
-export async function resizeImageToFile(file: File): Promise<File> {
-  const dataUrl = await resizeImageToDataUrl(file);
-  const blob = await (await fetch(dataUrl)).blob();
-  return new File([blob], "avatar.jpg", { type: "image/jpeg" });
+async function loadDrawable(file: File): Promise<Drawable> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+        draw: (ctx, width, height) => ctx.drawImage(bitmap, 0, 0, width, height),
+        close: () => bitmap.close(),
+      };
+    } catch {
+      /* GIF/AVIF decode can fail in some browsers — fall through. */
+    }
+  }
+  return loadViaElement(file);
+}
+
+/**
+ * Resize and encode a picked image to a bounded AVIF (or WebP) File.
+ * Animated GIFs become the first frame.
+ */
+export async function processImageForUpload(
+  file: File,
+  purpose: UploadPurpose,
+): Promise<File> {
+  const preset = PRESETS[purpose];
+  const source = await loadDrawable(file);
+  try {
+    if (!source.width || !source.height) {
+      throw new Error("Could not process image");
+    }
+
+    const scale = Math.min(preset.maxEdge / source.width, preset.maxEdge / source.height, 1);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(source.width * scale));
+    canvas.height = Math.max(1, Math.round(source.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Could not process image");
+    source.draw(ctx, canvas.width, canvas.height);
+
+    for (const format of FORMATS) {
+      const blob = await encodeToTarget(canvas, format.type, preset.maxBytes);
+      if (blob) {
+        return new File([blob], `${preset.basename}.${format.ext}`, { type: format.type });
+      }
+    }
+
+    throw new Error("Image is too large. Try a smaller photo.");
+  } finally {
+    source.close();
+  }
 }
