@@ -3,8 +3,8 @@ import type { UploadPurpose } from "@/lib/uploadImage";
 const QUALITY_STEPS = [0.85, 0.7, 0.55, 0.4] as const;
 
 const PRESETS = {
-  avatar: { maxEdge: 256, maxBytes: 200 * 1024, basename: "avatar" },
-  project: { maxEdge: 1600, maxBytes: 600 * 1024, basename: "artwork" },
+  avatar: { maxEdge: 256, maxBytes: 200 * 1024, basename: "avatar", square: false },
+  project: { maxEdge: 1080, maxBytes: 600 * 1024, basename: "artwork", square: true },
 } as const;
 
 const FORMATS = [
@@ -95,13 +95,28 @@ export async function processImageForUpload(
       throw new Error("Could not process image");
     }
 
-    const scale = Math.min(preset.maxEdge / source.width, preset.maxEdge / source.height, 1);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(source.width * scale));
-    canvas.height = Math.max(1, Math.round(source.height * scale));
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not process image");
-    source.draw(ctx, canvas.width, canvas.height);
+
+    if (preset.square) {
+      const shortest = Math.min(source.width, source.height);
+      const edge = Math.max(1, Math.round(Math.min(shortest, preset.maxEdge)));
+      canvas.width = edge;
+      canvas.height = edge;
+      const scale = edge / shortest;
+      const drawW = source.width * scale;
+      const drawH = source.height * scale;
+      ctx.save();
+      ctx.translate((edge - drawW) / 2, (edge - drawH) / 2);
+      source.draw(ctx, drawW, drawH);
+      ctx.restore();
+    } else {
+      const scale = Math.min(preset.maxEdge / source.width, preset.maxEdge / source.height, 1);
+      canvas.width = Math.max(1, Math.round(source.width * scale));
+      canvas.height = Math.max(1, Math.round(source.height * scale));
+      source.draw(ctx, canvas.width, canvas.height);
+    }
 
     for (const format of FORMATS) {
       const blob = await encodeToTarget(canvas, format.type, preset.maxBytes);

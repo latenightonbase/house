@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import { Crown, ExternalLink, Globe } from "lucide-react";
 import { SocialIcon } from "@/components/nav/SocialIcons";
 import { billboardPlaceholder } from "@/lib/brandMark";
 import type { Spotlight } from "@/lib/dailyAuction";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
-import { cn } from "@/lib/utils";
 
 /** "AUG 31, 2026" — the billboard's date line. */
 function billboardDate(iso: string | null) {
@@ -53,78 +52,104 @@ function href(url: string) {
 }
 
 /**
- * The billboard: the project that won yesterday's auction, live for its 24
- * hours. Every field below the name is optional — a bidder only has to supply
- * a project name, so this degrades to name + winning bid.
+ * The billboard: yesterday's winner, live for 24 hours. Built around a 1:1
+ * poster in a gold frame — square on every breakpoint, so the artwork is never
+ * cropped and reads as the hero on phones as well as the side of a 2-up on PC.
  */
 export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
   const [imageFailed, setImageFailed] = useState(false);
   const { lead, accent } = splitName(spotlight.name);
   const artwork =
     !imageFailed && spotlight.imageUrl ? spotlight.imageUrl : billboardPlaceholder(spotlight.name);
+  const links = [
+    spotlight.websiteUrl && {
+      key: "web",
+      href: href(spotlight.websiteUrl),
+      icon: <Globe className="w-4 h-4 text-gold/70" aria-hidden="true" />,
+      label: hostname(spotlight.websiteUrl),
+    },
+    spotlight.twitterUrl && {
+      key: "x",
+      href: href(spotlight.twitterUrl),
+      icon: <SocialIcon id="x" className="w-3.5 h-3.5 text-gold/70" />,
+      label: twitterHandle(spotlight.twitterUrl),
+    },
+    spotlight.youtubeUrl && {
+      key: "youtube",
+      href: href(spotlight.youtubeUrl),
+      icon: <SocialIcon id="youtube" className="w-4 h-4 text-gold/70" />,
+      label: "YouTube",
+    },
+  ].filter(Boolean) as { key: string; href: string; icon: ReactNode; label: string }[];
 
   return (
-    <section className="panel-glow relative overflow-hidden">
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-        {/* Copy */}
-        <div className="relative z-10 p-6 sm:p-8 lg:py-10 flex flex-col">
-          <p className="flex items-center gap-2 eyebrow text-primary-bright">
-            <Crown className="w-[15px] h-[15px]" aria-hidden="true" />
+    <section className="billboard relative overflow-hidden rounded-2xl sm:rounded-[1.5rem]">
+      <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
+
+      <div className="relative grid items-center gap-5 p-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:gap-6 sm:p-5 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:gap-8 lg:p-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:gap-10">
+        {/* 1:1 poster — the exact ratio creators upload at, so nothing is cropped. */}
+        <div className="billboard-frame relative aspect-square w-full overflow-hidden rounded-xl sm:rounded-2xl">
+          <Image
+            src={artwork}
+            alt={spotlight.name}
+            fill
+            sizes="(min-width: 1536px) 26rem, (min-width: 1280px) 20rem, (min-width: 640px) 16rem, 100vw"
+            unoptimized={isUnoptimizedSrc(artwork)}
+            onError={() => setImageFailed(true)}
+            className="object-cover"
+            priority
+          />
+          <span aria-hidden="true" className="billboard-scrim absolute inset-0" />
+          <p className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full border border-gold/45 bg-background/80 px-2.5 py-1 font-semibold uppercase tracking-[0.14em] text-[9px] text-gold-light backdrop-blur-sm xl:top-3 xl:left-3 xl:gap-2 xl:px-3 xl:py-1.5 xl:text-[11px] xl:tracking-[0.16em]">
+            <Crown className="w-3 h-3 xl:w-3.5 xl:h-3.5" aria-hidden="true" />
             Today&apos;s Attention
           </p>
+        </div>
 
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-caption">
-            24-hour billboard
-            <span className="mx-2 text-line-strong">•</span>
-            {billboardDate(spotlight.liveSince)}
+        <div className="flex flex-col">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-caption">
+            <span>24-hour billboard</span>
+            <span className="text-gold/60" aria-hidden="true">
+              •
+            </span>
+            <span>{billboardDate(spotlight.liveSince)}</span>
           </p>
 
-          <h1 className="mt-3 display text-[clamp(2.25rem,6vw,4.25rem)] uppercase">
+          <h1 className="mt-2.5 display uppercase text-[clamp(2.25rem,11vw,3.25rem)] lg:text-[clamp(2.5rem,3.4vw,4rem)] break-words">
             <span className="text-white">{lead}</span>
             {accent && <span className="text-primary-bright"> {accent}</span>}
           </h1>
 
           {spotlight.description && (
-            <p className="mt-4 text-[15px] leading-relaxed text-caption max-w-md">
+            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/75">
               {spotlight.description}
             </p>
           )}
 
-          {(spotlight.websiteUrl || spotlight.twitterUrl || spotlight.youtubeUrl) && (
-            <div className="mt-6 flex flex-wrap items-center gap-x-7 gap-y-3">
-              {spotlight.websiteUrl && (
+          {/* The prize line — the one place gold carries meaning rather than trim. */}
+          <p className="mt-5 inline-flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3 sm:w-auto sm:self-start">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-gold-light">
+              Winner of the {shortDate(spotlight.liveSince)} attention auction
+            </span>
+            <span className="numeric text-[19px] font-bold text-white">
+              ${spotlight.winningBid.toLocaleString()}
+            </span>
+          </p>
+
+          {links.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {links.map((link) => (
                 <a
-                  href={href(spotlight.websiteUrl)}
+                  key={link.key}
+                  href={link.href}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex items-center gap-2 text-[13px] text-white/90 hover:text-primary-light transition-colors"
+                  className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-3.5 py-2 text-[13px] text-white/85 transition-colors hover:border-gold/45 hover:text-white"
                 >
-                  <Globe className="w-4 h-4 text-caption" aria-hidden="true" />
-                  {hostname(spotlight.websiteUrl)}
+                  {link.icon}
+                  {link.label}
                 </a>
-              )}
-              {spotlight.twitterUrl && (
-                <a
-                  href={href(spotlight.twitterUrl)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex items-center gap-2 text-[13px] text-white/90 hover:text-primary-light transition-colors"
-                >
-                  <SocialIcon id="x" className="w-3.5 h-3.5 text-caption" />
-                  {twitterHandle(spotlight.twitterUrl)}
-                </a>
-              )}
-              {spotlight.youtubeUrl && (
-                <a
-                  href={href(spotlight.youtubeUrl)}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="flex items-center gap-2 text-[13px] text-white/90 hover:text-primary-light transition-colors"
-                >
-                  <SocialIcon id="youtube" className="w-4 h-4 text-caption" />
-                  YouTube
-                </a>
-              )}
+              ))}
             </div>
           )}
 
@@ -133,51 +158,12 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
               href={href(spotlight.websiteUrl)}
               target="_blank"
               rel="noreferrer noopener"
-              className="gradient-button mt-8 inline-flex items-center justify-center gap-2.5 self-start h-12 px-7 rounded-lg text-white eyebrow"
+              className="gradient-button mt-5 inline-flex h-12 w-full items-center justify-center gap-2.5 rounded-lg px-7 text-white eyebrow sm:w-auto sm:self-start"
             >
               Visit project
               <ExternalLink className="w-4 h-4" aria-hidden="true" />
             </a>
           )}
-        </div>
-
-        {/* Artwork */}
-        <div className="relative min-h-[220px] sm:min-h-[300px] lg:min-h-full">
-          <Image
-            src={artwork}
-            alt={spotlight.name}
-            fill
-            sizes="(min-width: 1024px) 50vw, 100vw"
-            unoptimized={isUnoptimizedSrc(artwork)}
-            onError={() => setImageFailed(true)}
-            className="object-cover"
-            priority
-          />
-          {/* Feathers the artwork into the copy column instead of hard-cropping. */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-r from-surface via-surface/40 to-transparent lg:from-surface lg:via-surface/20"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent"
-          />
-
-          <div className="absolute bottom-4 right-4 left-4 sm:left-auto flex justify-end">
-            <p
-              className={cn(
-                "inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-4 py-2.5",
-                "bg-background/80 backdrop-blur-sm border border-primary/30",
-              )}
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-primary-light">
-                Winner of the {shortDate(spotlight.liveSince)} attention auction
-              </span>
-              <span className="text-[15px] font-bold text-white numeric">
-                ${spotlight.winningBid.toLocaleString()}
-              </span>
-            </p>
-          </div>
         </div>
       </div>
     </section>
@@ -187,15 +173,16 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 /** Shown before the first auction settles, so the page never renders headless. */
 export function TodaysAttentionEmpty() {
   return (
-    <section className="panel-glow p-8 sm:p-12 text-center">
-      <p className="flex items-center justify-center gap-2 eyebrow text-primary-bright">
+    <section className="billboard relative overflow-hidden rounded-2xl px-5 py-10 text-center sm:rounded-[1.5rem] sm:px-12 sm:py-14">
+      <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
+      <p className="relative inline-flex items-center gap-2 rounded-full border border-gold/45 bg-background/70 px-3.5 py-1.5 eyebrow text-gold-light">
         <Crown className="w-[15px] h-[15px]" aria-hidden="true" />
         Today&apos;s Attention
       </p>
-      <h1 className="mt-4 display text-[clamp(1.75rem,5vw,3rem)] uppercase text-white">
+      <h1 className="relative mt-5 display text-[clamp(1.85rem,6vw,3rem)] uppercase text-white">
         The billboard is <span className="text-primary-bright">open</span>
       </h1>
-      <p className="mt-4 text-[15px] text-caption max-w-md mx-auto leading-relaxed">
+      <p className="relative mt-4 max-w-md mx-auto text-[15px] leading-relaxed text-caption">
         No auction has settled yet. Win the live auction below and your project takes this space
         for a full 24 hours.
       </p>

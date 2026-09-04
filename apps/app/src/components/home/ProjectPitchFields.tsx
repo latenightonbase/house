@@ -70,7 +70,7 @@ export function ProjectPitchFields({
         />
       </Labelled>
 
-      <Labelled label="Image" hint="optional" htmlFor={`${idPrefix}-image`}>
+      <Labelled label="Image" hint="1:1 · 1080×1080 · optional" htmlFor={`${idPrefix}-image`}>
         <ImageUploader
           variant="artwork"
           id={`${idPrefix}-image`}

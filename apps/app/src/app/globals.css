@@ -20,6 +20,12 @@
   --line: #221a2e;
   --line-strong: #33264a;
 
+  /* The billboard's gold: the marquee accent from the key art. Used only where
+     the show frames something as won — never as a general UI colour. */
+  --gold: #fbbf24;
+  --gold-light: #fde68a;
+  --gold-deep: #92610a;
+
   --positive: #34d399;
   --negative: #f87171;
   --warning: #fbbf24;
@@ -51,6 +57,9 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-deep: var(--gold-deep);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
@@ -145,6 +154,65 @@ input[type="datetime-local"] {
     var(--surface);
   border: 1px solid rgba(139, 92, 246, 0.22);
   border-radius: 1rem;
+}
+
+/* Today's Attention — the gold-framed marquee. Louder than panel-glow, and the
+   only surface that carries gold, so the billboard reads as the page hero. */
+.billboard {
+  position: relative;
+  background:
+    radial-gradient(115% 85% at 6% 0%, rgba(251, 191, 36, 0.08), transparent 58%),
+    radial-gradient(105% 80% at 100% 100%, rgba(139, 92, 246, 0.12), transparent 62%),
+    #08040f;
+  border: 1px solid rgba(251, 191, 36, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(253, 230, 138, 0.14),
+    0 0 24px rgba(251, 191, 36, 0.1),
+    0 12px 34px rgba(5, 2, 8, 0.55);
+  animation: billboard-glow 6s ease-in-out infinite;
+}
+
+@keyframes billboard-glow {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(253, 230, 138, 0.14),
+      0 0 24px rgba(251, 191, 36, 0.1),
+      0 12px 34px rgba(5, 2, 8, 0.55);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(253, 230, 138, 0.22),
+      0 0 32px rgba(251, 191, 36, 0.16),
+      0 12px 34px rgba(5, 2, 8, 0.55);
+  }
+}
+
+/* The poster's own frame: a gold hairline that separates artwork from shell. */
+.billboard-frame {
+  background: #0b0710;
+  border: 1px solid rgba(251, 191, 36, 0.34);
+  box-shadow:
+    0 0 12px rgba(251, 191, 36, 0.08),
+    0 6px 20px rgba(5, 2, 8, 0.5);
+}
+
+/* Gold cast off the top-left corner. Radial on both axes so it dissolves into
+   the shell rather than ending on an edge the eye can find. */
+.billboard-sheen {
+  background: radial-gradient(90% 70% at 18% -18%, rgba(253, 230, 138, 0.11), transparent 68%);
+}
+
+/* Keeps the crown badge legible over bright artwork. Anchored to the badge's
+   own corner so it never reads as a band laid across the poster. */
+.billboard-scrim {
+  background: radial-gradient(85% 60% at 0% 0%, rgba(0, 0, 0, 0.6), transparent 72%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .billboard {
+    animation: none;
+  }
 }
 
 .row-hover {

@@ -60,22 +60,22 @@ export function brandMarkDataUri(name: string, rounded = false): string {
  */
 export function billboardPlaceholder(name: string): string {
   const initials = initialsFor(name);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" preserveAspectRatio="xMidYMid slice">
 <defs>
 <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
 <stop offset="0" stop-color="#1a0b2e"/>
 <stop offset="0.55" stop-color="#3b1a6b"/>
 <stop offset="1" stop-color="#0a0410"/>
 </linearGradient>
-<radialGradient id="glow" cx="0.62" cy="0.42" r="0.5">
-<stop offset="0" stop-color="#a855f7" stop-opacity="0.45"/>
+<radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+<stop offset="0" stop-color="#a855f7" stop-opacity="0.5"/>
 <stop offset="1" stop-color="#a855f7" stop-opacity="0"/>
 </radialGradient>
 </defs>
-<rect width="800" height="600" fill="url(#g)"/>
-<rect width="800" height="600" fill="url(#glow)"/>
-<rect x="250" y="180" width="300" height="240" rx="16" fill="none" stroke="#a855f7" stroke-opacity="0.5" stroke-width="3"/>
-<text x="400" y="300" fill="#e9d5ff" font-family="Inter,system-ui,sans-serif" font-size="96" font-weight="800" letter-spacing="4" text-anchor="middle" dominant-baseline="central">${initials}</text>
+<rect width="1080" height="1080" fill="url(#g)"/>
+<rect width="1080" height="1080" fill="url(#glow)"/>
+<rect x="360" y="360" width="360" height="360" rx="24" fill="none" stroke="#a855f7" stroke-opacity="0.5" stroke-width="4"/>
+<text x="540" y="540" fill="#e9d5ff" font-family="Inter,system-ui,sans-serif" font-size="140" font-weight="800" letter-spacing="6" text-anchor="middle" dominant-baseline="central">${initials}</text>
 </svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }

@@ -216,8 +216,8 @@ export function ImageUploader({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
           className={cn(
-            "w-full rounded-lg border border-dashed px-4 py-7 text-center transition-colors",
-            "bg-surface-2 outline-none focus-visible:border-primary/60",
+            "w-full max-w-56 mx-auto aspect-square rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+            "bg-surface-2 outline-none focus-visible:border-primary/60 flex flex-col items-center justify-center",
             isDragging ? "border-primary/70 bg-primary/5" : "border-line hover:border-primary/50",
             busy && "cursor-wait opacity-70",
           )}
@@ -227,7 +227,7 @@ export function ImageUploader({
             {uploading ? "Uploading…" : "Drop an image here"}
           </p>
           <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, AVIF, GIF · 5MB max</p>
-          <p className="mt-0.5 text-[11px] text-caption">{variant === "artwork" && "Recommended size: 1500x300px"}</p>
+          <p className="mt-0.5 text-[11px] text-caption">{variant === "artwork" && "1:1 · 1080×1080px"}</p>
         </button>
       ) : (
         <div
@@ -239,7 +239,7 @@ export function ImageUploader({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
         >
-          <div className="relative h-40 w-full">
+          <div className={cn("relative w-full", variant === "artwork" ? "aspect-square" : "h-40")}>
             <Image
               src={preview}
               alt={alt}
