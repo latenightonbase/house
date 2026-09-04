@@ -4,7 +4,7 @@ import { FooterMark } from "./Wordmark";
 
 export function Footer() {
   return (
-    <footer className="border-t border-line mt-8 pt-6 pb-8">
+    <footer className="border-t border-line mt-8 pt-6 pb-[calc(6rem+var(--safe-bottom))] lg:pb-8">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
         <div className="flex items-start gap-5 min-w-0">
           <FooterMark className="shrink-0" />
