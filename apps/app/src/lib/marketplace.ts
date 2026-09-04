@@ -262,6 +262,33 @@ export async function fetchListing(id: string): Promise<Listing> {
   return data.listing;
 }
 
+/** The pitch a bidder attached to this listing, if they submitted one. */
+export interface ListingBidderProject {
+  name: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  websiteUrl?: string | null;
+  twitterUrl?: string | null;
+  youtubeUrl?: string | null;
+}
+
+/** One person who has bid on a listing — highest amount plus their project. */
+export interface ListingBidder {
+  wallet: string;
+  name: string;
+  avatarUrl?: string | null;
+  amount: number;
+  bidCount: number;
+  lastBidAt: string;
+  leading: boolean;
+  project: ListingBidderProject | null;
+}
+
+export async function fetchListingBidders(id: string): Promise<ListingBidder[]> {
+  const data = await getJson<{ bidders: ListingBidder[] }>(`/backend/listings/${id}/bidders`);
+  return data.bidders;
+}
+
 export async function fetchDailyListing(): Promise<Listing | null> {
   const data = await getJson<{ listing: Listing | null }>("/backend/listings/daily");
   return data.listing;

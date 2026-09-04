@@ -42,7 +42,7 @@ export function Wordmark({
 /** The stacked footer mark: solid "LNOC" over its expansion. */
 export function FooterMark({ className }: { className?: string }) {
   return (
-    <span className={cn("flex flex-col leading-none", className)}>
+    <span className={cn("flex flex-col leading-none justify-center max-md:items-center", className)}>
       <span className="text-white font-extrabold text-[22px] tracking-[0.02em]">LNOC</span>
       <span className="text-[7.5px] font-semibold uppercase tracking-[0.18em] text-caption mt-1">
         Late Night Onchain

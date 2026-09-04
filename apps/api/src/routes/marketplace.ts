@@ -122,6 +122,85 @@ async function dailyAuctionState(listingId: string, reservePrice: number) {
   };
 }
 
+type BidderUser = {
+  username: string | null;
+  avatarUrl: string | null;
+  socials: Array<{
+    displayName: string | null;
+    username: string | null;
+    avatarUrl: string | null;
+  }>;
+};
+
+/**
+ * Everyone who has bid on a listing, one row per wallet, highest bid first.
+ * Project pitch is joined when the bidder submitted one for this auction.
+ */
+async function listingBidders(listingId: string) {
+  const [bids, projects] = await Promise.all([
+    prisma.listingBid.findMany({
+      where: { listingId },
+      orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+      include: { bidderUser: { include: { socials: true } } },
+    }),
+    prisma.dailyProject.findMany({ where: { listingId } }),
+  ]);
+
+  const projectByWallet = new Map(
+    projects.map((project) => [project.bidderWallet.toLowerCase(), project]),
+  );
+
+  const byWallet = new Map<
+    string,
+    { wallet: string; amount: number; bidCount: number; lastBidAt: Date; user: BidderUser | null }
+  >();
+
+  for (const bid of bids) {
+    const wallet = bid.bidderWallet.toLowerCase();
+    const existing = byWallet.get(wallet);
+    if (!existing) {
+      byWallet.set(wallet, {
+        wallet,
+        amount: bid.amount,
+        bidCount: 1,
+        lastBidAt: bid.createdAt,
+        user: bid.bidderUser,
+      });
+      continue;
+    }
+    existing.bidCount += 1;
+    if (bid.amount > existing.amount) existing.amount = bid.amount;
+    if (bid.createdAt > existing.lastBidAt) existing.lastBidAt = bid.createdAt;
+  }
+
+  const rows = [...byWallet.values()].sort((a, b) => b.amount - a.amount || b.lastBidAt.getTime() - a.lastBidAt.getTime());
+  const leaderWallet = rows[0]?.wallet;
+
+  return rows.map((row) => {
+    const identity = bidderIdentity(row.wallet, row.user);
+    const project = projectByWallet.get(row.wallet);
+    return {
+      wallet: row.wallet,
+      name: identity.name,
+      avatarUrl: identity.avatarUrl,
+      amount: row.amount,
+      bidCount: row.bidCount,
+      lastBidAt: row.lastBidAt.toISOString(),
+      leading: row.wallet === leaderWallet,
+      project: project
+        ? {
+            name: project.name,
+            description: project.description,
+            imageUrl: project.imageUrl,
+            websiteUrl: project.websiteUrl,
+            twitterUrl: project.twitterUrl,
+            youtubeUrl: project.youtubeUrl,
+          }
+        : null,
+    };
+  });
+}
+
 /**
  * Every seller needs a public CreatorProfile to hang listings off. Verification
  * gating comes later — for now anyone with a session can list, so the profile
@@ -488,6 +567,21 @@ export const marketplaceRoutes = new Elysia()
     },
     { body: dailyProjectBody },
   )
+  /**
+   * Public bidder roll for an auction listing — each person who has bid, their
+   * highest amount, and the project pitch they submitted for this listing.
+   */
+  .get("/listings/:id/bidders", async ({ params, set }) => {
+    const listing = await prisma.listing.findUnique({
+      where: { id: params.id },
+      select: { id: true },
+    });
+    if (!listing) {
+      set.status = 404;
+      return { error: "Listing not found" };
+    }
+    return { bidders: await listingBidders(listing.id) };
+  })
   .get("/listings/:id", async ({ params, set }) => {
     const listing = await prisma.listing.findUnique({
       where: { id: params.id },

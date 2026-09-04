@@ -248,7 +248,7 @@ export function LiveAuctionPanel({
           </div>
         )}
 
-        <div className="flex flex-col justify-end w-full gap-2.5 pl-10">
+        <div className="flex flex-col justify-end w-full gap-2.5 md:pl-10">
           <button
             type="button"
             onClick={onPlaceBid}

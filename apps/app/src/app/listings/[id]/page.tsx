@@ -12,6 +12,7 @@ import {
 import { useOpenConnect } from "@/components/connect-intent";
 import { BadgeCheck, CheckCircle2, Gavel, Info } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
+import { AuctionBidders } from "@/components/listing/AuctionBidders";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/components/SessionProvider";
 import {
@@ -28,8 +29,10 @@ import {
 import {
   bookListing,
   fetchListing,
+  fetchListingBidders,
   recordListingBid,
   type Listing,
+  type ListingBidder,
 } from "@/lib/marketplace";
 import {
   auctionHouseAbi,
@@ -87,6 +90,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const { writeContractAsync } = useWriteContract();
 
   const [listing, setListing] = useState<Listing | null>(null);
+  const [bidders, setBidders] = useState<ListingBidder[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
@@ -99,10 +103,11 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     let cancelled = false;
-    fetchListing(id)
-      .then((data) => {
+    Promise.all([fetchListing(id), fetchListingBidders(id).catch(() => [] as ListingBidder[])])
+      .then(([data, nextBidders]) => {
         if (cancelled) return;
         setListing(data);
+        setBidders(nextBidders);
         if (data.pricingType === "AUCTION") {
           setBidAmount(String(data.price));
         }
@@ -255,8 +260,12 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
 
       if (isAuction) {
         try {
-          const updated = await recordListingBid(listing.id, bidNumber, hash);
+          const [updated, nextBidders] = await Promise.all([
+            recordListingBid(listing.id, bidNumber, hash),
+            fetchListingBidders(listing.id).catch(() => null),
+          ]);
           setListing(updated);
+          if (nextBidders) setBidders(nextBidders);
         } catch (err) {
           console.error("Failed to persist bid:", err);
         }
@@ -375,9 +384,11 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
-            <p className="panel-label mb-1">{isAuction ? "Minimum bid" : "Price"}</p>
+            <p className="panel-label mb-1">
+              {isAuction ? (bidders?.[0] ? "Current bid" : "Minimum bid") : "Price"}
+            </p>
             <p className="text-[16px] sm:text-[17px] font-bold text-white numeric truncate">
-              ${listing.price.toLocaleString()}
+              ${(bidders?.[0]?.amount ?? listing.price).toLocaleString()}
             </p>
           </div>
           <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
@@ -494,6 +505,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           </div>
         )}
       </Card>
+
+      {isAuction ? <AuctionBidders bidders={bidders} loading={bidders === null} /> : null}
     </div>
   );
 }
