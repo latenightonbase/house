@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
+import { getApiOrigin } from "@/lib/api-origin";
 
 const COOKIE_NAME = process.env.COOKIE_NAME || "house_session";
-const API_ORIGIN = process.env.API_ORIGIN || "http://localhost:3001";
+const API_ORIGIN = getApiOrigin();
 
 /** Server-side SIWE session check against the identity API. */
 export async function getServerSession() {

@@ -10,6 +10,16 @@ import { getAllowedOrigins } from "./lib/origins";
 
 const PORT = Number(process.env.PORT || 3001);
 
+/** Vercel used to forward `/backend/*` to this host without stripping the prefix. */
+function stripBackendPrefix(request: Request): Request {
+  const url = new URL(request.url);
+  if (url.pathname !== "/backend" && !url.pathname.startsWith("/backend/")) {
+    return request;
+  }
+  url.pathname = url.pathname.slice("/backend".length) || "/";
+  return new Request(url, request);
+}
+
 const app = new Elysia()
   .use(
     cors({
@@ -24,8 +34,12 @@ const app = new Elysia()
   .use(socialRoutes)
   .use(marketplaceRoutes)
   .use(cronRoutes)
-  .use(uploadRoutes)
-  .listen(PORT);
+  .use(uploadRoutes);
+
+Bun.serve({
+  port: PORT,
+  fetch: (request) => app.fetch(stripBackendPrefix(request)),
+});
 
 startDailyAuctionTicker();
 
