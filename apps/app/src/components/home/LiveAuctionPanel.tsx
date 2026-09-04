@@ -74,7 +74,7 @@ function CurrentLeaderCard({
             src={artwork}
             alt=""
             fill
-            sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
+            sizes="(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw"
             unoptimized={isUnoptimizedSrc(artwork)}
             onError={() => setBgFailed(true)}
             className="object-cover grayscale"

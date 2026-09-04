@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Plus } from "lucide-react";
+import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
 import { isSuperadmin } from "@/lib/api";
 import { Button } from "@/components/ui";
@@ -26,7 +26,7 @@ export function CreateListingButton({
 }) {
   const router = useRouter();
   const { status, user } = useSession();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
 
   if (!isSuperadmin(user)) return null;
 
@@ -37,7 +37,7 @@ export function CreateListingButton({
       className={className}
       onClick={() => {
         if (status === "authenticated") router.push("/listings/new");
-        else openConnectModal?.();
+        else openConnect();
       }}
     >
       <Plus className="w-4 h-4" />

@@ -11,7 +11,7 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useOpenConnect } from "@/components/connect-intent";
 import { ArrowLeft, CheckCircle2, Gavel, Info, Tag } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ListingPreview } from "@/components/ListingPreview";
@@ -197,7 +197,7 @@ function dropDraft(userId: string) {
 export default function NewListingPage() {
   const router = useRouter();
   const { status, user } = useSession();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
   const { address, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -441,11 +441,7 @@ export default function NewListingPage() {
       return;
     }
     if (!address) {
-      if (openConnectModal) {
-        openConnectModal();
-      } else {
-        setError("Reconnect your wallet to sign the listing transaction.");
-      }
+      openConnect();
       return;
     }
     setError(null);
@@ -542,7 +538,7 @@ export default function NewListingPage() {
             Connect and sign in with your wallet to list — it is the account buyers pay out
             to.
           </p>
-          <Button onClick={() => openConnectModal?.()} className="w-full sm:w-auto">
+          <Button onClick={() => openConnect()} className="w-full sm:w-auto">
             Connect wallet
           </Button>
         </Panel>
@@ -626,11 +622,9 @@ export default function NewListingPage() {
               Your session is signed in, but the wallet is disconnected. Reconnect
               it to confirm the listing transaction.
             </p>
-            {openConnectModal && (
-              <Button size="sm" variant="accent-outline" onClick={openConnectModal}>
-                Reconnect wallet
-              </Button>
-            )}
+            <Button size="sm" variant="accent-outline" onClick={openConnect}>
+              Reconnect wallet
+            </Button>
           </div>
         </Tile>
       )}

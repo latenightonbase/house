@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { parseUnits } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useOpenConnect } from "@/components/connect-intent";
 import { Check, Loader2, Pencil, X, Zap } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { useSession } from "@/components/SessionProvider";
@@ -77,7 +77,7 @@ export function BidDialog({
 }) {
   const { user, status } = useSession();
   const { address, chainId: walletChainId } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
 
@@ -183,11 +183,11 @@ export function BidDialog({
     setError(null);
 
     if (status !== "authenticated") {
-      openConnectModal?.();
+      openConnect();
       return;
     }
     if (!address) {
-      openConnectModal?.();
+      openConnect();
       return;
     }
     if (nameMissing) {

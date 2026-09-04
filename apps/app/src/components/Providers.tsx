@@ -1,69 +1,72 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
-import {
-  RainbowKitAuthenticationProvider,
-  RainbowKitProvider,
-  darkTheme,
-} from "@rainbow-me/rainbowkit";
-import "@rainbow-me/rainbowkit/styles.css";
-import { SpeedInsights } from "@vercel/speed-insights/next"
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
-
-import { config } from "@/lib/wagmi";
-import { authenticationAdapter } from "@/lib/auth-adapter";
-import { SessionProvider, useSession } from "@/components/SessionProvider";
+import { lightConfig } from "@/lib/wagmi-light";
+import { ConnectIntentProvider } from "@/components/connect-intent";
+import { SessionProvider } from "@/components/SessionProvider";
 import { SetupUsernameDialog } from "@/components/SetupUsernameDialog";
 
-function RainbowKitAuthBridge({ children }: { children: ReactNode }) {
-  const { status, refresh, setUnauthenticated } = useSession();
+type WalletTree = ComponentType<{ children: ReactNode }>;
 
-  return (
-    <RainbowKitAuthenticationProvider
-      adapter={{
-        ...authenticationAdapter,
-        verify: async (args) => {
-          const ok = await authenticationAdapter.verify(args);
-          if (ok) await refresh();
-          return ok;
-        },
-        signOut: async () => {
-          await authenticationAdapter.signOut();
-          setUnauthenticated();
-        },
-      }}
-      status={status}
-    >
-      <RainbowKitProvider
-        theme={darkTheme({
-          accentColor: "#2f6bff",
-          accentColorForeground: "white",
-          borderRadius: "medium",
-          overlayBlur: "small",
-        })}
-      >
-        {children}
-      </RainbowKitProvider>
-    </RainbowKitAuthenticationProvider>
-  );
+function loadWalletProviders() {
+  return import("@/components/WalletProviders").then((mod) => mod.WalletProviders);
 }
 
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const [WalletTree, setWalletTree] = useState<WalletTree | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const mount = () => {
+      void loadWalletProviders().then((mod) => {
+        if (!cancelled) setWalletTree(() => mod);
+      });
+    };
+
+    const onInteract = () => mount();
+    window.addEventListener("pointerdown", onInteract, { once: true, passive: true });
+
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(mount, { timeout: 800 });
+    } else {
+      timeoutId = window.setTimeout(mount, 1);
+    }
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("pointerdown", onInteract);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  const body = (
+    <>
+      <SpeedInsights />
+      {children}
+      <SetupUsernameDialog />
+    </>
+  );
 
   return (
-    <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <RainbowKitAuthBridge>
-            <SpeedInsights />
-            {children}
-            <SetupUsernameDialog />
-          </RainbowKitAuthBridge>
-        </SessionProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <ConnectIntentProvider>
+          {WalletTree ? (
+            <WalletTree>{body}</WalletTree>
+          ) : (
+            <WagmiProvider config={lightConfig}>{body}</WagmiProvider>
+          )}
+        </ConnectIntentProvider>
+      </SessionProvider>
+    </QueryClientProvider>
   );
 }

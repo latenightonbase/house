@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
 import {
   fetchDailyAuction,
@@ -17,8 +18,14 @@ import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysA
 import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
 import { WinnerBenefits } from "@/components/home/WinnerBenefits";
 import { AuctionEmpty } from "@/components/home/AuctionEmpty";
-import { BidDialog } from "@/components/home/BidDialog";
-import { EditListingDialog } from "@/components/home/EditListingDialog";
+const BidDialog = dynamic(
+  () => import("@/components/home/BidDialog").then((m) => ({ default: m.BidDialog })),
+  { ssr: false },
+);
+const EditListingDialog = dynamic(
+  () => import("@/components/home/EditListingDialog").then((m) => ({ default: m.EditListingDialog })),
+  { ssr: false },
+);
 
 /** Poll cadence for the live bid state — fast enough to feel live, cheap enough to leave on. */
 const REFRESH_MS = 20_000;
@@ -26,7 +33,7 @@ const REFRESH_MS = 20_000;
 function AuthRequiredBanner() {
   const searchParams = useSearchParams();
   const { status } = useSession();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
   const authRequired = searchParams.get("auth") === "required";
 
   if (!authRequired || status === "authenticated") return null;
@@ -36,7 +43,7 @@ function AuthRequiredBanner() {
       <p className="text-[13px] text-warning">Connect your wallet to continue.</p>
       <button
         type="button"
-        onClick={() => openConnectModal?.()}
+        onClick={() => openConnect()}
         className="btn-primary h-9 px-4 text-[12px] shrink-0"
       >
         Connect wallet
@@ -51,7 +58,7 @@ export default function HomeClient({
   spotlight: initialSpotlight,
 }: HomePageData) {
   const { status, user } = useSession();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
 
   const [spotlight, setSpotlight] = useState<Spotlight | null>(initialSpotlight);
   const [listing, setListing] = useState<Listing | null>(initialListing);
@@ -81,7 +88,7 @@ export default function HomeClient({
 
   function handlePlaceBid() {
     if (status !== "authenticated") {
-      openConnectModal?.();
+      openConnect();
       return;
     }
     setBidOpen(true);
@@ -89,7 +96,7 @@ export default function HomeClient({
 
   function handleEditListing() {
     if (status !== "authenticated") {
-      openConnectModal?.();
+      openConnect();
       return;
     }
     setEditOpen(true);
@@ -114,25 +121,29 @@ export default function HomeClient({
             onEditListing={canEditListing ? handleEditListing : undefined}
           />
           <WinnerBenefits />
-          <BidDialog
-            listing={listing}
-            auction={auction}
-            open={bidOpen}
-            onClose={() => setBidOpen(false)}
-            onBidPlaced={(next) => {
-              setAuction(next);
-              void load();
-            }}
-          />
-          <EditListingDialog
-            listing={listing}
-            open={editOpen}
-            onClose={() => setEditOpen(false)}
-            onSaved={(next) => {
-              if (next) setAuction(next);
-              void load();
-            }}
-          />
+          {bidOpen ? (
+            <BidDialog
+              listing={listing}
+              auction={auction}
+              open={bidOpen}
+              onClose={() => setBidOpen(false)}
+              onBidPlaced={(next) => {
+                setAuction(next);
+                void load();
+              }}
+            />
+          ) : null}
+          {editOpen ? (
+            <EditListingDialog
+              listing={listing}
+              open={editOpen}
+              onClose={() => setEditOpen(false)}
+              onSaved={(next) => {
+                if (next) setAuction(next);
+                void load();
+              }}
+            />
+          ) : null}
         </>
       ) : (
         <AuctionEmpty />

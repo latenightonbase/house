@@ -9,7 +9,7 @@ import {
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useOpenConnect } from "@/components/connect-intent";
 import { BadgeCheck, CheckCircle2, Gavel, Info } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { PageHeader } from "@/components/PageHeader";
@@ -81,7 +81,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
   const { status, user } = useSession();
-  const { openConnectModal } = useConnectModal();
+  const openConnect = useOpenConnect();
   const { address, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const { writeContractAsync } = useWriteContract();
@@ -166,8 +166,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
       return;
     }
     if (!address) {
-      if (openConnectModal) openConnectModal();
-      else setError("Reconnect your wallet to continue.");
+      openConnect();
       return;
     }
     if (isAuction && bidInvalid) {
@@ -412,7 +411,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <p className="text-sm text-caption">
               Connect and sign in with your wallet to {isAuction ? "place a bid" : "book this slot"}.
             </p>
-            <Button onClick={() => openConnectModal?.()} className="w-full sm:w-auto">
+            <Button onClick={() => openConnect()} className="w-full sm:w-auto">
               Connect wallet
             </Button>
           </Panel>
@@ -456,11 +455,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
                     Your session is signed in, but the wallet is disconnected. Reconnect
                     it to confirm the transaction.
                   </p>
-                  {openConnectModal && (
-                    <Button size="sm" variant="accent-outline" onClick={openConnectModal}>
-                      Reconnect wallet
-                    </Button>
-                  )}
+                  <Button size="sm" variant="accent-outline" onClick={openConnect}>
+                    Reconnect wallet
+                  </Button>
                 </div>
               </Tile>
             )}
