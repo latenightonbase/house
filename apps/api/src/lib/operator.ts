@@ -1,6 +1,7 @@
 import {
   createPublicClient,
   createWalletClient,
+  getAddress,
   http,
   parseUnits,
   type Hex,
@@ -76,12 +77,53 @@ export const auctionHouseAbi = [
       { name: "settled", type: "bool" },
     ],
   },
+  {
+    type: "function",
+    name: "feePercent",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "feeReceiver",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "address" }],
+  },
+  {
+    type: "function",
+    name: "setFeeReceiver",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_newReceiver", type: "address" }],
+    outputs: [],
+  },
+] as const;
+
+export const erc20Abi = [
+  {
+    type: "function",
+    name: "transfer",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
 ] as const;
 
 export function auctionHouseAddress() {
   const raw = process.env.AUCTION_HOUSE_ADDRESS?.trim();
   if (raw && /^0x[a-fA-F0-9]{40}$/.test(raw)) return raw as `0x${string}`;
   return FALLBACK_HOUSE;
+}
+
+/** Wallet that receives protocol fees and daily-auction winning-bid proceeds. */
+export function feeRecipient(): `0x${string}` | null {
+  const raw = process.env.FEE_RECIPIENT?.trim();
+  if (!raw || !/^0x[a-fA-F0-9]{40}$/.test(raw)) return null;
+  return getAddress(raw) as `0x${string}`;
 }
 
 export function operatorRpc() {

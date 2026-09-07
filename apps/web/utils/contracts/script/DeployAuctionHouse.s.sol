@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {AuctionHouse} from "../auctionContract.sol";
 
 contract DeployAuctionHouse is Script {
-    address constant FEE_RECEIVER = 0x1ce256752fBa067675F09291d12A1f069f34f5e8;
+    address constant FEE_RECEIVER = 0x755Dc65333C16F388d2054513B9D013D7035F230;
     address constant OWNER = 0x1ce256752fBa067675F09291d12A1f069f34f5e8;
     uint256 constant FEE_PERCENT = 0;
 

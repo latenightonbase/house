@@ -5,6 +5,8 @@ import { superadminWallet } from "./roles";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
+  erc20Abi,
+  feeRecipient,
   fromTokenAmount,
   operatorAccount,
   publicClient,
@@ -123,6 +125,49 @@ let running = false;
 function dailyMinBid() {
   const parsed = Number(process.env.DAILY_AUCTION_MIN_BID);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.01;
+}
+
+/**
+ * endAuction pays the listing owner (the operator). Forward that share to
+ * FEE_RECIPIENT so the treasury — not the hot operator key — holds the win.
+ */
+async function forwardWinningProceeds({
+  token,
+  rawBid,
+}: {
+  token: `0x${string}`;
+  rawBid: bigint;
+}) {
+  if (rawBid <= 0n) return;
+  const recipient = feeRecipient();
+  const account = operatorAccount();
+  const wallet = walletClient();
+  const client = publicClient();
+  if (!recipient || !account || !wallet) return;
+  if (recipient.toLowerCase() === account.address.toLowerCase()) return;
+
+  const feeBps = await client.readContract({
+    address: auctionHouseAddress(),
+    abi: auctionHouseAbi,
+    functionName: "feePercent",
+  });
+  const payout = rawBid - (rawBid * feeBps) / 10000n;
+  if (payout <= 0n) return;
+
+  const hash = await wallet.writeContract({
+    address: token,
+    abi: erc20Abi,
+    functionName: "transfer",
+    args: [recipient, payout],
+    account,
+  });
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  if (receipt.status === "reverted") {
+    throw new Error("forward winning proceeds reverted");
+  }
+  console.log(
+    `[daily-auction] forwarded ${fromTokenAmount(payout)} to ${recipient} tx=${hash}`,
+  );
 }
 
 function isDue(listing: { endDate: Date | null }, now: Date) {
@@ -294,6 +339,10 @@ async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpir
         if (receipt.status === "reverted") {
           throw new Error("endAuction reverted");
         }
+        await forwardWinningProceeds({
+          token: (expired.tokenAddress || USDG) as `0x${string}`,
+          rawBid: meta.highestBid,
+        });
       }
     } catch (err) {
       console.error("[daily-auction] settle failed:", err);

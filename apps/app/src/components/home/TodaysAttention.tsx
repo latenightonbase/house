@@ -32,6 +32,23 @@ function splitName(name: string) {
   return { lead: words.slice(0, -1).join(" "), accent: words[words.length - 1] };
 }
 
+/**
+ * The display face is set in viewport units, so a ticker-style name — one long
+ * unbreakable run — would break mid-word on a phone once the column is properly
+ * constrained. Step the size down by the longest run instead, so the name always
+ * lands on a line of its own rather than being sliced in half.
+ */
+function nameSize(name: string) {
+  const longest = name
+    .trim()
+    .split(/\s+/)
+    .reduce((max, word) => Math.max(max, word.length), 0);
+  if (longest <= 9) return "text-[clamp(2.25rem,11vw,3.25rem)] lg:text-[clamp(2.5rem,3.4vw,4rem)]";
+  if (longest <= 13) return "text-[clamp(1.9rem,8.5vw,2.75rem)] lg:text-[clamp(2.25rem,3vw,3.5rem)]";
+  if (longest <= 20) return "text-[clamp(1.5rem,6.5vw,2.25rem)] lg:text-[clamp(1.9rem,2.4vw,3rem)]";
+  return "text-[clamp(1.25rem,5vw,1.9rem)] lg:text-[clamp(1.6rem,1.9vw,2.4rem)]";
+}
+
 function hostname(url: string) {
   try {
     return new URL(url.startsWith("http") ? url : `https://${url}`).hostname.replace(/^www\./, "");
@@ -52,9 +69,9 @@ function href(url: string) {
 }
 
 /**
- * The billboard: yesterday's winner, live for 24 hours. Built around a 1:1
- * poster in a gold frame — square on every breakpoint, so the artwork is never
- * cropped and reads as the hero on phones as well as the side of a 2-up on PC.
+ * The billboard: yesterday's winner, live for 24 hours. Built around a poster in
+ * a gold frame — square on every breakpoint, whatever ratio the winner uploaded,
+ * so it reads as the hero on phones as well as the side of a 2-up on PC.
  */
 export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -103,9 +120,24 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 
       <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
 
-      <div className="relative grid items-center gap-5 p-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:gap-6 sm:p-5 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:gap-8 lg:p-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:gap-10">
-        {/* 1:1 poster — the exact ratio creators upload at, so nothing is cropped. */}
+      <div className="relative grid grid-cols-[minmax(0,1fr)] items-center gap-5 p-4 sm:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] sm:gap-6 sm:p-5 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] lg:gap-8 lg:p-6 xl:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] 2xl:gap-10">
+        {/* The poster keeps a square frame on every breakpoint, but uploads are not
+            always 1:1. The artwork is contained rather than cropped, and the strips
+            it leaves over are filled with a blurred copy of itself, so an off-ratio
+            poster reads as matted rather than as empty gutter. */}
         <div className="billboard-frame relative aspect-square w-full overflow-hidden rounded-xl sm:rounded-2xl">
+          <Image
+            src={artwork}
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes={artworkSizes}
+            unoptimized={isUnoptimizedSrc(artwork)}
+            className="scale-110 object-cover blur-2xl"
+          />
+          {/* Holds the matting back so the artwork itself stays the brightest thing
+              in the frame. Under the poster, so only the leftover strips darken. */}
+          <span aria-hidden="true" className="absolute inset-0 bg-[#08040f]/55" />
           <Image
             src={artwork}
             alt={spotlight.name}
@@ -113,7 +145,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             sizes={artworkSizes}
             unoptimized={isUnoptimizedSrc(artwork)}
             onError={() => setImageFailed(true)}
-            className="object-cover"
+            className="object-contain"
             priority
           />
           <span aria-hidden="true" className="billboard-scrim absolute inset-0" />
@@ -123,7 +155,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
           </p>
         </div>
 
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-caption">
             <span>24-hour billboard</span>
             <span className="text-gold/60" aria-hidden="true">
@@ -132,19 +164,19 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             <span>{billboardDate(spotlight.liveSince)}</span>
           </p>
 
-          <h1 className="mt-2.5 display uppercase text-[clamp(2.25rem,11vw,3.25rem)] lg:text-[clamp(2.5rem,3.4vw,4rem)] break-words">
+          <h1 className={`mt-2.5 display uppercase [overflow-wrap:anywhere] ${nameSize(spotlight.name)}`}>
             <span className="text-white">{lead}</span>
             {accent && <span className="text-primary-bright"> {accent}</span>}
           </h1>
 
           {spotlight.description && (
-            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/75">
+            <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/75 [overflow-wrap:anywhere]">
               {spotlight.description}
             </p>
           )}
 
           {/* The prize line — the one place gold carries meaning rather than trim. */}
-          <p className="mt-5 inline-flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3 sm:w-auto sm:self-start">
+          <p className="mt-5 inline-flex w-full flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-gold/35 bg-gold/[0.06] px-4 py-3 sm:w-auto sm:max-w-full sm:self-start">
             <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-gold-light">
               Winner of the {shortDate(spotlight.liveSince)} attention auction
             </span>
@@ -161,10 +193,10 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
                   href={link.href}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="inline-flex items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-3.5 py-2 text-[13px] text-white/85 transition-colors hover:border-gold/45 hover:text-white"
+                  className="inline-flex max-w-full items-center gap-2 rounded-full border border-line-strong bg-white/[0.03] px-3.5 py-2 text-[13px] text-white/85 transition-colors hover:border-gold/45 hover:text-white"
                 >
-                  {link.icon}
-                  {link.label}
+                  <span className="shrink-0">{link.icon}</span>
+                  <span className="truncate">{link.label}</span>
                 </a>
               ))}
             </div>
