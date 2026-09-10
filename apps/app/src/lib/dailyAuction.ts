@@ -56,6 +56,20 @@ export interface PastWinner extends DailyProject {
   settledAt: string | null;
 }
 
+export interface AttentionAnalytics {
+  metrics: {
+    totalVolume: number;
+    auctionsSettled: number;
+    uniqueBidders: number;
+    averageClearingPrice: number;
+  };
+  history: Array<{
+    listingId: string;
+    settledAt: string;
+    clearingPrice: number;
+  }>;
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(path, { credentials: "include", cache: "no-store" });
   if (!res.ok) throw new Error(`Request failed: ${path}`);
@@ -81,6 +95,10 @@ export async function fetchPastWinners(limit = 24): Promise<PastWinner[]> {
     `/backend/listings/daily/winners?limit=${limit}`,
   );
   return data.winners;
+}
+
+export async function fetchAttentionAnalytics(): Promise<AttentionAnalytics> {
+  return getJson("/backend/listings/daily/analytics");
 }
 
 /**

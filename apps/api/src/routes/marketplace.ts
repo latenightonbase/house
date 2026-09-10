@@ -418,6 +418,50 @@ export const marketplaceRoutes = new Elysia()
     };
   })
   /**
+   * Public attention-market history. Clearing prices come from the highest
+   * recorded bid, falling back to the listing price for legacy settled rows.
+   */
+  .get("/listings/daily/analytics", async () => {
+    const [listings, bidders] = await Promise.all([
+      prisma.listing.findMany({
+        where: { isDaily: true, settledAt: { not: null }, winnerWallet: { not: null } },
+        orderBy: { settledAt: "asc" },
+        select: {
+          id: true,
+          price: true,
+          settledAt: true,
+          bids: {
+            orderBy: { amount: "desc" },
+            take: 1,
+            select: { amount: true },
+          },
+        },
+      }),
+      prisma.listingBid.findMany({
+        where: { listing: { isDaily: true } },
+        distinct: ["bidderWallet"],
+        select: { bidderWallet: true },
+      }),
+    ]);
+
+    const history = listings.map((listing) => ({
+      listingId: listing.id,
+      settledAt: listing.settledAt!.toISOString(),
+      clearingPrice: listing.bids[0]?.amount ?? listing.price,
+    }));
+    const totalVolume = history.reduce((sum, auction) => sum + auction.clearingPrice, 0);
+
+    return {
+      metrics: {
+        totalVolume,
+        auctionsSettled: history.length,
+        uniqueBidders: new Set(bidders.map((bidder) => bidder.bidderWallet.toLowerCase())).size,
+        averageClearingPrice: history.length ? totalVolume / history.length : 0,
+      },
+      history,
+    };
+  })
+  /**
    * Leaderboard — bidders ranked by total committed across every daily auction,
    * with their wins. Built from bid rows rather than a running tally so it stays
    * correct without a counter to keep in sync.
