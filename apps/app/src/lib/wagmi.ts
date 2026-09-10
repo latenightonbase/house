@@ -1,14 +1,24 @@
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import {
-  base as baseWallet,
-  coinbaseWallet,
-  metaMaskWallet,
-  phantomWallet,
-  rainbowWallet,
-  trustWallet,
-} from "@rainbow-me/rainbowkit/wallets";
+import { getDefaultConfig, type WalletList } from "@rainbow-me/rainbowkit";
+import * as rainbowWallets from "@rainbow-me/rainbowkit/wallets";
 import { base, baseSepolia } from "wagmi/chains";
 import { robinhood } from "@/lib/chains";
+
+type WalletFn = WalletList[number]["wallets"][number];
+
+const popularWallets = [
+  rainbowWallets.metaMaskWallet,
+  rainbowWallets.coinbaseWallet,
+  rainbowWallets.trustWallet,
+  rainbowWallets.rainbowWallet,
+  rainbowWallets.phantomWallet,
+  rainbowWallets.base,
+] as WalletFn[];
+
+const popularRefs = new Set(popularWallets);
+
+const moreWallets = Object.values(rainbowWallets).filter(
+  (wallet) => typeof wallet === "function" && !popularRefs.has(wallet as WalletFn),
+) as WalletFn[];
 
 export const config = getDefaultConfig({
   appName: "House Identity",
@@ -17,16 +27,7 @@ export const config = getDefaultConfig({
   ssr: true,
   multiInjectedProviderDiscovery: false,
   wallets: [
-    {
-      groupName: "Popular",
-      wallets: [
-        metaMaskWallet,
-        coinbaseWallet,
-        trustWallet,
-        rainbowWallet,
-        phantomWallet,
-        baseWallet,
-      ],
-    },
+    { groupName: "Popular", wallets: popularWallets },
+    { groupName: "More", wallets: moreWallets },
   ],
 });
