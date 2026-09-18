@@ -640,7 +640,10 @@ export const marketplaceRoutes = new Elysia()
   /**
    * Persists a listing after its AuctionHouse transaction has confirmed.
    * The client generates the id, writes it on-chain, then posts that same id
-   * here with the tx fields. The row is ACTIVE immediately.
+   * here with the tx fields. A SUPERADMIN's listing is ACTIVE immediately;
+   * anyone else's is PENDING_REVIEW until an admin approves it via
+   * POST /listings/:id/approve. The on-chain tx has already happened either
+   * way — approval only controls whether it's shown/sold in the marketplace.
    */
   .post(
     "/listings",
@@ -650,10 +653,7 @@ export const marketplaceRoutes = new Elysia()
         set.status = 401;
         return { error: "Not authenticated" };
       }
-      if (!isSuperadmin(user)) {
-        set.status = 403;
-        return { error: "Only SUPERADMIN can create listings" };
-      }
+      const creatorIsSuperadmin = isSuperadmin(user);
 
       const endDate = new Date(body.endDate);
       if (Number.isNaN(endDate.getTime()) || endDate.getTime() <= Date.now()) {
@@ -672,6 +672,10 @@ export const marketplaceRoutes = new Elysia()
       }
 
       const isDaily = Boolean(body.isDaily);
+      if (isDaily && !creatorIsSuperadmin) {
+        set.status = 403;
+        return { error: "The daily auction slot is set by the platform operator." };
+      }
       if (isDaily && body.pricingType !== "AUCTION") {
         set.status = 400;
         return { error: "The daily auction must be priced as an auction." };
@@ -702,7 +706,7 @@ export const marketplaceRoutes = new Elysia()
           turnaroundDays: body.turnaroundDays ?? null,
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
           endDate,
-          status: "ACTIVE",
+          status: creatorIsSuperadmin ? "ACTIVE" : "PENDING_REVIEW",
           isDaily,
           txHash: body.txHash,
           chainId: body.chainId,
@@ -746,6 +750,90 @@ export const marketplaceRoutes = new Elysia()
       }),
     },
   )
+  /**
+   * Admin approval queue — listings created by non-SUPERADMIN creators land
+   * as PENDING_REVIEW (see POST /listings above). These two endpoints move
+   * them to ACTIVE or REJECTED. The on-chain tx already happened at creation
+   * time either way; this only controls marketplace visibility.
+   */
+  .post("/listings/:id/approve", async ({ params, request, set }) => {
+    const admin = await getUserFromRequest(request);
+    if (!admin) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+    if (!isSuperadmin(admin)) {
+      set.status = 403;
+      return { error: "Only the platform operator can approve listings" };
+    }
+
+    const listing = await prisma.listing.findUnique({ where: { id: params.id } });
+    if (!listing) {
+      set.status = 404;
+      return { error: "Listing not found" };
+    }
+    if (listing.status !== "PENDING_REVIEW") {
+      set.status = 409;
+      return { error: `Listing is ${listing.status}, not PENDING_REVIEW` };
+    }
+
+    const updated = await prisma.listing.update({
+      where: { id: params.id },
+      data: { status: "ACTIVE" },
+      include: { creator: { include: creatorInclude } },
+    });
+    return { listing: serializeListing(updated) };
+  })
+  .post("/listings/:id/reject", async ({ params, request, set }) => {
+    const admin = await getUserFromRequest(request);
+    if (!admin) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+    if (!isSuperadmin(admin)) {
+      set.status = 403;
+      return { error: "Only the platform operator can reject listings" };
+    }
+
+    const listing = await prisma.listing.findUnique({ where: { id: params.id } });
+    if (!listing) {
+      set.status = 404;
+      return { error: "Listing not found" };
+    }
+    if (listing.status !== "PENDING_REVIEW") {
+      set.status = 409;
+      return { error: `Listing is ${listing.status}, not PENDING_REVIEW` };
+    }
+
+    const updated = await prisma.listing.update({
+      where: { id: params.id },
+      data: { status: "REJECTED" },
+      include: { creator: { include: creatorInclude } },
+    });
+    return { listing: serializeListing(updated) };
+  })
+  /**
+   * Admin-only view of everything awaiting review, oldest first so the
+   * queue clears in order.
+   */
+  .get("/listings/pending", async ({ request, set }) => {
+    const admin = await getUserFromRequest(request);
+    if (!admin) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+    if (!isSuperadmin(admin)) {
+      set.status = 403;
+      return { error: "Only the platform operator can view the review queue" };
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: { status: "PENDING_REVIEW" },
+      include: { creator: { include: creatorInclude } },
+      orderBy: { createdAt: "asc" },
+    });
+    return { listings: listings.map(serializeListing) };
+  })
   /** Publishes a DRAFT once its AuctionHouse transaction has confirmed. */
   .post(
     "/listings/:id/activate",

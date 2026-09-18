@@ -309,7 +309,14 @@ enum ListingCategory {
 /// or immediately, when the marketplace runs without a deployed contract.
 enum ListingStatus {
   DRAFT
+  /// Live on-chain and saved, but created by a non-SUPERADMIN creator —
+  /// awaiting admin approval before it appears in the public marketplace.
+  PENDING_REVIEW
   ACTIVE
+  /// An admin declined a PENDING_REVIEW listing. The on-chain auction/listing
+  /// still exists on the contract; this only affects whether it's shown or sold
+  /// through the marketplace UI.
+  REJECTED
   SOLD
   CANCELLED
 }
