@@ -135,6 +135,11 @@ export function serializeEarner(profile: ProfileWithStats) {
   const monthStart = startOfMonth();
   const bookingsThisMonth = profile.bookings.filter((b) => b.createdAt >= monthStart).length;
   const totalReach = profile.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0);
+  // Same per-platform pattern already used in serializeAuction for the daily-auction
+  // host - just wasn't wired up for general creator profiles until now.
+  const socials = profile.user.socials
+    .filter((s) => s.followerCount != null)
+    .map((s) => ({ platform: PLATFORM_MAP[s.platform], followers: compact(s.followerCount!) }));
 
   return {
     id: profile.id,
@@ -147,6 +152,7 @@ export function serializeEarner(profile: ProfileWithStats) {
     avatarUrl: resolvedAvatar(profile),
     verified: profile.verified,
     reach: totalReach ? compact(totalReach) : undefined,
+    socials,
     engagement:
       profile.engagementPct != null ? `${profile.engagementPct.toFixed(1)}%` : undefined,
     inventory: profile.auctions.length,
