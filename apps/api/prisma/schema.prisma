@@ -304,10 +304,13 @@ enum ListingCategory {
   OTHER
 }
 
-/// DRAFT is written before the AuctionHouse transaction is sent, so a listing
-/// id exists to pass on-chain. It only becomes ACTIVE once that tx confirms —
-/// or immediately, when the marketplace runs without a deployed contract.
+/// PENDING_REVIEW is where a seller's listing waits for an admin. Approving it
+/// moves it to DRAFT — the id exists and is cleared to go on-chain, but nobody
+/// has sent the AuctionHouse transaction yet. It becomes ACTIVE once that tx
+/// confirms. A SUPERADMIN skips review: they transact first and land on ACTIVE.
 enum ListingStatus {
+  PENDING_REVIEW
+  REJECTED
   DRAFT
   ACTIVE
   SOLD
@@ -352,6 +355,11 @@ model Listing {
   isDaily      Boolean   @default(false)
   winnerWallet String?
   settledAt    DateTime?
+
+  /// Admin review trail. Null on a SUPERADMIN's own listing, which skips review.
+  reviewedAt DateTime?
+  /// Shown to the seller — the reason a listing was turned down.
+  reviewNote String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

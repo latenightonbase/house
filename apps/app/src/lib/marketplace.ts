@@ -115,7 +115,13 @@ export interface ListingCreator {
 }
 
 export type PricingType = "FIXED" | "AUCTION";
-export type ListingStatus = "DRAFT" | "ACTIVE" | "SOLD" | "CANCELLED";
+export type ListingStatus =
+  | "PENDING_REVIEW"
+  | "REJECTED"
+  | "DRAFT"
+  | "ACTIVE"
+  | "SOLD"
+  | "CANCELLED";
 
 /**
  * A unit of media or service on sale. `price` is the asking price for a FIXED
@@ -144,10 +150,19 @@ export interface Listing {
   isDaily?: boolean;
   winnerWallet?: string;
   settledAt?: string;
+  /** Set once an admin has approved or rejected a seller's submission. */
+  reviewedAt?: string;
+  /** The admin's note — the reason shown to the seller on a rejection. */
+  reviewNote?: string;
+  createdAt?: string;
   creator: ListingCreator;
 }
 
-/** What the create form sends after the AuctionHouse transaction confirms. */
+/**
+ * What the create form sends. An admin writes the listing on-chain first and
+ * includes the tx fields; a seller submits without them and the listing waits
+ * for approval before it can go on-chain at all.
+ */
 export interface NewListingInput {
   /** Same string passed to `startAuction` / `startFixedPriceListing`. */
   id: string;
@@ -162,10 +177,10 @@ export interface NewListingInput {
   platform?: "YOUTUBE" | "TWITTER" | "INSTAGRAM" | "TIKTOK";
   turnaroundDays?: number;
   slotsAvailable?: number;
-  txHash: string;
-  chainId: number;
-  contractAddress: string;
-  tokenAddress: string;
+  txHash?: string;
+  chainId?: number;
+  contractAddress?: string;
+  tokenAddress?: string;
   tokenName?: string;
   isDaily?: boolean;
 }
@@ -326,6 +341,29 @@ export async function createListing(input: NewListingInput): Promise<Listing> {
   return data.listing;
 }
 
+/** Every listing the signed-in seller owns, in every state. */
+export async function fetchMyListings(): Promise<Listing[]> {
+  const data = await getJson<{ listings: Listing[] }>("/backend/listings/mine");
+  return data.listings;
+}
+
+/** The admin review queue — listings waiting on a decision. */
+export async function fetchPendingListings(): Promise<Listing[]> {
+  const data = await getJson<{ listings: Listing[] }>("/backend/admin/listings");
+  return data.listings;
+}
+
+/** Clears a listing to go on-chain. The seller still has to publish it. */
+export async function approveListing(id: string, note?: string): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/approve`, { note });
+  return data.listing;
+}
+
+export async function rejectListing(id: string, note?: string): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/reject`, { note });
+  return data.listing;
+}
+
 /** Publishes a draft once its AuctionHouse transaction has confirmed. */
 export async function activateListing(
   id: string,
@@ -333,7 +371,7 @@ export async function activateListing(
     txHash: string;
     chainId: number;
     contractAddress: string;
-    tokenAddress: string;
+    tokenAddress?: string;
     tokenName?: string;
   },
 ): Promise<Listing> {

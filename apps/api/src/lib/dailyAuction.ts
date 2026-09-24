@@ -1,3 +1,4 @@
+import type { ListingStatus } from "@prisma/client";
 import { prisma } from "../db";
 import { sendAuctionWon } from "./email";
 import { getWinningProject, type SerializedDailyProject } from "./dailyProject";
@@ -8,9 +9,10 @@ import {
   erc20Abi,
   feeRecipient,
   fromTokenAmount,
+  fromUsdE8,
   operatorAccount,
   publicClient,
-  toTokenAmount,
+  toUsdE8,
   walletClient,
 } from "./operator";
 
@@ -98,7 +100,7 @@ type OpenDaily = {
   tokenAddress: string | null;
   tokenName: string | null;
   txHash: string | null;
-  status: "DRAFT" | "ACTIVE" | "SOLD" | "CANCELLED" | "EXPIRED";
+  status: ListingStatus;
   endDate: Date | null;
   creatorId: string;
   bids: { bidderWallet: string; amount: number }[];
@@ -246,7 +248,7 @@ function defaultTemplate(creatorId: string): DailyTemplate {
     description: "The winning project takes the homepage billboard for a full day.",
     category: "SHOUTOUT",
     price: dailyMinBid(),
-    currency: "USDG",
+    currency: "USD",
     placement: "Homepage billboard",
     platform: null,
     turnaroundDays: 1,
@@ -324,7 +326,7 @@ async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpir
       });
       if (meta.highestBidder && meta.highestBidder.toLowerCase() !== ZERO) {
         highestBidder = meta.highestBidder.toLowerCase();
-        highestBid = fromTokenAmount(meta.highestBid);
+        highestBid = fromUsdE8(meta.highestBidUsdE8);
       }
 
       if (!alreadySettled) {
@@ -339,9 +341,10 @@ async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpir
         if (receipt.status === "reverted") {
           throw new Error("endAuction reverted");
         }
+        // The winner chose the token, so proceeds arrive in whatever they paid.
         await forwardWinningProceeds({
-          token: (expired.tokenAddress || USDG) as `0x${string}`,
-          rawBid: meta.highestBid,
+          token: (meta.highestBidToken === ZERO ? USDG : meta.highestBidToken) as `0x${string}`,
+          rawBid: meta.highestBidAmount,
         });
       }
     } catch (err) {
@@ -396,13 +399,12 @@ async function startDailyAuction(template: DailyTemplate): Promise<StartDailyRes
   const endDate = new Date(Date.now() + DAY_MS);
   const token = (template.tokenAddress || USDG) as `0x${string}`;
   const tokenName = template.tokenName || "USDG";
-  const amount = toTokenAmount(template.price);
 
   const hash = await wallet.writeContract({
     address: house,
     abi: auctionHouseAbi,
     functionName: "startAuction",
-    args: [nextId, token, tokenName, 24n, amount],
+    args: [nextId, 24n, toUsdE8(template.price)],
     account,
   });
   const receipt = await client.waitForTransactionReceipt({ hash });
@@ -418,7 +420,7 @@ async function startDailyAuction(template: DailyTemplate): Promise<StartDailyRes
       category: template.category,
       pricingType: "AUCTION",
       price: template.price,
-      currency: template.currency || "USDG",
+      currency: template.currency || "USD",
       placement: template.placement,
       platform: template.platform,
       turnaroundDays: template.turnaroundDays,

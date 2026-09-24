@@ -2,15 +2,16 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BaseError, UserRejectedRequestError, parseUnits } from "viem";
+import { BaseError, UserRejectedRequestError, formatUnits } from "viem";
 import {
   useAccount,
   usePublicClient,
+  useReadContract,
   useSwitchChain,
   useWriteContract,
 } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
-import { BadgeCheck, CheckCircle2, Gavel, Info } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Clock, Gavel, Info } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
 import { PageHeader } from "@/components/PageHeader";
@@ -23,10 +24,12 @@ import {
   Field,
   InputAddon,
   Panel,
+  Select,
   TextInput,
   Tile,
 } from "@/components/ui";
 import {
+  activateListing,
   bookListing,
   fetchListing,
   fetchListingBidders,
@@ -38,7 +41,9 @@ import {
   auctionHouseAbi,
   auctionHouseAddress,
   CHAIN_LABELS,
+  durationHoursUntil,
   paymentTokens,
+  toUsdE8,
   USDG,
 } from "@/lib/contracts/auctionHouse";
 import { erc20Abi } from "@/lib/contracts/erc20";
@@ -55,6 +60,15 @@ const STEP_LABEL: Record<Exclude<Step, "idle" | "done">, string> = {
   confirming: "Waiting for the transaction to confirm…",
   publishing: "Recording the booking…",
 };
+
+/**
+ * A floating token's rate can move between the quote and the confirmation, so
+ * the buyer approves a little headroom and the contract still charges only
+ * what the listing is worth. A pegged stable needs none.
+ */
+function withSlippage(amount: bigint, pegged: boolean) {
+  return pegged ? amount : (amount * BigInt(101)) / BigInt(100);
+}
 
 function writeError(err: unknown, fallback: string): string {
   if (err instanceof UserRejectedRequestError) {
@@ -94,6 +108,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [bidAmount, setBidAmount] = useState("");
+  const [payTokenAddress, setPayTokenAddress] = useState<string>(USDG.address);
   const [step, setStep] = useState<Step>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pendingPersist, setPendingPersist] = useState<string | null>(null);
@@ -134,17 +149,16 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
     listing && (listing.status !== "ACTIVE" || soldOut || ended),
   );
 
+  // Listings are priced in USD and the buyer picks what to settle in, so the
+  // token is chosen here rather than read off the listing.
   const tokens = paymentTokens(chainForListing);
-  const token = useMemo(() => {
-    if (!listing) return tokens[0] ?? USDG;
-    return (
-      tokens.find(
-        (t) => t.address.toLowerCase() === listing.tokenAddress?.toLowerCase(),
-      ) ??
+  const token = useMemo(
+    () =>
+      tokens.find((t) => t.address.toLowerCase() === payTokenAddress.toLowerCase()) ??
       tokens[0] ??
-      USDG
-    );
-  }, [listing, tokens]);
+      USDG,
+    [tokens, payTokenAddress],
+  );
 
   const contractAddress =
     (listing?.contractAddress as `0x${string}` | undefined) ??
@@ -156,12 +170,89 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const bidInvalid =
     isAuction && (!Number.isFinite(bidNumber) || bidNumber < (listing?.price ?? 0));
 
+  /** Approved but never published — only its owner can finish that. */
+  const awaitingPublish = listing?.status === "DRAFT";
+  const pendingReview = listing?.status === "PENDING_REVIEW";
+  const rejected = listing?.status === "REJECTED";
+
+  // What the chosen amount costs in the chosen token, at the rate the contract
+  // publishes. Shown before signing so nobody is surprised by the conversion.
+  const usdToQuote = isAuction ? bidNumber : (listing?.price ?? 0);
+  const { data: quotedAmount } = useReadContract({
+    address: contractAddress,
+    abi: auctionHouseAbi,
+    functionName: "quoteUsd",
+    args: [token.address, toUsdE8(Number.isFinite(usdToQuote) ? usdToQuote : 0)],
+    chainId: chainForListing,
+    query: {
+      enabled: Boolean(contractAddress && !token.pegged && usdToQuote > 0 && !awaitingPublish),
+    },
+  });
+
   async function persistPurchase(txHash: string, current: Listing) {
     setStep("publishing");
     const updated = await bookListing(current.id, txHash);
     setPendingPersist(null);
     setListing(updated);
     setStep("done");
+  }
+
+  /**
+   * The second half of a seller's flow: an admin has approved the listing, and
+   * this is the one transaction that puts it on the AuctionHouse and makes it
+   * buyable. Until it lands the listing is approved but invisible.
+   */
+  async function handlePublish() {
+    if (!listing || !listing.endDate) return;
+    const house = auctionHouseAddress(chainForListing);
+    if (!house) {
+      setError("AuctionHouse is not configured for this chain.");
+      return;
+    }
+    if (!address) {
+      openConnect();
+      return;
+    }
+    setError(null);
+
+    try {
+      if (!chainSupported) {
+        setStep("switching");
+        if (!switchChainAsync) {
+          throw new Error("Switch your wallet to Robinhood Chain and try again.");
+        }
+        await switchChainAsync({ chainId: chainForListing });
+      }
+      if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
+
+      setStep("signing");
+      const hours = BigInt(durationHoursUntil(new Date(listing.endDate)));
+      const args = [listing.id, hours, toUsdE8(listing.price)] as const;
+      const hash = await writeContractAsync({
+        address: house,
+        abi: auctionHouseAbi,
+        args,
+        account: address,
+        functionName:
+          listing.pricingType === "AUCTION" ? "startAuction" : "startFixedPriceListing",
+      });
+
+      setStep("confirming");
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      if (receipt.status === "reverted") throw new Error("The transaction reverted.");
+
+      setStep("publishing");
+      const updated = await activateListing(listing.id, {
+        txHash: hash,
+        chainId: chainForListing,
+        contractAddress: house,
+      });
+      setListing(updated);
+      setStep("idle");
+    } catch (err) {
+      setError(writeError(err, "Could not publish the listing."));
+      setStep("idle");
+    }
   }
 
   async function handleCheckout() {
@@ -205,10 +296,15 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
 
       if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
 
-      const amount = parseUnits(
-        String(isAuction ? bidNumber : listing.price),
-        token.decimals,
-      );
+      // The USD price is fixed; how much of the chosen token covers it is not,
+      // so ask the contract rather than converting here.
+      const amount = await publicClient.readContract({
+        address: contractAddress,
+        abi: auctionHouseAbi,
+        functionName: "quoteUsd",
+        args: [token.address, toUsdE8(isAuction ? bidNumber : listing.price)],
+      });
+      const limit = withSlippage(amount, token.pegged);
 
       const allowance = await publicClient.readContract({
         address: token.address,
@@ -217,13 +313,13 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         args: [address, contractAddress],
       });
 
-      if (allowance < amount) {
+      if (allowance < limit) {
         setStep("approving");
         const approveHash = await writeContractAsync({
           address: token.address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [contractAddress, amount],
+          args: [contractAddress, limit],
           account: address,
         });
         const approveReceipt = await publicClient.waitForTransactionReceipt({
@@ -241,14 +337,14 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             address: contractAddress,
             abi: auctionHouseAbi,
             functionName: "placeBid",
-            args: [listing.id, amount, fid],
+            args: [listing.id, token.address, amount, fid],
             account: address,
           })
         : await writeContractAsync({
             address: contractAddress,
             abi: auctionHouseAbi,
             functionName: "buyListing",
-            args: [listing.id, fid],
+            args: [listing.id, token.address, limit, fid],
             account: address,
           });
 
@@ -401,7 +497,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <p className="panel-label mb-1">{isAuction ? "Settlement" : "Slots"}</p>
             <p className="text-[14px] sm:text-[15px] font-semibold text-white truncate">
               {isAuction
-                ? `${listing.tokenName ?? listing.currency} · ${CHAIN_LABELS[chainForListing] ?? "on-chain"}`
+                ? `${tokens.map((t) => t.symbol).join("/") || "on-chain"} · ${CHAIN_LABELS[chainForListing] ?? "on-chain"}`
                 : soldOut
                   ? "Sold out"
                   : `${listing.slotsAvailable} left`}
@@ -413,7 +509,51 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           <p className="text-[13px] text-caption">{listing.placement}</p>
         )}
 
-        {isOwner ? (
+        {isOwner && awaitingPublish ? (
+          <div className="space-y-3">
+            <Tile className="border-positive/30 bg-positive/10 px-4 py-3 flex gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-positive shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-[13px] font-semibold text-white">Approved — one step left</p>
+                <p className="text-[12px] text-caption leading-relaxed">
+                  Sign the AuctionHouse transaction to put this on-chain. It goes live on the
+                  marketplace the moment the transaction confirms.
+                </p>
+                {listing.reviewNote && (
+                  <p className="text-[12px] text-caption leading-relaxed">
+                    Note from the team: {listing.reviewNote}
+                  </p>
+                )}
+              </div>
+            </Tile>
+
+            {error && (
+              <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
+                {error}
+              </Tile>
+            )}
+
+            <Button onClick={() => void handlePublish()} disabled={busy} className="w-full">
+              {busy ? STEP_LABEL[step as Exclude<Step, "idle" | "done">] : "Publish listing"}
+            </Button>
+          </div>
+        ) : isOwner && pendingReview ? (
+          <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
+            <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <p className="text-[12px] text-warning leading-relaxed">
+              Waiting on review. Nobody else can see this listing yet, and nothing has gone
+              on-chain — we&apos;ll email you as soon as it is decided.
+            </p>
+          </Tile>
+        ) : isOwner && rejected ? (
+          <Tile className="border-negative/30 bg-negative/10 px-4 py-3 space-y-1">
+            <p className="text-[13px] font-semibold text-negative">Not approved</p>
+            <p className="text-[12px] text-caption leading-relaxed">
+              {listing.reviewNote ||
+                "This listing was turned down. You can adjust it and submit a new one."}
+            </p>
+          </Tile>
+        ) : isOwner ? (
           <Tile className="px-4 py-3 text-[13px] text-caption">
             This is your listing. Buyers book it from Discover — you cannot buy your own slot.
           </Tile>
@@ -440,21 +580,52 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               <Field
                 label="Your bid"
                 htmlFor="bid"
-                hint={`Minimum $${listing.price.toLocaleString()} ${token.symbol}`}
+                hint={`Minimum $${listing.price.toLocaleString()}`}
                 error={bidInvalid ? `Bid at least $${listing.price.toLocaleString()}.` : undefined}
               >
-                <InputAddon prefix="$" suffix={token.symbol}>
+                <InputAddon prefix="$" suffix="USD">
                   <TextInput
                     id="bid"
                     type="number"
                     min={listing.price}
-                    step={1}
+                    step={0.01}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                     disabled={busy}
                     className="pl-7 pr-16"
                   />
                 </InputAddon>
+              </Field>
+            )}
+
+            {tokens.length > 1 && (
+              <Field
+                label="Pay with"
+                htmlFor="pay-token"
+                hint={
+                  token.pegged
+                    ? `$1.00 per ${token.symbol}.`
+                    : quotedAmount !== undefined
+                      ? `About ${Number(
+                          formatUnits(quotedAmount, token.decimals),
+                        ).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${
+                          token.symbol
+                        } at the current rate.`
+                      : `Converted from USD at the rate the contract publishes for ${token.symbol}.`
+                }
+              >
+                <Select
+                  id="pay-token"
+                  value={token.address}
+                  onChange={(e) => setPayTokenAddress(e.target.value)}
+                  disabled={busy}
+                >
+                  {tokens.map((t) => (
+                    <option key={t.address} value={t.address}>
+                      {t.symbol}
+                    </option>
+                  ))}
+                </Select>
               </Field>
             )}
 

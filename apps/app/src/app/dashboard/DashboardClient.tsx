@@ -3,6 +3,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import { useAccount } from "wagmi";
 import { Check, Copy } from "lucide-react";
+import { MyListings } from "@/components/MyListings";
 import { useSession } from "@/components/SessionProvider";
 import { Badge, BrandAvatar, Button, Field, ImageUploader, TextInput, Tile } from "@/components/ui";
 import {
@@ -258,6 +259,8 @@ export default function DashboardClient() {
           </div>
         </form>
       ) : null}
+
+      {status === "authenticated" ? <MyListings /> : null}
 
       <section className="space-y-3">
         <div>

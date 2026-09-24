@@ -215,6 +215,9 @@ export function serializeListing(listing: ListingWithCreator) {
     isDaily: listing.isDaily,
     winnerWallet: listing.winnerWallet ?? undefined,
     settledAt: listing.settledAt?.toISOString(),
+    reviewedAt: listing.reviewedAt?.toISOString(),
+    reviewNote: listing.reviewNote ?? undefined,
+    createdAt: listing.createdAt.toISOString(),
     creator: {
       id: listing.creator.id,
       wallet: primaryWallet(listing.creator.user),

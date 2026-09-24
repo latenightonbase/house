@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ShieldCheck } from "lucide-react";
 import { NAV_ITEMS, SITE } from "@/lib/constants";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { useSession } from "@/components/SessionProvider";
@@ -58,7 +59,21 @@ export function Sidebar() {
       </nav>
 
       <div className="px-4 py-5 shrink-0 space-y-4">
-        {isSuperadmin(user) ? <CreateListingButton size="sm" className="w-full" /> : null}
+        {isSuperadmin(user) ? (
+          <Link
+            href="/admin/listings"
+            className={cn(
+              "flex items-center gap-3 px-3.5 py-3 rounded-xl eyebrow transition-colors",
+              isNavItemActive(pathname, "/admin")
+                ? "bg-primary/20 border border-primary/40 text-white"
+                : "border border-transparent text-caption hover:text-white hover:bg-white/[0.04]",
+            )}
+          >
+            <ShieldCheck className="w-[17px] h-[17px] shrink-0" aria-hidden="true" />
+            <span className="truncate">Review Queue</span>
+          </Link>
+        ) : null}
+        <CreateListingButton size="sm" className="w-full" />
         <ConnectWalletButton className="w-full" />
         <SocialRow className="pt-1" />
       </div>

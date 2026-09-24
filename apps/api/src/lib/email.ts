@@ -98,3 +98,48 @@ export function sendListingPurchased(to: string, input: { title: string; listing
     listingUrl: listingUrl(input.listingId),
   });
 }
+
+/** Tells the admin a seller's listing is waiting in the review queue. */
+export function sendListingPendingReview(
+  to: string,
+  input: {
+    title: string;
+    seller: string;
+    category: string;
+    pricingType: string;
+    price: number;
+    description?: string | null;
+  },
+) {
+  return send(to, `Listing needs review: ${input.title}`, "listing-pending.html", {
+    title: input.title,
+    seller: input.seller,
+    category: input.category,
+    pricing: input.pricingType === "AUCTION" ? "Auction" : "Flat price",
+    price: input.price.toLocaleString(),
+    description: input.description?.trim() ?? "",
+    reviewUrl: `${appOrigin()}/admin/listings`,
+  });
+}
+
+export function sendListingApproved(
+  to: string,
+  input: { title: string; listingId: string; reviewNote?: string | null },
+) {
+  return send(to, `Approved: ${input.title}`, "listing-approved.html", {
+    title: input.title,
+    reviewNote: input.reviewNote?.trim() ?? "",
+    listingUrl: listingUrl(input.listingId),
+  });
+}
+
+export function sendListingRejected(
+  to: string,
+  input: { title: string; reviewNote?: string | null },
+) {
+  return send(to, `Not approved: ${input.title}`, "listing-rejected.html", {
+    title: input.title,
+    reviewNote: input.reviewNote?.trim() ?? "",
+    newListingUrl: `${appOrigin()}/listings/new`,
+  });
+}

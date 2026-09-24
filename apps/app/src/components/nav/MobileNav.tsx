@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Menu, ShieldCheck, X } from "lucide-react";
 import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { useSession } from "@/components/SessionProvider";
@@ -102,7 +102,17 @@ export function MobileNav() {
               })}
             </nav>
 
-            {isSuperadmin(user) ? <CreateListingButton className="w-full" /> : null}
+            {isSuperadmin(user) ? (
+              <Link
+                href="/admin/listings"
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow border border-transparent text-caption"
+              >
+                <ShieldCheck className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
+                Review Queue
+              </Link>
+            ) : null}
+
+            <CreateListingButton className="w-full" />
 
             <SocialRow />
 

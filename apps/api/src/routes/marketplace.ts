@@ -1,8 +1,14 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../db";
 import { getUserFromRequest } from "../lib/session";
-import { isSuperadmin } from "../lib/roles";
-import { sendListingPurchased, sendOutbid } from "../lib/email";
+import { adminRecipients, isSuperadmin } from "../lib/roles";
+import {
+  sendListingApproved,
+  sendListingPendingReview,
+  sendListingPurchased,
+  sendListingRejected,
+  sendOutbid,
+} from "../lib/email";
 import {
   serializeActivation,
   serializeAuction,
@@ -231,6 +237,77 @@ async function ensureCreatorProfile(userId: string) {
       trend: [],
     },
   });
+}
+
+/** How a seller is named in the review queue and the admin's email. */
+function sellerName(user: {
+  username: string | null;
+  wallets: Array<{ address: string; isPrimary: boolean }>;
+  socials: Array<{ displayName: string | null; username: string | null }>;
+}) {
+  const social = user.socials.find((s) => s.displayName || s.username);
+  const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
+  return (
+    (user.username ? `@${user.username}` : null) ||
+    social?.displayName ||
+    (social?.username ? `@${social.username}` : null) ||
+    (wallet ? shortWallet(wallet.address) : "A seller")
+  );
+}
+
+/**
+ * Loads a listing for an admin decision. Only a listing actually waiting in the
+ * queue can be approved or rejected, so a double-click cannot un-reject one.
+ */
+async function requireReviewableListing(
+  request: Request,
+  listingId: string,
+  set: { status?: number | string },
+) {
+  const user = await getUserFromRequest(request);
+  if (!isSuperadmin(user)) {
+    set.status = 403;
+    return { error: "Only an admin can review listings" } as const;
+  }
+
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: { creator: { include: creatorInclude } },
+  });
+  if (!listing) {
+    set.status = 404;
+    return { error: "Listing not found" } as const;
+  }
+  if (listing.status !== "PENDING_REVIEW") {
+    set.status = 409;
+    return { error: "This listing is not awaiting review" } as const;
+  }
+  return listing;
+}
+
+/** Emails the seller the outcome of a review, when they can receive email. */
+async function emailReviewOutcome(
+  listing: { id: string; title: string; reviewNote: string | null; creator: { userId: string } },
+  approved: boolean,
+) {
+  const seller = await prisma.user.findUnique({
+    where: { id: listing.creator.userId },
+    select: { email: true, emailVerifiedAt: true },
+  });
+  if (!seller?.email || !seller.emailVerifiedAt) return;
+
+  const send = approved
+    ? sendListingApproved(seller.email, {
+        title: listing.title,
+        listingId: listing.id,
+        reviewNote: listing.reviewNote,
+      })
+    : sendListingRejected(seller.email, {
+        title: listing.title,
+        reviewNote: listing.reviewNote,
+      });
+
+  await send.catch((err) => console.error("[email] listing review failed:", err));
 }
 
 /** Loads a listing only if the session user owns it. */
@@ -562,6 +639,26 @@ export const marketplaceRoutes = new Elysia()
     return { winners };
   })
   /**
+   * The seller's own listings, in every state — this is the only place a
+   * PENDING_REVIEW, REJECTED or approved-but-unpublished row is visible, since
+   * public reads filter to ACTIVE.
+   */
+  .get("/listings/mine", async ({ request, set }) => {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: { creator: { userId: user.id } },
+      orderBy: { createdAt: "desc" },
+      include: { creator: { include: creatorInclude } },
+    });
+
+    return { listings: listings.map(serializeListing) };
+  })
+  /**
    * The signed-in bidder's saved pitch for one auction. Returning it lets the
    * bid dialog prefill, so re-bidding after being outbid never re-asks.
    */
@@ -626,7 +723,7 @@ export const marketplaceRoutes = new Elysia()
     }
     return { bidders: await listingBidders(listing.id) };
   })
-  .get("/listings/:id", async ({ params, set }) => {
+  .get("/listings/:id", async ({ params, request, set }) => {
     const listing = await prisma.listing.findUnique({
       where: { id: params.id },
       include: { creator: { include: creatorInclude } },
@@ -635,12 +732,26 @@ export const marketplaceRoutes = new Elysia()
       set.status = 404;
       return { error: "Listing not found" };
     }
+
+    // A listing that has not cleared review was never published, so it reads as
+    // absent to everyone but its seller and an admin.
+    const unpublished = listing.status === "PENDING_REVIEW" || listing.status === "REJECTED";
+    if (unpublished) {
+      const user = await getUserFromRequest(request);
+      const maySee = user && (isSuperadmin(user) || listing.creator.userId === user.id);
+      if (!maySee) {
+        set.status = 404;
+        return { error: "Listing not found" };
+      }
+    }
+
     return { listing: serializeListing(listing) };
   })
   /**
-   * Persists a listing after its AuctionHouse transaction has confirmed.
-   * The client generates the id, writes it on-chain, then posts that same id
-   * here with the tx fields. The row is ACTIVE immediately.
+   * Creates a listing. An admin has already written it on-chain — they post the
+   * same id back with the tx fields and the row is ACTIVE immediately. Everyone
+   * else submits nothing on-chain: the row lands in PENDING_REVIEW and costs
+   * them no gas until an admin approves it.
    */
   .post(
     "/listings",
@@ -650,9 +761,11 @@ export const marketplaceRoutes = new Elysia()
         set.status = 401;
         return { error: "Not authenticated" };
       }
-      if (!isSuperadmin(user)) {
-        set.status = 403;
-        return { error: "Only SUPERADMIN can create listings" };
+      const admin = isSuperadmin(user);
+
+      if (admin && !(body.txHash && body.chainId && body.contractAddress)) {
+        set.status = 400;
+        return { error: "An admin listing must be on-chain before it is saved" };
       }
 
       const endDate = new Date(body.endDate);
@@ -672,6 +785,10 @@ export const marketplaceRoutes = new Elysia()
       }
 
       const isDaily = Boolean(body.isDaily);
+      if (isDaily && !admin) {
+        set.status = 403;
+        return { error: "Only an admin can run the daily auction" };
+      }
       if (isDaily && body.pricingType !== "AUCTION") {
         set.status = 400;
         return { error: "The daily auction must be priced as an auction." };
@@ -696,23 +813,39 @@ export const marketplaceRoutes = new Elysia()
           category: body.category,
           pricingType: body.pricingType,
           price: body.price,
-          currency: body.currency ?? "USDG",
+          currency: body.currency ?? "USD",
           placement: body.placement?.trim() || null,
           platform: body.platform ?? null,
           turnaroundDays: body.turnaroundDays ?? null,
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
           endDate,
-          status: "ACTIVE",
+          status: admin ? "ACTIVE" : "PENDING_REVIEW",
           isDaily,
-          txHash: body.txHash,
-          chainId: body.chainId,
-          contractAddress: body.contractAddress,
-          tokenAddress: body.tokenAddress,
-          tokenName: body.tokenName ?? null,
+          txHash: admin ? body.txHash : null,
+          chainId: admin ? body.chainId : null,
+          contractAddress: admin ? body.contractAddress : null,
+          tokenAddress: admin ? (body.tokenAddress ?? null) : null,
+          tokenName: admin ? (body.tokenName ?? null) : null,
           creatorId: creator.id,
         },
         include: { creator: { include: creatorInclude } },
       });
+
+      if (!admin) {
+        const recipients = await adminRecipients();
+        await Promise.all(
+          recipients.map((to) =>
+            sendListingPendingReview(to, {
+              title: listing.title,
+              seller: sellerName(user),
+              category: listing.category,
+              pricingType: listing.pricingType,
+              price: listing.price,
+              description: listing.description,
+            }).catch((err) => console.error("[email] listing-pending failed:", err)),
+          ),
+        );
+      }
 
       return { listing: serializeListing(listing) };
     },
@@ -737,25 +870,92 @@ export const marketplaceRoutes = new Elysia()
         ),
         turnaroundDays: t.Optional(t.Number()),
         slotsAvailable: t.Optional(t.Number()),
-        txHash: t.String(),
-        chainId: t.Number(),
-        contractAddress: t.String(),
-        tokenAddress: t.String(),
+        // Chain fields are absent until a listing is actually written on-chain,
+        // which for a seller only happens after an admin approves it.
+        txHash: t.Optional(t.String()),
+        chainId: t.Optional(t.Number()),
+        contractAddress: t.Optional(t.String()),
+        tokenAddress: t.Optional(t.String()),
         tokenName: t.Optional(t.String()),
         isDaily: t.Optional(t.Boolean()),
       }),
     },
   )
-  /** Publishes a DRAFT once its AuctionHouse transaction has confirmed. */
+  /** The review queue — everything waiting on an admin decision, oldest first. */
+  .get("/admin/listings", async ({ request, set }) => {
+    const user = await getUserFromRequest(request);
+    if (!isSuperadmin(user)) {
+      set.status = 403;
+      return { error: "Only an admin can review listings" };
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: { status: "PENDING_REVIEW" },
+      orderBy: { createdAt: "asc" },
+      include: { creator: { include: creatorInclude } },
+    });
+
+    return { listings: listings.map(serializeListing) };
+  })
+  /**
+   * Clears a listing to go on-chain. It is not live yet — the seller still has
+   * to sign the AuctionHouse transaction, which is what `/activate` records.
+   */
+  .post(
+    "/listings/:id/approve",
+    async ({ params, body, request, set }) => {
+      const listing = await requireReviewableListing(request, params.id, set);
+      if ("error" in listing) return listing;
+
+      const updated = await prisma.listing.update({
+        where: { id: params.id },
+        data: {
+          status: "DRAFT",
+          reviewedAt: new Date(),
+          reviewNote: body?.note?.trim() || null,
+        },
+        include: { creator: { include: creatorInclude } },
+      });
+
+      await emailReviewOutcome(updated, true);
+      return { listing: serializeListing(updated) };
+    },
+    { body: t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 600 })) })) },
+  )
+  .post(
+    "/listings/:id/reject",
+    async ({ params, body, request, set }) => {
+      const listing = await requireReviewableListing(request, params.id, set);
+      if ("error" in listing) return listing;
+
+      const updated = await prisma.listing.update({
+        where: { id: params.id },
+        data: {
+          status: "REJECTED",
+          reviewedAt: new Date(),
+          reviewNote: body?.note?.trim() || null,
+        },
+        include: { creator: { include: creatorInclude } },
+      });
+
+      await emailReviewOutcome(updated, false);
+      return { listing: serializeListing(updated) };
+    },
+    { body: t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 600 })) })) },
+  )
+  /**
+   * Publishes an approved listing once its AuctionHouse transaction confirms.
+   * The seller signs this themselves, so it is owner-gated rather than
+   * admin-gated — approval already happened.
+   */
   .post(
     "/listings/:id/activate",
     async ({ params, body, request, set }) => {
       const listing = await requireOwnedListing(request, params.id, set);
       if ("error" in listing) return listing;
-      const owner = await getUserFromRequest(request);
-      if (!isSuperadmin(owner)) {
-        set.status = 403;
-        return { error: "Only SUPERADMIN can activate listings" };
+      if (listing.status !== "DRAFT") {
+        set.status = 409;
+        return { error: "This listing is not waiting to be published" };
       }
 
       const updated = await prisma.listing.update({
@@ -765,7 +965,7 @@ export const marketplaceRoutes = new Elysia()
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
-          tokenAddress: body.tokenAddress,
+          tokenAddress: body.tokenAddress ?? null,
           tokenName: body.tokenName ?? null,
         },
         include: { creator: { include: creatorInclude } },
@@ -778,7 +978,7 @@ export const marketplaceRoutes = new Elysia()
         txHash: t.String(),
         chainId: t.Number(),
         contractAddress: t.String(),
-        tokenAddress: t.String(),
+        tokenAddress: t.Optional(t.String()),
         tokenName: t.Optional(t.String()),
       }),
     },

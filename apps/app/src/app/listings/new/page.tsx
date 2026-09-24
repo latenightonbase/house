@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { BaseError, UserRejectedRequestError, parseUnits } from "viem";
+import { BaseError, UserRejectedRequestError } from "viem";
 import {
   useAccount,
   usePublicClient,
@@ -12,7 +11,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
-import { ArrowLeft, CheckCircle2, Gavel, Info, Tag } from "lucide-react";
+import { CheckCircle2, Clock, Gavel, Info, Tag } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ListingPreview } from "@/components/ListingPreview";
 import { useSession } from "@/components/SessionProvider";
@@ -43,6 +42,7 @@ import {
   durationHoursUntil,
   MAX_ACTIVE_LISTINGS,
   paymentTokens,
+  toUsdE8,
 } from "@/lib/contracts/auctionHouse";
 import { robinhood } from "@/lib/chains";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
@@ -89,6 +89,11 @@ const STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
   publishing: "Publishing to the marketplace…",
 };
 
+const SUBMIT_STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
+  ...STEP_LABEL,
+  publishing: "Sending your listing for review…",
+};
+
 function listingWriteError(err: unknown): string {
   if (err instanceof UserRejectedRequestError) {
     return "You rejected the transaction in your wallet.";
@@ -125,7 +130,6 @@ type ListingDraft = {
   platform: string;
   turnaroundDays: string;
   slots: string;
-  tokenAddress: string;
   isDaily: boolean;
 };
 
@@ -141,7 +145,6 @@ function defaultDraft(): ListingDraft {
     platform: "",
     turnaroundDays: "",
     slots: "1",
-    tokenAddress: "",
     isDaily: false,
   };
 }
@@ -170,7 +173,6 @@ function loadDraft(userId: string): ListingDraft | null {
       turnaroundDays:
         typeof parsed.turnaroundDays === "string" ? parsed.turnaroundDays : base.turnaroundDays,
       slots: typeof parsed.slots === "string" ? parsed.slots : base.slots,
-      tokenAddress: typeof parsed.tokenAddress === "string" ? parsed.tokenAddress : base.tokenAddress,
       isDaily: parsed.isDaily === true,
     };
   } catch {
@@ -215,7 +217,6 @@ export default function NewListingPage() {
   const [platform, setPlatform] = useState<string>("");
   const [turnaroundDays, setTurnaroundDays] = useState("");
   const [slots, setSlots] = useState("1");
-  const [tokenAddress, setTokenAddress] = useState<string>("");
   const [isDaily, setIsDaily] = useState(false);
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
@@ -236,7 +237,6 @@ export default function NewListingPage() {
     setPlatform(draft.platform);
     setTurnaroundDays(draft.turnaroundDays);
     setSlots(draft.slots);
-    setTokenAddress(draft.tokenAddress);
     setIsDaily(draft.isDaily);
     if (draft.isDaily) {
       setPricingType("AUCTION");
@@ -250,24 +250,25 @@ export default function NewListingPage() {
     if (user?.id) dropDraft(user.id);
   };
 
+  const isAdmin = isSuperadmin(user);
   const contractAddress = auctionHouseAddress(LISTING_CHAIN_ID);
   const tokens = paymentTokens(LISTING_CHAIN_ID);
-  const token = tokens.find((t) => t.address === tokenAddress) ?? tokens[0];
   const chainSupported = chainId === LISTING_CHAIN_ID;
   const categoryMeta = LISTING_CATEGORIES.find((c) => c.value === category)!;
 
   // The contract refuses a fourth simultaneously open listing, so show the
-  // seller where they stand before they spend gas finding out.
+  // seller where they stand before they spend gas finding out. Only an admin
+  // transacts from this page, so only they can hit the cap here.
   const { data: activeOnchain } = useReadContract({
     address: contractAddress,
     abi: auctionHouseAbi,
     functionName: "getActiveAuctionsByOwner",
     args: address ? [address] : undefined,
     chainId: LISTING_CHAIN_ID,
-    query: { enabled: Boolean(contractAddress && address) },
+    query: { enabled: Boolean(contractAddress && address && isAdmin) },
   });
   const activeCount = activeOnchain?.length ?? 0;
-  const atListingCap = Boolean(contractAddress) && activeCount >= MAX_ACTIVE_LISTINGS;
+  const atListingCap = isAdmin && Boolean(contractAddress) && activeCount >= MAX_ACTIVE_LISTINGS;
 
   useEffect(() => {
     if (!user?.id || hydratedFor === user.id) return;
@@ -289,7 +290,6 @@ export default function NewListingPage() {
       platform,
       turnaroundDays,
       slots,
-      tokenAddress,
       isDaily,
     });
   }, [
@@ -305,7 +305,6 @@ export default function NewListingPage() {
     platform,
     turnaroundDays,
     slots,
-    tokenAddress,
     isDaily,
   ]);
 
@@ -319,7 +318,9 @@ export default function NewListingPage() {
         ? "Set a minimum bid above zero."
         : "Set a price above zero.";
     }
-    if (!Number.isInteger(priceNumber)) return "Use a whole number amount.";
+    if (Math.round(priceNumber * 100) !== priceNumber * 100) {
+      return "Use at most two decimal places.";
+    }
     if (!parsedEnd || Number.isNaN(parsedEnd.getTime()))
       return "Pick when the listing ends.";
     if (parsedEnd.getTime() <= Date.now()) return "The end time has to be in the future.";
@@ -354,7 +355,7 @@ export default function NewListingPage() {
     category,
     pricingType,
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
-    currency: token?.symbol ?? "USDG",
+    currency: "USD",
     placement: placement.trim() || undefined,
     platform: platform ? PLATFORM_TO_CARD[platform] : undefined,
     turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
@@ -389,14 +390,15 @@ export default function NewListingPage() {
         parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? parsedEnd : new Date(),
       )}h`,
     },
+    {
+      label: "Paid in",
+      value: tokens.map((t) => t.symbol).join(" or ") || "—",
+    },
   ];
 
   const busy = step !== "form" && step !== "done";
 
-  function listingPayload(
-    listingId: string,
-    hash: `0x${string}`,
-  ): NewListingInput {
+  function listingPayload(listingId: string, hash?: `0x${string}`): NewListingInput {
     return {
       id: listingId,
       title,
@@ -404,7 +406,7 @@ export default function NewListingPage() {
       category,
       pricingType,
       price: priceNumber,
-      currency: token?.symbol ?? "USDG",
+      currency: "USD",
       endDate: (isDaily
         ? new Date(Date.now() + 24 * 3_600_000)
         : parsedEnd!
@@ -413,12 +415,12 @@ export default function NewListingPage() {
       platform: (platform || undefined) as never,
       turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
       slotsAvailable: slots ? Number(slots) : 1,
-      txHash: hash,
-      chainId: LISTING_CHAIN_ID,
-      contractAddress: contractAddress!,
-      tokenAddress: token!.address,
-      tokenName: token!.symbol,
       isDaily,
+      // Only an admin transacts before saving; a seller's listing goes on-chain
+      // after approval, from the listing page.
+      ...(hash
+        ? { txHash: hash, chainId: LISTING_CHAIN_ID, contractAddress: contractAddress! }
+        : {}),
     };
   }
 
@@ -436,7 +438,21 @@ export default function NewListingPage() {
       setError(validationError);
       return;
     }
-    if (!contractAddress || !token) {
+    setError(null);
+
+    // A seller never signs here. The listing is submitted for review and only
+    // reaches the chain once an admin approves it, so a rejection costs no gas.
+    if (!isAdmin) {
+      try {
+        await persistListing(listingPayload(crypto.randomUUID()));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not submit the listing.");
+        setStep("form");
+      }
+      return;
+    }
+
+    if (!contractAddress) {
       setError("AuctionHouse is not configured for Robinhood Chain.");
       return;
     }
@@ -444,7 +460,6 @@ export default function NewListingPage() {
       openConnect();
       return;
     }
-    setError(null);
 
     if (isDaily) {
       setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
@@ -479,9 +494,8 @@ export default function NewListingPage() {
       }
 
       setStep("signing");
-      const amount = parseUnits(String(priceNumber), token.decimals);
       const hours = BigInt(isDaily ? 24 : durationHoursUntil(parsedEnd));
-      const args = [listingId, token.address, token.symbol, hours, amount] as const;
+      const args = [listingId, hours, toUsdE8(priceNumber)] as const;
       const request = {
         address: contractAddress,
         abi: auctionHouseAbi,
@@ -546,37 +560,25 @@ export default function NewListingPage() {
     );
   }
 
-  if (!isSuperadmin(user)) {
-    return (
-      <div className="space-y-4 max-w-2xl">
-        <PageHeader
-          title="Create a listing"
-          subtitle="v1 listings are created by the platform operator only."
-        />
-        <Panel>
-          <p className="text-sm text-caption">
-            This account cannot create listings or auctions. You can still buy listings and
-            bid from Discover.
-          </p>
-          <Button className="mt-3" onClick={() => router.push("/")}>
-            Back to Discover
-          </Button>
-        </Panel>
-      </div>
-    );
-  }
-
   if (step === "done" && created) {
+    const submitted = created.status === "PENDING_REVIEW";
     return (
       <div className="space-y-4 max-w-2xl">
         <Panel className="space-y-4">
           <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-6 h-6 text-positive shrink-0" />
+            {submitted ? (
+              <Clock className="w-6 h-6 text-warning shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-6 h-6 text-positive shrink-0" />
+            )}
             <div>
-              <h1 className="text-lg font-bold text-foreground">Listing is live</h1>
+              <h1 className="text-lg font-bold text-foreground">
+                {submitted ? "Sent for review" : "Listing is live"}
+              </h1>
               <p className="text-[13px] text-caption">
-                {created.title} is now on the marketplace under{" "}
-                {categoryMeta.label.toLowerCase()}.
+                {submitted
+                  ? `${created.title} is with the LNOC team. You'll get an email either way, and nothing goes on-chain until it is approved.`
+                  : `${created.title} is now on the marketplace under ${categoryMeta.label.toLowerCase()}.`}
               </p>
             </div>
           </div>
@@ -588,7 +590,9 @@ export default function NewListingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => router.push("/")}>View on Discover</Button>
+            <Button onClick={() => router.push(submitted ? "/dashboard" : "/")}>
+              {submitted ? "See your listings" : "View on Discover"}
+            </Button>
             <Button
               variant="accent-outline"
               onClick={() => {
@@ -614,7 +618,18 @@ export default function NewListingPage() {
         subtitle="Sell a piece of your media or your time. Set a flat price for instant booking, or open it to bids."
       />
 
-      {!address && (
+      {!isAdmin && (
+        <Tile className="border-line bg-surface-2 px-4 py-3 flex gap-2.5">
+          <Info className="w-4 h-4 text-primary-light shrink-0 mt-0.5" />
+          <p className="text-[12px] text-caption leading-relaxed">
+            Listings are reviewed before they go live. Submitting costs nothing and touches
+            no wallet — once the LNOC team approves it, you sign one transaction to publish
+            it. We email you either way.
+          </p>
+        </Tile>
+      )}
+
+      {isAdmin && !address && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <div className="space-y-2">
@@ -629,7 +644,7 @@ export default function NewListingPage() {
         </Tile>
       )}
 
-      {address && !chainSupported && (
+      {isAdmin && address && !chainSupported && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <p className="text-[12px] text-warning leading-relaxed">
@@ -773,42 +788,46 @@ export default function NewListingPage() {
               />
             </div>
 
-            <label className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 px-3.5 py-3 cursor-pointer">
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                checked={isDaily}
-                disabled={busy}
-                onChange={(e) => {
-                  const next = e.target.checked;
-                  setIsDaily(next);
-                  if (next) {
-                    setPricingType("AUCTION");
-                    setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
-                  }
-                }}
-              />
-              <span>
-                <span className="block text-[13px] font-semibold text-white">Daily auction</span>
-                <span className="block mt-0.5 text-[11px] text-caption leading-relaxed">
-                  24-hour auction that the operator wallet settles and recreates every day.
+            {isAdmin && (
+              <label className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 px-3.5 py-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={isDaily}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const next = e.target.checked;
+                    setIsDaily(next);
+                    if (next) {
+                      setPricingType("AUCTION");
+                      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
+                    }
+                  }}
+                />
+                <span>
+                  <span className="block text-[13px] font-semibold text-white">Daily auction</span>
+                  <span className="block mt-0.5 text-[11px] text-caption leading-relaxed">
+                    24-hour auction that the operator wallet settles and recreates every day.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+            )}
 
             <div className="grid sm:grid-cols-2 gap-4">
               <Field
                 label={pricingType === "AUCTION" ? "Minimum bid" : "Price"}
                 htmlFor="price"
-                hint={`Whole ${token?.symbol ?? "USDG"} — no decimals.`}
+                hint={`In US dollars. Buyers settle in ${
+                  tokens.map((t) => t.symbol).join(" or ") || "a supported token"
+                } at the rate the contract publishes.`}
               >
-                <InputAddon prefix="$" suffix={token?.symbol ?? "USDG"}>
+                <InputAddon prefix="$" suffix="USD">
                   <TextInput
                     id="price"
                     type="number"
-                    inputMode="numeric"
-                    min={1}
-                    step={1}
+                    inputMode="decimal"
+                    min={0.01}
+                    step={0.01}
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     placeholder="1500"
@@ -817,27 +836,6 @@ export default function NewListingPage() {
                   />
                 </InputAddon>
               </Field>
-
-              {tokens.length > 1 && (
-                <Field
-                  label="Paid in"
-                  htmlFor="token"
-                  hint="The token the contract settles in."
-                >
-                  <Select
-                    id="token"
-                    value={token?.address ?? ""}
-                    onChange={(e) => setTokenAddress(e.target.value)}
-                    disabled={busy}
-                  >
-                    {tokens.map((t) => (
-                      <option key={t.address} value={t.address}>
-                        {t.symbol}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              )}
 
               {pricingType === "FIXED" && (
                 <Field
@@ -946,31 +944,36 @@ export default function NewListingPage() {
       <Panel className="space-y-3 max-lg:shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-caption min-w-0">
-            <Badge variant="accent">On-chain</Badge>
+            <Badge variant={isAdmin ? "accent" : "neutral"}>
+              {isAdmin ? "On-chain" : "Reviewed"}
+            </Badge>
             <span>
-              Settles on {CHAIN_LABELS[LISTING_CHAIN_ID]} · {activeCount}/
-              {MAX_ACTIVE_LISTINGS} open listings used
+              {isAdmin
+                ? `Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} · ${activeCount}/${MAX_ACTIVE_LISTINGS} open listings used`
+                : `Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} once approved · no wallet needed yet`}
             </span>
           </div>
 
           <Button
             onClick={handleSubmit}
-            disabled={busy || atListingCap || Boolean(validationError) || !token}
+            disabled={busy || atListingCap || Boolean(validationError)}
             className="w-full sm:w-auto sm:min-w-[190px]"
           >
             {busy
               ? "Working…"
-              : pendingPersist
-                ? "Save to marketplace"
-                : pricingType === "AUCTION"
-                  ? "Open for bids"
-                  : "List at this price"}
+              : !isAdmin
+                ? "Submit for review"
+                : pendingPersist
+                  ? "Save to marketplace"
+                  : pricingType === "AUCTION"
+                    ? "Open for bids"
+                    : "List at this price"}
           </Button>
         </div>
 
         {busy && (
           <p className="text-[12px] text-caption">
-            {STEP_LABEL[step as keyof typeof STEP_LABEL]}
+            {(isAdmin ? STEP_LABEL : SUBMIT_STEP_LABEL)[step as keyof typeof STEP_LABEL]}
           </p>
         )}
         {!busy && validationError && (

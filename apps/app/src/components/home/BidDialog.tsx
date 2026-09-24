@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { parseUnits } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
 import { Check, Loader2, Pencil, X, Zap } from "lucide-react";
@@ -13,6 +12,7 @@ import {
   auctionHouseAbi,
   auctionHouseAddress,
   paymentTokens,
+  toUsdE8,
   USDG,
 } from "@/lib/contracts/auctionHouse";
 import { erc20Abi } from "@/lib/contracts/erc20";
@@ -84,12 +84,14 @@ export function BidDialog({
   const chainForListing = listing.chainId ?? robinhood.id;
   const publicClient = usePublicClient({ chainId: chainForListing });
   const tokens = paymentTokens(chainForListing);
+  const [payTokenAddress, setPayTokenAddress] = useState<string>(USDG.address);
+  // Bids are denominated in USD; the bidder picks which token carries them.
   const token = useMemo(
     () =>
-      tokens.find((t) => t.address.toLowerCase() === listing.tokenAddress?.toLowerCase()) ??
+      tokens.find((t) => t.address.toLowerCase() === payTokenAddress.toLowerCase()) ??
       tokens[0] ??
       USDG,
-    [tokens, listing.tokenAddress],
+    [tokens, payTokenAddress],
   );
   const contractAddress =
     (listing.contractAddress as `0x${string}` | undefined) ??
@@ -227,7 +229,20 @@ export function BidDialog({
       }
       if (!publicClient) throw new Error("Could not reach the auction's network.");
 
-      const value = parseUnits(bidNumber.toFixed(token.decimals), token.decimals);
+      // The contract converts the USD bid into token units at its published
+      // rate, so the amount to escrow comes from it rather than from here.
+      const value = await publicClient.readContract({
+        address: contractAddress,
+        abi: auctionHouseAbi,
+        functionName: "quoteUsd",
+        args: [token.address, toUsdE8(bidNumber)],
+      });
+      // A floating rate can move between the quote and the signature, so
+      // approve a little headroom; only `value` is ever pulled.
+      const allowanceNeeded = token.pegged
+        ? value
+        : (value * BigInt(101)) / BigInt(100);
+
       const allowance = await publicClient.readContract({
         address: token.address,
         abi: erc20Abi,
@@ -235,13 +250,13 @@ export function BidDialog({
         args: [address, contractAddress],
       });
 
-      if (allowance < value) {
+      if (allowance < allowanceNeeded) {
         setStep("approving");
         const approveHash = await writeContractAsync({
           address: token.address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [contractAddress, value],
+          args: [contractAddress, allowanceNeeded],
           account: address,
         });
         const approveReceipt = await publicClient.waitForTransactionReceipt({
@@ -257,7 +272,7 @@ export function BidDialog({
         address: contractAddress,
         abi: auctionHouseAbi,
         functionName: "placeBid",
-        args: [listing.id, value, user?.username ?? address],
+        args: [listing.id, token.address, value, user?.username ?? address],
         account: address,
       });
 
@@ -402,10 +417,32 @@ export function BidDialog({
                     className={cn(pitchInputClass, "pl-8 pr-20 numeric text-[16px] font-semibold")}
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-caption">
-                    {listing.tokenName || listing.currency}
+                    USD
                   </span>
                 </div>
               </Labelled>
+
+              {tokens.length > 1 && (
+                <Labelled
+                  label="Pay with"
+                  hint={token.pegged ? "$1.00 each" : "converted at the live rate"}
+                  htmlFor="bid-token"
+                >
+                  <select
+                    id="bid-token"
+                    value={token.address}
+                    onChange={(e) => setPayTokenAddress(e.target.value)}
+                    disabled={busy || !formReady}
+                    className={cn(pitchInputClass, "text-[14px]")}
+                  >
+                    {tokens.map((t) => (
+                      <option key={t.address} value={t.address}>
+                        {t.symbol}
+                      </option>
+                    ))}
+                  </select>
+                </Labelled>
+              )}
 
               {error && (
                 <p className="text-[12px] text-negative leading-relaxed" role="alert">

@@ -23,8 +23,13 @@ async function isSiweSessionValid(token: string): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect profile — requires SIWE session, not social links
-  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+  // Dashboard and the admin review queue both need a SIWE session. The admin
+  // pages check the role themselves — this only keeps signed-out traffic out.
+  if (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname.startsWith("/admin")
+  ) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
       const url = request.nextUrl.clone();
@@ -48,5 +53,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*"],
+  matcher: ["/dashboard", "/dashboard/:path*", "/admin/:path*"],
 };

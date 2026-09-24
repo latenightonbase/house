@@ -31,10 +31,8 @@ export const auctionHouseAbi = [
     stateMutability: "nonpayable",
     inputs: [
       { name: "_auctionId", type: "string" },
-      { name: "_token", type: "address" },
-      { name: "_tokenName", type: "string" },
       { name: "durationHours", type: "uint256" },
-      { name: "_minBidAmount", type: "uint256" },
+      { name: "_minBidUsdE8", type: "uint256" },
     ],
     outputs: [],
   },
@@ -47,6 +45,27 @@ export const auctionHouseAbi = [
   },
   {
     type: "function",
+    name: "setToken",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_token", type: "address" },
+      { name: "_usdPriceE8", type: "uint256" },
+      { name: "_maxAge", type: "uint64" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "setTokenUsdPrice",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_token", type: "address" },
+      { name: "_usdPriceE8", type: "uint256" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "getAuctionMeta",
     stateMutability: "view",
     inputs: [{ name: "_auctionId", type: "string" }],
@@ -55,14 +74,16 @@ export const auctionHouseAbi = [
         name: "",
         type: "tuple",
         components: [
-          { name: "caInUse", type: "address" },
-          { name: "tokenName", type: "string" },
           { name: "deadline", type: "uint256" },
           { name: "auctionId", type: "string" },
           { name: "auctionOwner", type: "address" },
-          { name: "highestBid", type: "uint256" },
+          { name: "priceUsdE8", type: "uint256" },
+          { name: "highestBidUsdE8", type: "uint256" },
           { name: "highestBidder", type: "address" },
-          { name: "minBidAmount", type: "uint256" },
+          { name: "highestBidToken", type: "address" },
+          { name: "highestBidAmount", type: "uint256" },
+          { name: "isFixedPrice", type: "bool" },
+          { name: "settled", type: "bool" },
         ],
       },
     ],
@@ -164,4 +185,15 @@ export function toTokenAmount(amount: number, decimals = 6) {
 
 export function fromTokenAmount(raw: bigint, decimals = 6) {
   return Number(raw) / 10 ** decimals;
+}
+
+/** Listings are priced in USD with 8 decimals on-chain — 1e8 is $1.00. */
+export const USD_DECIMALS = 8;
+
+export function toUsdE8(usd: number) {
+  return parseUnits(usd.toFixed(USD_DECIMALS), USD_DECIMALS);
+}
+
+export function fromUsdE8(raw: bigint) {
+  return Number(raw) / 10 ** USD_DECIMALS;
 }
