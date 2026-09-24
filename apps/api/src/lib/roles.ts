@@ -18,17 +18,17 @@ export function isSuperadmin(user: { role: Role } | null | undefined) {
 }
 
 /**
- * Who to notify when something needs an admin. Every SUPERADMIN with a verified
- * address, plus ADMIN_EMAIL — which is the escape hatch for a fresh deployment
- * where the operator has a wallet but has not verified an email yet.
+ * Who to notify when something needs a SUPERADMIN. Every SUPERADMIN with a
+ * verified address, plus SUPERADMIN_EMAIL — the escape hatch for a fresh
+ * deployment where the operator has a wallet but no verified email yet.
  */
-export async function adminRecipients(): Promise<string[]> {
+export async function superadminRecipients(): Promise<string[]> {
   const admins = await prisma.user.findMany({
     where: { role: "SUPERADMIN", email: { not: null }, emailVerifiedAt: { not: null } },
     select: { email: true },
   });
 
-  const fallback = process.env.ADMIN_EMAIL?.trim();
+  const fallback = process.env.SUPERADMIN_EMAIL?.trim();
   const all = admins.map((a) => a.email!).concat(fallback ? [fallback] : []);
   return [...new Set(all.map((email) => email.toLowerCase()))];
 }

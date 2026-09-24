@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../db";
 import { getUserFromRequest } from "../lib/session";
-import { adminRecipients, isSuperadmin } from "../lib/roles";
+import { isSuperadmin, superadminRecipients } from "../lib/roles";
 import {
   sendListingApproved,
   sendListingPendingReview,
@@ -832,7 +832,7 @@ export const marketplaceRoutes = new Elysia()
       });
 
       if (!admin) {
-        const recipients = await adminRecipients();
+        const recipients = await superadminRecipients();
         await Promise.all(
           recipients.map((to) =>
             sendListingPendingReview(to, {
