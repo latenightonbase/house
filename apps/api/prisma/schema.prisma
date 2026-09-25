@@ -43,6 +43,9 @@ model User {
   emailOtps      EmailOtp[]
   listingBids    ListingBid[]
   dailyProjects  DailyProject[]
+  purchases      Purchase[]
+  conversations  ConversationParticipant[]
+  messagesSent   Message[]
 }
 
 model EmailOtp {
@@ -345,11 +348,11 @@ model Listing {
 
   /// Chain wiring, written once the AuctionHouse tx confirms. Null while the
   /// contract is unset — the listing is then marketplace-only.
-  chainId      Int?
+  chainId         Int?
   contractAddress String?
-  tokenAddress String?
-  tokenName    String?
-  txHash       String?
+  tokenAddress    String?
+  tokenName       String?
+  txHash          String?
 
   /// One rotating 24h auction owned by SUPERADMIN. Cron settles and clones it.
   isDaily      Boolean   @default(false)
@@ -367,9 +370,11 @@ model Listing {
   creatorId String
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
-  bids     ListingBid[]
+  bids          ListingBid[]
   /// Project pitches submitted with bids on this daily auction.
-  projects DailyProject[]
+  projects      DailyProject[]
+  purchases     Purchase[]
+  conversations Conversation[]
 
   @@index([creatorId])
   @@index([status])
@@ -478,4 +483,95 @@ model CreatorToken {
 
   creatorId String         @unique
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+}
+
+/// A completed fixed-price purchase, tying a listing to the User who bought it.
+/// `Booking` stays what it always was — the creator-facing "recent bookings"
+/// display feed, which stores a rendered name rather than an identity. This is
+/// the queryable record behind "things I bought" and the contact affordance.
+model Purchase {
+  id          String   @id @default(cuid())
+  amount      Float
+  currency    String   @default("USDC")
+  /// Lowercased buyer wallet at time of purchase — the account can relink later.
+  buyerWallet String
+  txHash      String?
+  createdAt   DateTime @default(now())
+
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  buyerUserId String
+  buyer       User   @relation(fields: [buyerUserId], references: [id], onDelete: Cascade)
+
+  @@index([buyerUserId])
+  @@index([listingId])
+  @@index([createdAt])
+}
+
+enum MessageKind {
+  TEXT
+  IMAGE
+  FILE
+}
+
+/// A 1:1 direct message thread. One thread per pair of users for all time —
+/// `pairKey` is the two user ids sorted and joined, which makes "open a chat
+/// with this person" idempotent no matter which listing it was started from.
+/// `listingId` only records the context the thread began in.
+model Conversation {
+  id            String    @id @default(cuid())
+  /// `${minUserId}:${maxUserId}` — enforces one thread per pair.
+  pairKey       String    @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  /// Denormalised so the conversation list sorts without touching messages.
+  lastMessageAt DateTime?
+
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([lastMessageAt])
+}
+
+model ConversationParticipant {
+  id         String    @id @default(cuid())
+  /// Everything before this is read; drives the unread badge.
+  lastReadAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String      @id @default(cuid())
+  kind           MessageKind @default(TEXT)
+  /// The text body, or the caption on an attachment. Null for a bare file.
+  body           String?
+  /// S3 object key — never a public URL. Reads go through a presigned GET that
+  /// the API only issues to a participant, so a DM'd file stays private.
+  attachmentKey  String?
+  attachmentName String?
+  attachmentMime String?
+  attachmentSize Int?
+  createdAt      DateTime    @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
 }

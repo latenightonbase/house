@@ -1047,6 +1047,20 @@ export const marketplaceRoutes = new Elysia()
         },
       });
 
+      // Booking is the creator's display feed and stores a rendered name. The
+      // Purchase row is the identity-bearing record: it is what lets the buyer
+      // find this in their own history and message the seller about it.
+      await prisma.purchase.create({
+        data: {
+          listingId: listing.id,
+          buyerUserId: user.id,
+          buyerWallet: (wallet?.address ?? "").toLowerCase(),
+          amount: listing.price,
+          currency: listing.currency,
+          txHash: body.txHash,
+        },
+      });
+
       if (user.email && user.emailVerifiedAt) {
         await sendListingPurchased(user.email, {
           title: listing.title,

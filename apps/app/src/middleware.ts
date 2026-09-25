@@ -23,11 +23,17 @@ async function isSiweSessionValid(token: string): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Dashboard and the admin review queue both need a SIWE session. The admin
-  // pages check the role themselves — this only keeps signed-out traffic out.
+  // Dashboard, the private profile, messages, and the admin review queue all
+  // need a SIWE session. The admin pages check the role themselves — this only
+  // keeps signed-out traffic out. The public profile at /user/[userid] is
+  // deliberately absent: anyone may read it.
   if (
     pathname === "/dashboard" ||
     pathname.startsWith("/dashboard/") ||
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/") ||
+    pathname === "/chat" ||
+    pathname.startsWith("/chat/") ||
     pathname.startsWith("/admin")
   ) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
@@ -53,5 +59,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard", "/dashboard/:path*", "/admin/:path*"],
+  matcher: [
+    "/dashboard",
+    "/dashboard/:path*",
+    "/profile",
+    "/profile/:path*",
+    "/chat",
+    "/chat/:path*",
+    "/admin/:path*",
+  ],
 };

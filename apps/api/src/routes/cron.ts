@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { settleAndRolloverDailyAuction } from "../lib/dailyAuction";
+import { settleExpiredAuctions } from "../lib/auctionSettlement";
 
 function cronAuthorized(request: Request) {
   const expected = process.env.CRON_SECRET?.trim();
@@ -22,11 +23,19 @@ async function runDailyAuctionCron({
 
   try {
     const result = await settleAndRolloverDailyAuction();
+    // Ordinary seller auctions settle on the same tick. Their failures are
+    // reported rather than thrown: one stuck auction must not stop the daily
+    // rollover, which is time-critical.
+    const auctions = await settleExpiredAuctions().catch((err) => {
+      console.error("[cron] auction sweep failed:", err);
+      return null;
+    });
+
     if ("ok" in result && result.ok === false) {
       set.status = 500;
-      return { error: result.error, result };
+      return { error: result.error, result, auctions };
     }
-    return { ok: true, result };
+    return { ok: true, result, auctions };
   } catch (err) {
     set.status = 500;
     return { error: err instanceof Error ? err.message : "Rollover failed" };

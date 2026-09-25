@@ -14,6 +14,7 @@ import { SocialRow } from "./SocialRow";
 import { Wordmark } from "./Wordmark";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { isNavItemActive } from "./Sidebar";
+import { AccountNav } from "./AccountNav";
 
 /**
  * Phone header plus a full-height drawer. The six sections do not fit a bottom
@@ -100,6 +101,10 @@ export function MobileNav() {
                   </Link>
                 );
               })}
+            </nav>
+
+            <nav className="space-y-1.5">
+              <AccountNav variant="mobile" />
             </nav>
 
             {isSuperadmin(user) ? (

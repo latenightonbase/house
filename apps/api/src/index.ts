@@ -5,7 +5,10 @@ import { socialRoutes } from "./routes/socials";
 import { marketplaceRoutes } from "./routes/marketplace";
 import { cronRoutes } from "./routes/cron";
 import { uploadRoutes } from "./routes/uploads";
+import { chatRoutes } from "./routes/chat";
+import { profileRoutes } from "./routes/profile";
 import { startDailyAuctionTicker } from "./lib/dailyAuction";
+import { websocket } from "elysia/ws";
 import { getAllowedOrigins } from "./lib/origins";
 
 const PORT = Number(process.env.PORT || 3001);
@@ -34,12 +37,23 @@ const app = new Elysia()
   .use(socialRoutes)
   .use(marketplaceRoutes)
   .use(cronRoutes)
-  .use(uploadRoutes);
+  .use(uploadRoutes)
+  .use(profileRoutes)
+  .use(chatRoutes);
 
-Bun.serve({
+/**
+ * `websocket` and the `app.server` assignment are both required for `.ws()` to
+ * work. This server is started by hand rather than with `app.listen()`, and
+ * Elysia's ws route upgrades through `app.server.upgrade(...)` — without the
+ * handler here and the back-reference below, every upgrade fails.
+ */
+const server = Bun.serve({
   port: PORT,
   fetch: (request) => app.fetch(stripBackendPrefix(request)),
+  websocket,
 });
+
+app.server = server;
 
 startDailyAuctionTicker();
 

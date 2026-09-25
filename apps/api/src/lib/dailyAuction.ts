@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { sendAuctionWon } from "./email";
 import { getWinningProject, type SerializedDailyProject } from "./dailyProject";
 import { superadminWallet } from "./roles";
+import { settleExpiredAuctions } from "./auctionSettlement";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
@@ -614,11 +615,19 @@ async function runDailyCycle(): Promise<DailyAuctionCycleResult> {
   }
 }
 
+/**
+ * Runs the daily rollover and the ordinary-auction sweep every minute. The two
+ * are independent: a seller's auction expiring must not wait on the daily
+ * cycle, and a failure in either one must not stop the other.
+ */
 export function startDailyAuctionTicker() {
   const ms = 60_000;
   const tick = () => {
     void settleAndRolloverDailyAuction().catch((err) => {
       console.error("[daily-auction] ticker error:", err);
+    });
+    void settleExpiredAuctions().catch((err) => {
+      console.error("[auction-settle] ticker error:", err);
     });
   };
   tick();

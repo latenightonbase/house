@@ -12,6 +12,7 @@ import { NavIcon } from "./navIcons";
 import { SocialRow } from "./SocialRow";
 import { Wordmark } from "./Wordmark";
 import { ConnectWalletButton } from "./ConnectWalletButton";
+import { AccountNav } from "./AccountNav";
 
 export function isNavItemActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -59,6 +60,9 @@ export function Sidebar() {
       </nav>
 
       <div className="px-4 py-5 shrink-0 space-y-4">
+        <div className="space-y-1">
+          <AccountNav />
+        </div>
         {isSuperadmin(user) ? (
           <Link
             href="/admin/listings"
