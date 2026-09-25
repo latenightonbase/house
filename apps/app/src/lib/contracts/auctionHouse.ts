@@ -86,7 +86,7 @@ function normalize(value: string | undefined): `0x${string}` | undefined {
 // spelled out here rather than looked up dynamically.
 const FALLBACK_ADDRESS = normalize(process.env.NEXT_PUBLIC_AUCTION_HOUSE_ADDRESS);
 
-const DEPLOYED_ROBINHOOD = "0xFfFABB522bB1Ff6F15F505a99c542f57e9378037" as const;
+const DEPLOYED_ROBINHOOD = "0xf976Ca98bA8D2B70E8698e09814a663deABE6359" as const;
 
 const ADDRESSES: Record<number, `0x${string}` | undefined> = {
   [robinhood.id]:

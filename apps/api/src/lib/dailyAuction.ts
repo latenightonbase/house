@@ -4,6 +4,7 @@ import { sendAuctionWon } from "./email";
 import { getWinningProject, type SerializedDailyProject } from "./dailyProject";
 import { superadminWallet } from "./roles";
 import { settleExpiredAuctions } from "./auctionSettlement";
+import { keeperEnabled, logKeeperOutcome, runLnocPriceKeeper } from "./pricing/keeper";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
@@ -629,6 +630,13 @@ export function startDailyAuctionTicker() {
     void settleExpiredAuctions().catch((err) => {
       console.error("[auction-settle] ticker error:", err);
     });
+    // The keeper rate-limits itself, so riding the minute ticker costs nothing
+    // when its own interval has not elapsed. Off unless LNOC_PRICE_KEEPER is set.
+    if (keeperEnabled()) {
+      void runLnocPriceKeeper()
+        .then(logKeeperOutcome)
+        .catch((err) => console.error("[lnoc-keeper] ticker error:", err));
+    }
   };
   tick();
   return setInterval(tick, ms);

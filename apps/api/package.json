@@ -12,7 +12,8 @@
     "db:push": "prisma db push",
     "db:seed": "bun run prisma/seed.ts",
     "cron:daily-auction": "bun src/scripts/runDailyAuctionCron.ts",
-    "chain:set-fee-recipient": "bun src/scripts/setFeeRecipient.ts"
+    "chain:set-fee-recipient": "bun src/scripts/setFeeRecipient.ts",
+    "price:lnoc": "bun src/scripts/lnocPrice.ts"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"
