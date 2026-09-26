@@ -20,6 +20,7 @@ import {
 } from "../lib/marketplace";
 import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dailyProject";
 import { buildShowcase } from "../lib/dailyAuction";
+import { verifyFixedPriceSale } from "../lib/listingSale";
 
 const CATEGORIES = [
   "SHOUTOUT",
@@ -1035,6 +1036,13 @@ export const marketplaceRoutes = new Elysia()
         return { error: "Auction listings settle by bid, not instant book" };
       }
 
+      // The chain is the proof of payment, not the hash the client sends.
+      const sale = await verifyFixedPriceSale(listing, user.wallets);
+      if (!sale.ok) {
+        set.status = sale.status;
+        return { error: sale.error };
+      }
+
       const slotsLeft = Math.max(0, listing.slotsAvailable - 1);
       const updated = await prisma.listing.update({
         where: { id: listing.id },
@@ -1071,10 +1079,10 @@ export const marketplaceRoutes = new Elysia()
         data: {
           listingId: listing.id,
           buyerUserId: user.id,
-          buyerWallet: (wallet?.address ?? "").toLowerCase(),
+          buyerWallet: sale.buyer,
           amount: listing.price,
           currency: listing.currency,
-          txHash: body.txHash,
+          txHash: body.txHash ?? null,
         },
       });
 
@@ -1086,11 +1094,13 @@ export const marketplaceRoutes = new Elysia()
         }).catch((err) => console.error("[email] listing-purchased failed:", err));
       }
 
-      return { listing: serializeListing(updated), txHash: body.txHash };
+      return { listing: serializeListing(updated), txHash: body.txHash ?? null };
     },
     {
+      // Optional: the chain proves the sale, so a purchase whose session died
+      // before it could report the hash can still be recorded afterwards.
       body: t.Object({
-        txHash: t.String(),
+        txHash: t.Optional(t.String()),
       }),
     },
   )

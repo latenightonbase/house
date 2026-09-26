@@ -393,9 +393,16 @@ export async function cancelListing(id: string): Promise<void> {
   await postJson(`/backend/listings/${id}/cancel`, {});
 }
 
-/** Persists a fixed-price purchase after `buyListing` confirms on-chain. */
-export async function bookListing(id: string, txHash: string): Promise<Listing> {
-  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/book`, { txHash });
+/**
+ * Persists a fixed-price purchase after `buyListing` confirms on-chain. The API
+ * re-reads the sale from the contract, so `txHash` is a reference rather than
+ * the proof — a purchase recovered after the fact can be recorded without one.
+ */
+export async function bookListing(id: string, txHash?: string | null): Promise<Listing> {
+  const data = await postJson<{ listing: Listing }>(
+    `/backend/listings/${id}/book`,
+    txHash ? { txHash } : {},
+  );
   return data.listing;
 }
 

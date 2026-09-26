@@ -189,7 +189,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
     },
   });
 
-  async function persistPurchase(txHash: string, current: Listing) {
+  async function persistPurchase(txHash: string | null, current: Listing) {
     setStep("publishing");
     const updated = await bookListing(current.id, txHash);
     setPendingPersist(null);
@@ -295,6 +295,34 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
       }
 
       if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
+
+      // The contract is the authority on whether this is still for sale, and it
+      // can disagree with the marketplace: a purchase that settled on-chain but
+      // never reached the API — what a dropped session leaves behind — keeps the
+      // listing looking live here while `buyListing` reverts with "Already
+      // sold". Ask first, so nobody pays gas to be told no.
+      const meta = await publicClient.readContract({
+        address: contractAddress,
+        abi: auctionHouseAbi,
+        functionName: "getAuctionMeta",
+        args: [listing.id],
+      });
+      if (meta.settled) {
+        const isBuyer = meta.highestBidder.toLowerCase() === address.toLowerCase();
+        if (!isAuction && isBuyer) {
+          // Already paid for by this wallet, just never recorded — a session
+          // that died between the transaction and the callback leaves exactly
+          // this. Finish the half that is missing instead of sending a second
+          // transaction the contract would reject.
+          await persistPurchase(null, listing);
+          return;
+        }
+        throw new Error(
+          isAuction
+            ? "This auction has already been settled on-chain."
+            : "This listing has already sold on-chain.",
+        );
+      }
 
       // The USD price is fixed; how much of the chosen token covers it is not,
       // so ask the contract rather than converting here.
