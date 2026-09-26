@@ -92,12 +92,26 @@ export default function HomeClient({
   }, []);
 
   useEffect(() => {
+    // The page ships a cached snapshot, so the first refresh happens on mount
+    // rather than a whole interval later. Without it a listing that sold since
+    // the last revalidation stayed on the home page for up to REFRESH_MS — long
+    // enough for someone to click through to a listing that is already gone.
+    void load();
+
     const id = setInterval(() => {
       if (!document.hidden) void load();
     }, REFRESH_MS);
 
+    // The interval deliberately skips while the tab is hidden, which leaves a
+    // returning tab up to an interval behind. Catch it up on the way back.
+    const onVisibility = () => {
+      if (!document.hidden) void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load]);
 

@@ -96,6 +96,7 @@ export function SalesHistory({
                   >
                     <Avatar
                       src={party.avatarUrl}
+                      fallbackSeed={party.wallet ?? party.userId ?? party.name}
                       fallback={party.name.slice(0, 2).toUpperCase()}
                       size={28}
                     />

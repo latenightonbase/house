@@ -50,9 +50,16 @@ const dailyProjectBody = t.Object({
   youtubeUrl: t.Optional(t.Union([t.String({ maxLength: 300 }), t.Null()])),
 });
 
-/** Live inventory: published, still has slots, and not past its end date. */
+/**
+ * Live inventory: published, still has slots, and not past its end date.
+ *
+ * The slot check is belt and braces — booking already flips a listing to SOLD
+ * as its last slot goes — but "sold out" and "still listed" must never be able
+ * to describe the same row, whatever else edits `slotsAvailable`.
+ */
 const liveListingWhere = () => ({
   status: "ACTIVE" as const,
+  slotsAvailable: { gt: 0 },
   OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
 });
 

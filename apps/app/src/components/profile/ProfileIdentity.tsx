@@ -18,6 +18,7 @@ export function ProfileIdentity({
     <div className="flex items-start gap-4 flex-wrap">
       <Avatar
         src={profile.avatarUrl}
+        fallbackSeed={profile.wallet ?? profile.name}
         fallback={profile.name.slice(0, 2).toUpperCase()}
         size={64}
         className="shrink-0"

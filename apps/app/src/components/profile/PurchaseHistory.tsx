@@ -85,6 +85,9 @@ export function PurchaseHistory({
               <div className="mt-3 flex items-center gap-3 border-t border-line pt-3">
                 <Avatar
                   src={purchase.seller.avatarUrl}
+                  fallbackSeed={
+                    purchase.seller.wallet ?? purchase.seller.userId ?? purchase.seller.name
+                  }
                   fallback={purchase.seller.name.slice(0, 2).toUpperCase()}
                   size={28}
                 />

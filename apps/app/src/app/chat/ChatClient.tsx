@@ -258,6 +258,11 @@ export default function ChatClient() {
                 </button>
                 <Avatar
                   src={activeConversation.counterparty.avatarUrl}
+                  fallbackSeed={
+                    activeConversation.counterparty.wallet ??
+                    activeConversation.counterparty.userId ??
+                    activeConversation.counterparty.name
+                  }
                   fallback={activeConversation.counterparty.name.slice(0, 2).toUpperCase()}
                   size={34}
                 />

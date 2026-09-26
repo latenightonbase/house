@@ -56,6 +56,7 @@ export function ConversationList({
               <span className="relative shrink-0">
                 <Avatar
                   src={counterparty.avatarUrl}
+                  fallbackSeed={counterparty.wallet ?? counterparty.userId ?? counterparty.name}
                   fallback={counterparty.name.slice(0, 2).toUpperCase()}
                   size={38}
                 />
