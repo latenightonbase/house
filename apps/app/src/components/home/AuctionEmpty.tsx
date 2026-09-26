@@ -3,14 +3,14 @@ import { Gavel } from "lucide-react";
 /** No daily auction is live — the operator has not opened the next one yet. */
 export function AuctionEmpty() {
   return (
-    <section className="panel-glow p-8 sm:p-12 text-center">
-      <span className="inline-flex items-center justify-center w-12 h-12 rounded-xl border border-primary/30 bg-primary/10">
-        <Gavel className="w-5 h-5 text-primary-light" aria-hidden="true" />
+    <section className="panel-glow flex min-h-[15rem] flex-col items-center justify-center p-6 text-center sm:p-8">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+        <Gavel className="h-5 w-5 text-primary-light" aria-hidden="true" />
       </span>
-      <h2 className="mt-5 display text-[clamp(1.5rem,4vw,2.25rem)] uppercase text-white">
+      <h2 className="mt-4 display text-[clamp(1.25rem,3.4vw,1.75rem)] uppercase text-white">
         No auction live right now
       </h2>
-      <p className="mt-3 text-[14px] text-caption max-w-md mx-auto leading-relaxed">
+      <p className="mx-auto mt-3 max-w-xs text-[13px] leading-relaxed text-caption">
         The next 24-hour attention auction opens as soon as the current billboard run ends. Follow
         along and be ready to bid.
       </p>

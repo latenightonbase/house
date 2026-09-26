@@ -56,13 +56,16 @@ export interface PastWinner extends DailyProject {
   settledAt: string | null;
 }
 
+/** The market's settled totals — what the home page's stat strip reports. */
+export interface AttentionMetrics {
+  totalVolume: number;
+  auctionsSettled: number;
+  uniqueBidders: number;
+  averageClearingPrice: number;
+}
+
 export interface AttentionAnalytics {
-  metrics: {
-    totalVolume: number;
-    auctionsSettled: number;
-    uniqueBidders: number;
-    averageClearingPrice: number;
-  };
+  metrics: AttentionMetrics;
   history: Array<{
     listingId: string;
     settledAt: string;

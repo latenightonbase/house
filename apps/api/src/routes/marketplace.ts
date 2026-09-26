@@ -428,6 +428,12 @@ export const marketplaceRoutes = new Elysia()
       token: token ? serializeCreatorToken(token) : null,
     };
   })
+  /**
+   * Seller inventory. The rotating daily auction is excluded on purpose — it has
+   * `/listings/daily` and the home page's own hero, and leaving it in the feed
+   * would show the same lot twice. Each row carries its live bid state so an
+   * auction card can say what it actually stands at rather than its reserve.
+   */
   .get("/listings", async ({ query }) => {
     const limit = query.limit ? Number(query.limit) : 30;
     const platform = typeof query.platform === "string" ? query.platform : undefined;
@@ -437,6 +443,7 @@ export const marketplaceRoutes = new Elysia()
     const listings = await prisma.listing.findMany({
       where: {
         ...liveListingWhere(),
+        isDaily: false,
         ...(platform && platform !== "all"
           ? { platform: platform.toUpperCase() as never }
           : {}),
@@ -449,10 +456,20 @@ export const marketplaceRoutes = new Elysia()
       },
       orderBy: { createdAt: "desc" },
       take: limit,
-      include: { creator: { include: creatorInclude } },
+      include: {
+        creator: { include: creatorInclude },
+        bids: { orderBy: { amount: "desc" }, take: 1, select: { amount: true } },
+        _count: { select: { bids: true } },
+      },
     });
 
-    return { listings: listings.map(serializeListing) };
+    return {
+      listings: listings.map((listing) => ({
+        ...serializeListing(listing),
+        bidCount: listing._count.bids,
+        highestBid: listing.bids[0]?.amount,
+      })),
+    };
   })
   /**
    * Tomorrow's auction — the one live daily listing, with the live bid state

@@ -1,10 +1,12 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export interface TabItem<T extends string = string> {
   value: T;
-  label: string;
+  /** Plain text in most cases; a node when a tab carries a count or glyph. */
+  label: ReactNode;
 }
 
 interface TabsProps<T extends string> {

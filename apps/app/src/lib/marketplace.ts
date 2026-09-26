@@ -156,6 +156,12 @@ export interface Listing {
   reviewNote?: string;
   createdAt?: string;
   creator: ListingCreator;
+  /**
+   * Live bid state, present on the public feed only. An AUCTION with bids shows
+   * `highestBid` as its current price; without them `price` is still the reserve.
+   */
+  bidCount?: number;
+  highestBid?: number;
 }
 
 /**
