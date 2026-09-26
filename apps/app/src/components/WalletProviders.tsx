@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
+import { getAccount } from "wagmi/actions";
 import {
   RainbowKitAuthenticationProvider,
   RainbowKitProvider,
@@ -12,6 +13,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 
 import { config } from "@/lib/wagmi";
 import { authenticationAdapter } from "@/lib/auth-adapter";
+import { shouldRevokeSession } from "@/lib/wallet-session";
 import { useSession } from "@/components/SessionProvider";
 import {
   useBindConnectModal,
@@ -44,24 +46,44 @@ function BindWalletChrome() {
 }
 
 function RainbowKitAuthBridge({ children }: { children: ReactNode }) {
-  const { status, refresh, setUnauthenticated } = useSession();
+  const { status, user, refresh, setUnauthenticated } = useSession();
+
+  /**
+   * RainbowKit calls `signOut` from connector events, long after the render it
+   * was built in — so the session is read through a ref rather than closed over.
+   */
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const adapter = useMemo(
+    () => ({
+      ...authenticationAdapter,
+      verify: async (args: Parameters<typeof authenticationAdapter.verify>[0]) => {
+        const ok = await authenticationAdapter.verify(args);
+        if (ok) await refresh();
+        return ok;
+      },
+      /**
+       * `POST /auth/logout` deletes the session row outright, so a sign-out
+       * fired by a wallet re-announcing the account already signed in is not a
+       * cosmetic glitch — it strands whatever transaction is in flight. See
+       * `shouldRevokeSession` for which of RainbowKit's triggers are real.
+       */
+      signOut: async () => {
+        const revoke = await shouldRevokeSession({
+          user: userRef.current,
+          readAddress: () => getAccount(config).address,
+        });
+        if (!revoke) return;
+        await authenticationAdapter.signOut();
+        setUnauthenticated();
+      },
+    }),
+    [refresh, setUnauthenticated],
+  );
 
   return (
-    <RainbowKitAuthenticationProvider
-      adapter={{
-        ...authenticationAdapter,
-        verify: async (args) => {
-          const ok = await authenticationAdapter.verify(args);
-          if (ok) await refresh();
-          return ok;
-        },
-        signOut: async () => {
-          await authenticationAdapter.signOut();
-          setUnauthenticated();
-        },
-      }}
-      status={status}
-    >
+    <RainbowKitAuthenticationProvider adapter={adapter} status={status}>
       <RainbowKitProvider
         theme={darkTheme({
           accentColor: "#2f6bff",
