@@ -102,12 +102,16 @@ export async function fetchUserProfile(handle: string): Promise<ProfileOverview 
   return (await res.json()) as ProfileOverview;
 }
 
+/** Every payment token here is dollar-pegged, so they all read as dollars. */
+const DOLLAR_PEGGED = new Set(["USD", "USDC", "USDG", "USDT"]);
+
 export function formatAmount(amount: number, currency = "USDC") {
-  const formatted =
-    amount >= 1000
-      ? amount.toLocaleString(undefined, { maximumFractionDigits: 0 })
-      : amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return `${formatted} ${currency}`;
+  const formatted = amount.toLocaleString(undefined, {
+    maximumFractionDigits: amount >= 1000 ? 0 : amount < 1 ? 4 : 2,
+  });
+  return DOLLAR_PEGGED.has(currency.toUpperCase())
+    ? `$${formatted}`
+    : `${formatted} ${currency}`;
 }
 
 export function formatDate(iso: string) {

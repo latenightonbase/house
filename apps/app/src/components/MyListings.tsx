@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Tile } from "@/components/ui";
+import { CreateListingButton } from "@/components/CreateListingButton";
 import { fetchMyListings, type Listing, type ListingStatus } from "@/lib/marketplace";
 import { relativeEndLabel } from "@/lib/utils";
 import type { BadgeVariant } from "@/components/ui";
@@ -30,7 +31,15 @@ const STATUS_COPY: Record<ListingStatus, { label: string; variant: BadgeVariant;
 };
 
 /** The seller's own listings in every state — the only place review status shows. */
-export function MyListings() {
+export function MyListings({
+  /**
+   * Drops the section's own heading, for callers that already label it — the
+   * profile page renders this inside a panel with a "Listings" tab on it.
+   */
+  bare = false,
+}: {
+  bare?: boolean;
+} = {}) {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -40,16 +49,21 @@ export function MyListings() {
       .catch(() => setFailed(true));
   }, []);
 
-  if (failed || listings?.length === 0) return null;
+  // A caller that labels this section still has to say something when there is
+  // nothing in it; one that does not can simply leave the block out.
+  if (failed) return bare ? <MyListingsEmpty failed /> : null;
+  if (listings?.length === 0) return bare ? <MyListingsEmpty /> : null;
 
   return (
     <section className="space-y-3">
-      <div>
-        <h2 className="text-[15px] font-bold text-foreground">Your listings</h2>
-        <p className="text-[12px] text-caption mt-0.5">
-          Everything you have submitted, and where each one stands.
-        </p>
-      </div>
+      {!bare && (
+        <div>
+          <h2 className="text-[15px] font-bold text-foreground">Your listings</h2>
+          <p className="text-[12px] text-caption mt-0.5">
+            Everything you have submitted, and where each one stands.
+          </p>
+        </div>
+      )}
 
       {listings === null ? (
         <div className="card h-24 animate-pulse bg-white/[0.03]" />
@@ -81,5 +95,22 @@ export function MyListings() {
         </div>
       )}
     </section>
+  );
+}
+
+function MyListingsEmpty({ failed = false }: { failed?: boolean }) {
+  return (
+    <div className="rounded-xl border border-dashed border-line px-5 py-10 text-center">
+      <p className="mx-auto max-w-sm text-[13px] leading-relaxed text-caption">
+        {failed
+          ? "Could not load your listings just now. Refresh to try again."
+          : "You have not submitted a listing yet. Anything you list shows up here with its review status."}
+      </p>
+      {!failed && (
+        <div className="mt-4 flex justify-center">
+          <CreateListingButton variant="accent-outline" size="sm" />
+        </div>
+      )}
+    </div>
   );
 }

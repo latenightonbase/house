@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageShell, Section } from "@/components/PageShell";
+import { UserX } from "lucide-react";
 import { Tabs, type TabItem } from "@/components/ui";
-import { ProfileIdentity } from "@/components/profile/ProfileIdentity";
+import { ProfileHero, ProfileHeroSkeleton } from "@/components/profile/ProfileHero";
+import { ProfileStats } from "@/components/profile/ProfileStats";
 import { SalesHistory } from "@/components/profile/SalesHistory";
 import { PurchaseHistory } from "@/components/profile/PurchaseHistory";
 import { ContactButton } from "@/components/profile/ContactButton";
@@ -13,8 +14,8 @@ import { fetchUserProfile, type ProfileOverview } from "@/lib/profileHistory";
 type Tab = "sales" | "purchases";
 
 const TABS: TabItem<Tab>[] = [
-  { value: "sales", label: "Sold & winners" },
-  { value: "purchases", label: "Bought & won" },
+  { value: "sales", label: "Sold" },
+  { value: "purchases", label: "Bought" },
 ];
 
 /**
@@ -55,9 +56,17 @@ export default function UserProfileClient({ handle }: { handle: string }) {
 
   if (state === "missing") {
     return (
-      <PageShell eyebrow="Profile" title="Not found" intro="No account matches that handle.">
-        <div />
-      </PageShell>
+      <div className="panel-glow flex min-h-[18rem] flex-col items-center justify-center p-8 text-center">
+        <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+          <UserX className="h-5 w-5 text-primary-light" aria-hidden="true" />
+        </span>
+        <h1 className="mt-4 display text-[clamp(1.25rem,3.4vw,1.75rem)] uppercase text-white">
+          No such account
+        </h1>
+        <p className="mx-auto mt-3 max-w-xs text-[13px] leading-relaxed text-caption">
+          Nothing on LNOC matches <span className="text-white">{handle}</span>.
+        </p>
+      </div>
     );
   }
 
@@ -66,39 +75,44 @@ export default function UserProfileClient({ handle }: { handle: string }) {
   const loading = state === "loading";
 
   return (
-    <PageShell
-      eyebrow="Profile"
-      title={profile?.name ?? "Loading…"}
-      intro="Everything this account has sold, who won it, and what they have bought or won."
-    >
+    <div className="w-full space-y-4 pb-4">
       {state === "error" && (
-        <Section>
+        <div className="tile border-negative/30 bg-negative/10 px-4 py-3">
           <p className="text-[13px] text-negative">Could not load this profile.</p>
-        </Section>
+        </div>
       )}
 
-      {profile && (
-        <Section>
-          <ProfileIdentity
-            profile={profile}
-            action={
-              // Messaging needs a session, and messaging yourself is not a
-              // thing — the private profile is the right place for that.
-              user && !isSelf ? (
-                <ContactButton userId={profile.id} label="Message" size="md" />
-              ) : null
-            }
-          />
-        </Section>
+      {profile ? (
+        <ProfileHero
+          profile={profile}
+          action={
+            // Messaging needs a session, and messaging yourself is not a
+            // thing — the private profile is the right place for that.
+            user && !isSelf ? <ContactButton userId={profile.id} label="Message" size="md" /> : null
+          }
+        />
+      ) : (
+        loading && <ProfileHeroSkeleton />
       )}
 
-      <Section title="History" action={<Tabs items={TABS} value={tab} onChange={setTab} />}>
-        {tab === "sales" ? (
-          <SalesHistory sales={overview?.sales ?? null} loading={loading} />
-        ) : (
-          <PurchaseHistory purchases={overview?.purchases ?? null} loading={loading} />
-        )}
-      </Section>
-    </PageShell>
+      {overview && <ProfileStats sales={overview.sales} purchases={overview.purchases} />}
+
+      <section className="card p-4 sm:p-5">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <h2 className="panel-label text-primary-light">History</h2>
+          <div className="sm:ml-auto">
+            <Tabs items={TABS} value={tab} onChange={setTab} />
+          </div>
+        </header>
+
+        <div className="mt-4">
+          {tab === "sales" ? (
+            <SalesHistory sales={overview?.sales ?? null} loading={loading} />
+          ) : (
+            <PurchaseHistory purchases={overview?.purchases ?? null} loading={loading} />
+          )}
+        </div>
+      </section>
+    </div>
   );
 }

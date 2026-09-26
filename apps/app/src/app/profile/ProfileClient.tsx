@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PageShell, Section } from "@/components/PageShell";
+import { ArrowUpRight } from "lucide-react";
 import { Tabs, type TabItem } from "@/components/ui";
 import { MyListings } from "@/components/MyListings";
-import { ProfileIdentity } from "@/components/profile/ProfileIdentity";
+import { ProfileHero, ProfileHeroSkeleton } from "@/components/profile/ProfileHero";
+import { ProfileStats } from "@/components/profile/ProfileStats";
 import { SalesHistory } from "@/components/profile/SalesHistory";
 import { PurchaseHistory } from "@/components/profile/PurchaseHistory";
 import { fetchMyProfileOverview, type ProfileOverview } from "@/lib/profileHistory";
@@ -13,9 +14,9 @@ import { fetchMyProfileOverview, type ProfileOverview } from "@/lib/profileHisto
 type Tab = "sales" | "purchases" | "listings";
 
 const TABS: TabItem<Tab>[] = [
-  { value: "sales", label: "Sold & winners" },
-  { value: "purchases", label: "Bought & won" },
-  { value: "listings", label: "My listings" },
+  { value: "sales", label: "Sold" },
+  { value: "purchases", label: "Bought" },
+  { value: "listings", label: "Listings" },
 ];
 
 /**
@@ -37,50 +38,56 @@ export default function ProfileClient() {
   const loading = !overview && !error;
 
   return (
-    <PageShell
-      eyebrow="Your account"
-      title="Profile"
-      intro="What you have sold and who won it, what you have bought or won, and every listing you have submitted."
-      action={
-        overview?.profile?.username ? (
-          <Link
-            href={`/user/${overview.profile.username}`}
-            className="text-[12px] text-caption hover:text-white transition-colors"
-          >
-            View public profile →
-          </Link>
-        ) : null
-      }
-    >
+    <div className="w-full space-y-4 pb-4">
       {error && (
-        <Section>
+        <div className="tile border-negative/30 bg-negative/10 px-4 py-3">
           <p className="text-[13px] text-negative">{error}</p>
-        </Section>
+        </div>
       )}
 
-      {overview?.profile && (
-        <Section>
-          <ProfileIdentity profile={overview.profile} />
-        </Section>
+      {overview?.profile ? (
+        <ProfileHero
+          profile={overview.profile}
+          action={
+            overview.profile.username ? (
+              <Link
+                href={`/user/${overview.profile.username}`}
+                className="btn-outline-accent inline-flex h-10 items-center gap-2 px-4 text-[12px]"
+              >
+                Public profile
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            ) : null
+          }
+        />
+      ) : (
+        loading && <ProfileHeroSkeleton />
       )}
 
-      <Section
-        title="History"
-        description="Sales show the winner and what they paid, with a way to reach them. Purchases show the creator you bought from."
-        action={<Tabs items={TABS} value={tab} onChange={setTab} />}
-      >
-        {tab === "sales" && (
-          <SalesHistory sales={overview?.sales ?? null} loading={loading} isOwnProfile />
-        )}
-        {tab === "purchases" && (
-          <PurchaseHistory
-            purchases={overview?.purchases ?? null}
-            loading={loading}
-            isOwnProfile
-          />
-        )}
-        {tab === "listings" && <MyListings />}
-      </Section>
-    </PageShell>
+      {overview && <ProfileStats sales={overview.sales} purchases={overview.purchases} />}
+
+      <section className="card p-4 sm:p-5">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <h2 className="panel-label text-primary-light">History</h2>
+          <div className="sm:ml-auto">
+            <Tabs items={TABS} value={tab} onChange={setTab} />
+          </div>
+        </header>
+
+        <div className="mt-4">
+          {tab === "sales" && (
+            <SalesHistory sales={overview?.sales ?? null} loading={loading} isOwnProfile />
+          )}
+          {tab === "purchases" && (
+            <PurchaseHistory
+              purchases={overview?.purchases ?? null}
+              loading={loading}
+              isOwnProfile
+            />
+          )}
+          {tab === "listings" && <MyListings bare />}
+        </div>
+      </section>
+    </div>
   );
 }
