@@ -118,6 +118,7 @@ export type PricingType = "FIXED" | "AUCTION";
 export type ListingStatus =
   | "PENDING_REVIEW"
   | "REJECTED"
+  /** Legacy: approved under the old flow and still awaiting the seller's signature. */
   | "DRAFT"
   | "ACTIVE"
   | "SOLD"
@@ -165,9 +166,11 @@ export interface Listing {
 }
 
 /**
- * What the create form sends. An admin writes the listing on-chain first and
- * includes the tx fields; a seller submits without them and the listing waits
- * for approval before it can go on-chain at all.
+ * What the create form sends. The AuctionHouse transaction is signed as part of
+ * submitting, by sellers and admins alike, so the tx fields are always filled
+ * in — the API verifies them against the contract before it saves the row. An
+ * admin's listing is live on arrival; a seller's waits for approval and needs
+ * no further signature.
  */
 export interface NewListingInput {
   /** Same string passed to `startAuction` / `startFixedPriceListing`. */
@@ -183,9 +186,9 @@ export interface NewListingInput {
   platform?: "YOUTUBE" | "TWITTER" | "INSTAGRAM" | "TIKTOK";
   turnaroundDays?: number;
   slotsAvailable?: number;
-  txHash?: string;
-  chainId?: number;
-  contractAddress?: string;
+  txHash: string;
+  chainId: number;
+  contractAddress: string;
   tokenAddress?: string;
   tokenName?: string;
   isDaily?: boolean;
@@ -340,7 +343,8 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 
 /**
  * Persists a listing after its AuctionHouse transaction has confirmed.
- * The `id` is the same string already written on-chain.
+ * The `id` is the same string already written on-chain, and the API reads the
+ * contract to confirm it before saving.
  */
 export async function createListing(input: NewListingInput): Promise<Listing> {
   const data = await postJson<{ listing: Listing }>("/backend/listings", input);
@@ -359,7 +363,7 @@ export async function fetchPendingListings(): Promise<Listing[]> {
   return data.listings;
 }
 
-/** Clears a listing to go on-chain. The seller still has to publish it. */
+/** Approves a listing, which publishes it — the seller already signed it on-chain. */
 export async function approveListing(id: string, note?: string): Promise<Listing> {
   const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/approve`, { note });
   return data.listing;
@@ -370,7 +374,10 @@ export async function rejectListing(id: string, note?: string): Promise<Listing>
   return data.listing;
 }
 
-/** Publishes a draft once its AuctionHouse transaction has confirmed. */
+/**
+ * Publishes a draft once its AuctionHouse transaction has confirmed. Only rows
+ * approved before sellers signed at submission are still in that state.
+ */
 export async function activateListing(
   id: string,
   onchain: {

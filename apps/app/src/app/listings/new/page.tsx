@@ -256,19 +256,20 @@ export default function NewListingPage() {
   const chainSupported = chainId === LISTING_CHAIN_ID;
   const categoryMeta = LISTING_CATEGORIES.find((c) => c.value === category)!;
 
-  // The contract refuses a fourth simultaneously open listing, so show the
-  // seller where they stand before they spend gas finding out. Only an admin
-  // transacts from this page, so only they can hit the cap here.
+  // The contract refuses a fourth simultaneously open listing, so show where
+  // the wallet stands before it spends gas finding out. Everyone transacts from
+  // this page now, so everyone can hit the cap — including on listings still
+  // waiting in review, which are open on-chain like any other.
   const { data: activeOnchain } = useReadContract({
     address: contractAddress,
     abi: auctionHouseAbi,
     functionName: "getActiveAuctionsByOwner",
     args: address ? [address] : undefined,
     chainId: LISTING_CHAIN_ID,
-    query: { enabled: Boolean(contractAddress && address && isAdmin) },
+    query: { enabled: Boolean(contractAddress && address) },
   });
   const activeCount = activeOnchain?.length ?? 0;
-  const atListingCap = isAdmin && Boolean(contractAddress) && activeCount >= MAX_ACTIVE_LISTINGS;
+  const atListingCap = Boolean(contractAddress) && activeCount >= MAX_ACTIVE_LISTINGS;
 
   useEffect(() => {
     if (!user?.id || hydratedFor === user.id) return;
@@ -398,7 +399,11 @@ export default function NewListingPage() {
 
   const busy = step !== "form" && step !== "done";
 
-  function listingPayload(listingId: string, hash?: `0x${string}`): NewListingInput {
+  function listingPayload(
+    listingId: string,
+    hash: `0x${string}`,
+    endsAt: Date,
+  ): NewListingInput {
     return {
       id: listingId,
       title,
@@ -407,20 +412,18 @@ export default function NewListingPage() {
       pricingType,
       price: priceNumber,
       currency: "USD",
-      endDate: (isDaily
-        ? new Date(Date.now() + 24 * 3_600_000)
-        : parsedEnd!
-      ).toISOString(),
+      // The same instant the on-chain duration was derived from, so the API's
+      // check of the contract's deadline against this lines up.
+      endDate: endsAt.toISOString(),
       placement: placement.trim() || undefined,
       platform: (platform || undefined) as never,
       turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
       slotsAvailable: slots ? Number(slots) : 1,
       isDaily,
-      // Only an admin transacts before saving; a seller's listing goes on-chain
-      // after approval, from the listing page.
-      ...(hash
-        ? { txHash: hash, chainId: LISTING_CHAIN_ID, contractAddress: contractAddress! }
-        : {}),
+      // Always present: the listing is on-chain before it is ever saved.
+      txHash: hash,
+      chainId: LISTING_CHAIN_ID,
+      contractAddress: contractAddress!,
     };
   }
 
@@ -433,24 +436,23 @@ export default function NewListingPage() {
     if (user?.id) dropDraft(user.id);
   }
 
+  /**
+   * One path for everybody: sign the AuctionHouse transaction, then save.
+   *
+   * Sellers used to submit without touching a wallet and sign only once an
+   * admin had approved, which left an approved listing invisible until they
+   * noticed the email and came back — days off an end date they had already
+   * committed to. Now the signature happens here and approval is the only thing
+   * between the listing and being live. What it costs is that the clock starts
+   * at submission, and a rejected listing leaves a paid-for entry on-chain until
+   * it lapses.
+   */
   async function handleSubmit() {
     if (validationError || !parsedEnd) {
       setError(validationError);
       return;
     }
     setError(null);
-
-    // A seller never signs here. The listing is submitted for review and only
-    // reaches the chain once an admin approves it, so a rejection costs no gas.
-    if (!isAdmin) {
-      try {
-        await persistListing(listingPayload(crypto.randomUUID()));
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not submit the listing.");
-        setStep("form");
-      }
-      return;
-    }
 
     if (!contractAddress) {
       setError("AuctionHouse is not configured for Robinhood Chain.");
@@ -461,10 +463,6 @@ export default function NewListingPage() {
       return;
     }
 
-    if (isDaily) {
-      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
-    }
-
     if (pendingPersist) {
       try {
         await persistListing(pendingPersist);
@@ -472,12 +470,19 @@ export default function NewListingPage() {
         setError(
           err instanceof Error
             ? err.message
-            : "On-chain listing exists — retry publishing to the marketplace.",
+            : "On-chain listing exists — retry saving it to the marketplace.",
         );
         setStep("form");
       }
       return;
     }
+
+    // Fixed before signing so the duration written on-chain and the end date
+    // sent to the API come from the same instant. Deriving either one after the
+    // transaction confirms would put them a confirmation apart, and the API
+    // checks the contract's deadline against exactly this.
+    const endsAt = isDaily ? new Date(Date.now() + 24 * 3_600_000) : parsedEnd;
+    if (isDaily) setEndDate(toLocalInputValue(endsAt));
 
     const listingId = crypto.randomUUID();
     try {
@@ -494,7 +499,7 @@ export default function NewListingPage() {
       }
 
       setStep("signing");
-      const hours = BigInt(isDaily ? 24 : durationHoursUntil(parsedEnd));
+      const hours = BigInt(isDaily ? 24 : durationHoursUntil(endsAt));
       const args = [listingId, hours, toUsdE8(priceNumber)] as const;
       const request = {
         address: contractAddress,
@@ -518,7 +523,7 @@ export default function NewListingPage() {
         throw new Error("The transaction reverted.");
       }
 
-      const input = listingPayload(listingId, hash);
+      const input = listingPayload(listingId, hash, endsAt);
       try {
         await persistListing(input);
       } catch (err) {
@@ -526,7 +531,7 @@ export default function NewListingPage() {
         setError(
           err instanceof Error
             ? `${err.message} The listing is on-chain — retry to save it to the marketplace.`
-            : "On-chain listing exists — retry publishing to the marketplace.",
+            : "On-chain listing exists — retry saving it to the marketplace.",
         );
         setStep("form");
       }
@@ -573,11 +578,11 @@ export default function NewListingPage() {
             )}
             <div>
               <h1 className="text-lg font-bold text-foreground">
-                {submitted ? "Sent for review" : "Listing is live"}
+                {submitted ? "Signed and sent for review" : "Listing is live"}
               </h1>
               <p className="text-[13px] text-caption">
                 {submitted
-                  ? `${created.title} is with the LNOC team. You'll get an email either way, and nothing goes on-chain until it is approved.`
+                  ? `${created.title} is on-chain and with the LNOC team. That was the only transaction — it goes live the moment they approve it, with nothing more for you to sign.`
                   : `${created.title} is now on the marketplace under ${categoryMeta.label.toLowerCase()}.`}
               </p>
             </div>
@@ -622,14 +627,15 @@ export default function NewListingPage() {
         <Tile className="border-line bg-surface-2 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-primary-light shrink-0 mt-0.5" />
           <p className="text-[12px] text-caption leading-relaxed">
-            Listings are reviewed before they go live. Submitting costs nothing and touches
-            no wallet — once the LNOC team approves it, you sign one transaction to publish
-            it. We email you either way.
+            Submitting signs one AuctionHouse transaction — that is the only one you sign.
+            The LNOC team reviews it next, and it goes live the moment they approve, so you
+            do not have to be around for it. Bidding time runs from now, so a listing that
+            waits in review has that long less to sell.
           </p>
         </Tile>
       )}
 
-      {isAdmin && !address && (
+      {!address && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <div className="space-y-2">
@@ -644,7 +650,7 @@ export default function NewListingPage() {
         </Tile>
       )}
 
-      {isAdmin && address && !chainSupported && (
+      {address && !chainSupported && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
           <p className="text-[12px] text-warning leading-relaxed">
@@ -658,6 +664,7 @@ export default function NewListingPage() {
         <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
           You already have {activeCount} open listings on-chain. The contract allows{" "}
           {MAX_ACTIVE_LISTINGS} at a time — settle or let one expire before adding another.
+          Anything still waiting in review counts too, since it is open on-chain already.
         </Tile>
       )}
 
@@ -944,13 +951,9 @@ export default function NewListingPage() {
       <Panel className="space-y-3 max-lg:shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-caption min-w-0">
-            <Badge variant={isAdmin ? "accent" : "neutral"}>
-              {isAdmin ? "On-chain" : "Reviewed"}
-            </Badge>
+            <Badge variant="accent">{isAdmin ? "On-chain" : "On-chain · reviewed"}</Badge>
             <span>
-              {isAdmin
-                ? `Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} · ${activeCount}/${MAX_ACTIVE_LISTINGS} open listings used`
-                : `Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} once approved · no wallet needed yet`}
+              {`Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} · ${activeCount}/${MAX_ACTIVE_LISTINGS} open listings used`}
             </span>
           </div>
 
@@ -961,10 +964,10 @@ export default function NewListingPage() {
           >
             {busy
               ? "Working…"
-              : !isAdmin
-                ? "Submit for review"
-                : pendingPersist
-                  ? "Save to marketplace"
+              : pendingPersist
+                ? "Save to marketplace"
+                : !isAdmin
+                  ? "Sign and submit for review"
                   : pricingType === "AUCTION"
                     ? "Open for bids"
                     : "List at this price"}

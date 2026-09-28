@@ -21,6 +21,7 @@ import {
 import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dailyProject";
 import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
+import { assertListingStillOpen, verifyListingOnChain } from "../lib/listingChain";
 
 const CATEGORIES = [
   "SHOUTOUT",
@@ -295,7 +296,13 @@ async function requireReviewableListing(
 
 /** Emails the seller the outcome of a review, when they can receive email. */
 async function emailReviewOutcome(
-  listing: { id: string; title: string; reviewNote: string | null; creator: { userId: string } },
+  listing: {
+    id: string;
+    title: string;
+    status: string;
+    reviewNote: string | null;
+    creator: { userId: string };
+  },
   approved: boolean,
 ) {
   const seller = await prisma.user.findUnique({
@@ -309,6 +316,9 @@ async function emailReviewOutcome(
         title: listing.title,
         listingId: listing.id,
         reviewNote: listing.reviewNote,
+        // ACTIVE means it is already live; DRAFT is a pre-sign-on-submit row
+        // that still needs the seller to publish it themselves.
+        live: listing.status === "ACTIVE",
       })
     : sendListingRejected(seller.email, {
         title: listing.title,
@@ -773,10 +783,11 @@ export const marketplaceRoutes = new Elysia()
     return { listing: serializeListing(listing) };
   })
   /**
-   * Creates a listing. An admin has already written it on-chain — they post the
-   * same id back with the tx fields and the row is ACTIVE immediately. Everyone
-   * else submits nothing on-chain: the row lands in PENDING_REVIEW and costs
-   * them no gas until an admin approves it.
+   * Creates a listing. It is already on-chain by the time it gets here —
+   * everyone signs the AuctionHouse transaction as part of submitting, and
+   * posts the same id back with the tx fields. An admin's own listing is ACTIVE
+   * on arrival; a seller's waits in PENDING_REVIEW and goes live the moment it
+   * is approved, with nothing further for them to sign.
    */
   .post(
     "/listings",
@@ -788,9 +799,9 @@ export const marketplaceRoutes = new Elysia()
       }
       const admin = isSuperadmin(user);
 
-      if (admin && !(body.txHash && body.chainId && body.contractAddress)) {
+      if (!(body.txHash && body.chainId && body.contractAddress)) {
         set.status = 400;
-        return { error: "An admin listing must be on-chain before it is saved" };
+        return { error: "A listing must be on-chain before it is saved" };
       }
 
       const endDate = new Date(body.endDate);
@@ -828,6 +839,24 @@ export const marketplaceRoutes = new Elysia()
         }
       }
 
+      // The chain is the proof the listing exists, not the hash the client
+      // sends. Approval is the only thing left between a seller's row and a
+      // live listing, so a submission that only claims to be on-chain has to
+      // fail here rather than reach an admin looking publishable.
+      const onchain = await verifyListingOnChain({
+        id: body.id,
+        price: body.price,
+        pricingType: body.pricingType,
+        endDate,
+        chainId: body.chainId,
+        contractAddress: body.contractAddress,
+        wallets: user.wallets,
+      });
+      if (!onchain.ok) {
+        set.status = onchain.status;
+        return { error: onchain.error };
+      }
+
       const creator = await ensureCreatorProfile(user.id);
 
       const listing = await prisma.listing.create({
@@ -846,11 +875,11 @@ export const marketplaceRoutes = new Elysia()
           endDate,
           status: admin ? "ACTIVE" : "PENDING_REVIEW",
           isDaily,
-          txHash: admin ? body.txHash : null,
-          chainId: admin ? body.chainId : null,
-          contractAddress: admin ? body.contractAddress : null,
-          tokenAddress: admin ? (body.tokenAddress ?? null) : null,
-          tokenName: admin ? (body.tokenName ?? null) : null,
+          txHash: body.txHash,
+          chainId: body.chainId,
+          contractAddress: body.contractAddress,
+          tokenAddress: body.tokenAddress ?? null,
+          tokenName: body.tokenName ?? null,
           creatorId: creator.id,
         },
         include: { creator: { include: creatorInclude } },
@@ -867,6 +896,9 @@ export const marketplaceRoutes = new Elysia()
               pricingType: listing.pricingType,
               price: listing.price,
               description: listing.description,
+              // The seller's clock is already running, so the queue email says
+              // how long an approval still has to land in.
+              closesAt: listing.endDate,
             }).catch((err) => console.error("[email] listing-pending failed:", err)),
           ),
         );
@@ -895,8 +927,10 @@ export const marketplaceRoutes = new Elysia()
         ),
         turnaroundDays: t.Optional(t.Number()),
         slotsAvailable: t.Optional(t.Number()),
-        // Chain fields are absent until a listing is actually written on-chain,
-        // which for a seller only happens after an admin approves it.
+        // Every listing is written on-chain as part of submitting it, so these
+        // are always present — kept optional in the schema only so a missing
+        // one is answered with the handler's own message rather than a
+        // validation error.
         txHash: t.Optional(t.String()),
         chainId: t.Optional(t.Number()),
         contractAddress: t.Optional(t.String()),
@@ -923,8 +957,12 @@ export const marketplaceRoutes = new Elysia()
     return { listings: listings.map(serializeListing) };
   })
   /**
-   * Clears a listing to go on-chain. It is not live yet — the seller still has
-   * to sign the AuctionHouse transaction, which is what `/activate` records.
+   * Publishes a listing. The seller signed the AuctionHouse transaction when
+   * they submitted, so approving is all that is left — the row goes ACTIVE and
+   * is buyable immediately, with nothing for the seller to come back and do.
+   *
+   * A row from before sellers signed at submission has no chain wiring, so it
+   * still lands in DRAFT and waits for the seller's `/activate`.
    */
   .post(
     "/listings/:id/approve",
@@ -932,10 +970,23 @@ export const marketplaceRoutes = new Elysia()
       const listing = await requireReviewableListing(request, params.id, set);
       if ("error" in listing) return listing;
 
+      const signed = Boolean(listing.txHash && listing.chainId && listing.contractAddress);
+
+      // Approval is what makes the listing buyable, so check the chain still
+      // agrees it can be: review may have outlasted the seller's own end date,
+      // and a fixed-price listing can be bought straight off the contract.
+      if (signed) {
+        const open = await assertListingStillOpen(listing);
+        if (!open.ok) {
+          set.status = open.status;
+          return { error: open.error };
+        }
+      }
+
       const updated = await prisma.listing.update({
         where: { id: params.id },
         data: {
-          status: "DRAFT",
+          status: signed ? "ACTIVE" : "DRAFT",
           reviewedAt: new Date(),
           reviewNote: body?.note?.trim() || null,
         },
@@ -972,6 +1023,10 @@ export const marketplaceRoutes = new Elysia()
    * Publishes an approved listing once its AuctionHouse transaction confirms.
    * The seller signs this themselves, so it is owner-gated rather than
    * admin-gated — approval already happened.
+   *
+   * Sellers now sign at submission, so nothing new lands in DRAFT and nothing
+   * new comes through here. It stays for the rows approved under the old flow,
+   * which are still waiting on their seller to publish them.
    */
   .post(
     "/listings/:id/activate",
@@ -1213,7 +1268,12 @@ export const marketplaceRoutes = new Elysia()
       }),
     },
   )
-  /** Drops a listing — used to clean up a draft whose transaction never landed. */
+  /**
+   * Drops a listing. A seller uses this to retire a rejected submission, or to
+   * clean up a row whose transaction never landed. The AuctionHouse entry is not
+   * touched: a rejected auction can be closed by its owner with `endAuction`,
+   * and a fixed-price one simply lapses at its deadline.
+   */
   .post("/listings/:id/cancel", async ({ params, request, set }) => {
     const listing = await requireOwnedListing(request, params.id, set);
     if ("error" in listing) return listing;

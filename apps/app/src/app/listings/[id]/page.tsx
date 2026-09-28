@@ -170,7 +170,11 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const bidInvalid =
     isAuction && (!Number.isFinite(bidNumber) || bidNumber < (listing?.price ?? 0));
 
-  /** Approved but never published — only its owner can finish that. */
+  /**
+   * Approved under the old flow and never published — only its owner can finish
+   * that. Sellers now sign at submission, so nothing new arrives in this state;
+   * the publish button below is here for the rows that were already in it.
+   */
   const awaitingPublish = listing?.status === "DRAFT";
   const pendingReview = listing?.status === "PENDING_REVIEW";
   const rejected = listing?.status === "REJECTED";
@@ -198,9 +202,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   }
 
   /**
-   * The second half of a seller's flow: an admin has approved the listing, and
-   * this is the one transaction that puts it on the AuctionHouse and makes it
-   * buyable. Until it lands the listing is approved but invisible.
+   * Publishes a listing left over from the old flow, where the seller's
+   * AuctionHouse transaction came after approval rather than at submission.
+   * Until it lands such a listing is approved but invisible.
    */
   async function handlePublish() {
     if (!listing || !listing.endDate) return;
@@ -569,8 +573,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
             <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" />
             <p className="text-[12px] text-warning leading-relaxed">
-              Waiting on review. Nobody else can see this listing yet, and nothing has gone
-              on-chain — we&apos;ll email you as soon as it is decided.
+              Waiting on review. It is already signed on-chain, so there is nothing more for
+              you to do — it goes live the moment the team approves it, whether or not you are
+              here. Nobody else can see it until then.
             </p>
           </Tile>
         ) : isOwner && rejected ? (
@@ -579,6 +584,18 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <p className="text-[12px] text-caption leading-relaxed">
               {listing.reviewNote ||
                 "This listing was turned down. You can adjust it and submit a new one."}
+            </p>
+            <p className="text-[12px] text-caption leading-relaxed">
+              {`The AuctionHouse entry you signed stays on-chain until it closes${
+                listing.endDate
+                  ? ` on ${new Date(listing.endDate).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}`
+                  : ""
+              }, and counts against your three open listings until then. Nobody can reach it from LNOC.`}
             </p>
           </Tile>
         ) : isOwner ? (

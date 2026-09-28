@@ -307,10 +307,13 @@ enum ListingCategory {
   OTHER
 }
 
-/// PENDING_REVIEW is where a seller's listing waits for an admin. Approving it
-/// moves it to DRAFT — the id exists and is cleared to go on-chain, but nobody
-/// has sent the AuctionHouse transaction yet. It becomes ACTIVE once that tx
-/// confirms. A SUPERADMIN skips review: they transact first and land on ACTIVE.
+/// PENDING_REVIEW is where a seller's listing waits for an admin. It is already
+/// on the AuctionHouse by then — everyone signs as part of submitting — so
+/// approving it goes straight to ACTIVE and it is buyable at once. A SUPERADMIN
+/// skips review and lands on ACTIVE directly.
+///
+/// DRAFT is the old middle state, from when a seller signed only after approval.
+/// Nothing new lands there; the rows that already have wait on `/activate`.
 enum ListingStatus {
   PENDING_REVIEW
   REJECTED
@@ -346,8 +349,9 @@ model Listing {
   endDate        DateTime?
   status         ListingStatus   @default(ACTIVE)
 
-  /// Chain wiring, written once the AuctionHouse tx confirms. Null while the
-  /// contract is unset — the listing is then marketplace-only.
+  /// Chain wiring, written when the listing is created — the AuctionHouse tx is
+  /// signed as part of submitting, so it is set even while the row is still in
+  /// PENDING_REVIEW. Null only on a legacy row that predates that.
   chainId         Int?
   contractAddress String?
   tokenAddress    String?
@@ -360,6 +364,7 @@ model Listing {
   settledAt    DateTime?
 
   /// Admin review trail. Null on a SUPERADMIN's own listing, which skips review.
+  /// On a seller's listing this is the moment it went live.
   reviewedAt DateTime?
   /// Shown to the seller — the reason a listing was turned down.
   reviewNote String?

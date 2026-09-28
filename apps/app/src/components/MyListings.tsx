@@ -13,8 +13,9 @@ const STATUS_COPY: Record<ListingStatus, { label: string; variant: BadgeVariant;
   PENDING_REVIEW: {
     label: "In review",
     variant: "warning",
-    hint: "Waiting on the LNOC team. Nothing on-chain yet.",
+    hint: "Signed on-chain and waiting on the LNOC team. It goes live as soon as they approve it.",
   },
+  // Only rows approved before sellers signed at submission still land here.
   DRAFT: {
     label: "Approved",
     variant: "positive",

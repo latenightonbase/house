@@ -16,6 +16,31 @@ import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
 type Decision = "approve" | "reject";
 
+/**
+ * A seller's on-chain clock starts when they submit, so a listing sitting in the
+ * queue is losing selling time — and once it passes its closing time the
+ * AuctionHouse entry is spent and approval fails outright. Flag both.
+ */
+const SOON_MS = 6 * 3_600_000;
+
+function urgency(endDate: string | undefined) {
+  if (!endDate) return null;
+  const left = new Date(endDate).getTime() - Date.now();
+  if (left <= 0) {
+    return {
+      tone: "negative" as const,
+      text: "This closed on-chain before it was reviewed. Approving it will fail — reject it and ask the seller to resubmit.",
+    };
+  }
+  if (left <= SOON_MS) {
+    return {
+      tone: "warning" as const,
+      text: "Closes within hours. Approve now or it will expire on-chain before it ever sells.",
+    };
+  }
+  return null;
+}
+
 export default function AdminListingsClient() {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -62,7 +87,7 @@ export default function AdminListingsClient() {
     <div className="space-y-4 max-w-4xl">
       <PageHeader
         title="Review queue"
-        subtitle="Seller listings waiting to go live. Approving one clears it to go on-chain — the seller signs the transaction that publishes it."
+        subtitle="Seller listings waiting to go live. Each is already signed on-chain, so approving one publishes it immediately — and its closing time is already counting down."
         action={
           listings ? (
             <Badge variant={listings.length ? "warning" : "neutral"}>
@@ -86,13 +111,14 @@ export default function AdminListingsClient() {
           <p className="text-[14px] font-semibold text-white">Nothing to review</p>
           <p className="text-[12px] text-caption max-w-sm">
             New seller listings land here. They stay invisible on the marketplace until you
-            approve them.
+            approve them, which puts them live at once.
           </p>
         </Panel>
       ) : (
         listings?.map((listing) => {
           const meta = categoryMeta(listing.category);
           const busy = working === listing.id;
+          const clock = urgency(listing.endDate);
           return (
             <Card key={listing.id} className="p-4 sm:p-5 space-y-4">
               <div className="flex items-start gap-3">
@@ -137,6 +163,18 @@ export default function AdminListingsClient() {
                 </Stat>
               </div>
 
+              {clock && (
+                <Tile
+                  className={
+                    clock.tone === "negative"
+                      ? "border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative"
+                      : "border-warning/30 bg-warning/10 px-4 py-3 text-[12px] text-warning"
+                  }
+                >
+                  {clock.text}
+                </Tile>
+              )}
+
               <TextArea
                 aria-label={`Note to the seller about ${listing.title}`}
                 value={notes[listing.id] ?? ""}
@@ -154,7 +192,7 @@ export default function AdminListingsClient() {
               <div className="flex flex-wrap gap-2">
                 <Button onClick={() => void decide(listing, "approve")} disabled={busy}>
                   <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                  Approve
+                  Approve &amp; publish
                 </Button>
                 <Button
                   variant="accent-outline"

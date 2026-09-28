@@ -18,7 +18,7 @@
           </tr>
           <tr>
             <td style="padding:16px 32px 8px;font-size:15px;line-height:1.6;color:#9aa4b8;">
-              <strong style="color:#e8edf7;">{{seller}}</strong> submitted <strong style="color:#e8edf7;">{{title}}</strong> for approval. It is not visible on the marketplace until you approve it.
+              <strong style="color:#e8edf7;">{{seller}}</strong> submitted <strong style="color:#e8edf7;">{{title}}</strong> for approval. It is already signed on-chain and invisible on the marketplace until you approve it &mdash; approving puts it live immediately.
             </td>
           </tr>
           <tr>
@@ -26,6 +26,13 @@
               {{category}} &middot; {{pricing}} &middot; <strong style="color:#e8edf7;">${{price}}</strong>
             </td>
           </tr>
+          {{#closes}}
+          <tr>
+            <td style="padding:0 32px 8px;font-size:14px;line-height:1.7;color:#9aa4b8;">
+              Their clock is already running &mdash; it closes <strong style="color:#e8edf7;">{{closes}}</strong>, and every hour it waits here is an hour it is not selling.
+            </td>
+          </tr>
+          {{/closes}}
           {{#description}}
           <tr>
             <td style="padding:8px 32px;font-size:14px;line-height:1.6;color:#9aa4b8;border-left:2px solid #1c2438;">

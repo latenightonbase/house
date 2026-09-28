@@ -42,6 +42,17 @@ export function listingUrl(id: string) {
   return `${appOrigin()}/listings/${id}`;
 }
 
+/** UTC, spelled out — the reader's zone is unknown and a deadline must not be guessed at. */
+function formatDeadline(date: Date) {
+  return `${date.toLocaleString("en-GB", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  })} UTC`;
+}
+
 async function send(to: string, subject: string, name: string, vars: Record<string, string>) {
   const resend = client();
   const html = render(name, vars);
@@ -109,6 +120,8 @@ export function sendListingPendingReview(
     pricingType: string;
     price: number;
     description?: string | null;
+    /** When the seller's on-chain listing closes — their clock is already running. */
+    closesAt?: Date | null;
   },
 ) {
   return send(to, `Listing needs review: ${input.title}`, "listing-pending.html", {
@@ -118,18 +131,33 @@ export function sendListingPendingReview(
     pricing: input.pricingType === "AUCTION" ? "Auction" : "Flat price",
     price: input.price.toLocaleString(),
     description: input.description?.trim() ?? "",
+    closes: input.closesAt ? formatDeadline(input.closesAt) : "",
     reviewUrl: `${appOrigin()}/admin/listings`,
   });
 }
 
 export function sendListingApproved(
   to: string,
-  input: { title: string; listingId: string; reviewNote?: string | null },
+  input: {
+    title: string;
+    listingId: string;
+    reviewNote?: string | null;
+    /**
+     * True once approval is all it took — the seller signed at submission, so
+     * the listing is live already. False only for a row approved under the old
+     * flow, where the seller still has a transaction to sign.
+     */
+    live?: boolean;
+  },
 ) {
-  return send(to, `Approved: ${input.title}`, "listing-approved.html", {
+  const live = input.live !== false;
+  return send(to, live ? `Live: ${input.title}` : `Approved: ${input.title}`, "listing-approved.html", {
     title: input.title,
     reviewNote: input.reviewNote?.trim() ?? "",
     listingUrl: listingUrl(input.listingId),
+    // Exactly one of these is set — the renderer has sections but no inverse.
+    live: live ? "1" : "",
+    needsPublish: live ? "" : "1",
   });
 }
 
