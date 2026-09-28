@@ -947,7 +947,7 @@ export default function NewListingPage() {
         </aside>
       </div>
 
-      <div className="max-lg:sticky max-lg:bottom-[var(--mobile-nav-offset)] max-lg:z-30">
+      <div className="max-lg:sticky max-lg:bottom-[var(--safe-bottom)] max-lg:z-30">
       <Panel className="space-y-3 max-lg:shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-caption min-w-0">
