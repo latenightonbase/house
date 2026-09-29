@@ -1,11 +1,18 @@
-import Link from "next/link";
 import type { Listing } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
-import { EndLabel, KindBadge, money, priceLine, Seller, TypeRow } from "./listingParts";
+import {
+  ActionPill,
+  EndLabel,
+  KindBadge,
+  money,
+  priceLine,
+  Seller,
+  TypeRow,
+} from "./listingParts";
 
 /** The column rule the header and every row share, so the two stay aligned. */
 const COLUMNS =
-  "grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_6.5rem_6.5rem]";
+  "grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2.6fr)_minmax(0,1.2fr)_6.5rem_6.5rem_5.5rem]";
 
 /** Column captions — desktop only, where the row actually reads as a table. */
 export function ListingRowHeader() {
@@ -21,6 +28,7 @@ export function ListingRowHeader() {
       <span>Seller</span>
       <span className="text-right">Price</span>
       <span className="text-right">Ends</span>
+      <span className="sr-only">Action</span>
     </div>
   );
 }
@@ -28,16 +36,26 @@ export function ListingRowHeader() {
 /**
  * One piece of seller inventory, dense enough that a screenful of the market
  * fits beside the daily auction rather than below it. The whole row is the
- * link — the pill at the end is decoration, so nothing interactive nests.
+ * button that opens checkout — the pill at the end is its label, so nothing
+ * interactive nests.
  */
-export function ListingRow({ listing }: { listing: Listing }) {
+export function ListingRow({
+  listing,
+  onCheckout,
+}: {
+  listing: Listing;
+  onCheckout: (listing: Listing) => void;
+}) {
   const price = priceLine(listing);
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
+    <button
+      type="button"
+      onClick={() => onCheckout(listing)}
+      aria-label={`${price.cta}: ${listing.title}, $${money(price.amount)}`}
+      aria-haspopup="dialog"
       className={cn(
-        "group grid items-center gap-x-4 gap-y-2 rounded-xl border border-transparent px-4 py-3 transition-colors",
+        "group grid w-full items-center gap-x-4 gap-y-2 rounded-xl border border-transparent px-4 py-3 text-left transition-colors",
         "hover:border-line-strong hover:bg-white/[0.03]",
         "focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
         COLUMNS,
@@ -72,13 +90,19 @@ export function ListingRow({ listing }: { listing: Listing }) {
         <EndLabel listing={listing} />
       </div>
 
+      <div className="hidden justify-end lg:flex">
+        <ActionPill listing={listing} />
+      </div>
+
+      {/* On a phone the pill says auction or buy-now on its own, so it takes
+          the kind badge's place rather than sitting beside it. */}
       <div className="col-span-2 flex items-center justify-between gap-3 lg:hidden">
         <Seller listing={listing} size={20} showReach={false} />
         <div className="flex shrink-0 items-center gap-2.5">
           <EndLabel listing={listing} />
-          <KindBadge listing={listing} />
+          <ActionPill listing={listing} />
         </div>
       </div>
-    </Link>
+    </button>
   );
 }

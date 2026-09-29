@@ -111,7 +111,13 @@ function MarketEmpty() {
  * are dense on purpose: a buyer should see what is for sale without scrolling,
  * and a seller's listing should be visible the day it goes live.
  */
-export function MarketplacePanel({ listings }: { listings: Listing[] }) {
+export function MarketplacePanel({
+  listings,
+  onCheckout,
+}: {
+  listings: Listing[];
+  onCheckout: (listing: Listing) => void;
+}) {
   const [kind, setKind] = useState<Kind>("all");
   const [category, setCategory] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
@@ -240,7 +246,7 @@ export function MarketplacePanel({ listings }: { listings: Listing[] }) {
               <ListingRowHeader />
               <div className="-mx-1 mt-1 min-w-0 divide-y divide-line/70">
                 {shown.map((listing) => (
-                  <ListingRow key={listing.id} listing={listing} />
+                  <ListingRow key={listing.id} listing={listing} onCheckout={onCheckout} />
                 ))}
               </div>
 

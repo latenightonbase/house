@@ -25,6 +25,13 @@ const BidDialog = dynamic(
   () => import("@/components/home/BidDialog").then((m) => ({ default: m.BidDialog })),
   { ssr: false },
 );
+const ListingCheckoutSheet = dynamic(
+  () =>
+    import("@/components/listing/ListingCheckoutSheet").then((m) => ({
+      default: m.ListingCheckoutSheet,
+    })),
+  { ssr: false },
+);
 const EditListingDialog = dynamic(
   () => import("@/components/home/EditListingDialog").then((m) => ({ default: m.EditListingDialog })),
   { ssr: false },
@@ -77,6 +84,10 @@ export default function HomeClient({
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [bidOpen, setBidOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // The listing outlives `checkoutOpen` so the sheet keeps its content while it
+  // animates closed.
+  const [checkoutListing, setCheckoutListing] = useState<Listing | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [daily, current, market] = await Promise.all([
@@ -131,6 +142,11 @@ export default function HomeClient({
     setEditOpen(true);
   }
 
+  function handleCheckout(next: Listing) {
+    setCheckoutListing(next);
+    setCheckoutOpen(true);
+  }
+
   const canEditListing = isAuctionLeader(user, auction?.leader?.wallet);
 
   return (
@@ -163,8 +179,8 @@ export default function HomeClient({
 
       {/* Second row: the open market, on the same footing as the row above it. */}
       <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <MarketplacePanel listings={listings} />
-        <ClosingSoonPanel listings={listings} />
+        <MarketplacePanel listings={listings} onCheckout={handleCheckout} />
+        <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
       </div>
 
       <WinnerBenefits />
@@ -179,6 +195,14 @@ export default function HomeClient({
             setAuction(next);
             void load();
           }}
+        />
+      ) : null}
+      {checkoutListing ? (
+        <ListingCheckoutSheet
+          listing={checkoutListing}
+          open={checkoutOpen}
+          onOpenChange={setCheckoutOpen}
+          onSettled={() => void load()}
         />
       ) : null}
       {listing && editOpen ? (

@@ -58,7 +58,7 @@ export function priceLine(listing: Listing) {
     note: soldOut
       ? "Sold out"
       : `${listing.slotsAvailable} slot${listing.slotsAvailable === 1 ? "" : "s"} left`,
-    cta: soldOut ? "Sold out" : "Book",
+    cta: soldOut ? "Sold out" : "Buy now",
     soldOut,
   };
 }
@@ -77,6 +77,30 @@ export function TypeRow({ listing, className }: { listing: Listing; className?: 
       <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em]">
         {listing.placement ?? meta.label}
       </span>
+    </span>
+  );
+}
+
+/**
+ * The row's call to action. It is a label, not a control — the whole row is the
+ * button — so it only has to look pressable and say what pressing does.
+ */
+export function ActionPill({ listing, className }: { listing: Listing; className?: string }) {
+  const price = priceLine(listing);
+  const isAuction = listing.pricingType === "AUCTION";
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2.5 text-[11px] font-semibold transition-colors",
+        price.soldOut
+          ? "border-line bg-white/[0.03] text-caption"
+          : "border-primary/45 bg-primary/12 text-white group-hover:border-primary/70 group-hover:bg-primary/25",
+        className,
+      )}
+    >
+      {isAuction && <Gavel className="h-3 w-3" />}
+      {price.cta}
     </span>
   );
 }

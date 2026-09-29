@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { Flame, Sparkles } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { BrandAvatar } from "@/components/ui";
@@ -12,15 +11,25 @@ import { countdownLabel, endsSoon, money, priceLine } from "./listingParts";
 /** Five keeps the rail close to the market table's own height. */
 const MAX_ROWS = 5;
 
-function Row({ listing, live }: { listing: Listing; live: boolean }) {
+function Row({
+  listing,
+  live,
+  onCheckout,
+}: {
+  listing: Listing;
+  live: boolean;
+  onCheckout: (listing: Listing) => void;
+}) {
   const countdown = useCountdown(live ? listing.endDate : null);
   const price = priceLine(listing);
   const urgent = endsSoon(listing.endDate);
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
-      className="group flex items-center gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+    <button
+      type="button"
+      onClick={() => onCheckout(listing)}
+      aria-haspopup="dialog"
+      className="group flex w-full items-center text-left gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
     >
       <BrandAvatar
         src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
@@ -57,7 +66,7 @@ function Row({ listing, live }: { listing: Listing; live: boolean }) {
           <p className="mt-0.5 text-[11px] text-caption">{price.note}</p>
         )}
       </div>
-    </Link>
+    </button>
   );
 }
 
@@ -66,7 +75,13 @@ function Row({ listing, live }: { listing: Listing; live: boolean }) {
  * to close; with nothing on a clock it falls back to what landed most recently,
  * so a new seller's listing is surfaced on its first day either way.
  */
-export function ClosingSoonPanel({ listings }: { listings: Listing[] }) {
+export function ClosingSoonPanel({
+  listings,
+  onCheckout,
+}: {
+  listings: Listing[];
+  onCheckout: (listing: Listing) => void;
+}) {
   const closing = listings
     .filter((listing) => listing.endDate && new Date(listing.endDate).getTime() > Date.now())
     .sort((a, b) => new Date(a.endDate!).getTime() - new Date(b.endDate!).getTime());
@@ -109,7 +124,7 @@ export function ClosingSoonPanel({ listings }: { listings: Listing[] }) {
       ) : (
         <div className="-mx-1 mt-2 flex flex-1 flex-col divide-y divide-line/70">
           {rows.map((listing) => (
-            <Row key={listing.id} listing={listing} live={live} />
+            <Row key={listing.id} listing={listing} live={live} onCheckout={onCheckout} />
           ))}
         </div>
       )}

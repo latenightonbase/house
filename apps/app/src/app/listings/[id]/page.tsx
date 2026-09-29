@@ -1,98 +1,48 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BaseError, UserRejectedRequestError, formatUnits } from "viem";
-import {
-  useAccount,
-  usePublicClient,
-  useReadContract,
-  useSwitchChain,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
-import { BadgeCheck, CheckCircle2, Clock, Gavel, Info } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Clock, Gavel } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
+import { CheckoutFields } from "@/components/listing/CheckoutFields";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/components/SessionProvider";
-import {
-  Badge,
-  BrandAvatar,
-  Button,
-  Card,
-  Field,
-  InputAddon,
-  Panel,
-  TextInput,
-  Tile,
-} from "@/components/ui";
+import { Badge, BrandAvatar, Button, Card, Panel, Tile } from "@/components/ui";
 import {
   activateListing,
-  bookListing,
   fetchListing,
   fetchListingBidders,
-  recordListingBid,
   type Listing,
   type ListingBidder,
 } from "@/lib/marketplace";
 import {
-  auctionHouseAbi,
   auctionHouseAddress,
+  auctionHouseAbi,
   CHAIN_LABELS,
   durationHoursUntil,
-  paymentTokens,
   toUsdE8,
-  USDG,
 } from "@/lib/contracts/auctionHouse";
-import { erc20Abi } from "@/lib/contracts/erc20";
 import { robinhood } from "@/lib/chains";
 import { categoryMeta } from "@/lib/listingCategories";
-import { cn, relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import {
+  CHECKOUT_STEP_LABEL,
+  minimumBidFor,
+  useListingCheckout,
+  writeError,
+} from "@/lib/useListingCheckout";
+import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
-type Step = "idle" | "switching" | "approving" | "signing" | "confirming" | "publishing" | "done";
+type PublishStep = "idle" | "switching" | "signing" | "confirming" | "publishing";
 
-const STEP_LABEL: Record<Exclude<Step, "idle" | "done">, string> = {
-  switching: "Switch your wallet to Robinhood Chain…",
-  approving: "Approve the token spend in your wallet…",
-  signing: "Confirm the transaction in your wallet…",
-  confirming: "Waiting for the transaction to confirm…",
-  publishing: "Recording the booking…",
+const PUBLISH_STEP_LABEL: Record<Exclude<PublishStep, "idle">, string> = {
+  switching: CHECKOUT_STEP_LABEL.switching,
+  signing: CHECKOUT_STEP_LABEL.signing,
+  confirming: CHECKOUT_STEP_LABEL.confirming,
+  publishing: "Publishing the listing…",
 };
-
-/**
- * A floating token's rate can move between the quote and the confirmation, so
- * the buyer approves a little headroom and the contract still charges only
- * what the listing is worth. A pegged stable needs none.
- */
-function withSlippage(amount: bigint, pegged: boolean) {
-  return pegged ? amount : (amount * BigInt(101)) / BigInt(100);
-}
-
-function writeError(err: unknown, fallback: string): string {
-  if (err instanceof UserRejectedRequestError) {
-    return "You rejected the transaction in your wallet.";
-  }
-  if (err instanceof BaseError) {
-    if (err.walk((e) => e instanceof UserRejectedRequestError)) {
-      return "You rejected the transaction in your wallet.";
-    }
-    const msg = err.shortMessage || err.message;
-    if (/Account type|smart/i.test(msg)) {
-      return "This wallet can't sign on Robinhood Chain. Connect MetaMask or Rainbow and try again.";
-    }
-    if (/chain/i.test(msg) && /mismatch|supported|unrecognized|switch/i.test(msg)) {
-      return "Switch your wallet to Robinhood Chain and try again.";
-    }
-    if (/own listing/i.test(msg)) {
-      return "You cannot book your own listing.";
-    }
-    return msg;
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
 
 export default function ListingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -107,14 +57,24 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const [bidders, setBidders] = useState<ListingBidder[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [bidAmount, setBidAmount] = useState("");
-  const [payTokenAddress, setPayTokenAddress] = useState<string>(USDG.address);
-  const [step, setStep] = useState<Step>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [pendingPersist, setPendingPersist] = useState<string | null>(null);
+  const [publishStep, setPublishStep] = useState<PublishStep>("idle");
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   const chainForListing = listing?.chainId ?? robinhood.id;
   const publicClient = usePublicClient({ chainId: chainForListing });
+
+  // Buying and bidding run through the same hook as the home-screen checkout
+  // sheet, so the two surfaces cannot drift apart.
+  const checkout = useListingCheckout(listing, {
+    currentBid: bidders?.[0]?.amount ?? null,
+    onPurchased: setListing,
+    onBidPlaced: (updated) => {
+      if (updated) setListing(updated);
+      void fetchListingBidders(id)
+        .then(setBidders)
+        .catch(() => {});
+    },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -124,7 +84,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         setListing(data);
         setBidders(nextBidders);
         if (data.pricingType === "AUCTION") {
-          setBidAmount(String(data.price));
+          checkout.setBidAmount(String(minimumBidFor(data, nextBidders[0]?.amount ?? null)));
         }
       })
       .catch(() => !cancelled && setNotFound(true))
@@ -132,6 +92,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
     return () => {
       cancelled = true;
     };
+    // `checkout` is a fresh object each render; only the listing id drives a load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const isOwner = Boolean(
@@ -149,26 +111,10 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
     listing && (listing.status !== "ACTIVE" || soldOut || ended),
   );
 
-  // Listings are priced in USD and the buyer picks what to settle in, so the
-  // token is chosen here rather than read off the listing.
-  const tokens = paymentTokens(chainForListing);
-  const token = useMemo(
-    () =>
-      tokens.find((t) => t.address.toLowerCase() === payTokenAddress.toLowerCase()) ??
-      tokens[0] ??
-      USDG,
-    [tokens, payTokenAddress],
-  );
-
-  const contractAddress =
-    (listing?.contractAddress as `0x${string}` | undefined) ??
-    auctionHouseAddress(chainForListing);
   const chainSupported = chainId === chainForListing;
-  const busy = step !== "idle" && step !== "done";
+  const publishing = publishStep !== "idle";
   const isAuction = listing?.pricingType === "AUCTION";
-  const bidNumber = Number(bidAmount);
-  const bidInvalid =
-    isAuction && (!Number.isFinite(bidNumber) || bidNumber < (listing?.price ?? 0));
+  const tokens = checkout.tokens;
 
   /**
    * Approved under the old flow and never published — only its owner can finish
@@ -179,28 +125,6 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const pendingReview = listing?.status === "PENDING_REVIEW";
   const rejected = listing?.status === "REJECTED";
 
-  // What the chosen amount costs in the chosen token, at the rate the contract
-  // publishes. Shown before signing so nobody is surprised by the conversion.
-  const usdToQuote = isAuction ? bidNumber : (listing?.price ?? 0);
-  const { data: quotedAmount } = useReadContract({
-    address: contractAddress,
-    abi: auctionHouseAbi,
-    functionName: "quoteUsd",
-    args: [token.address, toUsdE8(Number.isFinite(usdToQuote) ? usdToQuote : 0)],
-    chainId: chainForListing,
-    query: {
-      enabled: Boolean(contractAddress && !token.pegged && usdToQuote > 0 && !awaitingPublish),
-    },
-  });
-
-  async function persistPurchase(txHash: string | null, current: Listing) {
-    setStep("publishing");
-    const updated = await bookListing(current.id, txHash);
-    setPendingPersist(null);
-    setListing(updated);
-    setStep("done");
-  }
-
   /**
    * Publishes a listing left over from the old flow, where the seller's
    * AuctionHouse transaction came after approval rather than at submission.
@@ -210,18 +134,18 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
     if (!listing || !listing.endDate) return;
     const house = auctionHouseAddress(chainForListing);
     if (!house) {
-      setError("AuctionHouse is not configured for this chain.");
+      setPublishError("AuctionHouse is not configured for this chain.");
       return;
     }
     if (!address) {
       openConnect();
       return;
     }
-    setError(null);
+    setPublishError(null);
 
     try {
       if (!chainSupported) {
-        setStep("switching");
+        setPublishStep("switching");
         if (!switchChainAsync) {
           throw new Error("Switch your wallet to Robinhood Chain and try again.");
         }
@@ -229,7 +153,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
       }
       if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
 
-      setStep("signing");
+      setPublishStep("signing");
       const hours = BigInt(durationHoursUntil(new Date(listing.endDate)));
       const args = [listing.id, hours, toUsdE8(listing.price)] as const;
       const hash = await writeContractAsync({
@@ -241,181 +165,28 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           listing.pricingType === "AUCTION" ? "startAuction" : "startFixedPriceListing",
       });
 
-      setStep("confirming");
+      setPublishStep("confirming");
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status === "reverted") throw new Error("The transaction reverted.");
 
-      setStep("publishing");
+      setPublishStep("publishing");
       const updated = await activateListing(listing.id, {
         txHash: hash,
         chainId: chainForListing,
         contractAddress: house,
       });
       setListing(updated);
-      setStep("idle");
+      setPublishStep("idle");
     } catch (err) {
-      setError(writeError(err, "Could not publish the listing."));
-      setStep("idle");
+      setPublishError(writeError(err, "Could not publish the listing."));
+      setPublishStep("idle");
     }
   }
 
   async function handleCheckout() {
     if (!listing || unavailable || isOwner) return;
-    if (!contractAddress) {
-      setError("AuctionHouse is not configured for this listing.");
-      return;
-    }
-    if (!address) {
-      openConnect();
-      return;
-    }
-    if (isAuction && bidInvalid) {
-      setError(`Bid at least $${listing.price.toLocaleString()}.`);
-      return;
-    }
-    setError(null);
-
-    if (pendingPersist && !isAuction) {
-      try {
-        await persistPurchase(pendingPersist, listing);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "On-chain purchase succeeded — retry to record it on the marketplace.",
-        );
-        setStep("idle");
-      }
-      return;
-    }
-
-    try {
-      if (!chainSupported) {
-        setStep("switching");
-        if (!switchChainAsync) {
-          throw new Error("Switch your wallet to Robinhood Chain and try again.");
-        }
-        await switchChainAsync({ chainId: chainForListing });
-      }
-
-      if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
-
-      // The contract is the authority on whether this is still for sale, and it
-      // can disagree with the marketplace: a purchase that settled on-chain but
-      // never reached the API — what a dropped session leaves behind — keeps the
-      // listing looking live here while `buyListing` reverts with "Already
-      // sold". Ask first, so nobody pays gas to be told no.
-      const meta = await publicClient.readContract({
-        address: contractAddress,
-        abi: auctionHouseAbi,
-        functionName: "getAuctionMeta",
-        args: [listing.id],
-      });
-      if (meta.settled) {
-        const isBuyer = meta.highestBidder.toLowerCase() === address.toLowerCase();
-        if (!isAuction && isBuyer) {
-          // Already paid for by this wallet, just never recorded — a session
-          // that died between the transaction and the callback leaves exactly
-          // this. Finish the half that is missing instead of sending a second
-          // transaction the contract would reject.
-          await persistPurchase(null, listing);
-          return;
-        }
-        throw new Error(
-          isAuction
-            ? "This auction has already been settled on-chain."
-            : "This listing has already sold on-chain.",
-        );
-      }
-
-      // The USD price is fixed; how much of the chosen token covers it is not,
-      // so ask the contract rather than converting here.
-      const amount = await publicClient.readContract({
-        address: contractAddress,
-        abi: auctionHouseAbi,
-        functionName: "quoteUsd",
-        args: [token.address, toUsdE8(isAuction ? bidNumber : listing.price)],
-      });
-      const limit = withSlippage(amount, token.pegged);
-
-      const allowance = await publicClient.readContract({
-        address: token.address,
-        abi: erc20Abi,
-        functionName: "allowance",
-        args: [address, contractAddress],
-      });
-
-      if (allowance < limit) {
-        setStep("approving");
-        const approveHash = await writeContractAsync({
-          address: token.address,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [contractAddress, limit],
-          account: address,
-        });
-        const approveReceipt = await publicClient.waitForTransactionReceipt({
-          hash: approveHash,
-        });
-        if (approveReceipt.status === "reverted") {
-          throw new Error("The approval transaction reverted.");
-        }
-      }
-
-      setStep("signing");
-      const fid = user?.username ?? address;
-      const hash = isAuction
-        ? await writeContractAsync({
-            address: contractAddress,
-            abi: auctionHouseAbi,
-            functionName: "placeBid",
-            args: [listing.id, token.address, amount, fid],
-            account: address,
-          })
-        : await writeContractAsync({
-            address: contractAddress,
-            abi: auctionHouseAbi,
-            functionName: "buyListing",
-            args: [listing.id, token.address, limit, fid],
-            account: address,
-          });
-
-      setStep("confirming");
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      if (receipt.status === "reverted") {
-        throw new Error("The transaction reverted.");
-      }
-
-      if (isAuction) {
-        try {
-          const [updated, nextBidders] = await Promise.all([
-            recordListingBid(listing.id, bidNumber, hash),
-            fetchListingBidders(listing.id).catch(() => null),
-          ]);
-          setListing(updated);
-          if (nextBidders) setBidders(nextBidders);
-        } catch (err) {
-          console.error("Failed to persist bid:", err);
-        }
-        setStep("done");
-        return;
-      }
-
-      try {
-        await persistPurchase(hash, listing);
-      } catch (err) {
-        setPendingPersist(hash);
-        setError(
-          err instanceof Error
-            ? `${err.message} The purchase is on-chain — retry to save it to the marketplace.`
-            : "On-chain purchase succeeded — retry to record it on the marketplace.",
-        );
-        setStep("idle");
-      }
-    } catch (err) {
-      setError(writeError(err, isAuction ? "Could not place the bid." : "Could not book this listing."));
-      setStep("idle");
-    }
+    const ready = await checkout.checkout();
+    if (!ready) openConnect();
   }
 
   if (loading) {
@@ -441,7 +212,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const avatarSrc =
     listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet);
 
-  if (step === "done") {
+  if (checkout.step === "done") {
     return (
       <div className="space-y-4 max-w-2xl">
         <Panel className="space-y-4">
@@ -559,14 +330,14 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               </div>
             </Tile>
 
-            {error && (
+            {publishError && (
               <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
-                {error}
+                {publishError}
               </Tile>
             )}
 
-            <Button onClick={() => void handlePublish()} disabled={busy} className="w-full">
-              {busy ? STEP_LABEL[step as Exclude<Step, "idle" | "done">] : "Publish listing"}
+            <Button onClick={() => void handlePublish()} disabled={publishing} className="w-full">
+              {publishStep !== "idle" ? PUBLISH_STEP_LABEL[publishStep] : "Publish listing"}
             </Button>
           </div>
         ) : isOwner && pendingReview ? (
@@ -621,125 +392,25 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           </Tile>
         ) : (
           <div className="space-y-3">
-            {isAuction && (
-              <Field
-                label="Your bid"
-                htmlFor="bid"
-                hint={`Minimum $${listing.price.toLocaleString()}`}
-                error={bidInvalid ? `Bid at least $${listing.price.toLocaleString()}.` : undefined}
-              >
-                <InputAddon prefix="$" suffix="USD">
-                  <TextInput
-                    id="bid"
-                    type="number"
-                    min={listing.price}
-                    step={0.01}
-                    value={bidAmount}
-                    onChange={(e) => setBidAmount(e.target.value)}
-                    disabled={busy}
-                    className="pl-7 pr-16"
-                  />
-                </InputAddon>
-              </Field>
-            )}
-
-            {tokens.length > 1 && (
-              <Field
-                label="Pay with"
-                htmlFor="pay-token"
-                hint={
-                  token.pegged
-                    ? `$1.00 per ${token.symbol}.`
-                    : quotedAmount !== undefined
-                      ? `About ${Number(
-                          formatUnits(quotedAmount, token.decimals),
-                        ).toLocaleString(undefined, { maximumFractionDigits: 4 })} ${
-                          token.symbol
-                        } at the current rate.`
-                      : `Converted from USD at the rate the contract publishes for ${token.symbol}.`
-                }
-              >
-                <div
-                  id="pay-token"
-                  role="radiogroup"
-                  aria-label="Pay with"
-                  className="grid grid-cols-2 gap-2"
-                >
-                  {tokens.map((t) => {
-                    const active = t.address === token.address;
-                    return (
-                      <button
-                        key={t.address}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => setPayTokenAddress(t.address)}
-                        disabled={busy}
-                        className={cn(
-                          "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50",
-                          active
-                            ? "border-primary/60 bg-primary/20 text-white"
-                            : "border-line bg-surface-2 text-caption hover:border-line-strong hover:text-white",
-                        )}
-                      >
-                        <Image
-                          src={t.logo}
-                          alt=""
-                          width={20}
-                          height={20}
-                          className="h-5 w-5 rounded-full"
-                        />
-                        {t.symbol}
-                      </button>
-                    );
-                  })}
-                </div>
-              </Field>
-            )}
-
-            {!address && (
-              <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
-                <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="text-[12px] text-warning leading-relaxed">
-                    Your session is signed in, but the wallet is disconnected. Reconnect
-                    it to confirm the transaction.
-                  </p>
-                  <Button size="sm" variant="accent-outline" onClick={openConnect}>
-                    Reconnect wallet
-                  </Button>
-                </div>
-              </Tile>
-            )}
-
-            {address && !chainSupported && (
-              <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
-                <Info className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-                <p className="text-[12px] text-warning leading-relaxed">
-                  Settlement runs on {CHAIN_LABELS[chainForListing] ?? "Robinhood Chain"}. Your
-                  wallet will be asked to switch before the transaction.
-                </p>
-              </Tile>
-            )}
-
-            {error && (
-              <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
-                {error}
-              </Tile>
-            )}
+            <CheckoutFields
+              checkout={checkout}
+              isAuction={isAuction}
+              authenticated={status === "authenticated"}
+              onConnect={openConnect}
+            />
 
             <Button
               onClick={() => void handleCheckout()}
-              disabled={busy || bidInvalid}
+              disabled={checkout.busy || checkout.bidInvalid}
               className="w-full"
             >
-              {busy
-                ? STEP_LABEL[step]
-                : pendingPersist
+              {checkout.busy
+                ? CHECKOUT_STEP_LABEL[checkout.step as keyof typeof CHECKOUT_STEP_LABEL]
+                : checkout.pendingPersist
                   ? "Retry recording booking"
                   : isAuction
                     ? "Place bid"
-                    : "Book"}
+                    : "Buy now"}
             </Button>
           </div>
         )}
