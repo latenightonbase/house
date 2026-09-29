@@ -22,7 +22,6 @@ import {
   InputAddon,
   Panel,
   PanelHeader,
-  Select,
   TextArea,
   TextInput,
   Tile,
@@ -46,23 +45,6 @@ import {
 } from "@/lib/contracts/auctionHouse";
 import { robinhood } from "@/lib/chains";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
-import type { Platform } from "@/components/ui";
-
-const PLATFORMS = [
-  { value: "", label: "No specific platform" },
-  { value: "TWITTER", label: "X" },
-  { value: "YOUTUBE", label: "YouTube" },
-  { value: "INSTAGRAM", label: "Instagram" },
-  { value: "TIKTOK", label: "TikTok" },
-] as const;
-
-/** Form value → the glyph key the listing card renders. */
-const PLATFORM_TO_CARD: Record<string, Platform> = {
-  TWITTER: "x",
-  YOUTUBE: "youtube",
-  INSTAGRAM: "instagram",
-  TIKTOK: "tiktok",
-};
 
 const DURATION_PRESETS = [
   { label: "24 hours", hours: 24 },
@@ -126,10 +108,6 @@ type ListingDraft = {
   pricingType: PricingType;
   price: string;
   endDate: string;
-  placement: string;
-  platform: string;
-  turnaroundDays: string;
-  slots: string;
   isDaily: boolean;
 };
 
@@ -141,10 +119,6 @@ function defaultDraft(): ListingDraft {
     pricingType: "FIXED",
     price: "",
     endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
-    placement: "",
-    platform: "",
-    turnaroundDays: "",
-    slots: "1",
     isDaily: false,
   };
 }
@@ -168,11 +142,6 @@ function loadDraft(userId: string): ListingDraft | null {
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
       price: typeof parsed.price === "string" ? parsed.price : base.price,
       endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
-      placement: typeof parsed.placement === "string" ? parsed.placement : base.placement,
-      platform: typeof parsed.platform === "string" ? parsed.platform : base.platform,
-      turnaroundDays:
-        typeof parsed.turnaroundDays === "string" ? parsed.turnaroundDays : base.turnaroundDays,
-      slots: typeof parsed.slots === "string" ? parsed.slots : base.slots,
       isDaily: parsed.isDaily === true,
     };
   } catch {
@@ -213,10 +182,6 @@ export default function NewListingPage() {
   const [endDate, setEndDate] = useState(() =>
     toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
   );
-  const [placement, setPlacement] = useState("");
-  const [platform, setPlatform] = useState<string>("");
-  const [turnaroundDays, setTurnaroundDays] = useState("");
-  const [slots, setSlots] = useState("1");
   const [isDaily, setIsDaily] = useState(false);
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
@@ -233,10 +198,6 @@ export default function NewListingPage() {
     setPricingType(draft.pricingType);
     setPrice(draft.price);
     setEndDate(draft.endDate);
-    setPlacement(draft.placement);
-    setPlatform(draft.platform);
-    setTurnaroundDays(draft.turnaroundDays);
-    setSlots(draft.slots);
     setIsDaily(draft.isDaily);
     if (draft.isDaily) {
       setPricingType("AUCTION");
@@ -287,10 +248,6 @@ export default function NewListingPage() {
       pricingType,
       price,
       endDate,
-      placement,
-      platform,
-      turnaroundDays,
-      slots,
       isDaily,
     });
   }, [
@@ -302,10 +259,6 @@ export default function NewListingPage() {
     pricingType,
     price,
     endDate,
-    placement,
-    platform,
-    turnaroundDays,
-    slots,
     isDaily,
   ]);
 
@@ -357,10 +310,7 @@ export default function NewListingPage() {
     pricingType,
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
     currency: "USD",
-    placement: placement.trim() || undefined,
-    platform: platform ? PLATFORM_TO_CARD[platform] : undefined,
-    turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
-    slotsAvailable: pricingType === "AUCTION" ? 1 : Number(slots) || 1,
+    slotsAvailable: 1,
     endDate:
       parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? parsedEnd.toISOString() : undefined,
     status: "ACTIVE",
@@ -415,10 +365,8 @@ export default function NewListingPage() {
       // The same instant the on-chain duration was derived from, so the API's
       // check of the contract's deadline against this lines up.
       endDate: endsAt.toISOString(),
-      placement: placement.trim() || undefined,
-      platform: (platform || undefined) as never,
-      turnaroundDays: turnaroundDays ? Number(turnaroundDays) : undefined,
-      slotsAvailable: slots ? Number(slots) : 1,
+      // A fixed-price listing settles once on-chain, so it only ever has one slot.
+      slotsAvailable: 1,
       isDaily,
       // Always present: the listing is on-chain before it is ever saved.
       txHash: hash,
@@ -617,7 +565,6 @@ export default function NewListingPage() {
 
   return (
     <div className="space-y-4 max-w-6xl">
-      
       <PageHeader
         title="Create a listing"
         subtitle="Sell a piece of your media or your time. Set a flat price for instant booking, or open it to bids."
@@ -627,10 +574,8 @@ export default function NewListingPage() {
         <Tile className="border-line bg-surface-2 px-4 py-3 flex gap-2.5">
           <Info className="w-4 h-4 text-primary-light shrink-0 mt-0.5" />
           <p className="text-[12px] text-caption leading-relaxed">
-            Submitting signs one AuctionHouse transaction — that is the only one you sign.
-            The LNOC team reviews it next, and it goes live the moment they approve, so you
-            do not have to be around for it. Bidding time runs from now, so a listing that
-            waits in review has that long less to sell.
+            You sign one transaction now. The LNOC team reviews it and it goes live on
+            approval — nothing more to sign. The end time counts from now, including review.
           </p>
         </Tile>
       )}
@@ -730,50 +675,12 @@ export default function NewListingPage() {
                 })}
               </div>
             </Field>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Field
-                label="Platform"
-                htmlFor="platform"
-                optional
-                hint="Used to file the listing under a platform filter."
-              >
-                <Select
-                  id="platform"
-                  value={platform}
-                  onChange={(e) => setPlatform(e.target.value)}
-                  disabled={busy}
-                >
-                  {PLATFORMS.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-
-              <Field
-                label="Placement"
-                htmlFor="placement"
-                optional
-                hint="Short label shown on the card, e.g. “Pinned post”."
-              >
-                <TextInput
-                  id="placement"
-                  value={placement}
-                  onChange={(e) => setPlacement(e.target.value)}
-                  placeholder={categoryMeta.label}
-                  maxLength={80}
-                  disabled={busy}
-                />
-              </Field>
-            </div>
           </Panel>
 
           <Panel className="space-y-5">
             <PanelHeader label="How it sells" />
 
-            <div className="grid sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <PricingOption
                 active={pricingType === "FIXED"}
                 onClick={() => {
@@ -783,7 +690,7 @@ export default function NewListingPage() {
                 disabled={busy || isDaily}
                 icon={<Tag className="w-4 h-4" />}
                 title="Flat price"
-                body="Buyers book instantly at your price. First to pay wins the slot."
+                body="First buyer at your price gets it."
               />
               <PricingOption
                 active={pricingType === "AUCTION"}
@@ -791,7 +698,7 @@ export default function NewListingPage() {
                 disabled={busy}
                 icon={<Gavel className="w-4 h-4" />}
                 title="Auction"
-                body="Buyers bid above your minimum. Highest bid at close takes it."
+                body="Highest bid at close wins."
               />
             </div>
 
@@ -820,13 +727,11 @@ export default function NewListingPage() {
               </label>
             )}
 
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-4 items-start">
               <Field
                 label={pricingType === "AUCTION" ? "Minimum bid" : "Price"}
                 htmlFor="price"
-                hint={`In US dollars. Buyers settle in ${
-                  tokens.map((t) => t.symbol).join(" or ") || "a supported token"
-                } at the rate the contract publishes.`}
+                hint={`Paid in ${tokens.map((t) => t.symbol).join(" or ") || "stablecoins"}.`}
               >
                 <InputAddon prefix="$" suffix="USD">
                   <TextInput
@@ -844,50 +749,11 @@ export default function NewListingPage() {
                 </InputAddon>
               </Field>
 
-              {pricingType === "FIXED" && (
-                <Field
-                  label="Slots"
-                  htmlFor="slots"
-                  optional
-                  hint="How many buyers can book this."
-                >
-                  <TextInput
-                    id="slots"
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={slots}
-                    onChange={(e) => setSlots(e.target.value)}
-                    disabled={busy}
-                  />
-                </Field>
-              )}
-
               <Field
-                label="Turnaround"
-                htmlFor="turnaround"
-                optional
-                hint="Days from booking to delivery."
+                label={pricingType === "AUCTION" ? "Bidding ends" : "Offer expires"}
+                htmlFor="endDate"
               >
-                <TextInput
-                  id="turnaround"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={turnaroundDays}
-                  onChange={(e) => setTurnaroundDays(e.target.value)}
-                  placeholder="7"
-                  disabled={busy}
-                />
-              </Field>
-            </div>
-
-            <Field
-              label={pricingType === "AUCTION" ? "Bidding ends" : "Offer expires"}
-              htmlFor="endDate"
-              hint="Rounded up to a whole hour on-chain — it never closes early."
-            >
-              <div className="space-y-2">
+                <div className="space-y-2">
                   <TextInput
                     id="endDate"
                     type="datetime-local"
@@ -915,8 +781,9 @@ export default function NewListingPage() {
                       </button>
                     ))}
                   </div>
-              </div>
-            </Field>
+                </div>
+              </Field>
+            </div>
           </Panel>
         </div>
 
