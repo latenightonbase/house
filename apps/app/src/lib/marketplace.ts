@@ -191,7 +191,6 @@ export interface NewListingInput {
   contractAddress: string;
   tokenAddress?: string;
   tokenName?: string;
-  isDaily?: boolean;
 }
 
 export interface Vault {

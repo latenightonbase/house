@@ -108,7 +108,6 @@ type ListingDraft = {
   pricingType: PricingType;
   price: string;
   endDate: string;
-  isDaily: boolean;
 };
 
 function defaultDraft(): ListingDraft {
@@ -119,7 +118,6 @@ function defaultDraft(): ListingDraft {
     pricingType: "FIXED",
     price: "",
     endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
-    isDaily: false,
   };
 }
 
@@ -142,7 +140,6 @@ function loadDraft(userId: string): ListingDraft | null {
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
       price: typeof parsed.price === "string" ? parsed.price : base.price,
       endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
-      isDaily: parsed.isDaily === true,
     };
   } catch {
     return null;
@@ -182,7 +179,6 @@ export default function NewListingPage() {
   const [endDate, setEndDate] = useState(() =>
     toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
   );
-  const [isDaily, setIsDaily] = useState(false);
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>("form");
@@ -198,11 +194,6 @@ export default function NewListingPage() {
     setPricingType(draft.pricingType);
     setPrice(draft.price);
     setEndDate(draft.endDate);
-    setIsDaily(draft.isDaily);
-    if (draft.isDaily) {
-      setPricingType("AUCTION");
-      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
-    }
   };
 
   const resetForm = () => {
@@ -248,7 +239,6 @@ export default function NewListingPage() {
       pricingType,
       price,
       endDate,
-      isDaily,
     });
   }, [
     user?.id,
@@ -259,7 +249,6 @@ export default function NewListingPage() {
     pricingType,
     price,
     endDate,
-    isDaily,
   ]);
 
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
@@ -367,7 +356,6 @@ export default function NewListingPage() {
       endDate: endsAt.toISOString(),
       // A fixed-price listing settles once on-chain, so it only ever has one slot.
       slotsAvailable: 1,
-      isDaily,
       // Always present: the listing is on-chain before it is ever saved.
       txHash: hash,
       chainId: LISTING_CHAIN_ID,
@@ -429,8 +417,7 @@ export default function NewListingPage() {
     // sent to the API come from the same instant. Deriving either one after the
     // transaction confirms would put them a confirmation apart, and the API
     // checks the contract's deadline against exactly this.
-    const endsAt = isDaily ? new Date(Date.now() + 24 * 3_600_000) : parsedEnd;
-    if (isDaily) setEndDate(toLocalInputValue(endsAt));
+    const endsAt = parsedEnd;
 
     const listingId = crypto.randomUUID();
     try {
@@ -447,7 +434,7 @@ export default function NewListingPage() {
       }
 
       setStep("signing");
-      const hours = BigInt(isDaily ? 24 : durationHoursUntil(endsAt));
+      const hours = BigInt(durationHoursUntil(endsAt));
       const args = [listingId, hours, toUsdE8(priceNumber)] as const;
       const request = {
         address: contractAddress,
@@ -683,11 +670,8 @@ export default function NewListingPage() {
             <div className="grid grid-cols-2 gap-2">
               <PricingOption
                 active={pricingType === "FIXED"}
-                onClick={() => {
-                  setIsDaily(false);
-                  setPricingType("FIXED");
-                }}
-                disabled={busy || isDaily}
+                onClick={() => setPricingType("FIXED")}
+                disabled={busy}
                 icon={<Tag className="w-4 h-4" />}
                 title="Flat price"
                 body="First buyer at your price gets it."
@@ -701,31 +685,6 @@ export default function NewListingPage() {
                 body="Highest bid at close wins."
               />
             </div>
-
-            {isAdmin && (
-              <label className="flex items-start gap-3 rounded-lg border border-line bg-surface-2 px-3.5 py-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={isDaily}
-                  disabled={busy}
-                  onChange={(e) => {
-                    const next = e.target.checked;
-                    setIsDaily(next);
-                    if (next) {
-                      setPricingType("AUCTION");
-                      setEndDate(toLocalInputValue(new Date(Date.now() + 24 * 3_600_000)));
-                    }
-                  }}
-                />
-                <span>
-                  <span className="block text-[13px] font-semibold text-white">Daily auction</span>
-                  <span className="block mt-0.5 text-[11px] text-caption leading-relaxed">
-                    24-hour auction that the operator wallet settles and recreates every day.
-                  </span>
-                </span>
-              </label>
-            )}
 
             <div className="grid sm:grid-cols-2 gap-4 items-start">
               <Field
@@ -760,14 +719,14 @@ export default function NewListingPage() {
                     value={endDate}
                     min={toLocalInputValue(new Date(Date.now() + 3_600_000))}
                     onChange={(e) => setEndDate(e.target.value)}
-                    disabled={busy || isDaily}
+                    disabled={busy}
                   />
                   <div className="flex flex-wrap gap-1.5">
                     {DURATION_PRESETS.map((preset) => (
                       <button
                         key={preset.hours}
                         type="button"
-                        disabled={busy || isDaily}
+                        disabled={busy}
                         onClick={() =>
                           setEndDate(
                             toLocalInputValue(

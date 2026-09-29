@@ -820,25 +820,6 @@ export const marketplaceRoutes = new Elysia()
         return { error: "Listing already exists" };
       }
 
-      const isDaily = Boolean(body.isDaily);
-      if (isDaily && !admin) {
-        set.status = 403;
-        return { error: "Only an admin can run the daily auction" };
-      }
-      if (isDaily && body.pricingType !== "AUCTION") {
-        set.status = 400;
-        return { error: "The daily auction must be priced as an auction." };
-      }
-      if (isDaily) {
-        const liveDaily = await prisma.listing.findFirst({
-          where: { isDaily: true, status: "ACTIVE", settledAt: null },
-        });
-        if (liveDaily) {
-          set.status = 409;
-          return { error: "A daily auction is already live. Wait for it to close." };
-        }
-      }
-
       // The chain is the proof the listing exists, not the hash the client
       // sends. Approval is the only thing left between a seller's row and a
       // live listing, so a submission that only claims to be on-chain has to
@@ -874,7 +855,6 @@ export const marketplaceRoutes = new Elysia()
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
           endDate,
           status: admin ? "ACTIVE" : "PENDING_REVIEW",
-          isDaily,
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
@@ -936,7 +916,6 @@ export const marketplaceRoutes = new Elysia()
         contractAddress: t.Optional(t.String()),
         tokenAddress: t.Optional(t.String()),
         tokenName: t.Optional(t.String()),
-        isDaily: t.Optional(t.Boolean()),
       }),
     },
   )
