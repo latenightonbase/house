@@ -68,6 +68,7 @@ export const USDG: PaymentToken = {
   symbol: "USDG",
   decimals: 6,
   pegged: true,
+  logo: "/tokens/usdg.png",
 };
 
 /** The house token. Its USD rate is published on-chain by the contract owner. */
@@ -76,6 +77,7 @@ export const LNOC: PaymentToken = {
   symbol: "LNOC",
   decimals: 18,
   pegged: false,
+  logo: "/tokens/lnoc.jpg",
 };
 
 function normalize(value: string | undefined): `0x${string}` | undefined {
@@ -101,6 +103,8 @@ export interface PaymentToken {
   decimals: number;
   /** Dollar-pegged, so its on-chain rate never goes stale and $1 is $1. */
   pegged: boolean;
+  /** Path under /public. */
+  logo: string;
 }
 
 /**

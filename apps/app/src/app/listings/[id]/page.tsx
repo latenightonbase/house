@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { BaseError, UserRejectedRequestError, formatUnits } from "viem";
 import {
@@ -24,7 +25,6 @@ import {
   Field,
   InputAddon,
   Panel,
-  Select,
   TextInput,
   Tile,
 } from "@/components/ui";
@@ -49,7 +49,7 @@ import {
 import { erc20Abi } from "@/lib/contracts/erc20";
 import { robinhood } from "@/lib/chains";
 import { categoryMeta } from "@/lib/listingCategories";
-import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import { cn, relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
 type Step = "idle" | "switching" | "approving" | "signing" | "confirming" | "publishing" | "done";
 
@@ -659,18 +659,41 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
                       : `Converted from USD at the rate the contract publishes for ${token.symbol}.`
                 }
               >
-                <Select
+                <div
                   id="pay-token"
-                  value={token.address}
-                  onChange={(e) => setPayTokenAddress(e.target.value)}
-                  disabled={busy}
+                  role="radiogroup"
+                  aria-label="Pay with"
+                  className="grid grid-cols-2 gap-2"
                 >
-                  {tokens.map((t) => (
-                    <option key={t.address} value={t.address}>
-                      {t.symbol}
-                    </option>
-                  ))}
-                </Select>
+                  {tokens.map((t) => {
+                    const active = t.address === token.address;
+                    return (
+                      <button
+                        key={t.address}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setPayTokenAddress(t.address)}
+                        disabled={busy}
+                        className={cn(
+                          "flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-colors disabled:opacity-50",
+                          active
+                            ? "border-primary/60 bg-primary/20 text-white"
+                            : "border-line bg-surface-2 text-caption hover:border-line-strong hover:text-white",
+                        )}
+                      >
+                        <Image
+                          src={t.logo}
+                          alt=""
+                          width={20}
+                          height={20}
+                          className="h-5 w-5 rounded-full"
+                        />
+                        {t.symbol}
+                      </button>
+                    );
+                  })}
+                </div>
               </Field>
             )}
 
