@@ -18,7 +18,7 @@ import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysA
 import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
 import { WinnerBenefits } from "@/components/home/WinnerBenefits";
 import { AuctionEmpty } from "@/components/home/AuctionEmpty";
-import { MarketStatStrip } from "@/components/home/MarketStatStrip";
+import { HomeIntro } from "@/components/home/HomeIntro";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { ClosingSoonPanel } from "@/components/home/ClosingSoonPanel";
 const BidDialog = dynamic(
@@ -63,7 +63,7 @@ function AuthRequiredBanner() {
 }
 
 /**
- * The home page is a board, not a scroll. Stats set the scale, the billboard and
+ * The home page is a board, not a scroll. The intro says what LNOC is, the billboard and
  * the show's own auction share the top row, and the open market sits level with
  * them in the second — so a seller's listing is on screen the day it goes live
  * and a buyer never has to scroll to learn the market exists.
@@ -73,7 +73,6 @@ export default function HomeClient({
   auction: initialAuction,
   spotlight: initialSpotlight,
   listings: initialListings,
-  metrics,
 }: HomePageData) {
   const { status, user } = useSession();
   const openConnect = useOpenConnect();
@@ -155,11 +154,7 @@ export default function HomeClient({
         <AuthRequiredBanner />
       </Suspense>
 
-      <MarketStatStrip
-        listings={listings}
-        metrics={metrics}
-        dailyAuctionLive={Boolean(listing)}
-      />
+      <HomeIntro />
 
       {/* Top row: what won yesterday, and what is being fought over today. */}
       <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

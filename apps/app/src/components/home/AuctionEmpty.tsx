@@ -3,7 +3,7 @@ import { Gavel } from "lucide-react";
 /** No daily auction is live — the operator has not opened the next one yet. */
 export function AuctionEmpty() {
   return (
-    <section className="panel-glow flex min-h-[15rem] flex-col items-center justify-center p-6 text-center sm:p-8">
+    <section id="daily-auction" className="panel-glow flex min-h-[15rem] scroll-mt-24 flex-col items-center justify-center p-6 text-center sm:p-8">
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
         <Gavel className="h-5 w-5 text-primary-light" aria-hidden="true" />
       </span>

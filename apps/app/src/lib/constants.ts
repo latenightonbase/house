@@ -7,7 +7,7 @@
 export const SITE = {
   name: "Late Night Onchain",
   shortName: "LNOC",
-  tagline: "The marketplace for attention",
+  tagline: "",
   /** Footer strapline, under the wordmark. */
   strapline: "The world's first market for internet attention.",
   keywords: "Auctions. Attention. Exposure.",
@@ -50,16 +50,29 @@ export interface NavItem {
   href: string;
   label: string;
   /** Icon key resolved in `components/nav/navIcons.tsx`. */
-  icon: "auction" | "how" | "winners" | "economy" | "leaderboard" | "about";
+  icon: "auction" | "market" | "vaults" | "how" | "winners" | "leaderboard" | "about";
   /** Hidden from the top bar when false — the sidebar still lists it. */
   inTopNav?: boolean;
+  /** Off-site destination: opens in a new tab and is never marked active. */
+  external?: boolean;
 }
+
+/** Where projects go to deploy a token — the Pantheon vault LNOC runs. */
+export const PANTHEON_VAULTS_URL =
+  "https://launch.pantheonvaults.com/vaults/0x076277c3d6b57b4aad34c592cd2f138e9316a991";
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Live Auction", icon: "auction", inTopNav: true },
+  { href: "/marketplace", label: "Media Marketplace", icon: "market", inTopNav: true },
+  {
+    href: PANTHEON_VAULTS_URL,
+    label: "Pantheon Vaults",
+    icon: "vaults",
+    inTopNav: true,
+    external: true,
+  },
   { href: "/how-it-works", label: "How It Works", icon: "how", inTopNav: true },
   { href: "/past-winners", label: "Past Winners", icon: "winners", inTopNav: true },
-  { href: "/attention-economy", label: "Attention Economy", icon: "economy", inTopNav: true },
   { href: "/leaderboard", label: "Leaderboard", icon: "leaderboard", inTopNav: true },
   { href: "/about", label: "About LNOC", icon: "about", inTopNav: true },
 ];
@@ -76,5 +89,15 @@ export const WINNER_BENEFITS = [
   { icon: "megaphone", label: "Social Promotion Across LNOC Channels" },
   { icon: "clips", label: "2–3 Short-Form Clips From Appearance" },
 ] as const;
+
+/** The home page's opening pitch — what LNOC is, before any numbers. */
+export const HOME_INTRO = {
+  title: "The internet marketplace for attention",
+  pillars: [
+    { icon: "buy", label: "Buy attention" },
+    { icon: "monetize", label: "Monetize attention" },
+    { icon: "discover", label: "Get discovered" },
+  ]
+} as const;
 
 export const COPYRIGHT_YEAR = 2026;

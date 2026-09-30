@@ -114,9 +114,12 @@ function MarketEmpty() {
 export function MarketplacePanel({
   listings,
   onCheckout,
+  initialRows = INITIAL_ROWS,
 }: {
   listings: Listing[];
   onCheckout: (listing: Listing) => void;
+  /** Rows before "show more"; the marketplace page passes Infinity to list them all. */
+  initialRows?: number;
 }) {
   const [kind, setKind] = useState<Kind>("all");
   const [category, setCategory] = useState<string>("all");
@@ -154,7 +157,7 @@ export function MarketplacePanel({
     return sortListings(filtered, sort);
   }, [listings, kind, category, sort]);
 
-  const shown = expanded ? visible : visible.slice(0, INITIAL_ROWS);
+  const shown = expanded ? visible : visible.slice(0, initialRows);
   const hidden = visible.length - shown.length;
 
   return (

@@ -166,10 +166,10 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             <span>{billboardDate(spotlight.liveSince)}</span>
           </p>
 
-          <h1 className={`mt-2 display uppercase [overflow-wrap:anywhere] ${nameSize(spotlight.name)}`}>
+          <h2 className={`mt-2 display uppercase [overflow-wrap:anywhere] ${nameSize(spotlight.name)}`}>
             <span className="text-white">{lead}</span>
             {accent && <span className="text-primary-bright"> {accent}</span>}
-          </h1>
+          </h2>
 
           {spotlight.description && (
             <p className="mt-2.5 line-clamp-3 max-w-xl text-[13px] leading-relaxed text-white/75 [overflow-wrap:anywhere]">
@@ -241,9 +241,9 @@ export function TodaysAttentionEmpty() {
         <Crown className="w-[15px] h-[15px]" aria-hidden="true" />
         Today&apos;s Attention
       </p>
-      <h1 className="relative mt-4 display text-[clamp(1.6rem,4.5vw,2.5rem)] uppercase text-white">
+      <h2 className="relative mt-4 display text-[clamp(1.6rem,4.5vw,2.5rem)] uppercase text-white">
         The billboard is <span className="text-primary-bright">open</span>
-      </h1>
+      </h2>
       <p className="relative mt-3 max-w-md text-[14px] leading-relaxed text-caption">
         No auction has settled yet. Win the live auction beside this and your project takes the
         space for a full 24 hours.

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import { NAV_ITEMS, SITE } from "@/lib/constants";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { useSession } from "@/components/SessionProvider";
@@ -18,7 +18,7 @@ export function isNavItemActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-/** Desktop rail: wordmark, tagline, the six sections, wallet, then socials. */
+/** Desktop rail: wordmark, tagline, the site sections, wallet, then socials. */
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useSession();
@@ -36,12 +36,13 @@ export function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto scrollbar-none px-4 space-y-1">
         {NAV_ITEMS.map((item) => {
-          const active = isNavItemActive(pathname, item.href);
+          const active = !item.external && isNavItemActive(pathname, item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
+              {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className={cn(
                 "flex items-center gap-3 px-3.5 py-3 rounded-xl eyebrow transition-colors",
                 active
@@ -54,6 +55,9 @@ export function Sidebar() {
                 className={cn("w-[17px] h-[17px] shrink-0", active && "text-primary-light")}
               />
               <span className="truncate">{item.label}</span>
+              {item.external ? (
+                <ArrowUpRight className="ml-auto w-[14px] h-[14px] shrink-0 opacity-60" aria-hidden="true" />
+              ) : null}
             </Link>
           );
         })}

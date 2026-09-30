@@ -121,7 +121,7 @@ export function LiveAuctionPanel({
   const ended = countdown?.ended ?? false;
 
   return (
-    <section className="panel-glow flex flex-col p-4 sm:p-5">
+    <section id="daily-auction" className="panel-glow flex scroll-mt-24 flex-col p-4 sm:p-5">
       <header className="flex items-start gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-live">

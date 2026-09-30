@@ -1,7 +1,8 @@
 import {
-  BarChart3,
   Crown,
   Info,
+  Landmark,
+  Store,
   Trophy,
   Zap,
   type LucideIcon,
@@ -31,9 +32,10 @@ function AboutMark({ className }: { className?: string }) {
 
 const ICONS: Record<NavItem["icon"], LucideIcon | typeof AboutMark> = {
   auction: Zap,
+  market: Store,
+  vaults: Landmark,
   how: Info,
   winners: Trophy,
-  economy: BarChart3,
   leaderboard: Crown,
   about: AboutMark,
 };

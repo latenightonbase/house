@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, Menu, ShieldCheck, X } from "lucide-react";
 import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { useSession } from "@/components/SessionProvider";
@@ -17,7 +17,7 @@ import { isNavItemActive } from "./Sidebar";
 import { AccountNav } from "./AccountNav";
 
 /**
- * Phone header plus a full-height drawer. The six sections do not fit a bottom
+ * Phone header plus a full-height drawer. The sections do not fit a bottom
  * tab bar at this tracking, so the drawer carries the whole map — the same list
  * the desktop rail shows, in the same order.
  */
@@ -83,12 +83,13 @@ export function MobileNav() {
           <div className="px-4 py-6 space-y-6">
             <nav className="space-y-1.5">
               {NAV_ITEMS.map((item) => {
-                const active = isNavItemActive(pathname, item.href);
+                const active = !item.external && isNavItemActive(pathname, item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     aria-current={active ? "page" : undefined}
+                    {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow transition-colors",
                       active
@@ -98,6 +99,9 @@ export function MobileNav() {
                   >
                     <NavIcon name={item.icon} className="w-[18px] h-[18px] shrink-0" />
                     {item.label}
+                    {item.external ? (
+                      <ArrowUpRight className="ml-auto w-[15px] h-[15px] shrink-0 opacity-60" aria-hidden="true" />
+                    ) : null}
                   </Link>
                 );
               })}
