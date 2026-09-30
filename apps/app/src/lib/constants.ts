@@ -94,10 +94,9 @@ export const WINNER_BENEFITS = [
 export const HOME_INTRO = {
   title: "The internet marketplace for attention",
   pillars: [
-    { icon: "buy", label: "Buy attention" },
-    { icon: "monetize", label: "Monetize attention" },
-    { icon: "discover", label: "Get discovered" },
-  ]
+    { icon: "buy", label: "Buy attention", href: "/marketplace" },
+    { icon: "monetize", label: "Monetize attention", href: "/listings/new" },
+  ],
 } as const;
 
 export const COPYRIGHT_YEAR = 2026;

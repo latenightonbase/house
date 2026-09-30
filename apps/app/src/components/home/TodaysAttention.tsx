@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Image from "next/image";
-import { Crown, ExternalLink, Globe } from "lucide-react";
+import { ArrowUpRight, Crown, ExternalLink, Globe } from "lucide-react";
 import { SocialIcon } from "@/components/nav/SocialIcons";
 import { billboardPlaceholder } from "@/lib/brandMark";
 import type { Spotlight } from "@/lib/dailyAuction";
@@ -45,10 +45,14 @@ function nameSize(name: string) {
     .trim()
     .split(/\s+/)
     .reduce((max, word) => Math.max(max, word.length), 0);
-  if (longest <= 9) return "text-[clamp(2rem,10vw,2.75rem)] lg:text-[clamp(2rem,2.6vw,3rem)]";
-  if (longest <= 13) return "text-[clamp(1.75rem,8vw,2.4rem)] lg:text-[clamp(1.75rem,2.2vw,2.5rem)]";
-  if (longest <= 20) return "text-[clamp(1.35rem,6vw,1.9rem)] lg:text-[clamp(1.4rem,1.7vw,2rem)]";
-  return "text-[clamp(1.1rem,4.5vw,1.5rem)] lg:text-[clamp(1.15rem,1.3vw,1.6rem)]";
+  // The base size is the phone's, where the name shares a row with the poster.
+  if (longest <= 9)
+    return "text-[1.75rem] sm:text-[clamp(2rem,10vw,2.75rem)] lg:text-[clamp(2rem,2.6vw,3rem)]";
+  if (longest <= 13)
+    return "text-[1.3rem] sm:text-[clamp(1.75rem,8vw,2.4rem)] lg:text-[clamp(1.75rem,2.2vw,2.5rem)]";
+  if (longest <= 20)
+    return "text-[1.05rem] sm:text-[clamp(1.35rem,6vw,1.9rem)] lg:text-[clamp(1.4rem,1.7vw,2rem)]";
+  return "text-[0.9rem] sm:text-[clamp(1.1rem,4.5vw,1.5rem)] lg:text-[clamp(1.15rem,1.3vw,1.6rem)]";
 }
 
 function hostname(url: string) {
@@ -81,7 +85,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
   const { lead, accent } = splitName(spotlight.name);
   const artwork =
     !imageFailed && spotlight.imageUrl ? spotlight.imageUrl : billboardPlaceholder(spotlight.name);
-  const artworkSizes = "(min-width: 1536px) 19rem, (min-width: 1280px) 17rem, (min-width: 640px) 15rem, 100vw";
+  const artworkSizes = "(min-width: 1536px) 19rem, (min-width: 1280px) 17rem, (min-width: 640px) 15rem, 8rem";
   const links = [
     spotlight.websiteUrl && {
       key: "web",
@@ -102,6 +106,10 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
       label: "YouTube",
     },
   ].filter(Boolean) as { key: string; href: string; icon: ReactNode; label: string }[];
+  /** The phone card has room for one link: the project's site, else its first social. */
+  const phoneLink = spotlight.websiteUrl
+    ? { href: href(spotlight.websiteUrl), label: "Visit project" }
+    : links[0];
 
   return (
     <section className="billboard relative flex overflow-hidden rounded-2xl">
@@ -122,12 +130,14 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 
       <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
 
-      <div className="relative flex w-full min-w-0 flex-col gap-4 p-4 sm:flex-row sm:gap-5 sm:p-5">
+      {/* On a phone the card is a single row — poster beside the name — so the
+          intro, the billboard and the live auction's clock all fit one screen. */}
+      <div className="relative flex w-full min-w-0 flex-row items-center gap-3.5 p-3 sm:items-stretch sm:gap-5 sm:p-5">
         {/* The poster stays square at every width — stretching it to the panel's
             height would turn a 1:1 upload into a narrow banner. Uploads are not
             always 1:1 either, so the artwork is contained rather than cropped and
             the strips it leaves over are filled with a blurred copy of itself. */}
-        <div className="billboard-frame relative aspect-square w-full shrink-0 self-center overflow-hidden rounded-xl sm:w-[13rem] lg:w-[15rem] xl:w-[17rem] 2xl:w-[19rem]">
+        <div className="billboard-frame relative aspect-square w-[7.75rem] shrink-0 self-center overflow-hidden rounded-[10px] sm:w-[13rem] sm:rounded-xl lg:w-[15rem] xl:w-[17rem] 2xl:w-[19rem]">
           <Image
             src={artwork}
             alt=""
@@ -150,15 +160,21 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             className="object-contain"
             priority
           />
-          <span aria-hidden="true" className="billboard-scrim absolute inset-0" />
-          <p className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full border border-gold/45 bg-background/80 px-2.5 py-1 font-semibold uppercase tracking-[0.13em] text-[9px] text-gold-light backdrop-blur-sm">
+          <span aria-hidden="true" className="billboard-scrim absolute inset-0 max-sm:hidden" />
+          <p className="absolute top-2 left-2 max-sm:hidden inline-flex items-center gap-1.5 rounded-full border border-gold/45 bg-background/80 px-2.5 py-1 font-semibold uppercase tracking-[0.13em] text-[9px] text-gold-light backdrop-blur-sm">
             <Crown className="w-3 h-3" aria-hidden="true" />
             Today&apos;s Attention
           </p>
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-caption">
+          {/* The poster is too small on a phone to carry the crown badge. */}
+          <p className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-gold-light sm:hidden">
+            <Crown className="h-3 w-3 text-gold" aria-hidden="true" />
+            Today&apos;s Attention
+          </p>
+
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-caption max-sm:hidden">
             <span>24-hour billboard</span>
             <span className="text-gold/60" aria-hidden="true">
               •
@@ -166,13 +182,30 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             <span>{billboardDate(spotlight.liveSince)}</span>
           </p>
 
-          <h2 className={`mt-2 display uppercase [overflow-wrap:anywhere] ${nameSize(spotlight.name)}`}>
+          <h2 className={`mt-1.5 sm:mt-2 display uppercase [overflow-wrap:anywhere] ${nameSize(spotlight.name)}`}>
             <span className="text-white">{lead}</span>
             {accent && <span className="text-primary-bright"> {accent}</span>}
           </h2>
 
+          <p className="numeric mt-1.5 text-[12px] text-caption sm:hidden">
+            {shortDate(spotlight.liveSince)}
+            {runRemaining && !runRemaining.ended && <> · {countdownLabel(runRemaining)} left</>}
+          </p>
+
+          {phoneLink && (
+            <a
+              href={phoneLink.href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="mt-1 inline-flex h-8 max-w-full items-center gap-1.5 self-start text-[12px] font-semibold text-primary-light transition-colors hover:text-white sm:hidden"
+            >
+              <span className="truncate">{phoneLink.label}</span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            </a>
+          )}
+
           {spotlight.description && (
-            <p className="mt-2.5 line-clamp-3 max-w-xl text-[13px] leading-relaxed text-white/75 [overflow-wrap:anywhere]">
+            <p className="max-sm:hidden mt-2.5 line-clamp-3 max-w-xl text-[13px] leading-relaxed text-white/75 [overflow-wrap:anywhere]">
               {spotlight.description}
             </p>
           )}
@@ -180,7 +213,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
           {/* The prize line — the one place gold carries meaning rather than trim.
               The run clock sits beside it: the billboard is a 24-hour tenancy, so
               how much of it is left is part of what the winner bought. */}
-          <div className="mt-4 flex flex-wrap items-stretch gap-2">
+          <div className="mt-4 flex flex-wrap items-stretch gap-2 max-sm:hidden">
             <p className="inline-flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border border-gold/35 bg-gold/[0.06] px-3.5 py-2.5">
               <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-gold-light">
                 Winner of the {shortDate(spotlight.liveSince)} attention auction
@@ -201,7 +234,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
             )}
           </div>
 
-          <div className="mt-3.5 flex flex-wrap items-center gap-2">
+          <div className="mt-3.5 flex flex-wrap items-center gap-2 max-sm:hidden">
             {spotlight.websiteUrl && (
               <a
                 href={href(spotlight.websiteUrl)}
@@ -235,7 +268,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 /** Shown before the first auction settles, so the page never renders headless. */
 export function TodaysAttentionEmpty() {
   return (
-    <section className="billboard relative flex min-h-[15rem] flex-col items-center justify-center overflow-hidden rounded-2xl px-5 py-9 text-center sm:px-10">
+    <section className="billboard relative flex min-h-[11rem] flex-col items-center justify-center overflow-hidden rounded-2xl px-5 py-6 text-center sm:min-h-[15rem] sm:px-10 sm:py-9">
       <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
       <p className="relative inline-flex items-center gap-2 rounded-full border border-gold/45 bg-background/70 px-3.5 py-1.5 eyebrow text-gold-light">
         <Crown className="w-[15px] h-[15px]" aria-hidden="true" />

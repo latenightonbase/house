@@ -134,7 +134,8 @@ export function LiveAuctionPanel({
         </div>
       </header>
 
-      <p className="mt-2 text-[12px] leading-relaxed text-caption">
+      {/* Dropped on phones, where the panel has to clear the fold under the billboard. */}
+      <p className="mt-2 text-[12px] leading-relaxed text-caption max-sm:hidden">
         Win the next 24-hour billboard + Late Night spotlight on the show.
       </p>
 

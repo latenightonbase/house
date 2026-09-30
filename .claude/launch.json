@@ -22,6 +22,18 @@
       "port": 3002
     },
     {
+      "name": "app-direct",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "F:/Codes/house-1/node_modules/next/dist/bin/next",
+        "dev",
+        "F:/Codes/house-1/apps/app",
+        "--port",
+        "3002"
+      ],
+      "port": 3002
+    },
+    {
       "name": "api",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
