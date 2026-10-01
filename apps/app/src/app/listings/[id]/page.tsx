@@ -8,6 +8,7 @@ import { BadgeCheck, CheckCircle2, Clock, Gavel } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
 import { CheckoutFields } from "@/components/listing/CheckoutFields";
+import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/components/SessionProvider";
 import { Badge, BrandAvatar, Button, Card, Panel, Tile } from "@/components/ui";
@@ -261,6 +262,17 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
       />
 
       <Card className="p-4 sm:p-6 space-y-5">
+        {listing.posterUrl && (
+          <ListingPoster
+            src={listing.posterUrl}
+            alt={`Poster for ${listing.title}`}
+            adaptive
+            priority
+            sizes="(min-width: 768px) 720px, 100vw"
+            className="w-full max-h-[min(70dvh,36rem)] rounded-xl border border-line"
+          />
+        )}
+
         <div className="flex items-center gap-3 text-left">
           <BrandAvatar
             src={avatarSrc}

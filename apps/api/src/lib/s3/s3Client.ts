@@ -54,3 +54,13 @@ export function isOurS3Url(raw: string): boolean {
     return false;
   }
 }
+
+/**
+ * A listing poster must be an object this user uploaded through the `poster`
+ * presign — our bucket, under `poster/<userId>/`. Anything else (another
+ * user's key, an avatar, an outside host) is refused rather than stored.
+ */
+export function isOwnPosterUrl(raw: string, userId: string): boolean {
+  if (!isOurS3Url(raw)) return false;
+  return new URL(raw).pathname.startsWith(`/poster/${userId}/`);
+}

@@ -1,3 +1,5 @@
+import { PosterThumb } from "@/components/listing/ListingPoster";
+import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 import {
@@ -47,6 +49,7 @@ export function ListingRow({
   onCheckout: (listing: Listing) => void;
 }) {
   const price = priceLine(listing);
+  const CategoryIcon = categoryMeta(listing.category).icon;
 
   return (
     <button
@@ -61,16 +64,25 @@ export function ListingRow({
         COLUMNS,
       )}
     >
-      <div className="min-w-0">
-        {/* Kind rides in the listing cell rather than taking a column of its
-            own — in a two-thirds panel the width is better spent on the title. */}
-        <div className="flex min-w-0 items-center gap-2">
-          <TypeRow listing={listing} />
-          <span className="hidden lg:block">
-            <KindBadge listing={listing} />
-          </span>
+      <div className="flex min-w-0 items-center gap-2.5">
+        {/* Every row gets the box, poster or not, so titles line up. */}
+        <PosterThumb
+          src={listing.posterUrl}
+          alt={`Poster for ${listing.title}`}
+          size={40}
+          placeholder={<CategoryIcon className="h-4 w-4" />}
+        />
+        <div className="min-w-0">
+          {/* Kind rides in the listing cell rather than taking a column of its
+              own — in a two-thirds panel the width is better spent on the title. */}
+          <div className="flex min-w-0 items-center gap-2">
+            <TypeRow listing={listing} />
+            <span className="hidden lg:block">
+              <KindBadge listing={listing} />
+            </span>
+          </div>
+          <p className="mt-1 truncate text-[13px] font-semibold text-foreground">{listing.title}</p>
         </div>
-        <p className="mt-1 truncate text-[13px] font-semibold text-foreground">{listing.title}</p>
       </div>
 
       {/* The seller belongs next to the price on a phone, not in a column of

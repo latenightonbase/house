@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Inbox, XCircle } from "lucide-react";
+import { CheckCircle2, ExternalLink, ImageOff, Inbox, XCircle } from "lucide-react";
+import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge, BrandAvatar, Button, Card, Panel, TextArea, Tile } from "@/components/ui";
 import { categoryMeta } from "@/lib/listingCategories";
@@ -143,6 +144,34 @@ export default function AdminListingsClient() {
                   {listing.pricingType === "AUCTION" ? "Auction" : "Flat price"}
                 </Badge>
               </div>
+
+              {/* The poster goes live with the listing, so it is reviewed at a
+                  readable size and can be opened at full resolution. */}
+              {listing.posterUrl ? (
+                <div className="space-y-1.5">
+                  <ListingPoster
+                    src={listing.posterUrl}
+                    alt={`Poster for ${listing.title}`}
+                    adaptive
+                    sizes="(min-width: 640px) 320px, 100vw"
+                    className="w-full max-h-[28rem] rounded-xl border border-line sm:w-80"
+                  />
+                  <a
+                    href={listing.posterUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[12px] font-medium text-caption hover:text-white transition-colors"
+                  >
+                    Open full size
+                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                  </a>
+                </div>
+              ) : (
+                <p className="flex items-center gap-1.5 text-[12px] text-caption">
+                  <ImageOff className="w-3.5 h-3.5" aria-hidden="true" />
+                  No poster attached
+                </p>
+              )}
 
               {listing.description && (
                 <p className="text-[13px] text-caption leading-relaxed whitespace-pre-wrap">

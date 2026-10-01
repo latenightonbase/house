@@ -19,6 +19,7 @@ import {
   Badge,
   Button,
   Field,
+  ImageUploader,
   InputAddon,
   Panel,
   PanelHeader,
@@ -108,6 +109,8 @@ type ListingDraft = {
   pricingType: PricingType;
   price: string;
   endDate: string;
+  /** Already on S3 — the draft only remembers where. */
+  posterUrl: string | null;
 };
 
 function defaultDraft(): ListingDraft {
@@ -118,6 +121,7 @@ function defaultDraft(): ListingDraft {
     pricingType: "FIXED",
     price: "",
     endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
+    posterUrl: null,
   };
 }
 
@@ -140,6 +144,7 @@ function loadDraft(userId: string): ListingDraft | null {
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
       price: typeof parsed.price === "string" ? parsed.price : base.price,
       endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
+      posterUrl: typeof parsed.posterUrl === "string" ? parsed.posterUrl : base.posterUrl,
     };
   } catch {
     return null;
@@ -179,6 +184,8 @@ export default function NewListingPage() {
   const [endDate, setEndDate] = useState(() =>
     toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
   );
+  const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [posterUploading, setPosterUploading] = useState(false);
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
 
   const [step, setStep] = useState<Step>("form");
@@ -194,6 +201,7 @@ export default function NewListingPage() {
     setPricingType(draft.pricingType);
     setPrice(draft.price);
     setEndDate(draft.endDate);
+    setPosterUrl(draft.posterUrl);
   };
 
   const resetForm = () => {
@@ -239,6 +247,7 @@ export default function NewListingPage() {
       pricingType,
       price,
       endDate,
+      posterUrl,
     });
   }, [
     user?.id,
@@ -249,12 +258,14 @@ export default function NewListingPage() {
     pricingType,
     price,
     endDate,
+    posterUrl,
   ]);
 
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
   const priceNumber = Number(price);
 
   const validationError = useMemo(() => {
+    if (posterUploading) return "Wait for the poster to finish uploading.";
     if (title.trim().length < 2) return "Give your listing a name.";
     if (!Number.isFinite(priceNumber) || priceNumber <= 0) {
       return pricingType === "AUCTION"
@@ -268,7 +279,7 @@ export default function NewListingPage() {
       return "Pick when the listing ends.";
     if (parsedEnd.getTime() <= Date.now()) return "The end time has to be in the future.";
     return null;
-  }, [title, priceNumber, pricingType, parsedEnd]);
+  }, [posterUploading, title, priceNumber, pricingType, parsedEnd]);
 
   /** Identity shown on the preview card — the profile a listing is created under. */
   const previewCreator = useMemo(() => {
@@ -300,6 +311,7 @@ export default function NewListingPage() {
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
     currency: "USD",
     slotsAvailable: 1,
+    posterUrl: posterUrl ?? undefined,
     endDate:
       parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? parsedEnd.toISOString() : undefined,
     status: "ACTIVE",
@@ -356,6 +368,7 @@ export default function NewListingPage() {
       endDate: endsAt.toISOString(),
       // A fixed-price listing settles once on-chain, so it only ever has one slot.
       slotsAvailable: 1,
+      posterUrl: posterUrl ?? undefined,
       // Always present: the listing is on-chain before it is ever saved.
       txHash: hash,
       chainId: LISTING_CHAIN_ID,
@@ -635,6 +648,23 @@ export default function NewListingPage() {
                 maxLength={2000}
                 disabled={busy}
               />
+            </Field>
+
+            <Field
+              label="Poster"
+              optional
+              hint="Square (1:1) or story-shaped (9:16) artwork. Shown on Discover, the listing page and your profile."
+            >
+              <div className="max-w-56">
+                <ImageUploader
+                  variant="poster"
+                  value={posterUrl}
+                  onUploaded={setPosterUrl}
+                  onUploadingChange={setPosterUploading}
+                  disabled={busy}
+                  alt={title.trim() ? `Poster for ${title.trim()}` : "Listing poster"}
+                />
+              </div>
             </Field>
 
             <Field label="Category" hint={categoryMeta.hint}>

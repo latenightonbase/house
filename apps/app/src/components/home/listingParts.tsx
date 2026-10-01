@@ -108,13 +108,13 @@ export function ActionPill({ listing, className }: { listing: Listing; className
 export function KindBadge({ listing }: { listing: Listing }) {
   if (listing.pricingType === "AUCTION") {
     return (
-      <span className="badge badge-accent shrink-0">
+      <span className="badge badge-accent shrink-0 whitespace-nowrap">
         <Gavel className="mr-1 h-2.5 w-2.5" aria-hidden="true" />
         Auction
       </span>
     );
   }
-  return <span className="badge badge-neutral shrink-0">Buy now</span>;
+  return <span className="badge badge-neutral shrink-0 whitespace-nowrap">Buy now</span>;
 }
 
 /** A seller with no linked socials reports zero followers — that line is dropped. */

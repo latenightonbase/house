@@ -22,6 +22,7 @@ import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dai
 import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { assertListingStillOpen, verifyListingOnChain } from "../lib/listingChain";
+import { isOwnPosterUrl } from "../lib/s3/s3Client";
 
 const CATEGORIES = [
   "SHOUTOUT",
@@ -813,6 +814,11 @@ export const marketplaceRoutes = new Elysia()
         set.status = 400;
         return { error: "Price must be greater than zero" };
       }
+      const posterUrl = body.posterUrl?.trim() || null;
+      if (posterUrl && !isOwnPosterUrl(posterUrl, user.id)) {
+        set.status = 400;
+        return { error: "Upload the poster again — that image link was not accepted" };
+      }
 
       const existing = await prisma.listing.findUnique({ where: { id: body.id } });
       if (existing) {
@@ -853,6 +859,7 @@ export const marketplaceRoutes = new Elysia()
           platform: body.platform ?? null,
           turnaroundDays: body.turnaroundDays ?? null,
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
+          posterUrl,
           endDate,
           status: admin ? "ACTIVE" : "PENDING_REVIEW",
           txHash: body.txHash,
@@ -907,6 +914,7 @@ export const marketplaceRoutes = new Elysia()
         ),
         turnaroundDays: t.Optional(t.Number()),
         slotsAvailable: t.Optional(t.Number()),
+        posterUrl: t.Optional(t.String({ maxLength: 700 })),
         // Every listing is written on-chain as part of submitting it, so these
         // are always present — kept optional in the schema only so a missing
         // one is answered with the handler's own message rather than a

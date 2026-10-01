@@ -2,6 +2,7 @@
 
 import { Flame, Sparkles } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
+import { PosterThumb } from "@/components/listing/ListingPoster";
 import { BrandAvatar } from "@/components/ui";
 import type { Listing } from "@/lib/marketplace";
 import { useCountdown } from "@/lib/useCountdown";
@@ -31,13 +32,23 @@ function Row({
       aria-haspopup="dialog"
       className="group flex w-full items-center text-left gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
     >
-      <BrandAvatar
-        src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
-        alt={listing.creator.displayName}
-        fallbackSeed={listing.creator.wallet}
-        shape="square"
-        size={38}
-      />
+      {/* The poster when there is one; the seller's face otherwise. */}
+      {listing.posterUrl ? (
+        <PosterThumb
+          src={listing.posterUrl}
+          alt={`Poster for ${listing.title}`}
+          size={38}
+          placeholder={null}
+        />
+      ) : (
+        <BrandAvatar
+          src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
+          alt={listing.creator.displayName}
+          fallbackSeed={listing.creator.wallet}
+          shape="square"
+          size={38}
+        />
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold text-foreground">{listing.title}</p>

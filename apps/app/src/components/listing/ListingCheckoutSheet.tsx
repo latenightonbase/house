@@ -37,6 +37,7 @@ import {
 } from "@/lib/useListingCheckout";
 import { cn, relativeEndLabel } from "@/lib/utils";
 import { BidHistory } from "./BidHistory";
+import { ListingPoster } from "./ListingPoster";
 import { CheckoutFields } from "./CheckoutFields";
 
 /** Long enough that clamping it saves real height in a sheet. */
@@ -277,6 +278,18 @@ function SheetBody({
     <>
       {/* ── Summary ─────────────────────────────── */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4 sm:px-6 sm:pt-6">
+        {listing.posterUrl && (
+          // Capped low enough that price and checkout still fit without a
+          // scroll; a 9:16 poster gets blurred bands either side instead.
+          <ListingPoster
+            src={listing.posterUrl}
+            alt={`Poster for ${listing.title}`}
+            adaptive
+            priority
+            sizes="(min-width: 640px) 480px, 100vw"
+            className="mb-4 w-full max-h-[34dvh] rounded-xl border border-line sm:max-h-72"
+          />
+        )}
         <div className="flex items-center gap-2 pr-10">
           <TypeRow listing={listing} />
           <KindBadge listing={listing} />

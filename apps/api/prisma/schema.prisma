@@ -344,6 +344,10 @@ model Listing {
   turnaroundDays Int?
   /// Remaining slots; 0 reads as sold out.
   slotsAvailable Int             @default(1)
+  /// Optional seller-uploaded artwork, stored under `poster/<userId>/` in S3.
+  /// Kept at its own aspect ratio — mostly 1:1 or 9:16 — so every surface that
+  /// shows it letterboxes rather than crops.
+  posterUrl      String?
   /// When bidding closes / the offer expires. The contract only accepts whole
   /// hours of duration, so this is rounded up to the next hour on-chain.
   endDate        DateTime?

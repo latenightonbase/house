@@ -4,7 +4,7 @@ import { getFileExtension } from "./imageValidation";
 import { getChatFileExtension, sanitizeFileName } from "./fileValidation";
 import { getS3BucketName, getS3Client, publicUrlForKey } from "./s3Client";
 
-export type UploadPurpose = "avatar" | "project";
+export type UploadPurpose = "avatar" | "project" | "poster";
 
 export async function generatePresignedUpload(opts: {
   contentType: string;

@@ -4,12 +4,13 @@ import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type M
 import Image from "next/image";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { BrandAvatar } from "@/components/ui/BrandAvatar";
+import { ListingPoster } from "@/components/listing/ListingPoster";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
 import { processImageForUpload } from "@/lib/resizeImage";
 import { uploadImage, validateImageFile, type UploadPurpose } from "@/lib/uploadImage";
 import { cn } from "@/lib/utils";
 
-type Variant = "artwork" | "avatar";
+type Variant = "artwork" | "avatar" | "poster";
 
 type Props = {
   variant: Variant;
@@ -19,10 +20,13 @@ type Props = {
   fallbackSeed?: string;
   alt?: string;
   id?: string;
+  /** Lets a form hold its submit while an upload is still in flight. */
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 function purposeFor(variant: Variant): UploadPurpose {
-  return variant === "avatar" ? "avatar" : "project";
+  if (variant === "avatar") return "avatar";
+  return variant === "poster" ? "poster" : "project";
 }
 
 function acceptFor(variant: Variant) {
@@ -39,6 +43,7 @@ export function ImageUploader({
   fallbackSeed,
   alt = "Upload image",
   id,
+  onUploadingChange,
 }: Props) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -64,6 +69,10 @@ export function ImageUploader({
       if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    onUploadingChange?.(uploading);
+  }, [uploading, onUploadingChange]);
 
   const handleFile = useCallback(
     async (file: File | undefined) => {
@@ -216,7 +225,8 @@ export function ImageUploader({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
           className={cn(
-            "w-full max-w-56 mx-auto aspect-square rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+            "w-full max-w-56 mx-auto rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
+            variant === "poster" ? "aspect-[4/5]" : "aspect-square",
             "bg-surface-2 outline-none focus-visible:border-primary/60 flex flex-col items-center justify-center",
             isDragging ? "border-primary/70 bg-primary/5" : "border-line hover:border-primary/50",
             busy && "cursor-wait opacity-70",
@@ -227,7 +237,11 @@ export function ImageUploader({
             {uploading ? "Uploading…" : "Drop an image here"}
           </p>
           <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, AVIF, GIF · 5MB max</p>
-          <p className="mt-0.5 text-[11px] text-caption">{variant === "artwork" && "1:1 · 1080×1080px"}</p>
+          <p className="mt-0.5 text-[11px] text-caption">
+            {variant === "artwork"
+              ? "1:1 · 1080×1080px"
+              : "1:1 (1080×1080) or 9:16 (1080×1920)"}
+          </p>
         </button>
       ) : (
         <div
@@ -239,16 +253,29 @@ export function ImageUploader({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
         >
-          <div className={cn("relative w-full", variant === "artwork" ? "aspect-square" : "h-40")}>
-            <Image
+          {variant === "poster" ? (
+            // Shown at its own shape, as buyers will see it — a 9:16 poster
+            // stays tall here rather than being squared off.
+            <ListingPoster
+              key={preview}
               src={preview}
               alt={alt}
-              fill
+              adaptive
               sizes="400px"
-              unoptimized={isUnoptimizedSrc(preview)}
-              className="object-cover"
+              className="w-full max-h-96"
             />
-          </div>
+          ) : (
+            <div className="relative w-full aspect-square">
+              <Image
+                src={preview}
+                alt={alt}
+                fill
+                sizes="400px"
+                unoptimized={isUnoptimizedSrc(preview)}
+                className="object-cover"
+              />
+            </div>
+          )}
           {uploading ? (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <Loader2 className="h-6 w-6 animate-spin text-white" />

@@ -205,6 +205,7 @@ export function serializeListing(listing: ListingWithCreator) {
     currency: listing.currency,
     turnaroundDays: listing.turnaroundDays ?? undefined,
     slotsAvailable: listing.slotsAvailable,
+    posterUrl: listing.posterUrl ?? undefined,
     endDate: listing.endDate?.toISOString(),
     status: listing.status,
     chainId: listing.chainId ?? undefined,

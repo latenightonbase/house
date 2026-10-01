@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Badge, Tile } from "@/components/ui";
 import { CreateListingButton } from "@/components/CreateListingButton";
+import { PosterThumb } from "@/components/listing/ListingPoster";
+import { categoryMeta } from "@/lib/listingCategories";
 import { fetchMyListings, type Listing, type ListingStatus } from "@/lib/marketplace";
 import { relativeEndLabel } from "@/lib/utils";
 import type { BadgeVariant } from "@/components/ui";
@@ -72,9 +74,16 @@ export function MyListings({
         <div className="space-y-2">
           {listings.map((listing) => {
             const state = STATUS_COPY[listing.status];
+            const CategoryIcon = categoryMeta(listing.category).icon;
             return (
               <Link key={listing.id} href={`/listings/${listing.id}`} className="block">
                 <Tile className="px-4 py-3 flex items-start gap-3 hover:border-line-strong transition-colors">
+                  <PosterThumb
+                    src={listing.posterUrl}
+                    alt=""
+                    size={48}
+                    placeholder={<CategoryIcon className="h-4 w-4" />}
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold text-white truncate">
                       {listing.title}

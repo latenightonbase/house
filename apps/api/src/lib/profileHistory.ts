@@ -45,6 +45,7 @@ export type SaleCounterparty = PartyIdentity & {
 export type SaleRecord = {
   listingId: string;
   title: string;
+  posterUrl: string | null;
   category: string;
   pricingType: "FIXED" | "AUCTION";
   status: string;
@@ -62,6 +63,7 @@ export type SaleRecord = {
 export type PurchaseRecord = {
   listingId: string;
   title: string;
+  posterUrl: string | null;
   category: string;
   pricingType: "FIXED" | "AUCTION";
   isDaily: boolean;
@@ -179,6 +181,7 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
       return {
         listingId: listing.id,
         title: listing.title,
+        posterUrl: listing.posterUrl,
         category: listing.category,
         pricingType: listing.pricingType,
         status: listing.status,
@@ -234,6 +237,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
   const fromPurchases: PurchaseRecord[] = purchases.map((purchase) => ({
     listingId: purchase.listingId,
     title: purchase.listing.title,
+    posterUrl: purchase.listing.posterUrl,
     category: purchase.listing.category,
     pricingType: purchase.listing.pricingType,
     isDaily: purchase.listing.isDaily,
@@ -248,6 +252,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
   const fromWins: PurchaseRecord[] = wins.map((listing) => ({
     listingId: listing.id,
     title: listing.title,
+    posterUrl: listing.posterUrl,
     category: listing.category,
     pricingType: listing.pricingType,
     isDaily: listing.isDaily,

@@ -1,4 +1,4 @@
-export type UploadPurpose = "avatar" | "project";
+export type UploadPurpose = "avatar" | "project" | "poster";
 
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",

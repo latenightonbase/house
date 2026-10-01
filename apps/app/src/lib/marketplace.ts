@@ -141,6 +141,8 @@ export interface Listing {
   platform?: Platform;
   turnaroundDays?: number;
   slotsAvailable: number;
+  /** Seller-uploaded artwork, at its own aspect ratio (mostly 1:1 or 9:16). */
+  posterUrl?: string;
   endDate?: string;
   status: ListingStatus;
   chainId?: number;
@@ -186,6 +188,8 @@ export interface NewListingInput {
   platform?: "YOUTUBE" | "TWITTER" | "INSTAGRAM" | "TIKTOK";
   turnaroundDays?: number;
   slotsAvailable?: number;
+  /** A `poster` upload of the submitting user's own; the API refuses any other URL. */
+  posterUrl?: string;
   txHash: string;
   chainId: number;
   contractAddress: string;

@@ -17,7 +17,7 @@ aws s3 mb s3://your-auction-images --region us-east-1
 
 ### 2. Configure Bucket Policy
 
-Avatars and project artwork are public: they are rendered by URL on pages that
+Avatars, project artwork and listing posters are public: they are rendered by URL on pages that
 anyone can open. Chat attachments are **not** — a DM'd image or PDF is readable
 only by the two people in the conversation, and the API hands those out as
 short-lived presigned URLs instead.
@@ -36,7 +36,8 @@ public prefixes only, rather than to `/*`:
       "Action": "s3:GetObject",
       "Resource": [
         "arn:aws:s3:::your-auction-images/avatar/*",
-        "arn:aws:s3:::your-auction-images/project/*"
+        "arn:aws:s3:::your-auction-images/project/*",
+        "arn:aws:s3:::your-auction-images/poster/*"
       ]
     }
   ]
@@ -48,6 +49,10 @@ public prefixes only, rather than to `/*`:
 > attachment world-readable to anyone holding the URL — the presigned-download
 > path in the API would then be privacy theatre. If your bucket already has the
 > wildcard policy from an earlier setup, narrow it before enabling chat.
+
+> **Listing posters live under `poster/`.** A bucket set up before posters
+> existed needs that line added, or every poster uploads fine and then renders
+> as a broken image.
 
 Presigned downloads keep working under the narrowed policy: they are signed with
 the API's own IAM credentials, which the user policy in step 4 still grants

@@ -30,6 +30,7 @@ export type SaleCounterparty = PartyIdentity & {
 export type SaleRecord = {
   listingId: string;
   title: string;
+  posterUrl: string | null;
   category: string;
   pricingType: PricingType;
   status: string;
@@ -46,6 +47,7 @@ export type SaleRecord = {
 export type PurchaseRecord = {
   listingId: string;
   title: string;
+  posterUrl: string | null;
   category: string;
   pricingType: PricingType;
   isDaily: boolean;

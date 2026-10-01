@@ -44,6 +44,7 @@ export function SalesHistory({
           <HistoryRow
             href={`/listings/${sale.listingId}`}
             title={sale.title}
+            posterUrl={sale.posterUrl}
             meta={`${saleKindLabel(sale)}${
               sale.settledAt ? ` · Settled ${formatDate(sale.settledAt)}` : ""
             }`}

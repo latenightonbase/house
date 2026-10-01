@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { ImageIcon } from "lucide-react";
+import { PosterThumb } from "@/components/listing/ListingPoster";
 import { Avatar } from "@/components/ui";
 import { formatAmount, formatDate, type PartyIdentity } from "@/lib/profileHistory";
 
@@ -32,6 +34,7 @@ export function HistoryEmpty({ children }: { children: ReactNode }) {
 export function HistoryRow({
   href,
   title,
+  posterUrl,
   meta,
   amount,
   amountTone = "default",
@@ -39,6 +42,7 @@ export function HistoryRow({
 }: {
   href: string;
   title: string;
+  posterUrl?: string | null;
   meta: string;
   amount: string;
   amountTone?: "default" | "positive";
@@ -47,6 +51,14 @@ export function HistoryRow({
   return (
     <div className="rounded-xl border border-line bg-surface-2 px-4 py-3.5 transition-colors hover:border-line-strong">
       <div className="flex items-start gap-4">
+        <Link href={href} tabIndex={-1} aria-hidden="true" className="-mr-1 shrink-0">
+          <PosterThumb
+            src={posterUrl}
+            alt=""
+            size={48}
+            placeholder={<ImageIcon className="h-4 w-4 opacity-60" />}
+          />
+        </Link>
         <div className="min-w-0 flex-1">
           <Link
             href={href}

@@ -1,6 +1,7 @@
 "use client";
 
 import { BadgeCheck, Gavel } from "lucide-react";
+import { ListingPoster } from "@/components/listing/ListingPoster";
 import { Badge, BrandAvatar, Button, Card, PlatformIcon } from "@/components/ui";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
@@ -27,6 +28,15 @@ export function ListingCard({
 
   return (
     <Card className="p-4 flex h-full flex-col gap-3">
+      {listing.posterUrl && (
+        <ListingPoster
+          src={listing.posterUrl}
+          alt={`Poster for ${listing.title}`}
+          adaptive
+          sizes="330px"
+          className="w-full max-h-80 rounded-lg border border-line"
+        />
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 text-caption">
           {listing.platform ? (

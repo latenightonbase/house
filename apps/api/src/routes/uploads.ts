@@ -33,7 +33,7 @@ export const uploadRoutes = new Elysia({ prefix: "/uploads" }).post(
   {
     body: t.Object({
       contentType: t.String(),
-      purpose: t.Union([t.Literal("avatar"), t.Literal("project")]),
+      purpose: t.Union([t.Literal("avatar"), t.Literal("project"), t.Literal("poster")]),
     }),
   },
 );

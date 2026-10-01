@@ -2,10 +2,24 @@ import type { UploadPurpose } from "@/lib/uploadImage";
 
 const QUALITY_STEPS = [0.85, 0.7, 0.55, 0.4] as const;
 
-const PRESETS = {
-  avatar: { maxEdge: 256, maxBytes: 200 * 1024, basename: "avatar", square: false },
-  project: { maxEdge: 1080, maxBytes: 600 * 1024, basename: "artwork", square: true },
-} as const;
+/**
+ * `aspect` is the [narrowest, widest] width/height ratio kept; anything outside
+ * it is centre-cropped to the nearest bound. Avatars keep whatever they are,
+ * artwork is square, and posters keep their own shape — 1:1 and 9:16 are the
+ * norm — with only panoramas and slivers trimmed back to 16:9 and 9:16.
+ */
+type Preset = {
+  maxEdge: number;
+  maxBytes: number;
+  basename: string;
+  aspect?: readonly [number, number];
+};
+
+const PRESETS: Record<UploadPurpose, Preset> = {
+  avatar: { maxEdge: 256, maxBytes: 200 * 1024, basename: "avatar" },
+  project: { maxEdge: 1080, maxBytes: 600 * 1024, basename: "artwork", aspect: [1, 1] },
+  poster: { maxEdge: 1920, maxBytes: 1024 * 1024, basename: "poster", aspect: [9 / 16, 16 / 9] },
+};
 
 const FORMATS = [
   { type: "image/avif", ext: "avif" },
@@ -99,24 +113,22 @@ export async function processImageForUpload(
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not process image");
 
-    if (preset.square) {
-      const shortest = Math.min(source.width, source.height);
-      const edge = Math.max(1, Math.round(Math.min(shortest, preset.maxEdge)));
-      canvas.width = edge;
-      canvas.height = edge;
-      const scale = edge / shortest;
-      const drawW = source.width * scale;
-      const drawH = source.height * scale;
-      ctx.save();
-      ctx.translate((edge - drawW) / 2, (edge - drawH) / 2);
-      source.draw(ctx, drawW, drawH);
-      ctx.restore();
-    } else {
-      const scale = Math.min(preset.maxEdge / source.width, preset.maxEdge / source.height, 1);
-      canvas.width = Math.max(1, Math.round(source.width * scale));
-      canvas.height = Math.max(1, Math.round(source.height * scale));
-      source.draw(ctx, canvas.width, canvas.height);
-    }
+    const ratio = source.width / source.height;
+    const [minAspect, maxAspect] = preset.aspect ?? [ratio, ratio];
+    const target = Math.min(Math.max(ratio, minAspect), maxAspect);
+    // The region of the source that survives the crop, in source pixels.
+    const cropW = ratio > target ? source.height * target : source.width;
+    const cropH = ratio > target ? source.height : source.width / target;
+    const scale = Math.min(preset.maxEdge / cropW, preset.maxEdge / cropH, 1);
+
+    canvas.width = Math.max(1, Math.round(cropW * scale));
+    canvas.height = Math.max(1, Math.round(cropH * scale));
+    const drawW = source.width * scale;
+    const drawH = source.height * scale;
+    ctx.save();
+    ctx.translate((canvas.width - drawW) / 2, (canvas.height - drawH) / 2);
+    source.draw(ctx, drawW, drawH);
+    ctx.restore();
 
     for (const format of FORMATS) {
       const blob = await encodeToTarget(canvas, format.type, preset.maxBytes);
