@@ -1,5 +1,5 @@
 import { ArrowDownLeft, ArrowUpRight, Package, Wallet } from "lucide-react";
-import { formatAmount, type PurchaseRecord, type SaleRecord } from "@/lib/profileHistory";
+import { formatTotals, type PurchaseRecord, type SaleRecord } from "@/lib/profileHistory";
 
 function Cell({
   icon,
@@ -50,9 +50,10 @@ export function ProfileStats({
   sales: SaleRecord[];
   purchases: PurchaseRecord[];
 }) {
-  const earned = sales.reduce((sum, sale) => sum + sale.totalEarned, 0);
-  const spent = purchases.reduce((sum, purchase) => sum + purchase.amount, 0);
-  const currency = sales[0]?.currency ?? purchases[0]?.currency ?? "USD";
+  // Listings are paid in USDG or LNOC, so each total is kept per token rather
+  // than adding millions of LNOC to a handful of dollars.
+  const earned = formatTotals(sales.map((sale) => [sale.totalEarned, sale.currency]));
+  const spent = formatTotals(purchases.map((purchase) => [purchase.amount, purchase.currency]));
 
   return (
     // Hairlines are grid gaps over a line-coloured base, so they land between
@@ -66,7 +67,7 @@ export function ProfileStats({
       <Cell
         icon={<ArrowUpRight className="h-[15px] w-[15px]" />}
         label="Earned"
-        value={formatAmount(earned, currency)}
+        value={earned}
         accent="positive"
       />
       <Cell
@@ -77,7 +78,7 @@ export function ProfileStats({
       <Cell
         icon={<ArrowDownLeft className="h-[15px] w-[15px]" />}
         label="Spent"
-        value={formatAmount(spent, currency)}
+        value={spent}
         accent="primary"
       />
     </div>

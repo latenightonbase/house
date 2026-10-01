@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import Image from "next/image";
 import type { PaymentToken } from "@/lib/contracts/auctionHouse";
 import { cn } from "@/lib/utils";
 
 /**
- * The settle-in choice, as one button per token rather than a dropdown — with
- * two options both should be visible at once. Behaves as a radio group: one
- * tab stop, arrow keys move the selection.
+ * The token choice, as one button per token rather than a dropdown — with two
+ * options both should be visible at once. Behaves as a radio group: one tab
+ * stop, arrow keys move the selection.
  */
 export function TokenPicker({
   tokens,
@@ -16,12 +16,15 @@ export function TokenPicker({
   onChange,
   disabled,
   labelledBy,
+  detail,
 }: {
   tokens: PaymentToken[];
   value: string;
   onChange: (address: string) => void;
   disabled?: boolean;
   labelledBy?: string;
+  /** A second line under each symbol — the create form shows the live USD price. */
+  detail?: (token: PaymentToken) => ReactNode;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const selected = Math.max(
@@ -47,7 +50,7 @@ export function TokenPicker({
     <div
       role="radiogroup"
       aria-labelledby={labelledBy}
-      aria-label={labelledBy ? undefined : "Pay with"}
+      aria-label={labelledBy ? undefined : "Token"}
       className="grid grid-cols-2 gap-2"
       onKeyDown={onKeyDown}
     >
@@ -66,7 +69,8 @@ export function TokenPicker({
             onClick={() => onChange(t.address)}
             disabled={disabled}
             className={cn(
-              "flex h-11 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors",
+              "flex items-center justify-center gap-2 rounded-lg border px-3 text-sm font-semibold transition-colors",
+              detail ? "min-h-14 justify-start py-2.5 text-left" : "h-11",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 disabled:opacity-50",
               active
                 ? "border-primary/60 bg-primary/20 text-white"
@@ -76,11 +80,20 @@ export function TokenPicker({
             <Image
               src={t.logo}
               alt=""
-              width={20}
-              height={20}
-              className="h-5 w-5 rounded-full"
+              width={detail ? 28 : 20}
+              height={detail ? 28 : 20}
+              className={cn("shrink-0 rounded-full", detail ? "h-7 w-7" : "h-5 w-5")}
             />
-            {t.symbol}
+            {detail ? (
+              <span className="min-w-0">
+                <span className="block">{t.symbol}</span>
+                <span className="numeric block truncate text-[11px] font-medium text-caption">
+                  {detail(t)}
+                </span>
+              </span>
+            ) : (
+              t.symbol
+            )}
           </button>
         );
       })}

@@ -1,21 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { BaseError, UserRejectedRequestError } from "viem";
-import {
-  useAccount,
-  usePublicClient,
-  useReadContract,
-  useSwitchChain,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useSession } from "@/components/SessionProvider";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
-  paymentTokens,
-  toUsdE8,
-  USDG,
+  fromTokenUnits,
+  listingToken,
+  onCurrentHouse,
+  toTokenUnits,
 } from "@/lib/contracts/auctionHouse";
 import { erc20Abi } from "@/lib/contracts/erc20";
 import { robinhood } from "@/lib/chains";
@@ -24,6 +19,7 @@ import {
   recordListingBid,
   type Listing,
 } from "@/lib/marketplace";
+import { formatListingAmount } from "@/lib/tokenPrices";
 
 export type CheckoutStep =
   | "idle"
@@ -41,15 +37,6 @@ export const CHECKOUT_STEP_LABEL: Record<Exclude<CheckoutStep, "idle" | "done">,
   confirming: "Waiting for the transaction to confirm…",
   publishing: "Recording the booking…",
 };
-
-/**
- * A floating token's rate can move between the quote and the confirmation, so
- * the buyer approves a little headroom and the contract still charges only
- * what the listing is worth. A pegged stable needs none.
- */
-function withSlippage(amount: bigint, pegged: boolean) {
-  return pegged ? amount : (amount * BigInt(101)) / BigInt(100);
-}
 
 export function writeError(err: unknown, fallback: string): string {
   if (err instanceof UserRejectedRequestError) {
@@ -75,7 +62,10 @@ export function writeError(err: unknown, fallback: string): string {
   return fallback;
 }
 
-/** The contract rejects a bid that only matches the leader, so the floor sits a cent above it. */
+/**
+ * The contract rejects a bid that only matches the leader, so the floor sits
+ * one hundredth of a token above it — in the listing's own token.
+ */
 export function minimumBidFor(listing: Pick<Listing, "price">, currentBid?: number | null) {
   return currentBid != null ? Math.round((currentBid + 0.01) * 100) / 100 : listing.price;
 }
@@ -102,22 +92,15 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
   const publicClient = usePublicClient({ chainId: chainForListing });
   const isAuction = listing?.pricingType === "AUCTION";
 
-  const [payTokenAddress, setPayTokenAddress] = useState<string>(USDG.address);
   const [bidAmount, setBidAmount] = useState("");
   const [step, setStep] = useState<CheckoutStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pendingPersist, setPendingPersist] = useState<string | null>(null);
 
-  // Listings are priced in USD and the buyer picks what to settle in, so the
-  // token is chosen here rather than read off the listing.
-  const tokens = paymentTokens(chainForListing);
-  const token = useMemo(
-    () =>
-      tokens.find((t) => t.address.toLowerCase() === payTokenAddress.toLowerCase()) ??
-      tokens[0] ??
-      USDG,
-    [tokens, payTokenAddress],
-  );
+  // The seller picked the token when they listed; the buyer pays in it.
+  const token = listingToken(listing ?? {});
+  /** Opened on the retired contract, whose calls take different arguments. */
+  const legacy = Boolean(listing?.contractAddress) && !onCurrentHouse(listing ?? {});
 
   const contractAddress =
     (listing?.contractAddress as `0x${string}` | undefined) ??
@@ -131,23 +114,8 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
   const bidNumber = Number(bidAmount);
   const bidInvalid = isAuction && (!Number.isFinite(bidNumber) || bidNumber < minimumBid);
 
-  /** What the buyer pays, in USD — the bid for an auction, the price otherwise. */
-  const usdAmount = isAuction ? (Number.isFinite(bidNumber) ? bidNumber : 0) : (listing?.price ?? 0);
-
-  // What the chosen amount costs in the chosen token, at the rate the contract
-  // publishes. Shown before signing so nobody is surprised by the conversion.
-  const { data: quotedAmount } = useReadContract({
-    address: contractAddress,
-    abi: auctionHouseAbi,
-    functionName: "quoteUsd",
-    args: [token.address, toUsdE8(usdAmount)],
-    chainId: chainForListing,
-    query: {
-      enabled: Boolean(
-        contractAddress && !token.pegged && usdAmount > 0 && listing?.status === "ACTIVE",
-      ),
-    },
-  });
+  /** What the buyer pays, in the listing's token — the bid for an auction, the price otherwise. */
+  const amount = isAuction ? (Number.isFinite(bidNumber) ? bidNumber : 0) : (listing?.price ?? 0);
 
   async function persistPurchase(txHash: string | null, current: Listing) {
     setStep("publishing");
@@ -162,7 +130,6 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
     setStep("idle");
     setError(null);
     setPendingPersist(null);
-    setPayTokenAddress(USDG.address);
     setBidAmount(initialBid != null ? String(initialBid) : "");
   }
 
@@ -174,8 +141,14 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
       return true;
     }
     if (!address) return false;
+    if (legacy) {
+      setError(
+        "This listing was opened on the previous AuctionHouse contract and can no longer be bought here.",
+      );
+      return true;
+    }
     if (bidInvalid) {
-      setError(`Bid at least $${minimumBid.toLocaleString()}.`);
+      setError(`Bid at least ${formatListingAmount(listing, minimumBid)}.`);
       return true;
     }
     setError(null);
@@ -233,15 +206,21 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
         );
       }
 
-      // The USD price is fixed; how much of the chosen token covers it is not,
-      // so ask the contract rather than converting here.
-      const amount = await publicClient.readContract({
-        address: contractAddress,
-        abi: auctionHouseAbi,
-        functionName: "quoteUsd",
-        args: [token.address, toUsdE8(isAuction ? bidNumber : listing.price)],
+      // The contract charges exactly the listing's price (or the bid) in the
+      // listing's token — read the price back rather than trusting the row.
+      const units = isAuction ? toTokenUnits(bidNumber, token) : meta.price;
+
+      const balance = await publicClient.readContract({
+        address: token.address,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address],
       });
-      const limit = withSlippage(amount, token.pegged);
+      if (balance < units) {
+        throw new Error(
+          `This needs ${formatListingAmount(listing, fromTokenUnits(units, token))} and your wallet holds ${formatListingAmount(listing, fromTokenUnits(balance, token))}.`,
+        );
+      }
 
       const allowance = await publicClient.readContract({
         address: token.address,
@@ -250,13 +229,13 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
         args: [address, contractAddress],
       });
 
-      if (allowance < limit) {
+      if (allowance < units) {
         setStep("approving");
         const approveHash = await writeContractAsync({
           address: token.address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [contractAddress, limit],
+          args: [contractAddress, units],
           account: address,
         });
         const approveReceipt = await publicClient.waitForTransactionReceipt({
@@ -274,14 +253,14 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
             address: contractAddress,
             abi: auctionHouseAbi,
             functionName: "placeBid",
-            args: [listing.id, token.address, amount, fid],
+            args: [listing.id, units, fid],
             account: address,
           })
         : await writeContractAsync({
             address: contractAddress,
             abi: auctionHouseAbi,
             functionName: "buyListing",
-            args: [listing.id, token.address, limit, fid],
+            args: [listing.id, fid],
             account: address,
           });
 
@@ -327,16 +306,14 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
     address,
     chainForListing,
     chainSupported,
-    tokens,
     token,
-    setPayTokenAddress,
+    legacy,
     bidAmount,
     setBidAmount,
     bidNumber,
     minimumBid,
     bidInvalid,
-    usdAmount,
-    quotedAmount,
+    amount,
     step,
     busy,
     error,

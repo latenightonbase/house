@@ -3,6 +3,7 @@ import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { Resend } from "resend";
 import { getCanonicalOrigin } from "./origins";
+import { formatTokenAmount } from "./tokens";
 
 const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "../emails");
 
@@ -85,27 +86,39 @@ export function sendOtp(to: string, code: string) {
   return send(to, "Your LNOC verification code", "otp.html", { email: to, code });
 }
 
-export function sendOutbid(to: string, input: { title: string; listingId: string; previousBid: number; newBid: number }) {
+/** Amounts are in the listing's own token, so every email names it. */
+type Priced = { currency: string };
+
+export function sendOutbid(
+  to: string,
+  input: Priced & { title: string; listingId: string; previousBid: number; newBid: number },
+) {
   return send(to, `Outbid on ${input.title}`, "outbid.html", {
     title: input.title,
-    previousBid: input.previousBid.toLocaleString(),
-    newBid: input.newBid.toLocaleString(),
+    previousBid: formatTokenAmount(input.previousBid, input.currency),
+    newBid: formatTokenAmount(input.newBid, input.currency),
     listingUrl: listingUrl(input.listingId),
   });
 }
 
-export function sendAuctionWon(to: string, input: { title: string; listingId: string; amount: number }) {
+export function sendAuctionWon(
+  to: string,
+  input: Priced & { title: string; listingId: string; amount: number },
+) {
   return send(to, `You won ${input.title}`, "auction-won.html", {
     title: input.title,
-    amount: input.amount.toLocaleString(),
+    amount: formatTokenAmount(input.amount, input.currency),
     listingUrl: listingUrl(input.listingId),
   });
 }
 
-export function sendListingPurchased(to: string, input: { title: string; listingId: string; amount: number }) {
+export function sendListingPurchased(
+  to: string,
+  input: Priced & { title: string; listingId: string; amount: number },
+) {
   return send(to, `Purchase confirmed: ${input.title}`, "listing-purchased.html", {
     title: input.title,
-    amount: input.amount.toLocaleString(),
+    amount: formatTokenAmount(input.amount, input.currency),
     listingUrl: listingUrl(input.listingId),
   });
 }
@@ -113,7 +126,7 @@ export function sendListingPurchased(to: string, input: { title: string; listing
 /** Tells the admin a seller's listing is waiting in the review queue. */
 export function sendListingPendingReview(
   to: string,
-  input: {
+  input: Priced & {
     title: string;
     seller: string;
     category: string;
@@ -129,7 +142,7 @@ export function sendListingPendingReview(
     seller: input.seller,
     category: input.category,
     pricing: input.pricingType === "AUCTION" ? "Auction" : "Flat price",
-    price: input.price.toLocaleString(),
+    price: formatTokenAmount(input.price, input.currency),
     description: input.description?.trim() ?? "",
     closes: input.closesAt ? formatDeadline(input.closesAt) : "",
     reviewUrl: `${appOrigin()}/admin/listings`,

@@ -96,8 +96,8 @@ function MarketEmpty() {
       </span>
       <p className="mt-3.5 text-[14px] font-semibold text-white">The market is open</p>
       <p className="mx-auto mt-2 max-w-sm text-[12px] leading-relaxed text-caption">
-        No seller inventory is live yet. List a placement of your own and it shows up here the
-        moment it is approved and published.
+        No seller inventory is live yet. List a placement of your own, priced in USDG or LNOC,
+        and it shows up here the moment it is approved.
       </p>
       <div className="mt-4 flex justify-center">
         <CreateListingButton variant="accent-outline" size="sm" label="List your attention" />
@@ -107,7 +107,7 @@ function MarketEmpty() {
 }
 
 /**
- * The market, sitting level with the daily auction rather than under it. Rows
+ * The market, given the same footprint as the daily winner's billboard. Rows
  * are dense on purpose: a buyer should see what is for sale without scrolling,
  * and a seller's listing should be visible the day it goes live.
  */
@@ -139,10 +139,15 @@ export function MarketplacePanel({
         ]
       : [];
 
-  /** Only categories with inventory — an empty filter is a dead end. */
+  /**
+   * Only categories with inventory — an empty filter is a dead end. "Other" is
+   * no longer offered to sellers, so the few older rows in it are not given a
+   * chip of their own; they still show under "All categories".
+   */
   const categories = useMemo(() => {
     const seen = new Map<string, number>();
     for (const listing of listings) {
+      if (listing.category === "OTHER") continue;
       seen.set(listing.category, (seen.get(listing.category) ?? 0) + 1);
     }
     return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([value]) => value);
@@ -162,13 +167,22 @@ export function MarketplacePanel({
 
   return (
     <section id="marketplace" className="card flex min-w-0 flex-col p-4 scroll-mt-24 sm:p-5">
-      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex min-w-0 items-center gap-2">
-          <Store className="h-[15px] w-[15px] shrink-0 text-primary-light" aria-hidden="true" />
-          <h2 className="panel-label text-primary-light">Marketplace</h2>
-          <span className="numeric text-[11px] text-caption">
-            {listings.length} live {listings.length === 1 ? "listing" : "listings"}
-          </span>
+      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-light">
+            <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            Marketplace
+            <span className="text-line-strong" aria-hidden="true">•</span>
+            <span className="numeric text-caption">
+              {listings.length} live {listings.length === 1 ? "listing" : "listings"}
+            </span>
+          </p>
+          <h2 className="mt-2 display text-[clamp(1.25rem,3.4vw,1.75rem)] uppercase text-white">
+            Buy attention <span className="text-primary-bright">direct</span>
+          </h2>
+          <p className="mt-1 text-[12px] leading-relaxed text-caption max-sm:hidden">
+            Placements sold by creators, priced in USDG or LNOC and settled on-chain.
+          </p>
         </div>
 
         {/* Shrinkable and wrapping: on a phone the controls take their own lines
@@ -252,6 +266,25 @@ export function MarketplacePanel({
                   <ListingRow key={listing.id} listing={listing} onCheckout={onCheckout} />
                 ))}
               </div>
+
+              {/* A thin market would leave the panel's lower half bare at the
+                  billboard's height, so the seller-side ask fills it. */}
+              {shown.length < 4 && hidden === 0 && (
+                <div className="mt-auto pt-4">
+                  <div className="tile flex flex-col items-start gap-3 border-dashed px-4 py-4 sm:flex-row sm:items-center">
+                    <p className="text-[12px] leading-relaxed text-caption">
+                      Have an audience? List a placement of your own — priced in USDG or LNOC,
+                      paid out to your wallet.
+                    </p>
+                    <CreateListingButton
+                      variant="accent-outline"
+                      size="sm"
+                      className="shrink-0 sm:ml-auto"
+                      label="List your attention"
+                    />
+                  </div>
+                </div>
+              )}
 
               {hidden > 0 && (
                 <div className="mt-3 flex justify-center border-t border-line pt-3">

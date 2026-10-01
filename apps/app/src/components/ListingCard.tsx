@@ -6,6 +6,7 @@ import { Badge, BrandAvatar, Button, Card, PlatformIcon } from "@/components/ui"
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import { formatListingAmount } from "@/lib/tokenPrices";
 
 /**
  * One unit of media on sale. Reads as a service listing — what you get, from
@@ -44,7 +45,12 @@ export function ListingCard({
           ) : (
             <CategoryIcon className="w-3.5 h-3.5 shrink-0" />
           )}
-          <span className="text-[11px] truncate">{listing.placement ?? meta.label}</span>
+          <span className="text-[11px] truncate">
+            {listing.placement ??
+              (listing.category !== "OTHER"
+                ? meta.label
+                : `Paid in ${listing.tokenName || listing.currency}`)}
+          </span>
         </div>
         {isAuction ? (
           <Badge variant="accent" className="shrink-0">
@@ -97,14 +103,14 @@ export function ListingCard({
         <div>
           <p className="text-[11px] text-caption">{isAuction ? "Minimum bid" : "Price"}</p>
           <p className="text-lg font-bold text-white numeric">
-            ${listing.price.toLocaleString()}
+            {formatListingAmount(listing, listing.price)}
           </p>
           <p className="text-[11px] text-caption mt-0.5">
             {listing.endDate
               ? relativeEndLabel(listing.endDate)
               : listing.turnaroundDays
                 ? `~${listing.turnaroundDays}d turnaround`
-                : meta.label}
+                : "Open"}
           </p>
         </div>
         <Button

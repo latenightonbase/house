@@ -1,10 +1,11 @@
-import { getAddress, parseUnits } from "viem";
-import { auctionHouseAbi, auctionHouseAddress, publicClient, robinhood } from "./operator";
-
-/** Listing prices are USD with 8 decimals on-chain — 1e8 is $1.00. */
-function toUsdE8(usd: number): bigint {
-  return parseUnits(usd.toFixed(8), 8);
-}
+import { getAddress } from "viem";
+import {
+  auctionHouseAddress,
+  readListingOnChain,
+  robinhood,
+  type ListingOnChain,
+} from "./operator";
+import { toTokenUnits, type ListingToken } from "./tokens";
 
 /**
  * The contract rounds a duration up to whole hours from the block it lands in,
@@ -24,33 +25,15 @@ export type ChainListingCheck =
   | { ok: true; deadline: Date; owner: string }
   | { ok: false; status: number; error: string };
 
-type AuctionMeta = {
-  deadline: bigint;
-  auctionId: string;
-  auctionOwner: string;
-  priceUsdE8: bigint;
-  highestBidUsdE8: bigint;
-  highestBidder: string;
-  highestBidToken: string;
-  highestBidAmount: bigint;
-  isFixedPrice: boolean;
-  settled: boolean;
-};
-
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 function sameAddress(a: string | null | undefined, b: string | null | undefined) {
   return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
 }
 
-async function readMeta(house: `0x${string}`, id: string): Promise<AuctionMeta | "unreachable"> {
+async function readMeta(house: `0x${string}`, id: string): Promise<ListingOnChain | "unreachable"> {
   try {
-    return (await publicClient().readContract({
-      address: house,
-      abi: auctionHouseAbi,
-      functionName: "getAuctionMeta",
-      args: [id],
-    })) as unknown as AuctionMeta;
+    return await readListingOnChain(house, id);
   } catch (err) {
     console.error("[listing] could not read listing state on-chain:", err);
     return "unreachable";
@@ -59,7 +42,8 @@ async function readMeta(house: `0x${string}`, id: string): Promise<AuctionMeta |
 
 /**
  * Confirms a listing really is on the AuctionHouse, owned by the person who
- * submitted it, priced and dated the way the row says.
+ * submitted it, priced in the token and amount the row says, and dated the way
+ * the row says.
  *
  * Sellers now sign at submission rather than after approval, which makes an
  * admin's approve click the only thing standing between a row and a live,
@@ -71,6 +55,7 @@ async function readMeta(house: `0x${string}`, id: string): Promise<AuctionMeta |
 export async function verifyListingOnChain(input: {
   id: string;
   price: number;
+  token: ListingToken;
   pricingType: "FIXED" | "AUCTION";
   endDate: Date;
   chainId: number;
@@ -102,7 +87,7 @@ export async function verifyListingOnChain(input: {
     };
   }
 
-  if (!meta.auctionOwner || sameAddress(meta.auctionOwner, ZERO)) {
+  if (!meta.owner || sameAddress(meta.owner, ZERO)) {
     return {
       ok: false,
       status: 402,
@@ -111,7 +96,7 @@ export async function verifyListingOnChain(input: {
   }
 
   const owned = new Set(input.wallets.map((w) => w.address.toLowerCase()));
-  if (!owned.has(meta.auctionOwner.toLowerCase())) {
+  if (!owned.has(meta.owner.toLowerCase())) {
     return {
       ok: false,
       status: 403,
@@ -134,7 +119,15 @@ export async function verifyListingOnChain(input: {
     };
   }
 
-  if (meta.priceUsdE8 !== toUsdE8(input.price)) {
+  if (!sameAddress(meta.token, input.token.address)) {
+    return {
+      ok: false,
+      status: 400,
+      error: `This listing is priced in a different token on-chain, not ${input.token.symbol}.`,
+    };
+  }
+
+  if (meta.priceRaw !== toTokenUnits(input.price, input.token)) {
     return {
       ok: false,
       status: 400,
@@ -158,7 +151,7 @@ export async function verifyListingOnChain(input: {
     };
   }
 
-  return { ok: true, deadline, owner: getAddress(meta.auctionOwner) };
+  return { ok: true, deadline, owner: getAddress(meta.owner) };
 }
 
 /**
@@ -188,7 +181,7 @@ export async function assertListingStillOpen(listing: {
     };
   }
 
-  if (!meta.auctionOwner || sameAddress(meta.auctionOwner, ZERO)) {
+  if (!meta.owner || sameAddress(meta.owner, ZERO)) {
     return { ok: false, status: 409, error: "This listing is no longer on the AuctionHouse." };
   }
   if (meta.settled) {
@@ -204,5 +197,5 @@ export async function assertListingStillOpen(listing: {
     };
   }
 
-  return { ok: true, deadline, owner: getAddress(meta.auctionOwner) };
+  return { ok: true, deadline, owner: getAddress(meta.owner) };
 }

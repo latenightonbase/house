@@ -23,19 +23,32 @@ import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { assertListingStillOpen, verifyListingOnChain } from "../lib/listingChain";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
+import { findListingToken, listingToken } from "../lib/tokens";
+import { getTokenPrices } from "../lib/tokenPrices";
 
+/** Prices are entered to the cent; anything past that is a client bug, not a price. */
+const MAX_PRICE = 1e15;
+function validPrice(price: number) {
+  return (
+    Number.isFinite(price) &&
+    price > 0 &&
+    price <= MAX_PRICE &&
+    Math.abs(Math.round(price * 100) - price * 100) < 1e-6
+  );
+}
+
+/**
+ * Categories a new listing may be filed under. VIDEO_INTEGRATION, PODCAST, AMA,
+ * COLLAB and OTHER were retired from the picker; they stay in the Prisma enum
+ * because older listings still carry them.
+ */
 const CATEGORIES = [
   "SHOUTOUT",
   "SPONSORED_POST",
-  "VIDEO_INTEGRATION",
   "DEDICATED_VIDEO",
   "LIVESTREAM",
-  "PODCAST",
   "NEWSLETTER",
-  "AMA",
-  "COLLAB",
   "CONSULTING",
-  "OTHER",
 ] as const;
 
 /**
@@ -357,6 +370,14 @@ async function requireOwnedListing(
 }
 
 export const marketplaceRoutes = new Elysia()
+  /**
+   * Indicative USD prices for the listing tokens. Display only — a listing is
+   * priced and paid in token units, so nothing that moves money reads these.
+   */
+  .get("/token-prices", async ({ set }) => {
+    set.headers["cache-control"] = "public, max-age=30";
+    return getTokenPrices();
+  })
   /**
    * The market's headline figures, denominated in attention rather than
    * tokens: what was spent on media, who is selling, how much inventory
@@ -810,9 +831,16 @@ export const marketplaceRoutes = new Elysia()
         set.status = 400;
         return { error: "End date must be in the future" };
       }
-      if (body.price <= 0) {
+      if (!validPrice(body.price)) {
         set.status = 400;
-        return { error: "Price must be greater than zero" };
+        return { error: "Price must be above zero, with at most two decimal places" };
+      }
+      // The seller's choice of token is the listing's for life: every bid and
+      // purchase is paid in it, so it has to be one the contract accepts.
+      const token = findListingToken(body.tokenAddress);
+      if (!token) {
+        set.status = 400;
+        return { error: "Price the listing in USDG or LNOC" };
       }
       const posterUrl = body.posterUrl?.trim() || null;
       if (posterUrl && !isOwnPosterUrl(posterUrl, user.id)) {
@@ -833,6 +861,7 @@ export const marketplaceRoutes = new Elysia()
       const onchain = await verifyListingOnChain({
         id: body.id,
         price: body.price,
+        token,
         pricingType: body.pricingType,
         endDate,
         chainId: body.chainId,
@@ -854,7 +883,7 @@ export const marketplaceRoutes = new Elysia()
           category: body.category,
           pricingType: body.pricingType,
           price: body.price,
-          currency: body.currency ?? "USD",
+          currency: token.symbol,
           placement: body.placement?.trim() || null,
           platform: body.platform ?? null,
           turnaroundDays: body.turnaroundDays ?? null,
@@ -865,8 +894,8 @@ export const marketplaceRoutes = new Elysia()
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
-          tokenAddress: body.tokenAddress ?? null,
-          tokenName: body.tokenName ?? null,
+          tokenAddress: token.address,
+          tokenName: token.symbol,
           creatorId: creator.id,
         },
         include: { creator: { include: creatorInclude } },
@@ -882,6 +911,7 @@ export const marketplaceRoutes = new Elysia()
               category: listing.category,
               pricingType: listing.pricingType,
               price: listing.price,
+              currency: listing.currency,
               description: listing.description,
               // The seller's clock is already running, so the queue email says
               // how long an approval still has to land in.
@@ -922,6 +952,8 @@ export const marketplaceRoutes = new Elysia()
         txHash: t.Optional(t.String()),
         chainId: t.Optional(t.Number()),
         contractAddress: t.Optional(t.String()),
+        // Required in practice — kept optional so a missing one gets the
+        // handler's own message.
         tokenAddress: t.Optional(t.String()),
         tokenName: t.Optional(t.String()),
       }),
@@ -1032,8 +1064,11 @@ export const marketplaceRoutes = new Elysia()
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
-          tokenAddress: body.tokenAddress ?? null,
-          tokenName: body.tokenName ?? null,
+          // A row this old was saved before sellers chose a token, so it was
+          // published in the one its price was always quoted against.
+          tokenAddress: listingToken(listing).address,
+          tokenName: listingToken(listing).symbol,
+          currency: listingToken(listing).symbol,
         },
         include: { creator: { include: creatorInclude } },
       });
@@ -1140,6 +1175,7 @@ export const marketplaceRoutes = new Elysia()
           title: listing.title,
           listingId: listing.id,
           amount: listing.price,
+          currency: listing.currency,
         }).catch((err) => console.error("[email] listing-purchased failed:", err));
       }
 
@@ -1236,6 +1272,7 @@ export const marketplaceRoutes = new Elysia()
             listingId: listing.id,
             previousBid: previous.amount,
             newBid: body.amount,
+            currency: listing.currency,
           }).catch((err) => console.error("[email] outbid failed:", err));
         }
       }

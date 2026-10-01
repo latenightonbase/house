@@ -4,24 +4,31 @@ import { sendAuctionWon } from "./email";
 import { getWinningProject, type SerializedDailyProject } from "./dailyProject";
 import { superadminWallet } from "./roles";
 import { settleExpiredAuctions } from "./auctionSettlement";
-import { keeperEnabled, logKeeperOutcome, runLnocPriceKeeper } from "./pricing/keeper";
 import {
   auctionHouseAbi,
   auctionHouseAddress,
+  endAuctionOn,
   erc20Abi,
   feeRecipient,
-  fromTokenAmount,
-  fromUsdE8,
   operatorAccount,
   publicClient,
-  toUsdE8,
+  readListingOnChain,
+  recordedHouse,
   walletClient,
 } from "./operator";
+import {
+  findListingToken,
+  formatTokenAmount,
+  fromTokenUnits,
+  LISTING_TOKENS,
+  toTokenUnits,
+  USDG,
+  type ListingToken,
+} from "./tokens";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const DAY_MS = 24 * 3_600_000;
 const ROBINHOOD_CHAIN_ID = 4663;
-const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 
 const creatorInclude = {
   user: { include: { socials: true, wallets: true } },
@@ -126,9 +133,16 @@ type DailyTemplate = {
 
 let running = false;
 
+/** The reserve, in units of `dailyToken()`. */
 function dailyMinBid() {
   const parsed = Number(process.env.DAILY_AUCTION_MIN_BID);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0.01;
+}
+
+/** What the daily auction is priced and bid in — USDG unless DAILY_AUCTION_TOKEN says LNOC. */
+function dailyToken(): ListingToken {
+  const wanted = process.env.DAILY_AUCTION_TOKEN?.trim().toUpperCase();
+  return LISTING_TOKENS.find((t) => t.symbol === wanted) ?? USDG;
 }
 
 /**
@@ -136,9 +150,11 @@ function dailyMinBid() {
  * FEE_RECIPIENT so the treasury — not the hot operator key — holds the win.
  */
 async function forwardWinningProceeds({
+  house,
   token,
   rawBid,
 }: {
+  house: `0x${string}`;
   token: `0x${string}`;
   rawBid: bigint;
 }) {
@@ -150,8 +166,9 @@ async function forwardWinningProceeds({
   if (!recipient || !account || !wallet) return;
   if (recipient.toLowerCase() === account.address.toLowerCase()) return;
 
+  // Both contracts expose the same `feePercent()`, so the current ABI reads either.
   const feeBps = await client.readContract({
-    address: auctionHouseAddress(),
+    address: house,
     abi: auctionHouseAbi,
     functionName: "feePercent",
   });
@@ -169,9 +186,9 @@ async function forwardWinningProceeds({
   if (receipt.status === "reverted") {
     throw new Error("forward winning proceeds reverted");
   }
-  console.log(
-    `[daily-auction] forwarded ${fromTokenAmount(payout)} to ${recipient} tx=${hash}`,
-  );
+  const known = findListingToken(token);
+  const shown = known ? formatTokenAmount(fromTokenUnits(payout, known), known.symbol) : `${payout} raw`;
+  console.log(`[daily-auction] forwarded ${shown} to ${recipient} tx=${hash}`);
 }
 
 function isDue(listing: { endDate: Date | null }, now: Date) {
@@ -182,7 +199,11 @@ function shortWallet(wallet: string) {
   return `${wallet.slice(0, 6)}\u2026${wallet.slice(-4)}`;
 }
 
-async function emailWinner(listingId: string, title: string, wallet: string, amount: number) {
+async function emailWinner(
+  listing: { id: string; title: string; currency: string },
+  wallet: string,
+  amount: number,
+) {
   const user = await prisma.user.findFirst({
     where: {
       email: { not: null },
@@ -192,7 +213,12 @@ async function emailWinner(listingId: string, title: string, wallet: string, amo
     select: { email: true },
   });
   if (!user?.email) return;
-  await sendAuctionWon(user.email, { title, listingId, amount }).catch((err) => {
+  await sendAuctionWon(user.email, {
+    title: listing.title,
+    listingId: listing.id,
+    amount,
+    currency: listing.currency,
+  }).catch((err) => {
     console.error("[email] auction-won failed:", err);
   });
 }
@@ -245,19 +271,20 @@ async function ensureOperatorCreator() {
 }
 
 function defaultTemplate(creatorId: string): DailyTemplate {
+  const token = dailyToken();
   return {
     title: "24-hour attention auction",
     description: "The winning project takes the homepage billboard for a full day.",
     category: "SHOUTOUT",
     price: dailyMinBid(),
-    currency: "USD",
+    currency: token.symbol,
     placement: "Homepage billboard",
     platform: null,
     turnaroundDays: 1,
     chainId: ROBINHOOD_CHAIN_ID,
     contractAddress: null,
-    tokenAddress: USDG,
-    tokenName: "USDG",
+    tokenAddress: token.address,
+    tokenName: token.symbol,
     creatorId,
   };
 }
@@ -297,57 +324,36 @@ export function buildShowcase(
 
 async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpiredResult> {
   const account = operatorAccount();
-  const wallet = walletClient();
   const client = publicClient();
-  const house = auctionHouseAddress();
 
-  if (!account || !wallet) {
+  if (!account) {
     console.warn("[daily-auction] OPERATOR_PRIVATE_KEY unset — cannot settle");
     return { skipped: true as const, reason: "no-operator" as const };
   }
 
   let highestBidder = expired.bids[0]?.bidderWallet ?? "";
   let highestBid = expired.bids[0]?.amount ?? 0;
-  let alreadySettled = false;
 
-  if (expired.contractAddress && expired.txHash) {
+  // Settled on the contract the auction was opened on, which after a redeploy
+  // is not the one new auctions start on.
+  const house = recordedHouse(expired.contractAddress);
+  if (house && expired.txHash) {
     try {
-      const listingType = await client.readContract({
-        address: house,
-        abi: auctionHouseAbi,
-        functionName: "getListingType",
-        args: [expired.id],
-      });
-      alreadySettled = listingType[1];
-
-      const meta = await client.readContract({
-        address: house,
-        abi: auctionHouseAbi,
-        functionName: "getAuctionMeta",
-        args: [expired.id],
-      });
+      const meta = await readListingOnChain(house, expired.id);
       if (meta.highestBidder && meta.highestBidder.toLowerCase() !== ZERO) {
         highestBidder = meta.highestBidder.toLowerCase();
-        highestBid = fromUsdE8(meta.highestBidUsdE8);
+        highestBid = meta.highestBidAmount;
       }
 
-      if (!alreadySettled) {
-        const hash = await wallet.writeContract({
-          address: house,
-          abi: auctionHouseAbi,
-          functionName: "endAuction",
-          args: [expired.id],
-          account,
-        });
+      if (!meta.settled) {
+        const hash = await endAuctionOn(house, expired.id);
         const receipt = await client.waitForTransactionReceipt({ hash });
         if (receipt.status === "reverted") {
           throw new Error("endAuction reverted");
         }
-        // The winner chose the token, so proceeds arrive in whatever they paid.
-        await forwardWinningProceeds({
-          token: (meta.highestBidToken === ZERO ? USDG : meta.highestBidToken) as `0x${string}`,
-          rawBid: meta.highestBidAmount,
-        });
+        if (meta.payoutToken) {
+          await forwardWinningProceeds({ house, token: meta.payoutToken, rawBid: meta.payoutRaw });
+        }
       }
     } catch (err) {
       console.error("[daily-auction] settle failed:", err);
@@ -378,7 +384,7 @@ async function settleExpired(expired: OpenDaily, now: Date): Promise<SettleExpir
         `[daily-auction] showcase ${spotlight.name} live until ${spotlight.liveUntil}`,
       );
     }
-    await emailWinner(expired.id, expired.title, highestBidder, highestBid);
+    await emailWinner(expired, highestBidder, highestBid);
   }
 
   console.log(
@@ -399,14 +405,13 @@ async function startDailyAuction(template: DailyTemplate): Promise<StartDailyRes
 
   const nextId = crypto.randomUUID();
   const endDate = new Date(Date.now() + DAY_MS);
-  const token = (template.tokenAddress || USDG) as `0x${string}`;
-  const tokenName = template.tokenName || "USDG";
+  const token = findListingToken(template.tokenAddress) ?? USDG;
 
   const hash = await wallet.writeContract({
     address: house,
     abi: auctionHouseAbi,
     functionName: "startAuction",
-    args: [nextId, 24n, toUsdE8(template.price)],
+    args: [nextId, token.address, 24n, toTokenUnits(template.price, token)],
     account,
   });
   const receipt = await client.waitForTransactionReceipt({ hash });
@@ -422,7 +427,7 @@ async function startDailyAuction(template: DailyTemplate): Promise<StartDailyRes
       category: template.category,
       pricingType: "AUCTION",
       price: template.price,
-      currency: template.currency || "USD",
+      currency: token.symbol,
       placement: template.placement,
       platform: template.platform,
       turnaroundDays: template.turnaroundDays,
@@ -431,47 +436,35 @@ async function startDailyAuction(template: DailyTemplate): Promise<StartDailyRes
       status: "ACTIVE",
       isDaily: true,
       chainId: template.chainId ?? ROBINHOOD_CHAIN_ID,
-      contractAddress: template.contractAddress ?? house,
-      tokenAddress: token,
-      tokenName,
+      // Always the contract this was just written to — a template inherited
+      // from yesterday may name a contract that has since been replaced.
+      contractAddress: house,
+      tokenAddress: token.address,
+      tokenName: token.symbol,
       txHash: hash,
       creatorId: template.creatorId,
     },
   });
 
   console.log(
-    `[daily-auction] started ${listing.id} reserve=${template.price} ${template.currency} ends ${endDate.toISOString()}`,
+    `[daily-auction] started ${listing.id} reserve=${formatTokenAmount(template.price, token.symbol)} ends ${endDate.toISOString()}`,
   );
   return { ok: true as const, listing };
 }
 
 /** Ends the live daily auction on-chain with no winner so a replacement can start. */
 async function cancelOpenDaily(open: OpenDaily): Promise<CancelOpenResult> {
-  const account = operatorAccount();
-  const wallet = walletClient();
-  const client = publicClient();
-  const house = auctionHouseAddress();
-  if (!account || !wallet) {
+  if (!operatorAccount()) {
     return { skipped: true as const, reason: "no-operator" as const };
   }
 
-  if (open.contractAddress && open.txHash) {
+  const house = recordedHouse(open.contractAddress);
+  if (house && open.txHash) {
     try {
-      const listingType = await client.readContract({
-        address: house,
-        abi: auctionHouseAbi,
-        functionName: "getListingType",
-        args: [open.id],
-      });
-      if (!listingType[1]) {
-        const hash = await wallet.writeContract({
-          address: house,
-          abi: auctionHouseAbi,
-          functionName: "endAuction",
-          args: [open.id],
-          account,
-        });
-        const receipt = await client.waitForTransactionReceipt({ hash });
+      const meta = await readListingOnChain(house, open.id);
+      if (!meta.settled) {
+        const hash = await endAuctionOn(house, open.id);
+        const receipt = await publicClient().waitForTransactionReceipt({ hash });
         if (receipt.status === "reverted") {
           throw new Error("endAuction reverted");
         }
@@ -596,8 +589,11 @@ async function runDailyCycle(): Promise<DailyAuctionCycleResult> {
 
   const template = previous ?? defaultTemplate(creator.id);
   template.creatorId = previous?.creatorId ?? creator.id;
-  // Always take the live env reserve — do not inherit yesterday's price.
+  // Always take the live env reserve and token — do not inherit yesterday's.
   template.price = dailyMinBid();
+  template.tokenAddress = dailyToken().address;
+  template.tokenName = dailyToken().symbol;
+  template.currency = dailyToken().symbol;
 
   try {
     const started = await startDailyAuction(template);
@@ -630,13 +626,6 @@ export function startDailyAuctionTicker() {
     void settleExpiredAuctions().catch((err) => {
       console.error("[auction-settle] ticker error:", err);
     });
-    // The keeper rate-limits itself, so riding the minute ticker costs nothing
-    // when its own interval has not elapsed. Off unless LNOC_PRICE_KEEPER is set.
-    if (keeperEnabled()) {
-      void runLnocPriceKeeper()
-        .then(logKeeperOutcome)
-        .catch((err) => console.error("[lnoc-keeper] ticker error:", err));
-    }
   };
   tick();
   return setInterval(tick, ms);

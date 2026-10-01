@@ -27,7 +27,12 @@ import {
   TextInput,
   Tile,
 } from "@/components/ui";
-import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listingCategories";
+import { TokenPicker } from "@/components/listing/TokenPicker";
+import {
+  isSelectableCategory,
+  SELECTABLE_CATEGORIES,
+  type ListingCategory,
+} from "@/lib/listingCategories";
 import { formatCount, isSuperadmin } from "@/lib/api";
 import {
   createListing,
@@ -40,10 +45,19 @@ import {
   auctionHouseAddress,
   CHAIN_LABELS,
   durationHoursUntil,
+  findPaymentToken,
   MAX_ACTIVE_LISTINGS,
   paymentTokens,
-  toUsdE8,
+  toTokenUnits,
+  USDG,
 } from "@/lib/contracts/auctionHouse";
+import {
+  formatTokenAmount,
+  formatUsd,
+  usdPrice,
+  usdValue,
+  useTokenPrices,
+} from "@/lib/tokenPrices";
 import { robinhood } from "@/lib/chains";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
 
@@ -100,13 +114,13 @@ function listingWriteError(err: unknown): string {
 
 const LISTING_CHAIN_ID = robinhood.id;
 
-const CATEGORY_VALUES = new Set<string>(LISTING_CATEGORIES.map((c) => c.value));
-
 type ListingDraft = {
   title: string;
   description: string;
   category: ListingCategory;
   pricingType: PricingType;
+  /** The token the listing is priced and paid in — USDG or LNOC. */
+  tokenAddress: string;
   price: string;
   endDate: string;
   /** Already on S3 — the draft only remembers where. */
@@ -119,6 +133,7 @@ function defaultDraft(): ListingDraft {
     description: "",
     category: "SHOUTOUT",
     pricingType: "FIXED",
+    tokenAddress: USDG.address,
     price: "",
     endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
     posterUrl: null,
@@ -138,10 +153,10 @@ function loadDraft(userId: string): ListingDraft | null {
     return {
       title: typeof parsed.title === "string" ? parsed.title : base.title,
       description: typeof parsed.description === "string" ? parsed.description : base.description,
-      category: CATEGORY_VALUES.has(parsed.category ?? "")
-        ? (parsed.category as ListingCategory)
-        : base.category,
+      // A draft saved with a since-retired category falls back to the default.
+      category: isSelectableCategory(parsed.category) ? parsed.category : base.category,
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
+      tokenAddress: findPaymentToken(LISTING_CHAIN_ID, parsed.tokenAddress).address,
       price: typeof parsed.price === "string" ? parsed.price : base.price,
       endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
       posterUrl: typeof parsed.posterUrl === "string" ? parsed.posterUrl : base.posterUrl,
@@ -180,6 +195,7 @@ export default function NewListingPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<ListingCategory>("SHOUTOUT");
   const [pricingType, setPricingType] = useState<PricingType>("FIXED");
+  const [tokenAddress, setTokenAddress] = useState<string>(USDG.address);
   const [price, setPrice] = useState("");
   const [endDate, setEndDate] = useState(() =>
     toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
@@ -199,6 +215,7 @@ export default function NewListingPage() {
     setDescription(draft.description);
     setCategory(draft.category);
     setPricingType(draft.pricingType);
+    setTokenAddress(draft.tokenAddress);
     setPrice(draft.price);
     setEndDate(draft.endDate);
     setPosterUrl(draft.posterUrl);
@@ -213,8 +230,11 @@ export default function NewListingPage() {
   const isAdmin = isSuperadmin(user);
   const contractAddress = auctionHouseAddress(LISTING_CHAIN_ID);
   const tokens = paymentTokens(LISTING_CHAIN_ID);
+  const token = findPaymentToken(LISTING_CHAIN_ID, tokenAddress);
+  const prices = useTokenPrices();
   const chainSupported = chainId === LISTING_CHAIN_ID;
-  const categoryMeta = LISTING_CATEGORIES.find((c) => c.value === category)!;
+  const categoryMeta =
+    SELECTABLE_CATEGORIES.find((c) => c.value === category) ?? SELECTABLE_CATEGORIES[0];
 
   // The contract refuses a fourth simultaneously open listing, so show where
   // the wallet stands before it spends gas finding out. Everyone transacts from
@@ -245,6 +265,7 @@ export default function NewListingPage() {
       description,
       category,
       pricingType,
+      tokenAddress,
       price,
       endDate,
       posterUrl,
@@ -256,6 +277,7 @@ export default function NewListingPage() {
     description,
     category,
     pricingType,
+    tokenAddress,
     price,
     endDate,
     posterUrl,
@@ -263,6 +285,8 @@ export default function NewListingPage() {
 
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
   const priceNumber = Number(price);
+  const priceUsd =
+    Number.isFinite(priceNumber) && priceNumber > 0 ? usdValue(prices, token, priceNumber) : null;
 
   const validationError = useMemo(() => {
     if (posterUploading) return "Wait for the poster to finish uploading.";
@@ -275,6 +299,7 @@ export default function NewListingPage() {
     if (Math.round(priceNumber * 100) !== priceNumber * 100) {
       return "Use at most two decimal places.";
     }
+    if (priceNumber > 1e15) return "That price is too large.";
     if (!parsedEnd || Number.isNaN(parsedEnd.getTime()))
       return "Pick when the listing ends.";
     if (parsedEnd.getTime() <= Date.now()) return "The end time has to be in the future.";
@@ -309,7 +334,9 @@ export default function NewListingPage() {
     category,
     pricingType,
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
-    currency: "USD",
+    currency: token.symbol,
+    tokenAddress: token.address,
+    tokenName: token.symbol,
     slotsAvailable: 1,
     posterUrl: posterUrl ?? undefined,
     endDate:
@@ -342,10 +369,10 @@ export default function NewListingPage() {
         parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? parsedEnd : new Date(),
       )}h`,
     },
-    {
-      label: "Paid in",
-      value: tokens.map((t) => t.symbol).join(" or ") || "—",
-    },
+    { label: "Paid in", value: token.symbol },
+    ...(priceUsd != null && !token.pegged
+      ? [{ label: "Worth today", value: `≈ ${formatUsd(priceUsd)}` }]
+      : []),
   ];
 
   const busy = step !== "form" && step !== "done";
@@ -362,7 +389,7 @@ export default function NewListingPage() {
       category,
       pricingType,
       price: priceNumber,
-      currency: "USD",
+      currency: token.symbol,
       // The same instant the on-chain duration was derived from, so the API's
       // check of the contract's deadline against this lines up.
       endDate: endsAt.toISOString(),
@@ -373,6 +400,8 @@ export default function NewListingPage() {
       txHash: hash,
       chainId: LISTING_CHAIN_ID,
       contractAddress: contractAddress!,
+      tokenAddress: token.address,
+      tokenName: token.symbol,
     };
   }
 
@@ -448,7 +477,9 @@ export default function NewListingPage() {
 
       setStep("signing");
       const hours = BigInt(durationHoursUntil(endsAt));
-      const args = [listingId, hours, toUsdE8(priceNumber)] as const;
+      // Same call for either token — the contract only needs the token and an
+      // amount in its own units.
+      const args = [listingId, token.address, hours, toTokenUnits(priceNumber, token)] as const;
       const request = {
         address: contractAddress,
         abi: auctionHouseAbi,
@@ -498,7 +529,7 @@ export default function NewListingPage() {
       <div className="space-y-4 max-w-2xl">
         <PageHeader
           title="Create a listing"
-          subtitle="Sell a piece of your media or your time. Buyers pay in stablecoins, settlement runs through the AuctionHouse contract."
+          subtitle="Sell a piece of your media or your time. Price it in USDG or LNOC — settlement runs through the AuctionHouse contract."
         />
         <Panel className="flex flex-col items-start gap-3">
           <p className="text-sm text-caption">
@@ -531,7 +562,7 @@ export default function NewListingPage() {
               <p className="text-[13px] text-caption">
                 {submitted
                   ? `${created.title} is on-chain and with the LNOC team. That was the only transaction — it goes live the moment they approve it, with nothing more for you to sign.`
-                  : `${created.title} is now on the marketplace under ${categoryMeta.label.toLowerCase()}.`}
+                  : `${created.title} is now on the marketplace under ${categoryMeta.label.toLowerCase()}, priced in ${created.tokenName ?? token.symbol}.`}
               </p>
             </div>
           </div>
@@ -669,7 +700,7 @@ export default function NewListingPage() {
 
             <Field label="Category" hint={categoryMeta.hint}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {LISTING_CATEGORIES.map((c) => {
+                {SELECTABLE_CATEGORIES.map((c) => {
                   const Icon = c.icon;
                   const active = c.value === category;
                   return (
@@ -716,13 +747,38 @@ export default function NewListingPage() {
               />
             </div>
 
+            <div className="space-y-1.5">
+              <p id="listing-token" className="panel-label">
+                Get paid in
+              </p>
+              <TokenPicker
+                tokens={tokens}
+                value={token.address}
+                onChange={setTokenAddress}
+                disabled={busy}
+                labelledBy="listing-token"
+                detail={(t) => {
+                  const unit = usdPrice(prices, t);
+                  return unit == null ? "Price unavailable" : `1 ${t.symbol} ≈ ${formatUsd(unit)}`;
+                }}
+              />
+              <p className="text-[11px] text-caption">
+                Buyers pay in the token you pick, and you receive it. Prices from{" "}
+                {token.pegged ? "CoinGecko" : "DexScreener"}, refreshed every minute.
+              </p>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-4 items-start">
               <Field
                 label={pricingType === "AUCTION" ? "Minimum bid" : "Price"}
                 htmlFor="price"
-                hint={`Paid in ${tokens.map((t) => t.symbol).join(" or ") || "stablecoins"}.`}
+                hint={
+                  priceUsd != null
+                    ? `${formatTokenAmount(priceNumber, token.symbol)} ≈ ${formatUsd(priceUsd)} today.`
+                    : `In ${token.symbol}.`
+                }
               >
-                <InputAddon prefix="$" suffix="USD">
+                <InputAddon suffix={token.symbol}>
                   <TextInput
                     id="price"
                     type="number"
@@ -731,8 +787,8 @@ export default function NewListingPage() {
                     step={0.01}
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="1500"
-                    className="pl-7 pr-16"
+                    placeholder={token.pegged ? "1500" : "4000000"}
+                    className="pr-16"
                     disabled={busy}
                   />
                 </InputAddon>

@@ -1,22 +1,8 @@
-import { getAddress } from "viem";
-import { auctionHouseAbi, publicClient } from "./operator";
+import { readListingOnChain, recordedHouse } from "./operator";
 
 export type SaleCheck =
   | { ok: true; buyer: string }
   | { ok: false; status: number; error: string };
-
-/**
- * The contract this listing was actually published to. Deliberately no fallback
- * to the configured address: a listing with no chain wiring was never published
- * at all, and checking it against the default contract would let an unrelated
- * settled id stand in as proof of payment.
- */
-function resolveHouse(recorded: string | null | undefined): `0x${string}` | null {
-  if (recorded && /^0x[a-fA-F0-9]{40}$/.test(recorded)) {
-    return getAddress(recorded) as `0x${string}`;
-  }
-  return null;
-}
 
 /**
  * Confirms on-chain that a fixed-price listing has actually been paid for, and
@@ -36,7 +22,10 @@ export async function verifyFixedPriceSale(
   listing: { id: string; contractAddress: string | null },
   wallets: Array<{ address: string }>,
 ): Promise<SaleCheck> {
-  const house = resolveHouse(listing.contractAddress);
+  // Deliberately no fallback to the configured address: a listing with no chain
+  // wiring was never published, and checking it against the default contract
+  // would let an unrelated settled id stand in as proof of payment.
+  const house = recordedHouse(listing.contractAddress);
   if (!house) {
     return {
       ok: false,
@@ -47,12 +36,7 @@ export async function verifyFixedPriceSale(
 
   let meta: { highestBidder: string; settled: boolean };
   try {
-    meta = (await publicClient().readContract({
-      address: house,
-      abi: auctionHouseAbi,
-      functionName: "getAuctionMeta",
-      args: [listing.id],
-    })) as unknown as { highestBidder: string; settled: boolean };
+    meta = await readListingOnChain(house, listing.id);
   } catch (err) {
     console.error("[book] could not read listing state on-chain:", err);
     return {

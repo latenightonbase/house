@@ -5,32 +5,27 @@ import { robinhood } from "@/lib/chains";
  * AuctionHouse — the contract in `apps/web/utils/contracts/auctionContract.sol`.
  *
  * Written by hand from the source rather than imported from `@repo/contracts`,
- * whose `auctionAbi` is the currently deployed build and predates both
- * fixed-price listings and USD-denominated pricing. Keep this in step with the
- * .sol file until the new build ships.
+ * whose `auctionAbi` is an older build. Keep this in step with the .sol file.
+ *
+ * Every listing is priced in one token the seller picks — USDG or LNOC — and
+ * bought or bid on in that same token, so amounts here are plain token units.
  */
 export const auctionHouseAbi = parseAbi([
-  "struct Bidders { address bidder; uint256 bidAmount; address token; uint256 bidUsdE8; string fid; }",
-  "struct AuctionMeta { uint256 deadline; string auctionId; address auctionOwner; uint256 priceUsdE8; uint256 highestBidUsdE8; address highestBidder; address highestBidToken; uint256 highestBidAmount; bool isFixedPrice; bool settled; }",
-  "struct TokenConfig { bool accepted; uint8 decimals; uint256 usdPriceE8; uint64 updatedAt; uint64 maxAge; }",
+  "struct Bidders { address bidder; uint256 bidAmount; string fid; }",
+  "struct AuctionMeta { uint256 deadline; string auctionId; address auctionOwner; address token; uint256 price; uint256 highestBid; address highestBidder; bool isFixedPrice; bool settled; }",
 
-  // Creating inventory — priced in USD, paid in any accepted token
-  "function startAuction(string _auctionId, uint256 durationHours, uint256 _minBidUsdE8)",
-  "function startFixedPriceListing(string _listingId, uint256 durationHours, uint256 _priceUsdE8)",
+  // Creating inventory — the same call for either token
+  "function startAuction(string _auctionId, address _token, uint256 durationHours, uint256 _minBid)",
+  "function startFixedPriceListing(string _listingId, address _token, uint256 durationHours, uint256 _price)",
 
-  // Buying
-  "function placeBid(string _auctionId, address _token, uint256 amount, string fid)",
-  "function buyListing(string _listingId, address _token, uint256 _maxTokenAmount, string fid)",
+  // Buying, in the listing's own token
+  "function placeBid(string _auctionId, uint256 amount, string fid)",
+  "function buyListing(string _listingId, string fid)",
   "function endAuction(string _auctionId)",
 
-  // Pricing
-  "function quoteUsd(address _token, uint256 _usdE8) view returns (uint256)",
-  "function quoteToken(address _token, uint256 _amount) view returns (uint256)",
-  "function quoteListing(string _id, address _token) view returns (uint256 tokenAmount, uint256 usdE8)",
-  "function tokenConfig(address) view returns (bool accepted, uint8 decimals, uint256 usdPriceE8, uint64 updatedAt, uint64 maxAge)",
-  "function getAcceptedTokens() view returns (address[])",
-
   // Views
+  "function acceptedToken(address) view returns (bool)",
+  "function getAcceptedTokens() view returns (address[])",
   "function getAuctionMeta(string _auctionId) view returns (AuctionMeta)",
   "function getBidders(string _auctionId) view returns (Bidders[])",
   "function getListingType(string _id) view returns (bool isFixedPrice, bool settled)",
@@ -40,41 +35,46 @@ export const auctionHouseAbi = parseAbi([
   "function feeReceiver() view returns (address)",
 
   // Events
-  "event AuctionStarted(string indexed auctionId, address owner, uint256 deadline, uint256 priceUsdE8)",
-  "event ListingStarted(string indexed listingId, address owner, uint256 deadline, uint256 priceUsdE8)",
-  "event BidPlaced(string indexed auctionId, address indexed bidder, address token, uint256 amount, uint256 usdE8, string fid)",
-  "event AuctionEnded(string indexed auctionId, address winner, address token, uint256 amount, uint256 usdE8, address auctionOwner, uint256 feeTaken)",
-  "event ListingSold(string indexed listingId, address buyer, address token, uint256 amount, uint256 usdE8, address listingOwner, uint256 feeTaken)",
-  "event TokenPriceUpdated(address indexed token, uint256 usdPriceE8, uint64 updatedAt)",
+  "event AuctionStarted(string indexed auctionId, address owner, address token, uint256 deadline, uint256 minBid)",
+  "event ListingStarted(string indexed listingId, address owner, address token, uint256 deadline, uint256 price)",
+  "event BidPlaced(string indexed auctionId, address indexed bidder, address token, uint256 amount, string fid)",
+  "event AuctionEnded(string indexed auctionId, address winner, address token, uint256 amount, address auctionOwner, uint256 feeTaken)",
+  "event ListingSold(string indexed listingId, address buyer, address token, uint256 amount, address listingOwner, uint256 feeTaken)",
 ]);
 
 /** The contract caps an owner at three simultaneously open listings. */
 export const MAX_ACTIVE_LISTINGS = 3;
 
-/** Listing prices are USD with 8 decimals on-chain — 1e8 is $1.00. */
-export const USD_DECIMALS = 8;
+/**
+ * Prices are entered to the cent, so six decimals is exact for every listing
+ * token and keeps `toFixed` clear of float noise. The API converts with the
+ * same rule when it checks a submitted price against the chain.
+ */
+const PRICE_PRECISION = 6;
 
-export function toUsdE8(usd: number): bigint {
-  return parseUnits(usd.toFixed(USD_DECIMALS), USD_DECIMALS);
+export function toTokenUnits(amount: number, token: PaymentToken): bigint {
+  return parseUnits(amount.toFixed(Math.min(token.decimals, PRICE_PRECISION)), token.decimals);
 }
 
-export function fromUsdE8(value: bigint): number {
-  return Number(formatUnits(value, USD_DECIMALS));
+export function fromTokenUnits(value: bigint, token: PaymentToken): number {
+  return Number(formatUnits(value, token.decimals));
 }
 
-/** Official Robinhood Chain stable — Global Dollar. Pegged, so always $1. */
+/** Global Dollar — Robinhood Chain's stable. */
 export const USDG: PaymentToken = {
   address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
   symbol: "USDG",
+  name: "Global Dollar",
   decimals: 6,
   pegged: true,
   logo: "/tokens/usdg.png",
 };
 
-/** The house token. Its USD rate is published on-chain by the contract owner. */
+/** The house token. */
 export const LNOC: PaymentToken = {
   address: "0x076277c3d6b57B4aad34c592cd2f138e9316a991",
   symbol: "LNOC",
+  name: "Late Night Onchain",
   decimals: 18,
   pegged: false,
   logo: "/tokens/lnoc.jpg",
@@ -88,7 +88,7 @@ function normalize(value: string | undefined): `0x${string}` | undefined {
 // spelled out here rather than looked up dynamically.
 const FALLBACK_ADDRESS = normalize(process.env.NEXT_PUBLIC_AUCTION_HOUSE_ADDRESS);
 
-const DEPLOYED_ROBINHOOD = "0xf976Ca98bA8D2B70E8698e09814a663deABE6359" as const;
+const DEPLOYED_ROBINHOOD = "0xc78D7dfc1A335C510FAC1e7E488861aDDb9fF1aF" as const;
 
 const ADDRESSES: Record<number, `0x${string}` | undefined> = {
   [robinhood.id]:
@@ -99,18 +99,18 @@ const ADDRESSES: Record<number, `0x${string}` | undefined> = {
 
 export interface PaymentToken {
   address: `0x${string}`;
-  symbol: string;
+  symbol: "USDG" | "LNOC";
+  name: string;
   decimals: number;
-  /** Dollar-pegged, so its on-chain rate never goes stale and $1 is $1. */
+  /** Dollar-pegged — its token amount already reads as dollars. */
   pegged: boolean;
   /** Path under /public. */
   logo: string;
 }
 
 /**
- * Tokens a buyer can settle in. Listings are priced in USD, and the contract
- * converts at the rate it publishes for each token — so this is the buyer's
- * choice at payment time, not the seller's at creation.
+ * Tokens a seller can price a listing in. The choice is the seller's, made at
+ * creation, and every bid or purchase on that listing is paid in it.
  */
 const TOKENS: Record<number, PaymentToken[]> = {
   [robinhood.id]: [USDG, LNOC],
@@ -134,6 +134,26 @@ export function findPaymentToken(chainId: number | undefined, address: string | 
   const tokens = paymentTokens(chainId);
   return (
     tokens.find((t) => t.address.toLowerCase() === address?.toLowerCase()) ?? tokens[0] ?? USDG
+  );
+}
+
+/**
+ * The token a listing is paid in. A row saved before sellers chose one has no
+ * address; it was quoted in dollars and settled in USDG, so it reads as USDG.
+ */
+export function listingToken(listing: { chainId?: number; tokenAddress?: string }) {
+  return findPaymentToken(listing.chainId ?? robinhood.id, listing.tokenAddress);
+}
+
+/**
+ * True when a listing lives on the contract this build talks to. One opened
+ * before the per-token redeploy stays on the retired contract until it closes,
+ * whose functions take different arguments — so it is shown, but not bought.
+ */
+export function onCurrentHouse(listing: { chainId?: number; contractAddress?: string }) {
+  const house = auctionHouseAddress(listing.chainId ?? robinhood.id);
+  return Boolean(
+    house && listing.contractAddress && listing.contractAddress.toLowerCase() === house.toLowerCase(),
   );
 }
 

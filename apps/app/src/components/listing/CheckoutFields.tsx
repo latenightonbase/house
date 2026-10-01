@@ -1,50 +1,35 @@
 "use client";
 
-import { formatUnits } from "viem";
+import Image from "next/image";
 import { Info } from "lucide-react";
 import { Button, Field, InputAddon, TextInput, Tile } from "@/components/ui";
 import { CHAIN_LABELS } from "@/lib/contracts/auctionHouse";
+import type { Listing } from "@/lib/marketplace";
+import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import type { ListingCheckout } from "@/lib/useListingCheckout";
-import { TokenPicker } from "./TokenPicker";
-
-/** What the buyer will actually send, in the token they picked. */
-function payHint(checkout: ListingCheckout) {
-  const { token, usdAmount, quotedAmount } = checkout;
-  if (token.pegged) {
-    return usdAmount > 0
-      ? `You pay ${usdAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${token.symbol} · $1.00 each.`
-      : `$1.00 per ${token.symbol}.`;
-  }
-  if (quotedAmount !== undefined) {
-    const units = Number(formatUnits(quotedAmount, token.decimals));
-    // Precision follows size: 10,706 LNOC needs no decimals, 0.0042 needs four.
-    const amount = units.toLocaleString(undefined, {
-      maximumFractionDigits: units >= 1000 ? 0 : units >= 1 ? 2 : 4,
-    });
-    return `About ${amount} ${token.symbol} at the current rate.`;
-  }
-  return `Converted from USD at the rate the contract publishes for ${token.symbol}.`;
-}
 
 /**
- * The buyer's inputs — bid amount for an auction, then the settle-in token —
- * plus whatever is standing between them and signing. The call to action is
+ * The buyer's inputs — a bid amount for an auction — plus what they will pay
+ * and whatever is standing between them and signing. The call to action is
  * left to the caller, which places it where its surface wants it.
  */
 export function CheckoutFields({
+  listing,
   checkout,
   isAuction,
   authenticated,
   onConnect,
 }: {
+  listing: Listing;
   checkout: ListingCheckout;
   isAuction: boolean;
   /** Signed out, the wallet notices below would only repeat the Connect button. */
   authenticated: boolean;
   onConnect: () => void;
 }) {
-  const { busy, minimumBid, bidInvalid, tokens } = checkout;
-  const floor = `$${minimumBid.toLocaleString()}`;
+  const { busy, minimumBid, bidInvalid, token } = checkout;
+  const floor = formatListingAmount(listing, minimumBid);
+  const usdHint = useUsdHint(listing, checkout.amount);
 
   return (
     <div className="space-y-4">
@@ -55,7 +40,7 @@ export function CheckoutFields({
           hint={`Minimum ${floor}`}
           error={checkout.bidAmount && bidInvalid ? `Bid at least ${floor}.` : undefined}
         >
-          <InputAddon prefix="$" suffix="USD">
+          <InputAddon suffix={token.symbol}>
             <TextInput
               id="checkout-bid"
               type="number"
@@ -66,29 +51,24 @@ export function CheckoutFields({
               onChange={(e) => checkout.setBidAmount(e.target.value)}
               disabled={busy}
               aria-invalid={bidInvalid || undefined}
-              className="numeric pl-7 pr-14 font-semibold"
+              className="numeric pr-16 font-semibold"
             />
           </InputAddon>
         </Field>
       )}
 
-      {tokens.length > 1 && (
-        <div className="space-y-1.5">
-          <p id="checkout-pay-with" className="panel-label">
-            Pay with
-          </p>
-          <TokenPicker
-            tokens={tokens}
-            value={checkout.token.address}
-            onChange={checkout.setPayTokenAddress}
-            disabled={busy}
-            labelledBy="checkout-pay-with"
-          />
-          <p className="text-[11px] text-caption" aria-live="polite">
-            {payHint(checkout)}
+      {/* The seller chose the token when they listed, so there is nothing to
+          pick — just say what leaves the wallet. */}
+      <div className="tile flex items-center gap-3 px-3.5 py-3" aria-live="polite">
+        <Image src={token.logo} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-full" />
+        <div className="min-w-0">
+          <p className="panel-label">You pay in {token.symbol}</p>
+          <p className="numeric mt-0.5 truncate text-[14px] font-semibold text-white">
+            {checkout.amount > 0 ? formatListingAmount(listing, checkout.amount) : "—"}
+            {usdHint && <span className="ml-1.5 text-[12px] font-medium text-caption">{usdHint}</span>}
           </p>
         </div>
-      )}
+      </div>
 
       {authenticated && !checkout.address && (
         <Tile className="flex gap-2.5 border-warning/30 bg-warning/10 px-4 py-3">

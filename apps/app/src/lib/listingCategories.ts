@@ -89,6 +89,25 @@ export const LISTING_CATEGORIES: CategoryMeta[] = [
   { value: "OTHER", label: "Other", hint: "Anything that does not fit the rest.", icon: Package },
 ];
 
+/**
+ * What a seller can pick for a new listing. The rest stay in
+ * `LISTING_CATEGORIES` only so listings created before they were retired still
+ * render with their label and icon.
+ */
+const RETIRED = new Set<ListingCategory>([
+  "VIDEO_INTEGRATION",
+  "PODCAST",
+  "AMA",
+  "COLLAB",
+  "OTHER",
+]);
+
+export const SELECTABLE_CATEGORIES = LISTING_CATEGORIES.filter((c) => !RETIRED.has(c.value));
+
+export function isSelectableCategory(value: string | undefined): value is ListingCategory {
+  return SELECTABLE_CATEGORIES.some((c) => c.value === value);
+}
+
 const BY_VALUE = new Map(LISTING_CATEGORIES.map((c) => [c.value, c]));
 
 export function categoryMeta(value: ListingCategory | string): CategoryMeta {

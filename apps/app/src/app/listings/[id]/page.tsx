@@ -24,7 +24,8 @@ import {
   auctionHouseAbi,
   CHAIN_LABELS,
   durationHoursUntil,
-  toUsdE8,
+  listingToken,
+  toTokenUnits,
 } from "@/lib/contracts/auctionHouse";
 import { robinhood } from "@/lib/chains";
 import { categoryMeta } from "@/lib/listingCategories";
@@ -34,6 +35,7 @@ import {
   useListingCheckout,
   writeError,
 } from "@/lib/useListingCheckout";
+import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
 type PublishStep = "idle" | "switching" | "signing" | "confirming" | "publishing";
@@ -115,7 +117,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const chainSupported = chainId === chainForListing;
   const publishing = publishStep !== "idle";
   const isAuction = listing?.pricingType === "AUCTION";
-  const tokens = checkout.tokens;
+  const shownPrice = bidders?.[0]?.amount ?? listing?.price ?? 0;
+  const priceUsdHint = useUsdHint(listing, shownPrice);
 
   /**
    * Approved under the old flow and never published — only its owner can finish
@@ -156,7 +159,10 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
 
       setPublishStep("signing");
       const hours = BigInt(durationHoursUntil(new Date(listing.endDate)));
-      const args = [listing.id, hours, toUsdE8(listing.price)] as const;
+      // A row this old predates per-listing tokens; it was quoted in dollars,
+      // so it publishes in USDG at the same figure.
+      const token = listingToken(listing);
+      const args = [listing.id, token.address, hours, toTokenUnits(listing.price, token)] as const;
       const hash = await writeContractAsync({
         address: house,
         abi: auctionHouseAbi,
@@ -288,7 +294,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               )}
             </p>
             <p className="text-[12px] text-caption truncate">
-              {listing.creator.reach} reach · {meta.label}
+              {listing.creator.reach} reach
+              {listing.category !== "OTHER" ? ` · ${meta.label}` : ""}
             </p>
           </div>
         </div>
@@ -299,8 +306,11 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               {isAuction ? (bidders?.[0] ? "Current bid" : "Minimum bid") : "Price"}
             </p>
             <p className="text-[16px] sm:text-[17px] font-bold text-white numeric truncate">
-              ${(bidders?.[0]?.amount ?? listing.price).toLocaleString()}
+              {formatListingAmount(listing, shownPrice)}
             </p>
+            {priceUsdHint && (
+              <p className="numeric mt-0.5 text-[11px] text-caption">{priceUsdHint}</p>
+            )}
           </div>
           <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
             <p className="panel-label mb-1">Closes</p>
@@ -312,7 +322,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <p className="panel-label mb-1">{isAuction ? "Settlement" : "Slots"}</p>
             <p className="text-[14px] sm:text-[15px] font-semibold text-white truncate">
               {isAuction
-                ? `${tokens.map((t) => t.symbol).join("/") || "on-chain"} · ${CHAIN_LABELS[chainForListing] ?? "on-chain"}`
+                ? `${checkout.token.symbol} · ${CHAIN_LABELS[chainForListing] ?? "on-chain"}`
                 : soldOut
                   ? "Sold out"
                   : `${listing.slotsAvailable} left`}
@@ -394,6 +404,11 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               Connect wallet
             </Button>
           </Panel>
+        ) : checkout.legacy && !unavailable ? (
+          <Tile className="px-4 py-3 text-[13px] text-caption">
+            This listing was opened on the previous AuctionHouse contract, before listings were
+            priced per token. It can no longer be bought here.
+          </Tile>
         ) : unavailable ? (
           <Tile className="px-4 py-3 text-[13px] text-caption">
             {soldOut
@@ -405,6 +420,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         ) : (
           <div className="space-y-3">
             <CheckoutFields
+              listing={listing}
               checkout={checkout}
               isAuction={isAuction}
               authenticated={status === "authenticated"}

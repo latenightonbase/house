@@ -6,7 +6,6 @@ import { CheckCircle2, ExternalLink, ImageOff, Inbox, XCircle } from "lucide-rea
 import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
 import { Badge, BrandAvatar, Button, Card, Panel, TextArea, Tile } from "@/components/ui";
-import { categoryMeta } from "@/lib/listingCategories";
 import {
   approveListing,
   fetchPendingListings,
@@ -14,6 +13,8 @@ import {
   type Listing,
 } from "@/lib/marketplace";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import { formatListingAmount } from "@/lib/tokenPrices";
+import { categoryLabel } from "@/lib/listingCategories";
 
 type Decision = "approve" | "reject";
 
@@ -117,7 +118,6 @@ export default function AdminListingsClient() {
         </Panel>
       ) : (
         listings?.map((listing) => {
-          const meta = categoryMeta(listing.category);
           const busy = working === listing.id;
           const clock = urgency(listing.endDate);
           return (
@@ -181,9 +181,9 @@ export default function AdminListingsClient() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <Stat label={listing.pricingType === "AUCTION" ? "Minimum bid" : "Price"}>
-                  ${listing.price.toLocaleString()}
+                  {formatListingAmount(listing, listing.price)}
                 </Stat>
-                <Stat label="Category">{meta.label}</Stat>
+                <Stat label="Category">{categoryLabel(listing.category)}</Stat>
                 <Stat label="Closes">
                   {listing.endDate ? relativeEndLabel(listing.endDate) : "Open"}
                 </Stat>

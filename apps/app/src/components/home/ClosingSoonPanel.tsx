@@ -7,7 +7,7 @@ import { BrandAvatar } from "@/components/ui";
 import type { Listing } from "@/lib/marketplace";
 import { useCountdown } from "@/lib/useCountdown";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
-import { countdownLabel, endsSoon, money, priceLine } from "./listingParts";
+import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 
 /** Five keeps the rail close to the market table's own height. */
 const MAX_ROWS = 5;
@@ -61,9 +61,10 @@ function Row({
         <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-caption">
           {price.label}
         </p>
-        <p className="numeric text-[14px] font-bold leading-tight text-white">
-          ${money(price.amount)}
+        <p className="numeric whitespace-nowrap text-[14px] font-bold leading-tight text-white">
+          {money(listing, price.amount)}
         </p>
+        <UsdNote listing={listing} amount={price.amount} className="block" />
         {live ? (
           <p
             className={cn(

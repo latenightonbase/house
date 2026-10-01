@@ -104,7 +104,7 @@ export async function fetchUserProfile(handle: string): Promise<ProfileOverview 
   return (await res.json()) as ProfileOverview;
 }
 
-/** Every payment token here is dollar-pegged, so they all read as dollars. */
+/** Dollar-pegged tokens read as dollars; anything else (LNOC) keeps its symbol. */
 const DOLLAR_PEGGED = new Set(["USD", "USDC", "USDG", "USDT"]);
 
 export function formatAmount(amount: number, currency = "USDC") {
@@ -114,6 +114,20 @@ export function formatAmount(amount: number, currency = "USDC") {
   return DOLLAR_PEGGED.has(currency.toUpperCase())
     ? `$${formatted}`
     : `${formatted} ${currency}`;
+}
+
+/**
+ * Sums amounts per currency — dollar stables together, each other token on its
+ * own — and joins them: "$1,520 · 4.2M LNOC". Zero records read as "$0".
+ */
+export function formatTotals(entries: Array<[amount: number, currency: string]>) {
+  const totals = new Map<string, number>();
+  for (const [amount, currency] of entries) {
+    const key = DOLLAR_PEGGED.has(currency.toUpperCase()) ? "USD" : currency.toUpperCase();
+    totals.set(key, (totals.get(key) ?? 0) + amount);
+  }
+  if (totals.size === 0) return formatAmount(0, "USD");
+  return [...totals.entries()].map(([currency, sum]) => formatAmount(sum, currency)).join(" · ");
 }
 
 export function formatDate(iso: string) {

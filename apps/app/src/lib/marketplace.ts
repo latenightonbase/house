@@ -179,7 +179,8 @@ export interface NewListingInput {
   id: string;
   title: string;
   description?: string;
-  category: ListingCategory;
+  /** No longer asked for — the API stores its default. */
+  category?: ListingCategory;
   pricingType: PricingType;
   price: number;
   currency?: string;
@@ -193,8 +194,9 @@ export interface NewListingInput {
   txHash: string;
   chainId: number;
   contractAddress: string;
-  tokenAddress?: string;
-  tokenName?: string;
+  /** The token the seller priced it in — USDG or LNOC. */
+  tokenAddress: string;
+  tokenName: string;
 }
 
 export interface Vault {

@@ -9,6 +9,7 @@ import { categoryMeta } from "@/lib/listingCategories";
 import { fetchMyListings, type Listing, type ListingStatus } from "@/lib/marketplace";
 import { relativeEndLabel } from "@/lib/utils";
 import type { BadgeVariant } from "@/components/ui";
+import { formatListingAmount } from "@/lib/tokenPrices";
 
 /** How each state reads to the seller who owns the listing. */
 const STATUS_COPY: Record<ListingStatus, { label: string; variant: BadgeVariant; hint: string }> = {
@@ -89,7 +90,7 @@ export function MyListings({
                       {listing.title}
                     </p>
                     <p className="mt-0.5 text-[11px] text-caption">
-                      ${listing.price.toLocaleString()} ·{" "}
+                      {formatListingAmount(listing, listing.price)} ·{" "}
                       {listing.pricingType === "AUCTION" ? "Auction" : "Flat price"}
                       {listing.endDate ? ` · ${relativeEndLabel(listing.endDate)}` : ""}
                     </p>

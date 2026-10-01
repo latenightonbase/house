@@ -64,9 +64,9 @@ function AuthRequiredBanner() {
 
 /**
  * The home page is a board, not a scroll. The intro says what LNOC is, the billboard and
- * the show's own auction share the top row, and the open market sits level with
- * them in the second — so a seller's listing is on screen the day it goes live
- * and a buyer never has to scroll to learn the market exists.
+ * the show's own auction share the top row, and the open market takes a row of the
+ * same height beneath — the market carries as much weight as the daily winner, so a
+ * seller's listing is on screen the day it goes live.
  */
 export default function HomeClient({
   listing: initialListing,
@@ -156,8 +156,11 @@ export default function HomeClient({
 
       <HomeIntro />
 
-      {/* Top row: what won yesterday, and what is being fought over today. */}
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* One grid, two rows of equal height: yesterday's winner and today's
+          auction on top, the open market and its closing-soon rail beneath —
+          the market gets the same footprint as the billboard, not a strip
+          under it. */}
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:auto-rows-fr xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
 
         {listing ? (
@@ -170,10 +173,7 @@ export default function HomeClient({
         ) : (
           <AuctionEmpty />
         )}
-      </div>
 
-      {/* Second row: the open market, on the same footing as the row above it. */}
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <MarketplacePanel listings={listings} onCheckout={handleCheckout} />
         <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
       </div>

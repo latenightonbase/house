@@ -26,6 +26,7 @@ import {
   priceLine,
   Seller,
   TypeRow,
+  UsdNote,
 } from "@/components/home/listingParts";
 import { fetchListingBidders, type Listing, type ListingBidder } from "@/lib/marketplace";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -90,7 +91,7 @@ export function ListingCheckoutSheet({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
 
-  // Each open starts clean: a fresh minimum bid, USDG selected, no stale error.
+  // Each open starts clean: a fresh minimum bid and no stale error.
   useEffect(() => {
     if (!open || !listing) return;
     checkout.reset(
@@ -246,7 +247,7 @@ function SheetBody({
           </p>
           <Description className="mx-auto mt-2 max-w-sm">
             {isAuction
-              ? `Your $${money(checkout.bidNumber)} bid on ${listing.title} is on-chain. If you are outbid, it is returned to you.`
+              ? `Your ${money(listing, checkout.bidNumber)} bid on ${listing.title} is on-chain. If you are outbid, it is returned to you.`
               : `${listing.title} is booked. Settlement ran through the AuctionHouse, and the seller has been notified.`}
           </Description>
           {isAuction && !user?.emailVerifiedAt ? (
@@ -270,9 +271,9 @@ function SheetBody({
     authenticated: status === "authenticated",
     pendingPersist: Boolean(checkout.pendingPersist),
     isAuction,
-    amount: checkout.usdAmount,
+    total: checkout.amount > 0 ? money(listing, checkout.amount) : null,
   });
-  const canAct = !isOwner && !unavailable;
+  const canAct = !isOwner && !unavailable && !checkout.legacy;
 
   return (
     <>
@@ -324,7 +325,8 @@ function SheetBody({
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <Stat label={price.label}>
-            <span className="numeric text-[15px] font-bold">${money(price.amount)}</span>
+            <span className="numeric text-[15px] font-bold">{money(listing, price.amount)}</span>
+            <UsdNote listing={listing} amount={price.amount} className="block" />
           </Stat>
           <Stat label="Ends">
             <span className={cn("text-[13px]", endsSoon(listing.endDate) && "text-warning")}>
@@ -375,6 +377,11 @@ function SheetBody({
             <Tile className="px-4 py-3 text-[13px] text-caption">
               This is your listing — you cannot buy your own slot.
             </Tile>
+          ) : checkout.legacy && !unavailable ? (
+            <Tile className="px-4 py-3 text-[13px] text-caption">
+              This listing was opened on the previous AuctionHouse contract, before listings were
+              priced per token. It can no longer be bought here.
+            </Tile>
           ) : unavailable ? (
             <Tile className="px-4 py-3 text-[13px] text-caption">
               {price.soldOut
@@ -385,6 +392,7 @@ function SheetBody({
             </Tile>
           ) : (
             <CheckoutFields
+              listing={listing}
               checkout={checkout}
               isAuction={isAuction}
               authenticated={status === "authenticated"}
@@ -444,17 +452,17 @@ function ctaLabel({
   authenticated,
   pendingPersist,
   isAuction,
-  amount,
+  total,
 }: {
   step: CheckoutStep;
   authenticated: boolean;
   pendingPersist: boolean;
   isAuction: boolean;
-  amount: number;
+  total: string | null;
 }) {
   if (step !== "idle" && step !== "done") return "Processing…";
   if (!authenticated) return "Connect wallet";
   if (pendingPersist) return "Retry recording booking";
-  const total = amount > 0 ? ` · $${money(amount)}` : "";
-  return isAuction ? `Place bid${total}` : `Buy now${total}`;
+  const suffix = total ? ` · ${total}` : "";
+  return isAuction ? `Place bid${suffix}` : `Buy now${suffix}`;
 }

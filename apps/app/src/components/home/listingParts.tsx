@@ -3,15 +3,27 @@ import { BrandAvatar, PlatformIcon } from "@/components/ui";
 import type { Countdown } from "@/lib/useCountdown";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
+import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { cn, relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 
-/**
- * Listings run from a cent to five figures, so the decimals follow the size of
- * the number rather than a fixed rule — $0.014 keeps its precision, $25,000
- * does not grow a ".00".
- */
-export function money(amount: number) {
-  return amount.toLocaleString(undefined, { maximumFractionDigits: amount < 1 ? 4 : 2 });
+/** An amount in the listing's own token — "1,500 USDG", "4.2M LNOC". */
+export function money(listing: Listing, amount: number) {
+  return formatListingAmount(listing, amount);
+}
+
+/** The "≈ $x" line for a listing priced in a floating token; nothing for USDG. */
+export function UsdNote({
+  listing,
+  amount,
+  className,
+}: {
+  listing: Listing;
+  amount: number;
+  className?: string;
+}) {
+  const hint = useUsdHint(listing, amount);
+  if (!hint) return null;
+  return <span className={cn("numeric text-[10px] text-caption", className)}>{hint}</span>;
 }
 
 /** Under a day left reads as urgent — the one place a listing borrows warning. */
@@ -63,10 +75,16 @@ export function priceLine(listing: Listing) {
   };
 }
 
-/** Category or platform glyph, plus the seller's own placement label. */
+/**
+ * Category or platform glyph, plus the seller's own placement label. Sellers
+ * no longer pick a category, so a listing without a placement or a legacy
+ * category has nothing to say here and the line is dropped.
+ */
 export function TypeRow({ listing, className }: { listing: Listing; className?: string }) {
   const meta = categoryMeta(listing.category);
   const CategoryIcon = meta.icon;
+  const label = listing.placement ?? (listing.category !== "OTHER" ? meta.label : null);
+  if (!label && !listing.platform) return null;
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5 text-caption", className)}>
       {listing.platform ? (
@@ -74,9 +92,11 @@ export function TypeRow({ listing, className }: { listing: Listing; className?: 
       ) : (
         <CategoryIcon className="h-3 w-3 shrink-0" aria-hidden="true" />
       )}
-      <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em]">
-        {listing.placement ?? meta.label}
-      </span>
+      {label && (
+        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em]">
+          {label}
+        </span>
+      )}
     </span>
   );
 }

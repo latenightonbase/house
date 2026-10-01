@@ -1,12 +1,11 @@
 import { prisma } from "../db";
 import { sendAuctionWon } from "./email";
 import {
-  auctionHouseAbi,
-  auctionHouseAddress,
-  fromUsdE8,
+  endAuctionOn,
   operatorAccount,
   publicClient,
-  walletClient,
+  readListingOnChain,
+  recordedHouse,
 } from "./operator";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -37,6 +36,7 @@ type ExpiredAuction = {
   id: string;
   title: string;
   price: number;
+  currency: string;
   contractAddress: string | null;
   txHash: string | null;
   bids: Array<{ bidderWallet: string; amount: number }>;
@@ -61,56 +61,34 @@ function expiredAuctionWhere(now: Date) {
 async function onChainOutcome(
   listing: ExpiredAuction,
 ): Promise<{ winner: string; amount: number } | null> {
-  if (!listing.contractAddress || !listing.txHash) return null;
+  // Read and ended on the contract it was published to — a listing opened
+  // before a redeploy still lives on the old one.
+  const house = recordedHouse(listing.contractAddress);
+  if (!house || !listing.txHash) return null;
 
-  const account = operatorAccount();
-  const wallet = walletClient();
-  if (!account || !wallet) {
+  if (!operatorAccount()) {
     console.warn("[auction-settle] OPERATOR_PRIVATE_KEY unset — using stored bids");
     return null;
   }
 
-  const client = publicClient();
-  const house = auctionHouseAddress();
-
-  const [listingType, meta] = await Promise.all([
-    client.readContract({
-      address: house,
-      abi: auctionHouseAbi,
-      functionName: "getListingType",
-      args: [listing.id],
-    }),
-    client.readContract({
-      address: house,
-      abi: auctionHouseAbi,
-      functionName: "getAuctionMeta",
-      args: [listing.id],
-    }),
-  ]);
-
-  const alreadySettled = listingType[1];
-  if (!alreadySettled) {
-    const hash = await wallet.writeContract({
-      address: house,
-      abi: auctionHouseAbi,
-      functionName: "endAuction",
-      args: [listing.id],
-      account,
-    });
-    const receipt = await client.waitForTransactionReceipt({ hash });
+  const meta = await readListingOnChain(house, listing.id);
+  if (!meta.settled) {
+    const hash = await endAuctionOn(house, listing.id);
+    const receipt = await publicClient().waitForTransactionReceipt({ hash });
     if (receipt.status === "reverted") throw new Error("endAuction reverted");
   }
 
   if (!meta.highestBidder || meta.highestBidder.toLowerCase() === ZERO) {
     return { winner: "", amount: 0 };
   }
-  return {
-    winner: meta.highestBidder.toLowerCase(),
-    amount: fromUsdE8(meta.highestBidUsdE8),
-  };
+  return { winner: meta.highestBidder.toLowerCase(), amount: meta.highestBidAmount };
 }
 
-async function emailWinner(listingId: string, title: string, wallet: string, amount: number) {
+async function emailWinner(
+  listing: { id: string; title: string; currency: string },
+  wallet: string,
+  amount: number,
+) {
   const user = await prisma.user.findFirst({
     where: {
       email: { not: null },
@@ -120,7 +98,12 @@ async function emailWinner(listingId: string, title: string, wallet: string, amo
     select: { email: true },
   });
   if (!user?.email) return;
-  await sendAuctionWon(user.email, { title, listingId, amount }).catch((err) => {
+  await sendAuctionWon(user.email, {
+    title: listing.title,
+    listingId: listing.id,
+    amount,
+    currency: listing.currency,
+  }).catch((err) => {
     console.error("[auction-settle] auction-won email failed:", err);
   });
 }
@@ -161,7 +144,7 @@ export async function settleAuction(listing: ExpiredAuction, now = new Date()): 
     },
   });
 
-  if (hasWinner) await emailWinner(listing.id, listing.title, winner, amount);
+  if (hasWinner) await emailWinner(listing, winner, amount);
 
   console.log(
     `[auction-settle] settled ${listing.id} winner=${hasWinner ? winner : "none"}`,
@@ -181,6 +164,7 @@ export async function settleExpiredAuctions(now = new Date()): Promise<SettleSwe
       id: true,
       title: true,
       price: true,
+      currency: true,
       contractAddress: true,
       txHash: true,
       bids: { orderBy: { amount: "desc" }, take: 1, select: { bidderWallet: true, amount: true } },

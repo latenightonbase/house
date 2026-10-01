@@ -11,9 +11,10 @@ import { Labelled, ProjectPitchFields, pitchInputClass } from "./ProjectPitchFie
 import {
   auctionHouseAbi,
   auctionHouseAddress,
-  paymentTokens,
-  toUsdE8,
-  USDG,
+  fromTokenUnits,
+  listingToken,
+  onCurrentHouse,
+  toTokenUnits,
 } from "@/lib/contracts/auctionHouse";
 import { erc20Abi } from "@/lib/contracts/erc20";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/lib/dailyAuction";
 import { robinhood } from "@/lib/chains";
 import type { Listing } from "@/lib/marketplace";
+import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { cn } from "@/lib/utils";
 
 type Step = "idle" | "saving" | "switching" | "approving" | "signing" | "confirming" | "done";
@@ -83,16 +85,8 @@ export function BidDialog({
 
   const chainForListing = listing.chainId ?? robinhood.id;
   const publicClient = usePublicClient({ chainId: chainForListing });
-  const tokens = paymentTokens(chainForListing);
-  const [payTokenAddress, setPayTokenAddress] = useState<string>(USDG.address);
-  // Bids are denominated in USD; the bidder picks which token carries them.
-  const token = useMemo(
-    () =>
-      tokens.find((t) => t.address.toLowerCase() === payTokenAddress.toLowerCase()) ??
-      tokens[0] ??
-      USDG,
-    [tokens, payTokenAddress],
-  );
+  // The auction is priced in one token and every bid is escrowed in it.
+  const token = listingToken(listing);
   const contractAddress =
     (listing.contractAddress as `0x${string}` | undefined) ??
     auctionHouseAddress(chainForListing);
@@ -174,6 +168,7 @@ export function BidDialog({
   }, [open, onClose, step]);
 
   const bidNumber = Number(amount);
+  const usdHint = useUsdHint(listing, Number.isFinite(bidNumber) ? bidNumber : 0);
   const bidInvalid = !Number.isFinite(bidNumber) || bidNumber < minimumBid;
   const nameMissing = !project.name.trim();
   const busy = step !== "idle" && step !== "done";
@@ -198,11 +193,17 @@ export function BidDialog({
       return;
     }
     if (bidInvalid) {
-      setError(`Bid at least $${minimumBid.toLocaleString()}.`);
+      setError(`Bid at least ${formatListingAmount(listing, minimumBid)}.`);
       return;
     }
     if (!contractAddress) {
       setError("This auction is not wired to the AuctionHouse contract.");
+      return;
+    }
+    if (!onCurrentHouse(listing)) {
+      setError(
+        "This auction was opened on the previous AuctionHouse contract. Bidding reopens with the next one.",
+      );
       return;
     }
 
@@ -229,19 +230,20 @@ export function BidDialog({
       }
       if (!publicClient) throw new Error("Could not reach the auction's network.");
 
-      // The contract converts the USD bid into token units at its published
-      // rate, so the amount to escrow comes from it rather than from here.
-      const value = await publicClient.readContract({
-        address: contractAddress,
-        abi: auctionHouseAbi,
-        functionName: "quoteUsd",
-        args: [token.address, toUsdE8(bidNumber)],
+      // The bid is escrowed as-is, in the auction's own token.
+      const value = toTokenUnits(bidNumber, token);
+
+      const balance = await publicClient.readContract({
+        address: token.address,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address],
       });
-      // A floating rate can move between the quote and the signature, so
-      // approve a little headroom; only `value` is ever pulled.
-      const allowanceNeeded = token.pegged
-        ? value
-        : (value * BigInt(101)) / BigInt(100);
+      if (balance < value) {
+        throw new Error(
+          `Your wallet holds ${formatListingAmount(listing, fromTokenUnits(balance, token))} — not enough for this bid.`,
+        );
+      }
 
       const allowance = await publicClient.readContract({
         address: token.address,
@@ -250,13 +252,13 @@ export function BidDialog({
         args: [address, contractAddress],
       });
 
-      if (allowance < allowanceNeeded) {
+      if (allowance < value) {
         setStep("approving");
         const approveHash = await writeContractAsync({
           address: token.address,
           abi: erc20Abi,
           functionName: "approve",
-          args: [contractAddress, allowanceNeeded],
+          args: [contractAddress, value],
           account: address,
         });
         const approveReceipt = await publicClient.waitForTransactionReceipt({
@@ -272,7 +274,7 @@ export function BidDialog({
         address: contractAddress,
         abi: auctionHouseAbi,
         functionName: "placeBid",
-        args: [listing.id, token.address, value, user?.username ?? address],
+        args: [listing.id, value, user?.username ?? address],
         account: address,
       });
 
@@ -325,7 +327,7 @@ export function BidDialog({
             </span>
             <h3 className="mt-4 text-[18px] font-bold text-white">You&apos;re in the lead</h3>
             <p className="mt-2 text-[13px] text-caption leading-relaxed max-w-sm mx-auto">
-              Your ${bidNumber.toLocaleString()} bid for{" "}
+              Your {formatListingAmount(listing, bidNumber)} bid for{" "}
               <span className="text-white">{project.name}</span> is on-chain. If it holds when the
               clock runs out, your project takes the billboard for 24 hours.
             </p>
@@ -397,13 +399,10 @@ export function BidDialog({
             <div className="pt-1 border-t border-line space-y-4">
               <Labelled
                 label="Your bid"
-                hint={`min $${minimumBid.toLocaleString()}`}
+                hint={`min ${formatListingAmount(listing, minimumBid)}`}
                 htmlFor="bid-amount"
               >
                 <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[15px] font-semibold text-caption">
-                    $
-                  </span>
                   <input
                     id="bid-amount"
                     ref={amountRef}
@@ -414,35 +413,14 @@ export function BidDialog({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     disabled={busy || !formReady}
-                    className={cn(pitchInputClass, "pl-8 pr-20 numeric text-[16px] font-semibold")}
+                    className={cn(pitchInputClass, "pr-20 numeric text-[16px] font-semibold")}
                   />
                   <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold uppercase tracking-wider text-caption">
-                    USD
+                    {token.symbol}
                   </span>
                 </div>
+                {usdHint && <p className="numeric mt-1.5 text-[11px] text-caption">{usdHint}</p>}
               </Labelled>
-
-              {tokens.length > 1 && (
-                <Labelled
-                  label="Pay with"
-                  hint={token.pegged ? "$1.00 each" : "converted at the live rate"}
-                  htmlFor="bid-token"
-                >
-                  <select
-                    id="bid-token"
-                    value={token.address}
-                    onChange={(e) => setPayTokenAddress(e.target.value)}
-                    disabled={busy || !formReady}
-                    className={cn(pitchInputClass, "text-[14px]")}
-                  >
-                    {tokens.map((t) => (
-                      <option key={t.address} value={t.address}>
-                        {t.symbol}
-                      </option>
-                    ))}
-                  </select>
-                </Labelled>
-              )}
 
               {error && (
                 <p className="text-[12px] text-negative leading-relaxed" role="alert">
@@ -477,8 +455,8 @@ export function BidDialog({
               </button>
 
               <p className="text-[11px] text-caption leading-relaxed text-center">
-                Your bid is escrowed on-chain. If you are outbid it is returned, and your project
-                details stay saved for your next bid.
+                Your bid is escrowed on-chain in {token.symbol}. If you are outbid it is returned,
+                and your project details stay saved for your next bid.
               </p>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import type { AuctionState } from "@/lib/dailyAuction";
 import type { Listing } from "@/lib/marketplace";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
+import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
 
 function pad(n: number) {
@@ -119,6 +120,7 @@ export function LiveAuctionPanel({
   const reserve = auction?.reservePrice ?? listing.price;
   const leader = auction?.leader ?? null;
   const ended = countdown?.ended ?? false;
+  const bidUsd = useUsdHint(listing, currentBid);
 
   return (
     <section id="daily-auction" className="panel-glow flex scroll-mt-24 flex-col p-4 sm:p-5">
@@ -147,8 +149,9 @@ export function LiveAuctionPanel({
             Current bid
           </p>
           <p className="numeric mt-2 text-[clamp(1.5rem,4.5vw,2.125rem)] font-bold leading-none text-primary-bright">
-            ${currentBid.toLocaleString()}
+            {formatListingAmount(listing, currentBid)}
           </p>
+          {bidUsd && <p className="numeric mt-1 text-[10px] text-caption">{bidUsd}</p>}
           <p className="mt-2 text-[10px] text-caption">
             {auction ? (
               <>
@@ -188,7 +191,7 @@ export function LiveAuctionPanel({
             </p>
             <p className="mt-1.5 text-[13px] font-semibold text-white">No bids yet</p>
             <p className="mt-1 text-[11px] leading-relaxed text-caption">
-              Open at ${reserve.toLocaleString()} — the lead is yours for the taking.
+              Open at {formatListingAmount(listing, reserve)} — the lead is yours for the taking.
             </p>
           </div>
         )}
@@ -206,7 +209,7 @@ export function LiveAuctionPanel({
         </button>
         <div className="mt-2.5 flex items-center justify-between gap-3">
           <p className="text-[11px] text-caption">
-            Reserve ${reserve.toLocaleString()} {listing.tokenName || listing.currency}
+            Reserve {formatListingAmount(listing, reserve)}
           </p>
           <Link
             href={`/listings/${listing.id}`}

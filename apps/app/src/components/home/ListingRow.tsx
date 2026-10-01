@@ -10,6 +10,7 @@ import {
   priceLine,
   Seller,
   TypeRow,
+  UsdNote,
 } from "./listingParts";
 
 /** The column rule the header and every row share, so the two stay aligned. */
@@ -55,7 +56,7 @@ export function ListingRow({
     <button
       type="button"
       onClick={() => onCheckout(listing)}
-      aria-label={`${price.cta}: ${listing.title}, $${money(price.amount)}`}
+      aria-label={`${price.cta}: ${listing.title}, ${money(listing, price.amount)}`}
       aria-haspopup="dialog"
       className={cn(
         "group grid w-full items-center gap-x-4 gap-y-2 rounded-xl border border-transparent px-4 py-3 text-left transition-colors",
@@ -92,9 +93,10 @@ export function ListingRow({
       </div>
 
       <div className="text-right">
-        <p className="numeric text-[15px] font-bold leading-tight text-white">
-          ${money(price.amount)}
+        <p className="numeric whitespace-nowrap text-[15px] font-bold leading-tight text-white">
+          {money(listing, price.amount)}
         </p>
+        <UsdNote listing={listing} amount={price.amount} className="block" />
         <p className="text-[10px] text-caption">{price.note}</p>
       </div>
 
