@@ -156,11 +156,8 @@ export default function HomeClient({
 
       <HomeIntro />
 
-      {/* One grid, two rows of equal height: yesterday's winner and today's
-          auction on top, the open market and its closing-soon rail beneath —
-          the market gets the same footprint as the billboard, not a strip
-          under it. */}
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:auto-rows-fr xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {/* Yesterday's winner and today's auction, side by side at equal height. */}
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
 
         {listing ? (
@@ -174,8 +171,15 @@ export default function HomeClient({
           <AuctionEmpty />
         )}
 
+      </div>
+
+      {/* The market on the same column rule, but free to run as tall as its
+          cards need; the closing-soon rail stays in view beside it. */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <MarketplacePanel listings={listings} onCheckout={handleCheckout} />
-        <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
+        <div className="xl:sticky xl:top-24">
+          <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
+        </div>
       </div>
 
       <WinnerBenefits />

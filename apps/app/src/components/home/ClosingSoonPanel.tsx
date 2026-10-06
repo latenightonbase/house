@@ -9,7 +9,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 
-/** Five keeps the rail close to the market table's own height. */
+/** Five keeps the rail short enough to stay in view beside the market. */
 const MAX_ROWS = 5;
 
 function Row({
@@ -83,7 +83,7 @@ function Row({
 }
 
 /**
- * The urgency rail beside the market table. It shows whatever is actually about
+ * The urgency rail beside the market. It shows whatever is actually about
  * to close; with nothing on a clock it falls back to what landed most recently,
  * so a new seller's listing is surfaced on its first day either way.
  */
@@ -141,9 +141,7 @@ export function ClosingSoonPanel({
         </div>
       )}
 
-      {/* Pinned to the bottom so the rail has a floor whatever height the market
-          table forces on it — and so the supply-side ask lands on the same
-          screen as the demand-side one. */}
+      {/* The supply-side ask, on the same screen as the demand-side one. */}
       <div className="mt-auto border-t border-line pt-3.5">
         <CreateListingButton
           variant="accent-outline"

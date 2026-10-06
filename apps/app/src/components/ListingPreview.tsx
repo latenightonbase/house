@@ -32,7 +32,7 @@ export function ListingPreview({
         {action ? <div className="ml-auto shrink-0">{action}</div> : null}
       </div>
 
-      <ListingCard listing={listing} />
+      <ListingCard listing={listing} className="mx-auto max-w-[330px]" />
 
       <Tile className="divide-y divide-line">
         {rows.map((row) => (

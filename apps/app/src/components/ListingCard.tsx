@@ -1,127 +1,147 @@
 "use client";
 
-import { BadgeCheck, Gavel } from "lucide-react";
 import { ListingPoster } from "@/components/listing/ListingPoster";
-import { Badge, BrandAvatar, Button, Card, PlatformIcon } from "@/components/ui";
+import {
+  ActionPill,
+  EndLabel,
+  KindBadge,
+  money,
+  priceLine,
+  Seller,
+  TypeRow,
+  UsdNote,
+} from "@/components/home/listingParts";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
-import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
-import { formatListingAmount } from "@/lib/tokenPrices";
+import { cn } from "@/lib/utils";
 
 /**
- * One unit of media on sale. Reads as a service listing — what you get, from
- * whom, for how much — not as a tradeable instrument. Auction listings carry
- * the same shape, differing only in how the price is described.
+ * A listing without artwork still gets the full-size box, so a grid of mixed
+ * listings keeps its rhythm — filled with its category glyph over the violet
+ * wash the panels use, rather than an empty grey hole.
+ */
+function PosterPlaceholder({ listing }: { listing: Listing }) {
+  const CategoryIcon = categoryMeta(listing.category).icon;
+  return (
+    <span
+      className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.22),transparent_65%)] bg-surface-2"
+      aria-hidden="true"
+    >
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
+        <CategoryIcon className="h-6 w-6 text-primary-light" />
+      </span>
+    </span>
+  );
+}
+
+/**
+ * One piece of seller inventory as a buyer meets it in the market. The poster
+ * leads at full card width — sellers use it to pitch what they are selling, so
+ * it is given the room to be read — and the write-up gets enough lines beneath
+ * it to say something. Price and the call to action sit on the card's floor so
+ * they line up across a row of cards.
+ *
+ * With `onCheckout` the whole card is the button that opens checkout (the pill
+ * is only its label, so nothing interactive nests); without it — the seller's
+ * own preview — it is inert.
  */
 export function ListingCard({
   listing,
-  onOpenCreator,
-  onBook,
+  onCheckout,
+  priority = false,
+  className,
 }: {
   listing: Listing;
-  onOpenCreator?: (id: string) => void;
-  onBook?: (id: string) => void;
+  onCheckout?: (listing: Listing) => void;
+  priority?: boolean;
+  className?: string;
 }) {
-  const isAuction = listing.pricingType === "AUCTION";
-  const soldOut = !isAuction && listing.slotsAvailable <= 0;
-  const meta = categoryMeta(listing.category);
-  const CategoryIcon = meta.icon;
+  const price = priceLine(listing);
+  const interactive = Boolean(onCheckout);
+
+  const body = (
+    <>
+      <span className="relative block overflow-hidden border-b border-line">
+        {listing.posterUrl ? (
+          <ListingPoster
+            src={listing.posterUrl}
+            alt={`Poster for ${listing.title}`}
+            sizes="(min-width: 1280px) 320px, (min-width: 640px) 50vw, 100vw"
+            priority={priority}
+            className="aspect-[4/5] w-full transition-transform duration-300 group-hover:scale-[1.02]"
+            fallback={
+              <span className="block aspect-[4/5] w-full">
+                <PosterPlaceholder listing={listing} />
+              </span>
+            }
+          />
+        ) : (
+          <span className="block aspect-[4/5] w-full">
+            <PosterPlaceholder listing={listing} />
+          </span>
+        )}
+        <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 backdrop-blur-sm">
+          <KindBadge listing={listing} />
+        </span>
+      </span>
+
+      <span className="flex flex-1 flex-col gap-2.5 p-3.5">
+        <span className="block min-w-0">
+          <TypeRow listing={listing} />
+          <span className="mt-1.5 line-clamp-2 block text-[15px] font-semibold leading-snug text-foreground">
+            {listing.title}
+          </span>
+          {listing.description && (
+            <span className="mt-1.5 line-clamp-3 block whitespace-pre-line text-[12.5px] leading-relaxed text-caption">
+              {listing.description}
+            </span>
+          )}
+        </span>
+
+        <span className="flex min-w-0 items-center justify-between gap-3">
+          <Seller listing={listing} size={22} showReach={false} />
+          <EndLabel listing={listing} className="shrink-0" />
+        </span>
+
+        <span className="mt-auto flex items-end justify-between gap-3 border-t border-line pt-3">
+          <span className="min-w-0">
+            <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-caption">
+              {price.label}
+            </span>
+            <span className="numeric block whitespace-nowrap text-[17px] font-bold leading-tight text-white">
+              {money(listing, price.amount)}
+            </span>
+            <span className="flex flex-wrap items-baseline gap-x-2 text-[10px] text-caption">
+              <UsdNote listing={listing} amount={price.amount} />
+              <span>{price.note}</span>
+            </span>
+          </span>
+          <ActionPill listing={listing} className="h-8 px-3" />
+        </span>
+      </span>
+    </>
+  );
+
+  const shell = cn(
+    "group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-line bg-surface text-left transition-colors",
+    className,
+  );
+
+  if (!interactive) return <div className={shell}>{body}</div>;
 
   return (
-    <Card className="p-4 flex h-full flex-col gap-3">
-      {listing.posterUrl && (
-        <ListingPoster
-          src={listing.posterUrl}
-          alt={`Poster for ${listing.title}`}
-          adaptive
-          sizes="330px"
-          className="w-full max-h-80 rounded-lg border border-line"
-        />
+    <button
+      type="button"
+      onClick={() => onCheckout?.(listing)}
+      aria-label={`${price.cta}: ${listing.title}, ${money(listing, price.amount)}`}
+      aria-haspopup="dialog"
+      className={cn(
+        shell,
+        "hover:border-line-strong hover:bg-white/[0.02]",
+        "focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
       )}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0 text-caption">
-          {listing.platform ? (
-            <PlatformIcon platform={listing.platform} className="w-3.5 h-3.5" />
-          ) : (
-            <CategoryIcon className="w-3.5 h-3.5 shrink-0" />
-          )}
-          <span className="text-[11px] truncate">
-            {listing.placement ??
-              (listing.category !== "OTHER"
-                ? meta.label
-                : `Paid in ${listing.tokenName || listing.currency}`)}
-          </span>
-        </div>
-        {isAuction ? (
-          <Badge variant="accent" className="shrink-0">
-            <Gavel className="w-2.5 h-2.5 mr-1" />
-            Auction
-          </Badge>
-        ) : soldOut ? (
-          <span className="text-[11px] text-caption shrink-0">Sold out</span>
-        ) : (
-          <span className="text-[11px] text-caption shrink-0">
-            {listing.slotsAvailable} left
-          </span>
-        )}
-      </div>
-
-      <div>
-        <h3 className="text-[14px] font-semibold text-foreground leading-snug">
-          {listing.title}
-        </h3>
-        {listing.description && (
-          <p className="mt-1 text-[12px] text-caption leading-relaxed line-clamp-2">
-            {listing.description}
-          </p>
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => onOpenCreator?.(listing.creator.id)}
-        className="flex items-center gap-2.5 min-w-0 text-left"
-      >
-        <BrandAvatar
-          src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
-          alt={listing.creator.displayName}
-          fallbackSeed={listing.creator.wallet}
-          size={30}
-        />
-        <div className="min-w-0">
-          <p className="text-[12px] font-medium text-white truncate flex items-center gap-1">
-            {listing.creator.displayName}
-            {listing.creator.verified && (
-              <BadgeCheck className="w-3 h-3 text-primary shrink-0" />
-            )}
-          </p>
-          <p className="text-[11px] text-caption truncate">{listing.creator.reach} reach</p>
-        </div>
-      </button>
-
-      <div className="mt-auto flex items-end justify-between gap-3 pt-1">
-        <div>
-          <p className="text-[11px] text-caption">{isAuction ? "Minimum bid" : "Price"}</p>
-          <p className="text-lg font-bold text-white numeric">
-            {formatListingAmount(listing, listing.price)}
-          </p>
-          <p className="text-[11px] text-caption mt-0.5">
-            {listing.endDate
-              ? relativeEndLabel(listing.endDate)
-              : listing.turnaroundDays
-                ? `~${listing.turnaroundDays}d turnaround`
-                : "Open"}
-          </p>
-        </div>
-        <Button
-          size="sm"
-          disabled={soldOut}
-          className="shrink-0"
-          onClick={() => onBook?.(listing.id)}
-        >
-          {isAuction ? "Place bid" : soldOut ? "Sold out" : "Book"}
-        </Button>
-      </div>
-    </Card>
+    >
+      {body}
+    </button>
   );
 }

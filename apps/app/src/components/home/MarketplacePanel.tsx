@@ -7,7 +7,7 @@ import { Select, Tabs, type TabItem } from "@/components/ui";
 import { categoryLabel } from "@/lib/listingCategories";
 import type { Listing, PricingType } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
-import { ListingRow, ListingRowHeader } from "./ListingRow";
+import { ListingCard } from "@/components/ListingCard";
 
 type Kind = "all" | PricingType;
 type Sort = "newest" | "ending" | "price-asc" | "price-desc";
@@ -19,8 +19,8 @@ const SORTS: { value: Sort; label: string }[] = [
   { value: "price-desc", label: "Price: high to low" },
 ];
 
-/** Rows shown before "show all" — a screenful, not the whole book. */
-const INITIAL_ROWS = 6;
+/** Cards shown before "show all" — a couple of rows, not the whole book. */
+const INITIAL_ROWS = 4;
 
 /** The number a row leads with, so sorting by price sorts by what is shown. */
 function shownPrice(listing: Listing) {
@@ -107,9 +107,11 @@ function MarketEmpty() {
 }
 
 /**
- * The market, given the same footprint as the daily winner's billboard. Rows
- * are dense on purpose: a buyer should see what is for sale without scrolling,
- * and a seller's listing should be visible the day it goes live.
+ * The market as a grid of poster-led cards. Sellers pitch with their artwork
+ * and write-up, so both get real room rather than a thumbnail and one
+ * truncated line. The grid sizes itself to the panel (container queries), so
+ * the same panel works in the home page's two-thirds column and full width on
+ * the marketplace page.
  */
 export function MarketplacePanel({
   listings,
@@ -259,17 +261,21 @@ export function MarketplacePanel({
               </button>
             </div>
           ) : (
-            <div className="mt-4 flex min-w-0 flex-1 flex-col">
-              <ListingRowHeader />
-              <div className="-mx-1 mt-1 min-w-0 divide-y divide-line/70">
-                {shown.map((listing) => (
-                  <ListingRow key={listing.id} listing={listing} onCheckout={onCheckout} />
+            <div className="@container mt-4 flex min-w-0 flex-1 flex-col">
+              <div className="grid min-w-0 grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 sm:gap-4">
+                {shown.map((listing, index) => (
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    onCheckout={onCheckout}
+                    priority={index < 3}
+                  />
                 ))}
               </div>
 
-              {/* A thin market would leave the panel's lower half bare at the
-                  billboard's height, so the seller-side ask fills it. */}
-              {shown.length < 4 && hidden === 0 && (
+              {/* A thin market leaves the grid's first row unfinished, so the
+                  seller-side ask follows it. */}
+              {shown.length < 2 && hidden === 0 && (
                 <div className="mt-auto pt-4">
                   <div className="tile flex flex-col items-start gap-3 border-dashed px-4 py-4 sm:flex-row sm:items-center">
                     <p className="text-[12px] leading-relaxed text-caption">
@@ -287,7 +293,7 @@ export function MarketplacePanel({
               )}
 
               {hidden > 0 && (
-                <div className="mt-3 flex justify-center border-t border-line pt-3">
+                <div className="mt-4 flex justify-center border-t border-line pt-3">
                   <button
                     type="button"
                     onClick={() => setExpanded(true)}
