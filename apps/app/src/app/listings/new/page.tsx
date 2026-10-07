@@ -684,7 +684,7 @@ export default function NewListingPage() {
             <Field
               label="Poster"
               optional
-              hint="Square (1:1) or story-shaped (9:16) artwork. Shown on Discover, the listing page and your profile."
+              hint="Upload a square (1:1) image for best visibility — cards in the marketplace are square. Shown on Discover, the listing page and your profile."
             >
               <div className="max-w-56">
                 <ImageUploader

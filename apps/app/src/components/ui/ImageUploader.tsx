@@ -35,6 +35,31 @@ function acceptFor(variant: Variant) {
     : "image/jpeg,image/png,image/webp,image/avif,image/gif";
 }
 
+/** Within this of 1:1 a poster counts as square — a few pixels off is not worth a warning. */
+const SQUARE_TOLERANCE = 0.03;
+
+/** Whether a poster preview is square, once its natural size is known. */
+function usePosterShape(src: string | null) {
+  const [shape, setShape] = useState<{ src: string; square: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!src) return;
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (cancelled || !img.naturalWidth || !img.naturalHeight) return;
+      const ratio = img.naturalWidth / img.naturalHeight;
+      setShape({ src, square: Math.abs(ratio - 1) <= SQUARE_TOLERANCE });
+    };
+    img.src = src;
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return shape && shape.src === src ? shape : null;
+}
+
 export function ImageUploader({
   variant,
   value,
@@ -57,6 +82,7 @@ export function ImageUploader({
   const preview = localPreview || value || null;
   const purpose = purposeFor(variant);
   const busy = disabled || uploading;
+  const posterShape = usePosterShape(variant === "poster" ? preview : null);
 
   const replaceLocalPreview = (next: string | null) => {
     if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
@@ -226,7 +252,7 @@ export function ImageUploader({
           onDrop={onDrop}
           className={cn(
             "w-full max-w-56 mx-auto rounded-lg border border-dashed px-4 py-6 text-center transition-colors",
-            variant === "poster" ? "aspect-[4/5]" : "aspect-square",
+            "aspect-square",
             "bg-surface-2 outline-none focus-visible:border-primary/60 flex flex-col items-center justify-center",
             isDragging ? "border-primary/70 bg-primary/5" : "border-line hover:border-primary/50",
             busy && "cursor-wait opacity-70",
@@ -237,11 +263,13 @@ export function ImageUploader({
             {uploading ? "Uploading…" : "Drop an image here"}
           </p>
           <p className="mt-0.5 text-[11px] text-caption">or click to browse · JPEG, PNG, WebP, AVIF, GIF · 5MB max</p>
-          <p className="mt-0.5 text-[11px] text-caption">
-            {variant === "artwork"
-              ? "1:1 · 1080×1080px"
-              : "1:1 (1080×1080) or 9:16 (1080×1920)"}
-          </p>
+          {variant === "artwork" ? (
+            <p className="mt-0.5 text-[11px] text-caption">1:1 · 1080×1080px</p>
+          ) : (
+            <p className="mt-1.5 text-[11px] font-semibold text-primary-light">
+              Use a square 1:1 image (1080×1080) for best visibility
+            </p>
+          )}
         </button>
       ) : (
         <div
@@ -254,15 +282,15 @@ export function ImageUploader({
           onDrop={onDrop}
         >
           {variant === "poster" ? (
-            // Shown at its own shape, as buyers will see it — a 9:16 poster
-            // stays tall here rather than being squared off.
+            // In the square box the marketplace card uses, so the seller sees
+            // exactly how much of the card a non-square poster leaves to the
+            // blurred fill.
             <ListingPoster
               key={preview}
               src={preview}
               alt={alt}
-              adaptive
               sizes="400px"
-              className="w-full max-h-96"
+              className="aspect-square w-full"
             />
           ) : (
             <div className="relative w-full aspect-square">
@@ -293,6 +321,12 @@ export function ImageUploader({
           )}
         </div>
       )}
+      {variant === "poster" && preview && posterShape && !posterShape.square ? (
+        <p className="text-[11px] leading-relaxed text-warning">
+          This image isn&apos;t square, so the card fills the gaps with a blurred copy of it.
+          Upload a 1:1 image for best visibility.
+        </p>
+      ) : null}
       {error ? <p className="text-[11px] text-negative">{error}</p> : null}
       {input}
     </div>

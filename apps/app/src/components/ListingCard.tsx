@@ -36,9 +36,11 @@ function PosterPlaceholder({ listing }: { listing: Listing }) {
 
 /**
  * One piece of seller inventory as a buyer meets it in the market. The poster
- * leads at full card width — sellers use it to pitch what they are selling, so
- * it is given the room to be read — and the write-up gets enough lines beneath
- * it to say something. Price and the call to action sit on the card's floor so
+ * leads at full card width in a square box — sellers use it to pitch what they
+ * are selling, so it is given the room to be read. A square poster fills the
+ * box edge to edge; any other shape is shown whole, with the gaps filled by a
+ * blurred copy of itself. The write-up gets enough lines beneath it to say
+ * something. Price and the call to action sit on the card's floor so
  * they line up across a row of cards.
  *
  * With `onCheckout` the whole card is the button that opens checkout (the pill
@@ -68,15 +70,15 @@ export function ListingCard({
             alt={`Poster for ${listing.title}`}
             sizes="(min-width: 1280px) 320px, (min-width: 640px) 50vw, 100vw"
             priority={priority}
-            className="aspect-[4/5] w-full transition-transform duration-300 group-hover:scale-[1.02]"
+            className="aspect-square w-full transition-transform duration-300 group-hover:scale-[1.02]"
             fallback={
-              <span className="block aspect-[4/5] w-full">
+              <span className="block aspect-square w-full">
                 <PosterPlaceholder listing={listing} />
               </span>
             }
           />
         ) : (
-          <span className="block aspect-[4/5] w-full">
+          <span className="block aspect-square w-full">
             <PosterPlaceholder listing={listing} />
           </span>
         )}

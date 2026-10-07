@@ -12,8 +12,8 @@ const MAX_ASPECT = 16 / 9;
 /**
  * A listing's poster. Sellers upload square and 9:16 artwork about equally, so
  * nothing here crops by default: the image is letterboxed inside its box over a
- * blurred, zoomed copy of itself, which fills the bars with the poster's own
- * colours instead of flat black. Any box shape therefore works — callers size
+ * blurred, zoomed copy of itself at full strength, which wraps the poster in
+ * its own colours so the bars read as part of the artwork, not as gaps. Any box shape therefore works — callers size
  * it with `className`.
  *
  * `fit="cover"` is for thumbnails, where a sliver of a tall poster would read
@@ -70,9 +70,9 @@ export function ListingPoster({
             fill
             sizes="64px"
             unoptimized={unoptimized}
-            className="scale-125 object-cover opacity-60 blur-2xl"
+            className="scale-150 object-cover blur-2xl saturate-150"
           />
-          <span className="absolute inset-0 bg-black/25" aria-hidden="true" />
+          <span className="absolute inset-0 bg-black/15" aria-hidden="true" />
         </>
       )}
       <Image
