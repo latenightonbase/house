@@ -11,7 +11,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
-import { CheckCircle2, Clock, Gavel, Info, Tag } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Gavel, Info, Tag } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ListingPreview } from "@/components/ListingPreview";
 import { useSession } from "@/components/SessionProvider";
@@ -376,6 +376,11 @@ export default function NewListingPage() {
   ];
 
   const busy = step !== "form" && step !== "done";
+  // Why the submit button is off, said on the bar that holds it — the cap has
+  // its own banner at the top, but that is a scroll away from the button.
+  const disabledReason = atListingCap
+    ? `You have ${activeCount}/${MAX_ACTIVE_LISTINGS} open listings. Settle or let one expire before adding another.`
+    : validationError;
 
   function listingPayload(
     listingId: string,
@@ -871,7 +876,8 @@ export default function NewListingPage() {
 
           <Button
             onClick={handleSubmit}
-            disabled={busy || atListingCap || Boolean(validationError)}
+            disabled={busy || Boolean(disabledReason)}
+            aria-describedby={!busy && disabledReason ? "submit-disabled-reason" : undefined}
             className="w-full sm:w-auto sm:min-w-[190px]"
           >
             {busy
@@ -891,8 +897,14 @@ export default function NewListingPage() {
             {(isAdmin ? STEP_LABEL : SUBMIT_STEP_LABEL)[step as keyof typeof STEP_LABEL]}
           </p>
         )}
-        {!busy && validationError && (
-          <p className="text-[12px] text-caption">{validationError}</p>
+        {!busy && disabledReason && (
+          <p
+            id="submit-disabled-reason"
+            className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[12px] leading-snug text-warning"
+          >
+            <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{disabledReason}</span>
+          </p>
         )}
         {error && <p className="text-[12px] text-negative">{error}</p>}
       </Panel>

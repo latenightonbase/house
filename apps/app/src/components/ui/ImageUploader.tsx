@@ -22,6 +22,8 @@ type Props = {
   id?: string;
   /** Lets a form hold its submit while an upload is still in flight. */
   onUploadingChange?: (uploading: boolean) => void;
+  /** Avatar variant only — match the shape the picture is shown in. */
+  shape?: "circle" | "square";
 };
 
 function purposeFor(variant: Variant): UploadPurpose {
@@ -69,6 +71,7 @@ export function ImageUploader({
   alt = "Upload image",
   id,
   onUploadingChange,
+  shape = "circle",
 }: Props) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
@@ -176,6 +179,7 @@ export function ImageUploader({
   );
 
   if (variant === "avatar") {
+    const rounding = shape === "square" ? "rounded-[22%]" : "rounded-full";
     return (
       <div className="flex items-center gap-4">
         <button
@@ -187,7 +191,8 @@ export function ImageUploader({
           onDrop={onDrop}
           aria-label="Upload profile picture"
           className={cn(
-            "group relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+            "group relative shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+            rounding,
             isDragging && "ring-2 ring-primary/60",
             busy && "cursor-wait",
           )}
@@ -197,11 +202,13 @@ export function ImageUploader({
             src={preview}
             alt={alt}
             fallbackSeed={fallbackSeed}
+            shape={shape}
             size={72}
           />
           <span
             className={cn(
-              "absolute inset-0 flex items-center justify-center rounded-full bg-black/50 text-white transition-opacity",
+              "absolute inset-0 flex items-center justify-center bg-black/50 text-white transition-opacity",
+              rounding,
               uploading ? "opacity-100" : "opacity-100 lg:opacity-0 lg:group-hover:opacity-100",
             )}
           >

@@ -52,7 +52,7 @@ export function BrandAvatar({
         onError={() => setFailed(true)}
         className={cn(
           "object-cover w-full h-full border border-line-strong",
-          shape === "circle" ? "rounded-full" : "rounded-lg",
+          shape === "circle" ? "rounded-full" : "rounded-[22%]",
         )}
       />
       {verified && (

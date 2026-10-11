@@ -16,6 +16,8 @@ type Props = {
    */
   fallbackSeed?: string | null;
   size?: number;
+  /** `circle` (default) for people in lists; `square` for a profile's own picture. */
+  shape?: "circle" | "square";
   className?: string;
 };
 
@@ -31,8 +33,12 @@ export function Avatar({
   fallback,
   fallbackSeed,
   size = 44,
+  shape = "circle",
   className = "",
 }: Props) {
+  // A percentage keeps the corner in proportion at every size, so a square
+  // avatar never reads as a hard box when small or a pill when large.
+  const rounding = shape === "square" ? "rounded-[22%]" : "rounded-full";
   const seeded = fallbackSeed?.trim() ? walletFallbackAvatar(fallbackSeed) : null;
   const sources = [src, seeded].filter(Boolean) as string[];
 
@@ -53,7 +59,7 @@ export function Avatar({
         height={size}
         unoptimized={isUnoptimizedSrc(current)}
         onError={() => setStep((previous) => previous + 1)}
-        className={`rounded-full object-cover border border-line-strong ${className}`}
+        className={`${rounding} object-cover border border-line-strong ${className}`}
       />
     );
   }
@@ -61,7 +67,7 @@ export function Avatar({
   return (
     <div
       style={{ width: size, height: size }}
-      className={`flex items-center justify-center rounded-full border border-line-strong bg-surface-2 text-caption ${className}`}
+      className={`flex items-center justify-center ${rounding} border border-line-strong bg-surface-2 text-caption ${className}`}
     >
       {fallback}
     </div>
