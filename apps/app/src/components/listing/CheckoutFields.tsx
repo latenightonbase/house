@@ -5,7 +5,7 @@ import { Info } from "lucide-react";
 import { Button, Field, InputAddon, TextInput, Tile } from "@/components/ui";
 import { CHAIN_LABELS } from "@/lib/contracts/auctionHouse";
 import type { Listing } from "@/lib/marketplace";
-import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
+import { formatListingAmount, useTokenLookup, useUsdHint } from "@/lib/tokenPrices";
 import type { ListingCheckout } from "@/lib/useListingCheckout";
 
 /**
@@ -30,6 +30,10 @@ export function CheckoutFields({
   const { busy, minimumBid, bidInvalid, token } = checkout;
   const floor = formatListingAmount(listing, minimumBid);
   const usdHint = useUsdHint(listing, checkout.amount);
+  // A token pasted by address has no local art; its logo comes from the same
+  // cached lookup the USD hint already makes.
+  const lookup = useTokenLookup(token.custom ? token.address : undefined);
+  const tokenLogo = lookup.status === "found" ? (lookup.token.logoUrl ?? undefined) : undefined;
 
   return (
     <div className="space-y-4">
@@ -60,7 +64,11 @@ export function CheckoutFields({
       {/* The seller chose the token when they listed, so there is nothing to
           pick — just say what leaves the wallet. */}
       <div className="tile flex items-center gap-3 px-3.5 py-3" aria-live="polite">
-        <TokenMark token={token} size={28} className="h-7 w-7" />
+        <TokenMark
+          token={{ symbol: token.symbol, logo: token.logo ?? tokenLogo }}
+          size={28}
+          className="h-7 w-7"
+        />
         <div className="min-w-0">
           <p className="panel-label">You pay in {token.symbol}</p>
           <p className="numeric mt-0.5 truncate text-[14px] font-semibold text-white">

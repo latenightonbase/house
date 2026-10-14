@@ -2,12 +2,13 @@ import {
   createPublicClient,
   createWalletClient,
   fallback,
+  formatUnits,
   getAddress,
   http,
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { fromTokenUnits, resolveListingToken } from "./tokens";
+import { settlementDecimals } from "./tokens";
 import { defineChain } from "viem";
 
 const ROBINHOOD_ID = 4663;
@@ -270,14 +271,14 @@ export async function readListingOnChain(
       args: [id],
     });
     // Any ERC-20 the seller picked, so its decimals may need a chain read.
-    const token = meta.token === ZERO_ADDRESS ? null : await resolveListingToken(meta.token);
+    const decimals = meta.token === ZERO_ADDRESS ? null : await settlementDecimals(meta.token);
     return {
       owner: meta.auctionOwner,
       settled: meta.settled,
       isFixedPrice: meta.isFixedPrice,
       deadline: meta.deadline,
       highestBidder: meta.highestBidder,
-      highestBidAmount: token ? fromTokenUnits(meta.highestBid, token) : 0,
+      highestBidAmount: decimals == null ? 0 : Number(formatUnits(meta.highestBid, decimals)),
       priceRaw: meta.price,
       token: meta.token === ZERO_ADDRESS ? null : meta.token,
       payoutToken: meta.token === ZERO_ADDRESS ? null : meta.token,

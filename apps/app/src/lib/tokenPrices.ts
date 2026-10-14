@@ -90,15 +90,17 @@ export function usdValue(prices: TokenPrices, token: PaymentToken, amount: numbe
   return price == null || !Number.isFinite(amount) ? null : amount * price;
 }
 
-/** A Robinhood Chain ERC-20 as the API read it: identity, units and a USD price. */
+/** A Robinhood Chain token as DexScreener and CoinGecko describe it, via the API. */
 export type TokenInfo = {
   address: `0x${string}`;
   symbol: string;
   name: string;
   decimals: number;
+  /** From DexScreener or CoinGecko; absent for USDG and LNOC, which have local art. */
+  logoUrl?: string | null;
   /** One of the tokens offered by name. */
   known: boolean;
-  /** From DexScreener; null when the token has no pool there. */
+  /** DexScreener, then CoinGecko; null when neither prices it. */
   priceUsd: number | null;
 };
 

@@ -1,17 +1,21 @@
 import { erc20Abi, formatUnits, getAddress, parseUnits } from "viem";
 import { publicClient } from "./operator";
+import { getMarketToken } from "./tokenMarket";
 
 /**
  * The ERC-20 a listing is priced in. The seller picks it at creation and every
  * bid or purchase on that listing is paid in it — the AuctionHouse never
  * converts between tokens. USDG and LNOC are offered by name; any other
- * Robinhood Chain ERC-20 can be entered by address and is read from the chain.
+ * Robinhood Chain ERC-20 can be entered by address and is looked up on
+ * DexScreener and CoinGecko.
  */
 export type ListingToken = {
   address: `0x${string}`;
   symbol: string;
   name: string;
   decimals: number;
+  /** From DexScreener or CoinGecko; the app has its own art for USDG and LNOC. */
+  logoUrl?: string | null;
 };
 
 /** Global Dollar — Robinhood Chain's stable. */
@@ -87,16 +91,44 @@ function cleanLabel(value: string, max: number) {
   return value.replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max);
 }
 
-// ERC-20 metadata does not change, so a token is read from the chain once per
-// process. A failed read is not cached — the next request tries again.
-const resolved = new Map<string, ListingToken>();
+// Decimals never change, so a token's are read once per process. A failed
+// read is not cached — the next request tries again.
+const chainDecimals = new Map<string, number>();
+
+/** The token contract's own `decimals()`, or null when it does not answer as an ERC-20. */
+async function decimalsOnChain(address: `0x${string}`): Promise<number | null> {
+  const key = address.toLowerCase();
+  const cached = chainDecimals.get(key);
+  if (cached != null) return cached;
+  try {
+    const decimals = await publicClient().readContract({
+      address,
+      abi: erc20Abi,
+      functionName: "decimals",
+    });
+    chainDecimals.set(key, decimals);
+    return decimals;
+  } catch {
+    return null;
+  }
+}
 
 /**
- * Any ERC-20 on Robinhood Chain, by address: USDG and LNOC from the constants,
- * anything else read from the token contract itself. Null when the address
- * holds no contract or one that does not answer as an ERC-20; throws when the
- * chain could not be reached, so a caller can tell "not a token" from "try
- * again".
+ * Decimals for settling a listing — from the constants or the token contract,
+ * never an indexer, so moving escrowed funds does not depend on a third-party
+ * API being up or still listing the token.
+ */
+export async function settlementDecimals(address: `0x${string}`): Promise<number | null> {
+  return findListingToken(address)?.decimals ?? (await decimalsOnChain(getAddress(address)));
+}
+
+/**
+ * Any Robinhood Chain token, by address: USDG and LNOC from the constants,
+ * anything else from DexScreener and CoinGecko — name, symbol and logo, and
+ * decimals from CoinGecko's contract record. Only a token CoinGecko has no
+ * decimals for costs a chain read, since those decide what buyers pay and
+ * cannot be guessed. Null when neither indexer lists the token; throws when
+ * neither could be reached, so a caller can tell "unknown" from "try again".
  */
 export async function resolveListingToken(
   address: string | null | undefined,
@@ -105,33 +137,22 @@ export async function resolveListingToken(
   const known = findListingToken(address);
   if (known) return known;
 
-  const key = address.toLowerCase();
-  const cached = resolved.get(key);
-  if (cached) return cached;
+  const market = await getMarketToken(address);
+  if (!market?.symbol) return null;
 
-  const client = publicClient();
   const checksummed = getAddress(address);
-  const code = await client.getCode({ address: checksummed });
-  if (!code || code === "0x") return null;
+  const decimals = market.decimals ?? (await decimalsOnChain(checksummed));
+  if (decimals == null || decimals < 0 || decimals > MAX_DECIMALS) return null;
 
-  const [decimals, symbol, name] = await Promise.allSettled([
-    client.readContract({ address: checksummed, abi: erc20Abi, functionName: "decimals" }),
-    client.readContract({ address: checksummed, abi: erc20Abi, functionName: "symbol" }),
-    client.readContract({ address: checksummed, abi: erc20Abi, functionName: "name" }),
-  ]);
-  if (decimals.status !== "fulfilled" || symbol.status !== "fulfilled") return null;
-  if (decimals.value > MAX_DECIMALS) return null;
-
-  const cleanSymbol = cleanLabel(symbol.value, 16);
-  if (!cleanSymbol) return null;
-  const token: ListingToken = {
+  const symbol = cleanLabel(market.symbol, 16);
+  if (!symbol) return null;
+  return {
     address: checksummed,
-    symbol: cleanSymbol,
-    name: (name.status === "fulfilled" && cleanLabel(name.value, 64)) || cleanSymbol,
-    decimals: decimals.value,
+    symbol,
+    name: (market.name && cleanLabel(market.name, 64)) || symbol,
+    decimals,
+    logoUrl: market.logoUrl,
   };
-  resolved.set(key, token);
-  return token;
 }
 
 /**

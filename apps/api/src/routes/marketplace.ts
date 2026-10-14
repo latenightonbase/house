@@ -308,13 +308,15 @@ export const marketplaceRoutes = new Elysia()
     try {
       token = await resolveListingToken(params.address);
     } catch (err) {
-      console.error("[tokens] could not read token on-chain:", err);
+      console.error("[tokens] could not look up token:", err);
       set.status = 503;
-      return { error: "Could not reach Robinhood Chain. Try again in a moment." };
+      return { error: "Could not reach DexScreener or CoinGecko. Try again in a moment." };
     }
     if (!token) {
       set.status = 404;
-      return { error: "No ERC-20 token at that address on Robinhood Chain" };
+      return {
+        error: "Neither DexScreener nor CoinGecko lists a Robinhood Chain token at that address",
+      };
     }
     if (imitatesKnownToken(token)) {
       set.status = 422;
@@ -788,20 +790,22 @@ export const marketplaceRoutes = new Elysia()
         return { error: "Price must be above zero, with at most two decimal places" };
       }
       // The seller's choice of token is the listing's for life: every bid and
-      // purchase is paid in it. USDG, LNOC or any ERC-20 entered by address —
-      // read from the chain, so the symbol and decimals saved are the token's
-      // own rather than whatever the client sent.
+      // purchase is paid in it. USDG, LNOC or any token entered by address —
+      // looked up here, so the symbol and decimals saved are the token's own
+      // rather than whatever the client sent.
       let token;
       try {
         token = await resolveListingToken(body.tokenAddress);
       } catch (err) {
-        console.error("[listing] could not read token on-chain:", err);
+        console.error("[listing] could not look up token:", err);
         set.status = 503;
-        return { error: "Could not reach Robinhood Chain to read the token. Try again." };
+        return { error: "Could not look up the token right now. Try again." };
       }
       if (!token) {
         set.status = 400;
-        return { error: "Price the listing in USDG, LNOC or an ERC-20 token on Robinhood Chain" };
+        return {
+          error: "Price the listing in USDG, LNOC or a Robinhood Chain token listed on DexScreener or CoinGecko",
+        };
       }
       if (imitatesKnownToken(token)) {
         set.status = 400;

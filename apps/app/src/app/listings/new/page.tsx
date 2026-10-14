@@ -243,7 +243,8 @@ export default function NewListingPage() {
   const prices = useTokenPrices();
 
   // A pasted address takes over from the picker. It is looked up through the
-  // API, which reads the token from the chain and prices it from DexScreener.
+  // API, which gets its name, logo, decimals and price from DexScreener and
+  // CoinGecko.
   const customAddress = customToken.trim();
   const usingCustom = customAddress.length > 0;
   const customValid = /^0x[a-fA-F0-9]{40}$/.test(customAddress);
@@ -259,6 +260,7 @@ export default function NewListingPage() {
         name: found.name,
         decimals: found.decimals,
         pegged: false,
+        logo: found.logoUrl ?? undefined,
         custom: true,
       }
     );
@@ -810,7 +812,7 @@ export default function NewListingPage() {
               <p className="text-[11px] text-caption">
                 Buyers pay in the token you pick, and you receive it.{" "}
                 {usingCustom
-                  ? "Prices from DexScreener, refreshed every minute."
+                  ? "Token details and prices from DexScreener and CoinGecko, refreshed every minute."
                   : `Prices from ${token.pegged ? "CoinGecko" : "DexScreener"}, refreshed every minute.`}
               </p>
             </div>
@@ -1027,7 +1029,7 @@ function CustomTokenCard({
     return (
       <p id={id} className="flex items-center gap-2 text-[12px] text-caption" aria-live="polite">
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-        Looking up the token on Robinhood Chain…
+        Looking up the token…
       </p>
     );
   }
@@ -1047,7 +1049,11 @@ function CustomTokenCard({
   return (
     <Tile id={id} className="space-y-3 px-3.5 py-3" aria-live="polite">
       <div className="flex items-center gap-3">
-        <TokenMark token={token} size={32} className="h-8 w-8" />
+        <TokenMark
+          token={{ symbol: token.symbol, logo: token.logoUrl ?? undefined }}
+          size={32}
+          className="h-8 w-8"
+        />
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-[14px] font-semibold text-white">
             <span className="truncate">{token.symbol}</span>
@@ -1101,7 +1107,8 @@ function CustomTokenCard({
         <p className="text-[11px] leading-relaxed text-warning">
           Anyone can deploy a token. Check this is the contract you mean — buyers will pay in it
           and you will receive it.
-          {token.priceUsd == null && " DexScreener has no pool for it, so buyers won't see a dollar value."}
+          {token.priceUsd == null &&
+            " Neither DexScreener nor CoinGecko prices it, so buyers won't see a dollar value."}
         </p>
       )}
     </Tile>

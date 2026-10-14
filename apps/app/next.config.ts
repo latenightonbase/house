@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.tiktokcdn-us.com" },
       { protocol: "https", hostname: "**.tiktokcdn-eu.com" },
       { protocol: "https", hostname: "i.pravatar.cc" },
+      // Token logos for tokens pasted by address — the API only passes these on.
+      { protocol: "https", hostname: "cdn.dexscreener.com" },
+      { protocol: "https", hostname: "dd.dexscreener.com" },
+      { protocol: "https", hostname: "coin-images.coingecko.com" },
+      { protocol: "https", hostname: "assets.coingecko.com" },
     ],
   },
 };
