@@ -149,6 +149,8 @@ export interface Listing {
   contractAddress?: string;
   tokenAddress?: string;
   tokenName?: string;
+  /** Sent with every token address — how many decimals that token's units have. */
+  tokenDecimals?: number;
   txHash?: string;
   isDaily?: boolean;
   winnerWallet?: string;
@@ -160,7 +162,7 @@ export interface Listing {
   createdAt?: string;
   creator: ListingCreator;
   /**
-   * Live bid state, present on the public feed only. An AUCTION with bids shows
+   * Live bid state, present on the public feed and the admin view. An AUCTION with bids shows
    * `highestBid` as its current price; without them `price` is still the reserve.
    */
   bidCount?: number;
@@ -169,10 +171,9 @@ export interface Listing {
 
 /**
  * What the create form sends. The AuctionHouse transaction is signed as part of
- * submitting, by sellers and admins alike, so the tx fields are always filled
- * in — the API verifies them against the contract before it saves the row. An
- * admin's listing is live on arrival; a seller's waits for approval and needs
- * no further signature.
+ * submitting, so the tx fields are always filled in — the API verifies them
+ * against the contract before it saves the row, and the listing is live on
+ * arrival.
  */
 export interface NewListingInput {
   /** Same string passed to `startAuction` / `startFixedPriceListing`. */
@@ -194,7 +195,7 @@ export interface NewListingInput {
   txHash: string;
   chainId: number;
   contractAddress: string;
-  /** The token the seller priced it in — USDG or LNOC. */
+  /** The token the seller priced it in — USDG, LNOC or any ERC-20 by address. */
   tokenAddress: string;
   tokenName: string;
 }
@@ -362,21 +363,22 @@ export async function fetchMyListings(): Promise<Listing[]> {
   return data.listings;
 }
 
-/** The admin review queue — listings waiting on a decision. */
-export async function fetchPendingListings(): Promise<Listing[]> {
+/** Every live seller listing, with bid counts — the admin moderation view. */
+export async function fetchAdminListings(): Promise<Listing[]> {
   const data = await getJson<{ listings: Listing[] }>("/backend/admin/listings");
   return data.listings;
 }
 
-/** Approves a listing, which publishes it — the seller already signed it on-chain. */
-export async function approveListing(id: string, note?: string): Promise<Listing> {
-  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/approve`, { note });
-  return data.listing;
-}
-
-export async function rejectListing(id: string, note?: string): Promise<Listing> {
-  const data = await postJson<{ listing: Listing }>(`/backend/listings/${id}/reject`, { note });
-  return data.listing;
+/** Deletes a listing as an admin. The API refuses once it has bids. */
+export async function deleteListingAsAdmin(id: string): Promise<void> {
+  const res = await fetch(`/backend/admin/listings/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error || "Could not delete the listing.");
+  }
 }
 
 /**

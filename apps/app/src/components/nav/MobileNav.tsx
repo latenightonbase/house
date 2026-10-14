@@ -117,7 +117,7 @@ export function MobileNav() {
                 className="flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow border border-transparent text-caption"
               >
                 <ShieldCheck className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
-                Review Queue
+                Admin
               </Link>
             ) : null}
 

@@ -21,6 +21,20 @@ contract MockToken is ERC20 {
     }
 }
 
+/// Keeps 1% of every transfer, so the recipient gets less than was sent.
+contract FeeToken is MockToken {
+    constructor() MockToken("FEE", 18) {}
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) {
+            uint256 cut = value / 100;
+            super._update(from, address(0), cut);
+            value -= cut;
+        }
+        super._update(from, to, value);
+    }
+}
+
 contract AuctionHouseTest is Test {
     AuctionHouse house;
     MockToken usdg;
@@ -38,18 +52,17 @@ contract AuctionHouseTest is Test {
         lnoc = new MockToken("LNOC", 18);
         stray = new MockToken("STRAY", 18);
 
-        address[] memory tokens = new address[](2);
-        tokens[0] = address(usdg);
-        tokens[1] = address(lnoc);
-        house = new AuctionHouse(fees, 500, owner, tokens);
+        house = new AuctionHouse(fees, 500, owner);
 
         for (uint256 i = 0; i < 2; i++) {
             address who = i == 0 ? alice : bob;
             usdg.mint(who, 1_000_000e6);
             lnoc.mint(who, 1_000_000_000e18);
+            stray.mint(who, 1_000e18);
             vm.startPrank(who);
             usdg.approve(address(house), type(uint256).max);
             lnoc.approve(address(house), type(uint256).max);
+            stray.approve(address(house), type(uint256).max);
             vm.stopPrank();
         }
     }
@@ -89,25 +102,64 @@ contract AuctionHouseTest is Test {
         assertEq(house.getBidders("auction").length, 2);
     }
 
-    function test_rejectsUnacceptedToken() public {
+    function test_anyTokenTheSellerPicks() public {
         vm.prank(seller);
-        vm.expectRevert("Token not accepted");
         house.startAuction("stray", address(stray), 24, 1e18);
+
+        vm.prank(alice);
+        house.placeBid("stray", 1e18, "alice");
+        vm.prank(bob);
+        house.placeBid("stray", 3e18, "bob");
+
+        vm.prank(seller);
+        house.endAuction("stray");
+        assertEq(stray.balanceOf(seller), 2.85e18);
+        assertEq(stray.balanceOf(alice), 1_000e18);
+        assertEq(house.getAuctionMeta("stray").token, address(stray));
     }
 
-    function test_removedTokenKeepsOpenListingsWorking() public {
+    function test_rejectsNonContractToken() public {
+        vm.prank(seller);
+        vm.expectRevert("Token is not a contract");
+        house.startAuction("eoa", address(0xBEEF), 24, 1e18);
+    }
+
+    function test_rejectsFeeOnTransferEscrow() public {
+        FeeToken fee = new FeeToken();
+        fee.mint(alice, 100e18);
+        vm.prank(alice);
+        fee.approve(address(house), type(uint256).max);
+
+        vm.prank(seller);
+        house.startFixedPriceListing("fee", address(fee), 24, 10e18);
+
+        vm.prank(alice);
+        vm.expectRevert("Fee-on-transfer tokens not supported");
+        house.buyListing("fee", "alice");
+    }
+
+    function test_blockedTokenKeepsOpenListingsWorking() public {
         vm.prank(seller);
         house.startAuction("open", address(lnoc), 24, 1e18);
+
+        vm.prank(alice);
+        vm.expectRevert();
+        house.setTokenBlocked(address(lnoc), true);
+
         vm.prank(owner);
-        house.setAcceptedToken(address(lnoc), false);
+        house.setTokenBlocked(address(lnoc), true);
 
         vm.prank(alice);
         house.placeBid("open", 2e18, "alice");
 
         vm.prank(seller);
-        vm.expectRevert("Token not accepted");
+        vm.expectRevert("Token blocked");
         house.startAuction("new", address(lnoc), 24, 1e18);
-        assertEq(house.getAcceptedTokens().length, 1);
+
+        vm.prank(owner);
+        house.setTokenBlocked(address(lnoc), false);
+        vm.prank(seller);
+        house.startAuction("new", address(lnoc), 24, 1e18);
     }
 
     function test_bidRules() public {

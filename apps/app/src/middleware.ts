@@ -23,7 +23,7 @@ async function isSiweSessionValid(token: string): Promise<boolean> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Dashboard, the private profile, messages, and the admin review queue all
+  // Dashboard, the private profile, messages, and the admin listings page all
   // need a SIWE session. The admin pages check the role themselves — this only
   // keeps signed-out traffic out. The public profile at /user/[userid] is
   // deliberately absent: anyone may read it.

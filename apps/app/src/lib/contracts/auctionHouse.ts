@@ -7,8 +7,9 @@ import { robinhood } from "@/lib/chains";
  * Written by hand from the source rather than imported from `@repo/contracts`,
  * whose `auctionAbi` is an older build. Keep this in step with the .sol file.
  *
- * Every listing is priced in one token the seller picks — USDG or LNOC — and
- * bought or bid on in that same token, so amounts here are plain token units.
+ * Every listing is priced in one token the seller picks — USDG, LNOC or any
+ * ERC-20 they paste by address — and bought or bid on in that same token, so
+ * amounts here are plain token units.
  */
 export const auctionHouseAbi = parseAbi([
   "struct Bidders { address bidder; uint256 bidAmount; string fid; }",
@@ -24,8 +25,7 @@ export const auctionHouseAbi = parseAbi([
   "function endAuction(string _auctionId)",
 
   // Views
-  "function acceptedToken(address) view returns (bool)",
-  "function getAcceptedTokens() view returns (address[])",
+  "function blockedToken(address) view returns (bool)",
   "function getAuctionMeta(string _auctionId) view returns (AuctionMeta)",
   "function getBidders(string _auctionId) view returns (Bidders[])",
   "function getListingType(string _id) view returns (bool isFixedPrice, bool settled)",
@@ -88,7 +88,7 @@ function normalize(value: string | undefined): `0x${string}` | undefined {
 // spelled out here rather than looked up dynamically.
 const FALLBACK_ADDRESS = normalize(process.env.NEXT_PUBLIC_AUCTION_HOUSE_ADDRESS);
 
-const DEPLOYED_ROBINHOOD = "0xc78D7dfc1A335C510FAC1e7E488861aDDb9fF1aF" as const;
+const DEPLOYED_ROBINHOOD = "0x9d379D37C55cdd9A7702eaf655Cda7c8fCbF629F" as const;
 
 const ADDRESSES: Record<number, `0x${string}` | undefined> = {
   [robinhood.id]:
@@ -99,18 +99,21 @@ const ADDRESSES: Record<number, `0x${string}` | undefined> = {
 
 export interface PaymentToken {
   address: `0x${string}`;
-  symbol: "USDG" | "LNOC";
+  symbol: string;
   name: string;
   decimals: number;
   /** Dollar-pegged — its token amount already reads as dollars. */
   pegged: boolean;
-  /** Path under /public. */
-  logo: string;
+  /** Path under /public. A token entered by address has none. */
+  logo?: string;
+  /** Entered by address rather than offered by name. */
+  custom?: boolean;
 }
 
 /**
- * Tokens a seller can price a listing in. The choice is the seller's, made at
- * creation, and every bid or purchase on that listing is paid in it.
+ * The tokens the create form offers by name. A seller can also paste any other
+ * ERC-20's address; the choice is made at creation, and every bid or purchase
+ * on that listing is paid in it.
  */
 const TOKENS: Record<number, PaymentToken[]> = {
   [robinhood.id]: [USDG, LNOC],
@@ -130,6 +133,11 @@ export function paymentTokens(chainId: number | undefined): PaymentToken[] {
   return (chainId && TOKENS[chainId]) || [];
 }
 
+/** One of the named tokens, or undefined for any other address. */
+export function knownPaymentToken(chainId: number | undefined, address: string | undefined) {
+  return paymentTokens(chainId).find((t) => t.address.toLowerCase() === address?.toLowerCase());
+}
+
 export function findPaymentToken(chainId: number | undefined, address: string | undefined) {
   const tokens = paymentTokens(chainId);
   return (
@@ -140,20 +148,64 @@ export function findPaymentToken(chainId: number | undefined, address: string | 
 /**
  * The token a listing is paid in. A row saved before sellers chose one has no
  * address; it was quoted in dollars and settled in USDG, so it reads as USDG.
+ * A token entered by address carries the symbol and decimals the API read from
+ * the chain when the listing was saved.
  */
-export function listingToken(listing: { chainId?: number; tokenAddress?: string }) {
-  return findPaymentToken(listing.chainId ?? robinhood.id, listing.tokenAddress);
+export function listingToken(listing: {
+  chainId?: number;
+  tokenAddress?: string;
+  tokenName?: string;
+  tokenDecimals?: number;
+}): PaymentToken {
+  const chainId = listing.chainId ?? robinhood.id;
+  const known = knownPaymentToken(chainId, listing.tokenAddress);
+  if (known || !listing.tokenAddress) return known ?? findPaymentToken(chainId, undefined);
+  const symbol = listing.tokenName || "TOKEN";
+  return {
+    address: listing.tokenAddress as `0x${string}`,
+    symbol,
+    name: symbol,
+    // The API sends decimals with every token address. Without them the units
+    // are unknown, and `unpayable` keeps checkout from guessing.
+    decimals: listing.tokenDecimals ?? 18,
+    pegged: false,
+    custom: true,
+  };
+}
+
+/** True when a listing names a token whose decimals never reached the client. */
+export function unpayable(listing: { chainId?: number; tokenAddress?: string; tokenDecimals?: number }) {
+  return (
+    Boolean(listing.tokenAddress) &&
+    listing.tokenDecimals == null &&
+    !knownPaymentToken(listing.chainId ?? robinhood.id, listing.tokenAddress)
+  );
 }
 
 /**
- * True when a listing lives on the contract this build talks to. One opened
- * before the per-token redeploy stays on the retired contract until it closes,
- * whose functions take different arguments — so it is shown, but not bought.
+ * Earlier per-token deployments. Opening the contract to any ERC-20 kept every
+ * signature and the `AuctionMeta` struct, so a listing still open on one of
+ * these is bought and bid on exactly like one on the current contract. Add the
+ * outgoing address here whenever the house is redeployed with the same ABI.
+ */
+const PER_TOKEN_HOUSES: Record<number, readonly string[]> = {
+  [robinhood.id]: ["0xc78D7dfc1A335C510FAC1e7E488861aDDb9fF1aF"],
+};
+
+/**
+ * True when a listing lives on a contract this build can call. One opened
+ * before the per-token redeploy stays on the retired USD-priced contract until
+ * it closes, whose functions take different arguments — so it is shown, but
+ * not bought.
  */
 export function onCurrentHouse(listing: { chainId?: number; contractAddress?: string }) {
-  const house = auctionHouseAddress(listing.chainId ?? robinhood.id);
-  return Boolean(
-    house && listing.contractAddress && listing.contractAddress.toLowerCase() === house.toLowerCase(),
+  const chainId = listing.chainId ?? robinhood.id;
+  const house = auctionHouseAddress(chainId);
+  const recorded = listing.contractAddress?.toLowerCase();
+  if (!house || !recorded) return false;
+  return (
+    recorded === house.toLowerCase() ||
+    (PER_TOKEN_HOUSES[chainId] ?? []).some((h) => h.toLowerCase() === recorded)
   );
 }
 

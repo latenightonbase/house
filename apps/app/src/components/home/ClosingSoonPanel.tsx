@@ -150,7 +150,7 @@ export function ClosingSoonPanel({
           label="List your attention"
         />
         <p className="mt-2 text-center text-[11px] leading-relaxed text-caption">
-          Sell a placement of your own — approved listings appear here.
+          Sell a placement of your own — new listings appear here.
         </p>
       </div>
     </section>

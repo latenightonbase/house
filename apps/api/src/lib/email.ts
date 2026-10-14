@@ -43,17 +43,6 @@ export function listingUrl(id: string) {
   return `${appOrigin()}/listings/${id}`;
 }
 
-/** UTC, spelled out — the reader's zone is unknown and a deadline must not be guessed at. */
-function formatDeadline(date: Date) {
-  return `${date.toLocaleString("en-GB", {
-    timeZone: "UTC",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  })} UTC`;
-}
-
 async function send(to: string, subject: string, name: string, vars: Record<string, string>) {
   const resend = client();
   const html = render(name, vars);
@@ -120,67 +109,5 @@ export function sendListingPurchased(
     title: input.title,
     amount: formatTokenAmount(input.amount, input.currency),
     listingUrl: listingUrl(input.listingId),
-  });
-}
-
-/** Tells the admin a seller's listing is waiting in the review queue. */
-export function sendListingPendingReview(
-  to: string,
-  input: Priced & {
-    title: string;
-    seller: string;
-    category: string;
-    pricingType: string;
-    price: number;
-    description?: string | null;
-    /** When the seller's on-chain listing closes — their clock is already running. */
-    closesAt?: Date | null;
-  },
-) {
-  return send(to, `Listing needs review: ${input.title}`, "listing-pending.html", {
-    title: input.title,
-    seller: input.seller,
-    category: input.category,
-    pricing: input.pricingType === "AUCTION" ? "Auction" : "Flat price",
-    price: formatTokenAmount(input.price, input.currency),
-    description: input.description?.trim() ?? "",
-    closes: input.closesAt ? formatDeadline(input.closesAt) : "",
-    reviewUrl: `${appOrigin()}/admin/listings`,
-  });
-}
-
-export function sendListingApproved(
-  to: string,
-  input: {
-    title: string;
-    listingId: string;
-    reviewNote?: string | null;
-    /**
-     * True once approval is all it took — the seller signed at submission, so
-     * the listing is live already. False only for a row approved under the old
-     * flow, where the seller still has a transaction to sign.
-     */
-    live?: boolean;
-  },
-) {
-  const live = input.live !== false;
-  return send(to, live ? `Live: ${input.title}` : `Approved: ${input.title}`, "listing-approved.html", {
-    title: input.title,
-    reviewNote: input.reviewNote?.trim() ?? "",
-    listingUrl: listingUrl(input.listingId),
-    // Exactly one of these is set — the renderer has sections but no inverse.
-    live: live ? "1" : "",
-    needsPublish: live ? "" : "1",
-  });
-}
-
-export function sendListingRejected(
-  to: string,
-  input: { title: string; reviewNote?: string | null },
-) {
-  return send(to, `Not approved: ${input.title}`, "listing-rejected.html", {
-    title: input.title,
-    reviewNote: input.reviewNote?.trim() ?? "",
-    newListingUrl: `${appOrigin()}/listings/new`,
   });
 }

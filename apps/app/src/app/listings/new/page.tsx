@@ -11,7 +11,15 @@ import {
   useWriteContract,
 } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
-import { AlertCircle, CheckCircle2, Clock, Gavel, Info, Tag } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ExternalLink,
+  Gavel,
+  Info,
+  Loader2,
+  Tag,
+} from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ListingPreview } from "@/components/ListingPreview";
 import { useSession } from "@/components/SessionProvider";
@@ -28,12 +36,8 @@ import {
   Tile,
 } from "@/components/ui";
 import { TokenPicker } from "@/components/listing/TokenPicker";
-import {
-  isSelectableCategory,
-  SELECTABLE_CATEGORIES,
-  type ListingCategory,
-} from "@/lib/listingCategories";
-import { formatCount, isSuperadmin } from "@/lib/api";
+import { TokenMark } from "@/components/listing/TokenMark";
+import { formatCount } from "@/lib/api";
 import {
   createListing,
   type Listing,
@@ -46,17 +50,20 @@ import {
   CHAIN_LABELS,
   durationHoursUntil,
   findPaymentToken,
+  knownPaymentToken,
   MAX_ACTIVE_LISTINGS,
   paymentTokens,
   toTokenUnits,
   USDG,
+  type PaymentToken,
 } from "@/lib/contracts/auctionHouse";
 import {
   formatTokenAmount,
   formatUsd,
   usdPrice,
-  usdValue,
+  useTokenLookup,
   useTokenPrices,
+  type TokenLookup,
 } from "@/lib/tokenPrices";
 import { robinhood } from "@/lib/chains";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
@@ -86,11 +93,6 @@ const STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
   publishing: "Publishing to the marketplace…",
 };
 
-const SUBMIT_STEP_LABEL: Record<Exclude<Step, "form" | "done">, string> = {
-  ...STEP_LABEL,
-  publishing: "Sending your listing for review…",
-};
-
 function listingWriteError(err: unknown): string {
   if (err instanceof UserRejectedRequestError) {
     return "You rejected the transaction in your wallet.";
@@ -100,6 +102,15 @@ function listingWriteError(err: unknown): string {
       return "You rejected the transaction in your wallet.";
     }
     const msg = err.shortMessage || err.message;
+    if (/Token not accepted/.test(msg)) {
+      return "The marketplace contract doesn't accept this token yet. Pick USDG or LNOC for now.";
+    }
+    if (/Token blocked/.test(msg)) {
+      return "This token has been blocked from new listings. Pick another one.";
+    }
+    if (/Token is not a contract/.test(msg)) {
+      return "There is no token contract at that address on Robinhood Chain.";
+    }
     if (/Account type|smart/i.test(msg)) {
       return "This wallet can't sign on Robinhood Chain. Connect MetaMask or Rainbow and try again.";
     }
@@ -117,10 +128,11 @@ const LISTING_CHAIN_ID = robinhood.id;
 type ListingDraft = {
   title: string;
   description: string;
-  category: ListingCategory;
   pricingType: PricingType;
-  /** The token the listing is priced and paid in — USDG or LNOC. */
+  /** The named token picked — USDG or LNOC. Ignored while `customToken` is set. */
   tokenAddress: string;
+  /** Any other ERC-20's contract address, as typed. Takes over from the picker. */
+  customToken: string;
   price: string;
   endDate: string;
   /** Already on S3 — the draft only remembers where. */
@@ -131,9 +143,9 @@ function defaultDraft(): ListingDraft {
   return {
     title: "",
     description: "",
-    category: "SHOUTOUT",
     pricingType: "FIXED",
     tokenAddress: USDG.address,
+    customToken: "",
     price: "",
     endDate: toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
     posterUrl: null,
@@ -153,10 +165,9 @@ function loadDraft(userId: string): ListingDraft | null {
     return {
       title: typeof parsed.title === "string" ? parsed.title : base.title,
       description: typeof parsed.description === "string" ? parsed.description : base.description,
-      // A draft saved with a since-retired category falls back to the default.
-      category: isSelectableCategory(parsed.category) ? parsed.category : base.category,
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
       tokenAddress: findPaymentToken(LISTING_CHAIN_ID, parsed.tokenAddress).address,
+      customToken: typeof parsed.customToken === "string" ? parsed.customToken : base.customToken,
       price: typeof parsed.price === "string" ? parsed.price : base.price,
       endDate: typeof parsed.endDate === "string" ? parsed.endDate : base.endDate,
       posterUrl: typeof parsed.posterUrl === "string" ? parsed.posterUrl : base.posterUrl,
@@ -193,9 +204,9 @@ export default function NewListingPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<ListingCategory>("SHOUTOUT");
   const [pricingType, setPricingType] = useState<PricingType>("FIXED");
   const [tokenAddress, setTokenAddress] = useState<string>(USDG.address);
+  const [customToken, setCustomToken] = useState("");
   const [price, setPrice] = useState("");
   const [endDate, setEndDate] = useState(() =>
     toLocalInputValue(new Date(Date.now() + 7 * 86_400_000)),
@@ -213,9 +224,9 @@ export default function NewListingPage() {
   const applyDraft = (draft: ListingDraft) => {
     setTitle(draft.title);
     setDescription(draft.description);
-    setCategory(draft.category);
     setPricingType(draft.pricingType);
     setTokenAddress(draft.tokenAddress);
+    setCustomToken(draft.customToken);
     setPrice(draft.price);
     setEndDate(draft.endDate);
     setPosterUrl(draft.posterUrl);
@@ -227,19 +238,48 @@ export default function NewListingPage() {
     if (user?.id) dropDraft(user.id);
   };
 
-  const isAdmin = isSuperadmin(user);
   const contractAddress = auctionHouseAddress(LISTING_CHAIN_ID);
   const tokens = paymentTokens(LISTING_CHAIN_ID);
-  const token = findPaymentToken(LISTING_CHAIN_ID, tokenAddress);
   const prices = useTokenPrices();
+
+  // A pasted address takes over from the picker. It is looked up through the
+  // API, which reads the token from the chain and prices it from DexScreener.
+  const customAddress = customToken.trim();
+  const usingCustom = customAddress.length > 0;
+  const customValid = /^0x[a-fA-F0-9]{40}$/.test(customAddress);
+  const lookup = useTokenLookup(usingCustom && customValid ? customAddress : undefined);
+  const customPaymentToken = useMemo<PaymentToken | null>(() => {
+    if (lookup.status !== "found") return null;
+    const found = lookup.token;
+    // Pasting USDG's or LNOC's own address is the same as picking it.
+    return (
+      knownPaymentToken(LISTING_CHAIN_ID, found.address) ?? {
+        address: found.address,
+        symbol: found.symbol,
+        name: found.name,
+        decimals: found.decimals,
+        pegged: false,
+        custom: true,
+      }
+    );
+  }, [lookup]);
+  /** The token the listing is priced in — null while a pasted address is unresolved. */
+  const selectedToken: PaymentToken | null = usingCustom
+    ? customPaymentToken
+    : findPaymentToken(LISTING_CHAIN_ID, tokenAddress);
+  // Everything that only labels the form falls back to USDG while a pasted
+  // address resolves; validation keeps that from ever being submitted.
+  const token = selectedToken ?? USDG;
+  const unitUsd =
+    selectedToken?.custom && lookup.status === "found"
+      ? lookup.token.priceUsd
+      : selectedToken
+        ? usdPrice(prices, selectedToken)
+        : null;
   const chainSupported = chainId === LISTING_CHAIN_ID;
-  const categoryMeta =
-    SELECTABLE_CATEGORIES.find((c) => c.value === category) ?? SELECTABLE_CATEGORIES[0];
 
   // The contract refuses a fourth simultaneously open listing, so show where
-  // the wallet stands before it spends gas finding out. Everyone transacts from
-  // this page now, so everyone can hit the cap — including on listings still
-  // waiting in review, which are open on-chain like any other.
+  // the wallet stands before it spends gas finding out.
   const { data: activeOnchain } = useReadContract({
     address: contractAddress,
     abi: auctionHouseAbi,
@@ -263,9 +303,9 @@ export default function NewListingPage() {
     saveDraft(user.id, {
       title,
       description,
-      category,
       pricingType,
       tokenAddress,
+      customToken,
       price,
       endDate,
       posterUrl,
@@ -275,9 +315,9 @@ export default function NewListingPage() {
     hydratedFor,
     title,
     description,
-    category,
     pricingType,
     tokenAddress,
+    customToken,
     price,
     endDate,
     posterUrl,
@@ -286,25 +326,48 @@ export default function NewListingPage() {
   const parsedEnd = useMemo(() => (endDate ? new Date(endDate) : null), [endDate]);
   const priceNumber = Number(price);
   const priceUsd =
-    Number.isFinite(priceNumber) && priceNumber > 0 ? usdValue(prices, token, priceNumber) : null;
+    selectedToken && unitUsd != null && Number.isFinite(priceNumber) && priceNumber > 0
+      ? priceNumber * unitUsd
+      : null;
+  // The form takes cents, but a token with fewer decimals cannot hold them.
+  const priceDecimals = Math.min(2, token.decimals);
 
   const validationError = useMemo(() => {
     if (posterUploading) return "Wait for the poster to finish uploading.";
     if (title.trim().length < 2) return "Give your listing a name.";
+    if (usingCustom) {
+      if (!customValid) return "Enter a token contract address — 0x followed by 40 characters.";
+      if (lookup.status === "loading" || lookup.status === "idle") return "Looking up the token…";
+      if (lookup.status === "error") return lookup.error;
+    }
     if (!Number.isFinite(priceNumber) || priceNumber <= 0) {
       return pricingType === "AUCTION"
         ? "Set a minimum bid above zero."
         : "Set a price above zero.";
     }
-    if (Math.round(priceNumber * 100) !== priceNumber * 100) {
-      return "Use at most two decimal places.";
+    const scale = 10 ** priceDecimals;
+    if (Math.round(priceNumber * scale) !== priceNumber * scale) {
+      return priceDecimals === 0
+        ? `${token.symbol} has no decimals — use a whole number.`
+        : `Use at most ${priceDecimals === 1 ? "one decimal place" : "two decimal places"}.`;
     }
     if (priceNumber > 1e15) return "That price is too large.";
     if (!parsedEnd || Number.isNaN(parsedEnd.getTime()))
       return "Pick when the listing ends.";
     if (parsedEnd.getTime() <= Date.now()) return "The end time has to be in the future.";
     return null;
-  }, [posterUploading, title, priceNumber, pricingType, parsedEnd]);
+  }, [
+    posterUploading,
+    title,
+    usingCustom,
+    customValid,
+    lookup,
+    priceNumber,
+    priceDecimals,
+    token.symbol,
+    pricingType,
+    parsedEnd,
+  ]);
 
   /** Identity shown on the preview card — the profile a listing is created under. */
   const previewCreator = useMemo(() => {
@@ -331,12 +394,13 @@ export default function NewListingPage() {
     id: "preview",
     title: title.trim() || "Your listing name",
     description: description.trim() || undefined,
-    category,
+    category: "OTHER",
     pricingType,
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
     currency: token.symbol,
     tokenAddress: token.address,
     tokenName: token.symbol,
+    tokenDecimals: token.decimals,
     slotsAvailable: 1,
     posterUrl: posterUrl ?? undefined,
     endDate:
@@ -346,7 +410,6 @@ export default function NewListingPage() {
   };
 
   const previewRows = [
-    { label: "Category", value: categoryMeta.label },
     {
       label: "Sells as",
       value: pricingType === "AUCTION" ? "Auction — open to bids" : "Flat price",
@@ -369,7 +432,7 @@ export default function NewListingPage() {
         parsedEnd && !Number.isNaN(parsedEnd.getTime()) ? parsedEnd : new Date(),
       )}h`,
     },
-    { label: "Paid in", value: token.symbol },
+    { label: "Paid in", value: selectedToken ? token.symbol : "—" },
     ...(priceUsd != null && !token.pegged
       ? [{ label: "Worth today", value: `≈ ${formatUsd(priceUsd)}` }]
       : []),
@@ -391,7 +454,6 @@ export default function NewListingPage() {
       id: listingId,
       title,
       description: description.trim() || undefined,
-      category,
       pricingType,
       price: priceNumber,
       currency: token.symbol,
@@ -420,15 +482,8 @@ export default function NewListingPage() {
   }
 
   /**
-   * One path for everybody: sign the AuctionHouse transaction, then save.
-   *
-   * Sellers used to submit without touching a wallet and sign only once an
-   * admin had approved, which left an approved listing invisible until they
-   * noticed the email and came back — days off an end date they had already
-   * committed to. Now the signature happens here and approval is the only thing
-   * between the listing and being live. What it costs is that the clock starts
-   * at submission, and a rejected listing leaves a paid-for entry on-chain until
-   * it lapses.
+   * One path for everybody: sign the AuctionHouse transaction, then save. The
+   * listing is live as soon as the API has checked it against the contract.
    */
   async function handleSubmit() {
     if (validationError || !parsedEnd) {
@@ -534,7 +589,7 @@ export default function NewListingPage() {
       <div className="space-y-4 max-w-2xl">
         <PageHeader
           title="Create a listing"
-          subtitle="Sell a piece of your media or your time. Price it in USDG or LNOC — settlement runs through the AuctionHouse contract."
+          subtitle="Sell a piece of your media or your time. Price it in USDG, LNOC or any Robinhood Chain token — settlement runs through the AuctionHouse contract."
         />
         <Panel className="flex flex-col items-start gap-3">
           <p className="text-sm text-caption">
@@ -550,24 +605,15 @@ export default function NewListingPage() {
   }
 
   if (step === "done" && created) {
-    const submitted = created.status === "PENDING_REVIEW";
     return (
       <div className="space-y-4 max-w-2xl">
         <Panel className="space-y-4">
           <div className="flex items-center gap-3">
-            {submitted ? (
-              <Clock className="w-6 h-6 text-warning shrink-0" />
-            ) : (
-              <CheckCircle2 className="w-6 h-6 text-positive shrink-0" />
-            )}
+            <CheckCircle2 className="w-6 h-6 text-positive shrink-0" />
             <div>
-              <h1 className="text-lg font-bold text-foreground">
-                {submitted ? "Signed and sent for review" : "Listing is live"}
-              </h1>
+              <h1 className="text-lg font-bold text-foreground">Listing is live</h1>
               <p className="text-[13px] text-caption">
-                {submitted
-                  ? `${created.title} is on-chain and with the LNOC team. That was the only transaction — it goes live the moment they approve it, with nothing more for you to sign.`
-                  : `${created.title} is now on the marketplace under ${categoryMeta.label.toLowerCase()}, priced in ${created.tokenName ?? token.symbol}.`}
+                {`${created.title} is now on the marketplace, priced in ${created.tokenName ?? token.symbol}.`}
               </p>
             </div>
           </div>
@@ -579,9 +625,7 @@ export default function NewListingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => router.push(submitted ? "/dashboard" : "/")}>
-              {submitted ? "See your listings" : "View on Discover"}
-            </Button>
+            <Button onClick={() => router.push("/")}>View on Discover</Button>
             <Button
               variant="accent-outline"
               onClick={() => {
@@ -605,16 +649,6 @@ export default function NewListingPage() {
         title="Create a listing"
         subtitle="Sell a piece of your media or your time. Set a flat price for instant booking, or open it to bids."
       />
-
-      {!isAdmin && (
-        <Tile className="border-line bg-surface-2 px-4 py-3 flex gap-2.5">
-          <Info className="w-4 h-4 text-primary-light shrink-0 mt-0.5" />
-          <p className="text-[12px] text-caption leading-relaxed">
-            You sign one transaction now. The LNOC team reviews it and it goes live on
-            approval — nothing more to sign. The end time counts from now, including review.
-          </p>
-        </Tile>
-      )}
 
       {!address && (
         <Tile className="border-warning/30 bg-warning/10 px-4 py-3 flex gap-2.5">
@@ -645,7 +679,6 @@ export default function NewListingPage() {
         <Tile className="border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative">
           You already have {activeCount} open listings on-chain. The contract allows{" "}
           {MAX_ACTIVE_LISTINGS} at a time — settle or let one expire before adding another.
-          Anything still waiting in review counts too, since it is open on-chain already.
         </Tile>
       )}
 
@@ -702,32 +735,6 @@ export default function NewListingPage() {
                 />
               </div>
             </Field>
-
-            <Field label="Category" hint={categoryMeta.hint}>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {SELECTABLE_CATEGORIES.map((c) => {
-                  const Icon = c.icon;
-                  const active = c.value === category;
-                  return (
-                    <button
-                      key={c.value}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setCategory(c.value)}
-                      className={cn(
-                        "flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-[12px] font-medium transition-colors disabled:opacity-50",
-                        active
-                          ? "border-primary/70 bg-primary/15 text-white"
-                          : "border-line bg-surface-2 text-caption hover:text-white hover:border-line-strong",
-                      )}
-                    >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      <span className="truncate">{c.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </Field>
           </Panel>
 
           <Panel className="space-y-5">
@@ -758,8 +765,11 @@ export default function NewListingPage() {
               </p>
               <TokenPicker
                 tokens={tokens}
-                value={token.address}
-                onChange={setTokenAddress}
+                value={usingCustom ? "" : token.address}
+                onChange={(next) => {
+                  setTokenAddress(next);
+                  setCustomToken("");
+                }}
                 disabled={busy}
                 labelledBy="listing-token"
                 detail={(t) => {
@@ -767,9 +777,41 @@ export default function NewListingPage() {
                   return unit == null ? "Price unavailable" : `1 ${t.symbol} ≈ ${formatUsd(unit)}`;
                 }}
               />
+
+              <div className="pt-1.5">
+                <label htmlFor="custom-token" className="text-[12px] font-medium text-caption">
+                  Or paste any Robinhood Chain token address
+                </label>
+                <TextInput
+                  id="custom-token"
+                  value={customToken}
+                  onChange={(e) => setCustomToken(e.target.value)}
+                  placeholder="0x…"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="numeric mt-1.5 font-mono text-[13px]"
+                  aria-describedby="custom-token-status"
+                  aria-invalid={usingCustom && (!customValid || lookup.status === "error") || undefined}
+                  disabled={busy}
+                />
+              </div>
+
+              {usingCustom && (
+                <CustomTokenCard
+                  id="custom-token-status"
+                  valid={customValid}
+                  lookup={lookup}
+                  amount={priceNumber > 0 && Number.isFinite(priceNumber) ? priceNumber : null}
+                  onClear={() => setCustomToken("")}
+                  disabled={busy}
+                />
+              )}
+
               <p className="text-[11px] text-caption">
-                Buyers pay in the token you pick, and you receive it. Prices from{" "}
-                {token.pegged ? "CoinGecko" : "DexScreener"}, refreshed every minute.
+                Buyers pay in the token you pick, and you receive it.{" "}
+                {usingCustom
+                  ? "Prices from DexScreener, refreshed every minute."
+                  : `Prices from ${token.pegged ? "CoinGecko" : "DexScreener"}, refreshed every minute.`}
               </p>
             </div>
 
@@ -780,20 +822,22 @@ export default function NewListingPage() {
                 hint={
                   priceUsd != null
                     ? `${formatTokenAmount(priceNumber, token.symbol)} ≈ ${formatUsd(priceUsd)} today.`
-                    : `In ${token.symbol}.`
+                    : selectedToken
+                      ? `In ${token.symbol}.`
+                      : "Pick a token first."
                 }
               >
-                <InputAddon suffix={token.symbol}>
+                <InputAddon suffix={selectedToken ? token.symbol : undefined}>
                   <TextInput
                     id="price"
                     type="number"
                     inputMode="decimal"
-                    min={0.01}
-                    step={0.01}
+                    min={priceDecimals === 0 ? 1 : 10 ** -priceDecimals}
+                    step={priceDecimals === 0 ? 1 : 10 ** -priceDecimals}
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder={token.pegged ? "1500" : "4000000"}
-                    className="pr-16"
+                    placeholder={token.pegged ? "1500" : token.custom ? "100" : "4000000"}
+                    className="pr-20"
                     disabled={busy}
                   />
                 </InputAddon>
@@ -868,7 +912,7 @@ export default function NewListingPage() {
       <Panel className="space-y-3 max-lg:shadow-[0_-12px_32px_rgba(0,0,0,0.45)]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-[12px] text-caption min-w-0">
-            <Badge variant="accent">{isAdmin ? "On-chain" : "On-chain · reviewed"}</Badge>
+            <Badge variant="accent">On-chain</Badge>
             <span>
               {`Settles on ${CHAIN_LABELS[LISTING_CHAIN_ID]} · ${activeCount}/${MAX_ACTIVE_LISTINGS} open listings used`}
             </span>
@@ -884,17 +928,15 @@ export default function NewListingPage() {
               ? "Working…"
               : pendingPersist
                 ? "Save to marketplace"
-                : !isAdmin
-                  ? "Sign and submit for review"
-                  : pricingType === "AUCTION"
-                    ? "Open for bids"
-                    : "List at this price"}
+                : pricingType === "AUCTION"
+                  ? "Create Listing"
+                  : "List at this price"}
           </Button>
         </div>
 
         {busy && (
           <p className="text-[12px] text-caption">
-            {(isAdmin ? STEP_LABEL : SUBMIT_STEP_LABEL)[step as keyof typeof STEP_LABEL]}
+            {STEP_LABEL[step as keyof typeof STEP_LABEL]}
           </p>
         )}
         {!busy && disabledReason && (
@@ -951,5 +993,117 @@ function PricingOption({
       </span>
       <span className="mt-1 block text-[11px] text-caption leading-relaxed">{body}</span>
     </button>
+  );
+}
+
+/**
+ * What a pasted address turned out to be: the token's symbol, name and price,
+ * and what the listing's price comes to in dollars. Shown before the seller
+ * signs, since the token is the listing's for life.
+ */
+function CustomTokenCard({
+  id,
+  valid,
+  lookup,
+  amount,
+  onClear,
+  disabled,
+}: {
+  id: string;
+  valid: boolean;
+  lookup: TokenLookup;
+  amount: number | null;
+  onClear: () => void;
+  disabled?: boolean;
+}) {
+  if (!valid) {
+    return (
+      <p id={id} className="text-[12px] text-warning">
+        A token address is 0x followed by 40 letters and numbers.
+      </p>
+    );
+  }
+  if (lookup.status === "idle" || lookup.status === "loading") {
+    return (
+      <p id={id} className="flex items-center gap-2 text-[12px] text-caption" aria-live="polite">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        Looking up the token on Robinhood Chain…
+      </p>
+    );
+  }
+  if (lookup.status === "error") {
+    return (
+      <p id={id} className="flex items-start gap-2 text-[12px] text-negative" aria-live="polite">
+        <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        {lookup.error}
+      </p>
+    );
+  }
+
+  const { token } = lookup;
+  const worth = amount != null && token.priceUsd != null ? amount * token.priceUsd : null;
+  const explorer = `${robinhood.blockExplorers.default.url}/token/${token.address}`;
+
+  return (
+    <Tile id={id} className="space-y-3 px-3.5 py-3" aria-live="polite">
+      <div className="flex items-center gap-3">
+        <TokenMark token={token} size={32} className="h-8 w-8" />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-[14px] font-semibold text-white">
+            <span className="truncate">{token.symbol}</span>
+            {!token.known && <Badge>Custom</Badge>}
+          </p>
+          <p className="truncate text-[12px] text-caption">{token.name}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={disabled}
+          className="text-[12px] font-medium text-caption hover:text-white transition-colors disabled:opacity-50"
+        >
+          Clear
+        </button>
+      </div>
+
+      <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
+        <div className="min-w-0">
+          <dt className="text-caption">Price</dt>
+          <dd className="numeric truncate font-semibold text-white">
+            {token.priceUsd != null ? `1 ${token.symbol} ≈ ${formatUsd(token.priceUsd)}` : "No market price"}
+          </dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-caption">Your price is worth</dt>
+          <dd className="numeric truncate font-semibold text-white">
+            {worth != null
+              ? `≈ ${formatUsd(worth)}`
+              : amount == null
+                ? "Set a price below"
+                : "—"}
+          </dd>
+        </div>
+      </dl>
+
+      <div className="flex items-center justify-between gap-3 text-[11px] text-caption">
+        <span className="numeric truncate font-mono">{shortAddress(token.address)}</span>
+        <a
+          href={explorer}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex shrink-0 items-center gap-1 hover:text-white transition-colors"
+        >
+          View on Blockscout
+          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </a>
+      </div>
+
+      {!token.known && (
+        <p className="text-[11px] leading-relaxed text-warning">
+          Anyone can deploy a token. Check this is the contract you mean — buyers will pay in it
+          and you will receive it.
+          {token.priceUsd == null && " DexScreener has no pool for it, so buyers won't see a dollar value."}
+        </p>
+      )}
+    </Tile>
   );
 }

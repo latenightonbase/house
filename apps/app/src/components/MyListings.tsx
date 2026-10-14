@@ -34,7 +34,7 @@ const STATUS_COPY: Record<ListingStatus, { label: string; variant: BadgeVariant;
   CANCELLED: { label: "Cancelled", variant: "neutral", hint: "No longer listed." },
 };
 
-/** The seller's own listings in every state — the only place review status shows. */
+/** The seller's own listings in every state, including ones no longer on the marketplace. */
 export function MyListings({
   /**
    * Drops the section's own heading, for callers that already label it — the
@@ -115,7 +115,7 @@ function MyListingsEmpty({ failed = false }: { failed?: boolean }) {
       <p className="mx-auto max-w-sm text-[13px] leading-relaxed text-caption">
         {failed
           ? "Could not load your listings just now. Refresh to try again."
-          : "You have not submitted a listing yet. Anything you list shows up here with its review status."}
+          : "You have not created a listing yet. Anything you list shows up here."}
       </p>
       {!failed && (
         <div className="mt-4 flex justify-center">

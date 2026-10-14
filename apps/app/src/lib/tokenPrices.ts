@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import type { Listing } from "@/lib/marketplace";
-import { listingToken, type PaymentToken } from "@/lib/contracts/auctionHouse";
+import {
+  LNOC,
+  listingToken,
+  USDG,
+  type PaymentToken,
+} from "@/lib/contracts/auctionHouse";
 
 /**
  * Indicative USD prices for the listing tokens — LNOC from DexScreener, USDG
@@ -67,14 +72,94 @@ export function useTokenPrices(): TokenPrices {
   return prices;
 }
 
+/**
+ * The shared price for USDG or LNOC. Matched by address, never symbol — a
+ * token entered by address could call itself anything, and has its own price
+ * from `useTokenLookup`.
+ */
 export function usdPrice(prices: TokenPrices, token: PaymentToken) {
-  return prices[token.symbol] ?? (token.pegged ? 1 : null);
+  const address = token.address.toLowerCase();
+  if (address === USDG.address.toLowerCase()) return prices.USDG ?? 1;
+  if (address === LNOC.address.toLowerCase()) return prices.LNOC;
+  return token.pegged ? 1 : null;
 }
 
 /** What `amount` of `token` is worth, or null while there is no price for it. */
 export function usdValue(prices: TokenPrices, token: PaymentToken, amount: number) {
   const price = usdPrice(prices, token);
   return price == null || !Number.isFinite(amount) ? null : amount * price;
+}
+
+/** A Robinhood Chain ERC-20 as the API read it: identity, units and a USD price. */
+export type TokenInfo = {
+  address: `0x${string}`;
+  symbol: string;
+  name: string;
+  decimals: number;
+  /** One of the tokens offered by name. */
+  known: boolean;
+  /** From DexScreener; null when the token has no pool there. */
+  priceUsd: number | null;
+};
+
+export type TokenLookup =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "found"; token: TokenInfo }
+  | { status: "error"; error: string };
+
+const lookups = new Map<string, { at: number; result: Promise<TokenLookup> }>();
+
+function lookupToken(address: string): Promise<TokenLookup> {
+  const key = address.toLowerCase();
+  const hit = lookups.get(key);
+  if (hit && Date.now() - hit.at < REFRESH_MS) return hit.result;
+
+  const result = fetch(`/backend/tokens/${address}`, { cache: "no-store" })
+    .then(async (res): Promise<TokenLookup> => {
+      const body = (await res.json().catch(() => null)) as
+        | { token?: TokenInfo; error?: string }
+        | null;
+      if (res.ok && body?.token) return { status: "found", token: body.token };
+      return { status: "error", error: body?.error ?? "Could not look up that token." };
+    })
+    .catch((): TokenLookup => ({ status: "error", error: "Could not look up that token." }));
+  // A failed lookup is forgotten, so the next render can try again.
+  void result.then((r) => {
+    if (r.status === "error") lookups.delete(key);
+  });
+  lookups.set(key, { at: Date.now(), result });
+  return result;
+}
+
+/**
+ * Reads any token by address from the API — name, symbol, decimals and USD
+ * price — refreshed every minute like the shared prices. Pass undefined to
+ * stay idle.
+ */
+export function useTokenLookup(address: string | undefined): TokenLookup {
+  const valid = Boolean(address && /^0x[a-fA-F0-9]{40}$/.test(address));
+  const [state, setState] = useState<{ key: string; lookup: TokenLookup } | null>(null);
+
+  useEffect(() => {
+    if (!valid || !address) return;
+    let live = true;
+    const run = () =>
+      lookupToken(address).then((lookup) => {
+        if (live) setState({ key: address.toLowerCase(), lookup });
+      });
+    void run();
+    const id = setInterval(() => {
+      if (!document.hidden) void run();
+    }, REFRESH_MS);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [address, valid]);
+
+  if (!valid || !address) return { status: "idle" };
+  return state && state.key === address.toLowerCase() ? state.lookup : { status: "loading" };
 }
 
 /**
@@ -125,9 +210,15 @@ export function formatListingAmount(listing: Listing, amount: number) {
  */
 export function useUsdHint(listing: Listing | null, amount: number): string | null {
   const prices = useTokenPrices();
-  if (!listing) return null;
-  const token = listingToken(listing);
-  if (token.pegged) return null;
-  const usd = usdValue(prices, token, amount);
-  return usd == null ? null : `≈ ${formatUsd(usd)}`;
+  const token = listing ? listingToken(listing) : null;
+  // A token entered by address is priced on its own; the house tokens share one request.
+  const lookup = useTokenLookup(token?.custom ? token.address : undefined);
+  if (!token || token.pegged) return null;
+  const unit = token.custom
+    ? lookup.status === "found"
+      ? lookup.token.priceUsd
+      : null
+    : usdPrice(prices, token);
+  if (unit == null || !Number.isFinite(amount)) return null;
+  return `≈ ${formatUsd(amount * unit)}`;
 }

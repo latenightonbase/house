@@ -9,7 +9,7 @@ export default async function Page() {
   if (session.role !== "SUPERADMIN") redirect("/");
 
   return (
-    <Suspense fallback={<p className="text-[13px] text-caption">Loading review queue…</p>}>
+    <Suspense fallback={<p className="text-[13px] text-caption">Loading listings…</p>}>
       <AdminListingsClient />
     </Suspense>
   );

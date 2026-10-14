@@ -45,9 +45,9 @@ async function readMeta(house: `0x${string}`, id: string): Promise<ListingOnChai
  * submitted it, priced in the token and amount the row says, and dated the way
  * the row says.
  *
- * Sellers now sign at submission rather than after approval, which makes an
- * admin's approve click the only thing standing between a row and a live,
- * buyable listing. Nothing else would ever look at the chain again, so a
+ * A listing goes live the moment its row is saved — there is no review step —
+ * so this is the only thing standing between a row and a live, buyable
+ * listing. Nothing else would ever look at the chain again, so a
  * client that posted an invented `txHash` would get a listing published that
  * buyers could only ever fail to buy. The contract already records the owner,
  * price, type and deadline — ask it rather than trusting the submission.
@@ -148,52 +148,6 @@ export async function verifyListingOnChain(input: {
       ok: false,
       status: 400,
       error: "The closing time on-chain does not match the one submitted.",
-    };
-  }
-
-  return { ok: true, deadline, owner: getAddress(meta.owner) };
-}
-
-/**
- * The lighter re-check an admin's approval runs. The full shape was verified at
- * submission; what can still have changed since is the clock and, for a
- * fixed-price listing bought straight off the contract, whether it is spent.
- */
-export async function assertListingStillOpen(listing: {
-  id: string;
-  contractAddress: string | null;
-}): Promise<ChainListingCheck> {
-  const house = auctionHouseAddress();
-  if (!sameAddress(listing.contractAddress, house)) {
-    return {
-      ok: false,
-      status: 409,
-      error: "This listing is not wired to the AuctionHouse the marketplace settles on.",
-    };
-  }
-
-  const meta = await readMeta(house, listing.id);
-  if (meta === "unreachable") {
-    return {
-      ok: false,
-      status: 503,
-      error: "Could not reach the chain to confirm the listing. Try again in a moment.",
-    };
-  }
-
-  if (!meta.owner || sameAddress(meta.owner, ZERO)) {
-    return { ok: false, status: 409, error: "This listing is no longer on the AuctionHouse." };
-  }
-  if (meta.settled) {
-    return { ok: false, status: 409, error: "This listing has already settled on-chain." };
-  }
-
-  const deadline = new Date(Number(meta.deadline) * 1000);
-  if (deadline.getTime() <= Date.now()) {
-    return {
-      ok: false,
-      status: 409,
-      error: "This listing closed on-chain before it was reviewed — the seller has to resubmit it.",
     };
   }
 

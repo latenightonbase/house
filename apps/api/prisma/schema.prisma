@@ -360,6 +360,10 @@ model Listing {
   contractAddress String?
   tokenAddress    String?
   tokenName       String?
+  /// Decimals of `tokenAddress`, read from the token when the listing is saved.
+  /// USDG and LNOC are known without it; a token entered by address needs it
+  /// to turn a price into token units.
+  tokenDecimals   Int?
   txHash          String?
 
   /// One rotating 24h auction owned by SUPERADMIN. Cron settles and clones it.

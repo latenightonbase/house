@@ -30,8 +30,6 @@ export type ListingCategory =
 export interface CategoryMeta {
   value: ListingCategory;
   label: string;
-  /** One line of help shown under the picker in the create form. */
-  hint: string;
   icon: LucideIcon;
 }
 
@@ -39,74 +37,47 @@ export const LISTING_CATEGORIES: CategoryMeta[] = [
   {
     value: "SHOUTOUT",
     label: "Shoutout",
-    hint: "A short mention or story slot.",
     icon: Megaphone,
   },
   {
     value: "SPONSORED_POST",
     label: "Sponsored post",
-    hint: "A standalone post, reel or thread.",
     icon: FileText,
   },
   {
     value: "VIDEO_INTEGRATION",
     label: "Video integration",
-    hint: "A segment inside a video you were already making.",
     icon: Film,
   },
   {
     value: "DEDICATED_VIDEO",
     label: "Dedicated video",
-    hint: "A whole video built around the brand.",
     icon: Video,
   },
   {
     value: "LIVESTREAM",
     label: "Livestream",
-    hint: "A read, segment or takeover during a live show.",
     icon: Radio,
   },
-  { value: "PODCAST", label: "Podcast", hint: "A host-read spot or guest slot.", icon: Mic },
+  { value: "PODCAST", label: "Podcast", icon: Mic },
   {
     value: "NEWSLETTER",
     label: "Newsletter",
-    hint: "Placement in a send to your list.",
     icon: Mail,
   },
-  { value: "AMA", label: "AMA / Q&A", hint: "A live session with your audience.", icon: MessagesSquare },
+  { value: "AMA", label: "AMA / Q&A", icon: MessagesSquare },
   {
     value: "COLLAB",
     label: "Collab",
-    hint: "A joint piece made with the buyer.",
     icon: Handshake,
   },
   {
     value: "CONSULTING",
     label: "Consulting",
-    hint: "Your time — strategy, review, advisory.",
     icon: Briefcase,
   },
-  { value: "OTHER", label: "Other", hint: "Anything that does not fit the rest.", icon: Package },
+  { value: "OTHER", label: "Other", icon: Package },
 ];
-
-/**
- * What a seller can pick for a new listing. The rest stay in
- * `LISTING_CATEGORIES` only so listings created before they were retired still
- * render with their label and icon.
- */
-const RETIRED = new Set<ListingCategory>([
-  "VIDEO_INTEGRATION",
-  "PODCAST",
-  "AMA",
-  "COLLAB",
-  "OTHER",
-]);
-
-export const SELECTABLE_CATEGORIES = LISTING_CATEGORIES.filter((c) => !RETIRED.has(c.value));
-
-export function isSelectableCategory(value: string | undefined): value is ListingCategory {
-  return SELECTABLE_CATEGORIES.some((c) => c.value === value);
-}
 
 const BY_VALUE = new Map(LISTING_CATEGORIES.map((c) => [c.value, c]));
 

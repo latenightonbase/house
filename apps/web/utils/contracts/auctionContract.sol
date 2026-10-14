@@ -17,7 +17,8 @@ struct AuctionMeta {
     uint256 deadline;
     string auctionId;
     address auctionOwner;
-    /// The ERC-20 the seller priced this listing in. Every bid and purchase is paid in it.
+    /// The ERC-20 the seller priced this listing in — any token they choose. Every bid and
+    /// purchase is paid in it.
     address token;
     /// Asking price for a fixed-price listing, minimum bid for an auction — in `token` units.
     uint256 price;
@@ -44,9 +45,15 @@ struct Auction {
 /**
  * @title AuctionHouse
  * @notice Each listing is priced in one ERC-20 the seller picks when creating
- *         it — USDG or LNOC — and is bought or bid on in that same token. The
- *         contract never converts between tokens, so it needs no price feed:
- *         amounts are plain token units at whatever decimals the token has.
+ *         it — any token, not a fixed list — and is bought or bid on in that
+ *         same token. The contract never converts between tokens, so it needs
+ *         no price feed: amounts are plain token units at whatever decimals the
+ *         token has.
+ *
+ *         Because the token is the seller's choice, escrow checks what actually
+ *         arrived: a fee-on-transfer token would otherwise leave the contract
+ *         short of what it later refunds or pays out, and that shortfall would
+ *         come out of other listings escrowed in the same token.
  */
 contract AuctionHouse is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -54,9 +61,9 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
     mapping(string => Auction) private auctions;
     string[] private allAuctionIds;
 
-    /// Tokens a seller may price a new listing in.
-    mapping(address => bool) public acceptedToken;
-    address[] private acceptedTokens;
+    /// Tokens the owner has stopped new listings from using — a scam or broken
+    /// token, say. Everything else is open.
+    mapping(address => bool) public blockedToken;
 
     /// @notice Protocol fee in basis points (100 = 1%, 1000 = 10%). Applied on
     ///         winning auction bids and on fixed-price purchases.
@@ -83,19 +90,13 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
         uint256 feeTaken
     );
     event FeeSettingsUpdated(uint256 newFeePercent, address newFeeReceiver);
-    event TokenAccepted(address indexed token, bool accepted);
+    event TokenBlocked(address indexed token, bool blocked);
 
-    /// @param _tokens Accepted from the start, so a fresh deployment can take listings immediately.
-    constructor(address _feeReceiver, uint256 _feePercent, address _owner, address[] memory _tokens)
-        Ownable(_owner)
-    {
+    constructor(address _feeReceiver, uint256 _feePercent, address _owner) Ownable(_owner) {
         require(_feeReceiver != address(0), "Invalid fee receiver");
         require(_feePercent <= 1000, "Fee too high (>10%)");
         feeReceiver = _feeReceiver;
         feePercent = _feePercent;
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            _setAcceptedToken(_tokens[i], true);
-        }
     }
 
     // ------------------ CONFIGURATION ------------------
@@ -115,34 +116,14 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Allows or stops new listings priced in `_token`. Listings already
-     *         open in it are untouched — bids, purchases and refunds still run.
+     * @notice Stops (or allows again) new listings priced in `_token`. Listings
+     *         already open in it are untouched — bids, purchases and refunds
+     *         still run, since their bidders have funds escrowed.
      */
-    function setAcceptedToken(address _token, bool _accepted) external onlyOwner {
-        _setAcceptedToken(_token, _accepted);
-    }
-
-    function _setAcceptedToken(address _token, bool _accepted) internal {
+    function setTokenBlocked(address _token, bool _blocked) external onlyOwner {
         require(_token != address(0), "Invalid token");
-        if (acceptedToken[_token] == _accepted) return;
-        acceptedToken[_token] = _accepted;
-
-        if (_accepted) {
-            acceptedTokens.push(_token);
-        } else {
-            for (uint256 i = 0; i < acceptedTokens.length; i++) {
-                if (acceptedTokens[i] == _token) {
-                    acceptedTokens[i] = acceptedTokens[acceptedTokens.length - 1];
-                    acceptedTokens.pop();
-                    break;
-                }
-            }
-        }
-        emit TokenAccepted(_token, _accepted);
-    }
-
-    function getAcceptedTokens() external view returns (address[] memory) {
-        return acceptedTokens;
+        blockedToken[_token] = _blocked;
+        emit TokenBlocked(_token, _blocked);
     }
 
     // ------------------ CREATE LISTINGS ------------------
@@ -173,7 +154,8 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
     ) internal {
         require(bytes(_id).length > 0, "Listing ID required");
         require(auctions[_id].owner == address(0), "Listing already exists");
-        require(acceptedToken[_token], "Token not accepted");
+        require(_token.code.length > 0, "Token is not a contract");
+        require(!blockedToken[_token], "Token blocked");
         require(durationHours > 0, "Duration > 0");
         require(_price > 0, "Price/min bid > 0");
         require(_activeListingCount(msg.sender) < 3, "Max 3 active listings per owner");
@@ -211,7 +193,7 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
         require(amount >= a.price, "Bid below minimum");
         require(amount > a.highestBid, "Bid too low");
 
-        a.token.safeTransferFrom(msg.sender, address(this), amount);
+        _pullExact(a.token, amount);
 
         address prevBidder = a.highestBidder;
         uint256 prevAmount = a.highestBid;
@@ -276,7 +258,7 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
         require(msg.sender != a.owner, "Cannot buy own listing");
 
         uint256 amount = a.price;
-        a.token.safeTransferFrom(msg.sender, address(this), amount);
+        _pullExact(a.token, amount);
 
         a.highestBidder = msg.sender;
         a.highestBid = amount;
@@ -289,6 +271,17 @@ contract AuctionHouse is Ownable, ReentrancyGuard {
 
         uint256 feeTaken = _settle(a, amount);
         emit ListingSold(_listingId, msg.sender, address(a.token), amount, a.owner, feeTaken);
+    }
+
+    /// @dev Escrows `amount` from the caller and refuses a token that delivers
+    ///      less — what is recorded as escrowed must be what is held.
+    function _pullExact(IERC20 token, uint256 amount) internal {
+        uint256 before = token.balanceOf(address(this));
+        token.safeTransferFrom(msg.sender, address(this), amount);
+        require(
+            token.balanceOf(address(this)) - before == amount,
+            "Fee-on-transfer tokens not supported"
+        );
     }
 
     /// @dev Takes feePercent of `amount` to feeReceiver and the rest to the listing owner.

@@ -10,6 +10,7 @@ import type {
   Vault,
   Wallet,
 } from "@prisma/client";
+import { listingToken } from "./tokens";
 
 const PLATFORM_MAP: Record<string, string> = {
   YOUTUBE: "youtube",
@@ -212,6 +213,9 @@ export function serializeListing(listing: ListingWithCreator) {
     contractAddress: listing.contractAddress ?? undefined,
     tokenAddress: listing.tokenAddress ?? undefined,
     tokenName: listing.tokenName ?? undefined,
+    // Always sent with an address, so a client never has to guess the units
+    // of a token it does not know.
+    tokenDecimals: listing.tokenAddress ? listingToken(listing).decimals : undefined,
     txHash: listing.txHash ?? undefined,
     isDaily: listing.isDaily,
     winnerWallet: listing.winnerWallet ?? undefined,

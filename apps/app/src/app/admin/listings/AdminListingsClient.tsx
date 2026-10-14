@@ -1,85 +1,72 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, ImageOff, Inbox, XCircle } from "lucide-react";
+import { Gavel, ImageOff, Inbox, Search, Trash2 } from "lucide-react";
 import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
-import { Badge, BrandAvatar, Button, Card, Panel, TextArea, Tile } from "@/components/ui";
-import {
-  approveListing,
-  fetchPendingListings,
-  rejectListing,
-  type Listing,
-} from "@/lib/marketplace";
+import { Badge, BrandAvatar, Button, Card, Panel, TextInput, Tile } from "@/components/ui";
+import { deleteListingAsAdmin, fetchAdminListings, type Listing } from "@/lib/marketplace";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 import { formatListingAmount } from "@/lib/tokenPrices";
-import { categoryLabel } from "@/lib/listingCategories";
-
-type Decision = "approve" | "reject";
 
 /**
- * A seller's on-chain clock starts when they submit, so a listing sitting in the
- * queue is losing selling time — and once it passes its closing time the
- * AuctionHouse entry is spent and approval fails outright. Flag both.
+ * Moderation for live listings. Anyone can list without review, so this is
+ * where an admin takes down anything offensive — as long as nobody has bid on
+ * it yet. A listing with bids stays: those bidders have funds escrowed on-chain
+ * and the row is what settles and refunds them.
  */
-const SOON_MS = 6 * 3_600_000;
-
-function urgency(endDate: string | undefined) {
-  if (!endDate) return null;
-  const left = new Date(endDate).getTime() - Date.now();
-  if (left <= 0) {
-    return {
-      tone: "negative" as const,
-      text: "This closed on-chain before it was reviewed. Approving it will fail — reject it and ask the seller to resubmit.",
-    };
-  }
-  if (left <= SOON_MS) {
-    return {
-      tone: "warning" as const,
-      text: "Closes within hours. Approve now or it will expire on-chain before it ever sells.",
-    };
-  }
-  return null;
-}
-
 export default function AdminListingsClient() {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  /** Per-listing note, so reviewing several in a row never crosses them over. */
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState("");
   const [working, setWorking] = useState<string | null>(null);
   const [rowError, setRowError] = useState<Record<string, string>>({});
 
   const load = useCallback(() => {
-    fetchPendingListings()
+    fetchAdminListings()
       .then(setListings)
-      .catch((err) =>
-        setLoadError(err instanceof Error ? err.message : "Could not load the review queue."),
+      .catch((err: unknown) =>
+        setLoadError(err instanceof Error ? err.message : "Could not load listings."),
       );
   }, []);
 
   useEffect(load, [load]);
 
-  async function decide(listing: Listing, decision: Decision) {
-    const note = notes[listing.id]?.trim() || undefined;
-    if (decision === "reject" && !note) {
-      setRowError((e) => ({ ...e, [listing.id]: "Say why — the seller gets this in an email." }));
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!listings || !q) return listings;
+    return listings.filter(
+      (l) =>
+        l.title.toLowerCase().includes(q) ||
+        l.creator.displayName.toLowerCase().includes(q) ||
+        l.creator.username?.toLowerCase().includes(q) ||
+        l.creator.wallet?.toLowerCase().includes(q),
+    );
+  }, [listings, query]);
+
+  async function remove(listing: Listing) {
+    if (
+      !window.confirm(
+        `Delete "${listing.title}"? It comes off the marketplace for good and cannot be restored.`,
+      )
+    ) {
       return;
     }
 
     setWorking(listing.id);
     setRowError((e) => ({ ...e, [listing.id]: "" }));
     try {
-      if (decision === "approve") await approveListing(listing.id, note);
-      else await rejectListing(listing.id, note);
-      // The row leaves the queue either way, so drop it rather than refetching.
+      await deleteListingAsAdmin(listing.id);
       setListings((current) => current?.filter((l) => l.id !== listing.id) ?? null);
     } catch (err) {
       setRowError((e) => ({
         ...e,
-        [listing.id]: err instanceof Error ? err.message : "Could not save that decision.",
+        [listing.id]: err instanceof Error ? err.message : "Could not delete the listing.",
       }));
+      // A refusal usually means a bid landed since the page loaded — refresh
+      // the counts so the row says so.
+      load();
     } finally {
       setWorking(null);
     }
@@ -88,14 +75,10 @@ export default function AdminListingsClient() {
   return (
     <div className="space-y-4 max-w-4xl">
       <PageHeader
-        title="Review queue"
-        subtitle="Seller listings waiting to go live. Each is already signed on-chain, so approving one publishes it immediately — and its closing time is already counting down."
+        title="Admin · Listings"
+        subtitle="Every live listing on the marketplace. Delete anything offensive — a listing can only be deleted while nobody has bid on it."
         action={
-          listings ? (
-            <Badge variant={listings.length ? "warning" : "neutral"}>
-              {listings.length} waiting
-            </Badge>
-          ) : undefined
+          listings ? <Badge variant="neutral">{listings.length} live</Badge> : undefined
         }
       />
 
@@ -105,133 +88,115 @@ export default function AdminListingsClient() {
         </Tile>
       )}
 
+      {listings && listings.length > 0 && (
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-caption"
+            aria-hidden="true"
+          />
+          <TextInput
+            aria-label="Search listings"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title, seller or wallet"
+            className="pl-9"
+          />
+        </div>
+      )}
+
       {listings === null && !loadError ? (
         <div className="card h-40 animate-pulse bg-white/[0.03]" />
-      ) : listings?.length === 0 ? (
+      ) : visible?.length === 0 ? (
         <Panel className="flex flex-col items-center gap-2 py-12 text-center">
           <Inbox className="w-7 h-7 text-caption" aria-hidden="true" />
-          <p className="text-[14px] font-semibold text-white">Nothing to review</p>
+          <p className="text-[14px] font-semibold text-white">
+            {query.trim() ? "No listings match" : "No live listings"}
+          </p>
           <p className="text-[12px] text-caption max-w-sm">
-            New seller listings land here. They stay invisible on the marketplace until you
-            approve them, which puts them live at once.
+            {query.trim()
+              ? "Try a different title, seller name or wallet."
+              : "Listings go live as soon as a seller signs for them, and show up here."}
           </p>
         </Panel>
       ) : (
-        listings?.map((listing) => {
+        visible?.map((listing) => {
           const busy = working === listing.id;
-          const clock = urgency(listing.endDate);
+          const bids = listing.bidCount ?? 0;
           return (
-            <Card key={listing.id} className="p-4 sm:p-5 space-y-4">
+            <Card key={listing.id} className="p-4 space-y-3">
               <div className="flex items-start gap-3">
-                <BrandAvatar
-                  src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
-                  alt={listing.creator.displayName}
-                  fallbackSeed={listing.creator.wallet}
-                  size={44}
-                />
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-line bg-surface-2">
+                  {listing.posterUrl ? (
+                    <ListingPoster
+                      src={listing.posterUrl}
+                      alt={`Poster for ${listing.title}`}
+                      fit="cover"
+                      sizes="64px"
+                      className="h-full w-full"
+                      fallback={<PosterPlaceholder />}
+                    />
+                  ) : (
+                    <PosterPlaceholder />
+                  )}
+                </div>
+
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/listings/${listing.id}`}
-                    className="text-[15px] font-semibold text-white hover:text-primary-light transition-colors"
+                    className="block truncate text-[15px] font-semibold text-white hover:text-primary-light transition-colors"
                   >
                     {listing.title}
                   </Link>
-                  <p className="mt-0.5 text-[12px] text-caption truncate">
-                    {listing.creator.displayName} · {listing.creator.reach} reach
+                  <div className="mt-1 flex items-center gap-1.5 text-[12px] text-caption min-w-0">
+                    <BrandAvatar
+                      src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
+                      alt={listing.creator.displayName}
+                      fallbackSeed={listing.creator.wallet}
+                      size={16}
+                    />
+                    <span className="truncate">{listing.creator.displayName}</span>
+                  </div>
+                  <p className="mt-1 text-[12px] text-caption">
+                    {formatListingAmount(listing, listing.price)}
+                    {" · "}
+                    {listing.pricingType === "AUCTION" ? "Auction" : "Flat price"}
+                    {listing.endDate ? ` · ${relativeEndLabel(listing.endDate)}` : ""}
                   </p>
                 </div>
-                <Badge variant={listing.pricingType === "AUCTION" ? "accent" : "neutral"}>
-                  {listing.pricingType === "AUCTION" ? "Auction" : "Flat price"}
-                </Badge>
+
+                <Button
+                  size="sm"
+                  variant="accent-outline"
+                  onClick={() => void remove(listing)}
+                  disabled={busy || bids > 0}
+                  aria-describedby={bids > 0 ? `bids-${listing.id}` : undefined}
+                  className="shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  {busy ? "Deleting…" : "Delete"}
+                </Button>
               </div>
 
-              {/* The poster goes live with the listing, so it is reviewed at a
-                  readable size and can be opened at full resolution. */}
-              {listing.posterUrl ? (
-                <div className="space-y-1.5">
-                  <ListingPoster
-                    src={listing.posterUrl}
-                    alt={`Poster for ${listing.title}`}
-                    adaptive
-                    sizes="(min-width: 640px) 320px, 100vw"
-                    className="w-full max-h-[28rem] rounded-xl border border-line sm:w-80"
-                  />
-                  <a
-                    href={listing.posterUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-[12px] font-medium text-caption hover:text-white transition-colors"
-                  >
-                    Open full size
-                    <ExternalLink className="w-3 h-3" aria-hidden="true" />
-                  </a>
-                </div>
-              ) : (
-                <p className="flex items-center gap-1.5 text-[12px] text-caption">
-                  <ImageOff className="w-3.5 h-3.5" aria-hidden="true" />
-                  No poster attached
-                </p>
-              )}
-
               {listing.description && (
-                <p className="text-[13px] text-caption leading-relaxed whitespace-pre-wrap">
+                <p className="text-[13px] text-caption leading-relaxed whitespace-pre-wrap line-clamp-3">
                   {listing.description}
                 </p>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <Stat label={listing.pricingType === "AUCTION" ? "Minimum bid" : "Price"}>
-                  {formatListingAmount(listing, listing.price)}
-                </Stat>
-                <Stat label="Category">{categoryLabel(listing.category)}</Stat>
-                <Stat label="Closes">
-                  {listing.endDate ? relativeEndLabel(listing.endDate) : "Open"}
-                </Stat>
-                <Stat label={listing.pricingType === "AUCTION" ? "Slot" : "Slots"}>
-                  {listing.slotsAvailable}
-                </Stat>
-              </div>
-
-              {clock && (
-                <Tile
-                  className={
-                    clock.tone === "negative"
-                      ? "border-negative/30 bg-negative/10 px-4 py-3 text-[12px] text-negative"
-                      : "border-warning/30 bg-warning/10 px-4 py-3 text-[12px] text-warning"
-                  }
+              {bids > 0 && (
+                <p
+                  id={`bids-${listing.id}`}
+                  className="flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-[12px] text-warning"
                 >
-                  {clock.text}
-                </Tile>
+                  <Gavel className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  This listing has {bids} {bids === 1 ? "bid" : "bids"}, so it can&apos;t be
+                  deleted.
+                </p>
               )}
-
-              <TextArea
-                aria-label={`Note to the seller about ${listing.title}`}
-                value={notes[listing.id] ?? ""}
-                onChange={(e) => setNotes((n) => ({ ...n, [listing.id]: e.target.value }))}
-                placeholder="Note to the seller — required when turning a listing down."
-                rows={2}
-                maxLength={600}
-                disabled={busy}
-              />
 
               {rowError[listing.id] && (
                 <p className="text-[12px] text-negative">{rowError[listing.id]}</p>
               )}
-
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => void decide(listing, "approve")} disabled={busy}>
-                  <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                  Approve &amp; publish
-                </Button>
-                <Button
-                  variant="accent-outline"
-                  onClick={() => void decide(listing, "reject")}
-                  disabled={busy}
-                >
-                  <XCircle className="w-4 h-4" aria-hidden="true" />
-                  Reject
-                </Button>
-              </div>
             </Card>
           );
         })
@@ -240,11 +205,10 @@ export default function AdminListingsClient() {
   );
 }
 
-function Stat({ label, children }: { label: string; children: React.ReactNode }) {
+function PosterPlaceholder() {
   return (
-    <div className="tile min-w-0 px-3 py-2.5">
-      <p className="panel-label mb-1">{label}</p>
-      <p className="text-[14px] font-semibold text-white truncate">{children}</p>
+    <div className="flex h-full w-full items-center justify-center text-caption">
+      <ImageOff className="w-4 h-4" aria-hidden="true" />
     </div>
   );
 }

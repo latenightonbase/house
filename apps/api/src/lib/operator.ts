@@ -6,7 +6,7 @@ import {
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { findListingToken, fromTokenUnits } from "./tokens";
+import { fromTokenUnits, resolveListingToken } from "./tokens";
 import { defineChain } from "viem";
 
 const ROBINHOOD_ID = 4663;
@@ -22,7 +22,16 @@ export const robinhood = defineChain({
   },
 });
 
-const FALLBACK_HOUSE = "0xc78D7dfc1A335C510FAC1e7E488861aDDb9fF1aF" as const;
+const FALLBACK_HOUSE = "0x9d379D37C55cdd9A7702eaf655Cda7c8fCbF629F" as const;
+
+/**
+ * Every AuctionHouse deployed since listings were priced per token. They share
+ * one ABI — opening the contract to any ERC-20 kept every signature and the
+ * `AuctionMeta` struct as they were — so a listing still open on an earlier one
+ * reads and settles exactly like a listing on the current contract. Add the
+ * outgoing address here whenever the house is redeployed with the same ABI.
+ */
+const PER_TOKEN_HOUSES: readonly string[] = ["0xc78D7dfc1A335C510FAC1e7E488861aDDb9fF1aF"];
 
 const getListingTypeAbi = {
   type: "function",
@@ -225,8 +234,13 @@ export type ListingOnChain = {
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-export function isCurrentHouse(house: string) {
-  return house.toLowerCase() === auctionHouseAddress().toLowerCase();
+/** True for the current contract and any earlier one that shares its ABI. */
+export function hasPerTokenAbi(house: string) {
+  const wanted = house.toLowerCase();
+  return (
+    wanted === auctionHouseAddress().toLowerCase() ||
+    PER_TOKEN_HOUSES.some((h) => h.toLowerCase() === wanted)
+  );
 }
 
 export async function readListingOnChain(
@@ -234,14 +248,15 @@ export async function readListingOnChain(
   id: string,
 ): Promise<ListingOnChain> {
   const client = publicClient();
-  if (isCurrentHouse(house)) {
+  if (hasPerTokenAbi(house)) {
     const meta = await client.readContract({
       address: house,
       abi: auctionHouseAbi,
       functionName: "getAuctionMeta",
       args: [id],
     });
-    const token = findListingToken(meta.token);
+    // Any ERC-20 the seller picked, so its decimals may need a chain read.
+    const token = meta.token === ZERO_ADDRESS ? null : await resolveListingToken(meta.token);
     return {
       owner: meta.auctionOwner,
       settled: meta.settled,
@@ -285,7 +300,7 @@ export function endAuctionOn(house: `0x${string}`, id: string) {
   if (!wallet || !account) throw new Error("OPERATOR_PRIVATE_KEY unset");
   return wallet.writeContract({
     address: house,
-    abi: isCurrentHouse(house) ? auctionHouseAbi : legacyAuctionHouseAbi,
+    abi: hasPerTokenAbi(house) ? auctionHouseAbi : legacyAuctionHouseAbi,
     functionName: "endAuction",
     args: [id],
     account,

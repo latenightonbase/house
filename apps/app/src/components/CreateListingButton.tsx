@@ -8,9 +8,8 @@ import { Button } from "@/components/ui";
 import type { ButtonSize, ButtonVariant } from "@/components/ui";
 
 /**
- * The seller-side entry point, open to everyone. An admin's listing goes live
- * as soon as they sign for it; anyone else's is submitted for review first,
- * which the form itself explains — so nothing is gated here.
+ * The seller-side entry point, open to everyone. Every listing goes live as
+ * soon as its seller signs for it — there is no review step to gate on.
  */
 export function CreateListingButton({
   size = "md",

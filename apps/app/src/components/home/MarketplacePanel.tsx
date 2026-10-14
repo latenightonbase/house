@@ -96,8 +96,8 @@ function MarketEmpty() {
       </span>
       <p className="mt-3.5 text-[14px] font-semibold text-white">The market is open</p>
       <p className="mx-auto mt-2 max-w-sm text-[12px] leading-relaxed text-caption">
-        No seller inventory is live yet. List a placement of your own, priced in USDG or LNOC,
-        and it shows up here the moment it is approved.
+        No seller inventory is live yet. List a placement of your own, priced in USDG, LNOC or any token,
+        and it shows up here the moment you sign for it.
       </p>
       <div className="mt-4 flex justify-center">
         <CreateListingButton variant="accent-outline" size="sm" label="List your attention" />
@@ -183,7 +183,7 @@ export function MarketplacePanel({
             Buy attention <span className="text-primary-bright">direct</span>
           </h2>
           <p className="mt-1 text-[12px] leading-relaxed text-caption max-sm:hidden">
-            Placements sold by creators, priced in USDG or LNOC and settled on-chain.
+            Placements sold by creators, priced in USDG, LNOC or any token and settled on-chain.
           </p>
         </div>
 
@@ -279,7 +279,7 @@ export function MarketplacePanel({
                 <div className="mt-auto pt-4">
                   <div className="tile flex flex-col items-start gap-3 border-dashed px-4 py-4 sm:flex-row sm:items-center">
                     <p className="text-[12px] leading-relaxed text-caption">
-                      Have an audience? List a placement of your own — priced in USDG or LNOC,
+                      Have an audience? List a placement of your own — priced in USDG, LNOC or any token,
                       paid out to your wallet.
                     </p>
                     <CreateListingButton

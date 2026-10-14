@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { TokenMark } from "@/components/listing/TokenMark";
 import { Info } from "lucide-react";
 import { Button, Field, InputAddon, TextInput, Tile } from "@/components/ui";
 import { CHAIN_LABELS } from "@/lib/contracts/auctionHouse";
@@ -60,7 +60,7 @@ export function CheckoutFields({
       {/* The seller chose the token when they listed, so there is nothing to
           pick — just say what leaves the wallet. */}
       <div className="tile flex items-center gap-3 px-3.5 py-3" aria-live="polite">
-        <Image src={token.logo} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-full" />
+        <TokenMark token={token} size={28} className="h-7 w-7" />
         <div className="min-w-0">
           <p className="panel-label">You pay in {token.symbol}</p>
           <p className="numeric mt-0.5 truncate text-[14px] font-semibold text-white">

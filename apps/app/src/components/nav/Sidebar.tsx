@@ -78,7 +78,7 @@ export function Sidebar() {
             )}
           >
             <ShieldCheck className="w-[17px] h-[17px] shrink-0" aria-hidden="true" />
-            <span className="truncate">Review Queue</span>
+            <span className="truncate">Admin</span>
           </Link>
         ) : null}
         <CreateListingButton size="sm" className="w-full" />

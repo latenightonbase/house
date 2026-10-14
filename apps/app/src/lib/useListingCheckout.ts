@@ -11,6 +11,7 @@ import {
   listingToken,
   onCurrentHouse,
   toTokenUnits,
+  unpayable,
 } from "@/lib/contracts/auctionHouse";
 import { erc20Abi } from "@/lib/contracts/erc20";
 import { robinhood } from "@/lib/chains";
@@ -145,6 +146,10 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
       setError(
         "This listing was opened on the previous AuctionHouse contract and can no longer be bought here.",
       );
+      return true;
+    }
+    if (unpayable(listing)) {
+      setError("This listing's token details did not load. Refresh the page and try again.");
       return true;
     }
     if (bidInvalid) {

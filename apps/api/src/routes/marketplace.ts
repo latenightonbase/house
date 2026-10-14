@@ -1,14 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../db";
 import { getUserFromRequest } from "../lib/session";
-import { isSuperadmin, superadminRecipients } from "../lib/roles";
-import {
-  sendListingApproved,
-  sendListingPendingReview,
-  sendListingPurchased,
-  sendListingRejected,
-  sendOutbid,
-} from "../lib/email";
+import { isSuperadmin } from "../lib/roles";
+import { sendListingPurchased, sendOutbid } from "../lib/email";
 import {
   serializeActivation,
   serializeAuction,
@@ -21,10 +15,16 @@ import {
 import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dailyProject";
 import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
-import { assertListingStillOpen, verifyListingOnChain } from "../lib/listingChain";
+import { verifyListingOnChain } from "../lib/listingChain";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
-import { findListingToken, listingToken } from "../lib/tokens";
-import { getTokenPrices } from "../lib/tokenPrices";
+import {
+  findListingToken,
+  imitatesKnownToken,
+  listingToken,
+  priceDecimals,
+  resolveListingToken,
+} from "../lib/tokens";
+import { getTokenPrices, getTokenUsdPrice } from "../lib/tokenPrices";
 
 /** Prices are entered to the cent; anything past that is a client bug, not a price. */
 const MAX_PRICE = 1e15;
@@ -36,20 +36,6 @@ function validPrice(price: number) {
     Math.abs(Math.round(price * 100) - price * 100) < 1e-6
   );
 }
-
-/**
- * Categories a new listing may be filed under. VIDEO_INTEGRATION, PODCAST, AMA,
- * COLLAB and OTHER were retired from the picker; they stay in the Prisma enum
- * because older listings still carry them.
- */
-const CATEGORIES = [
-  "SHOUTOUT",
-  "SPONSORED_POST",
-  "DEDICATED_VIDEO",
-  "LIVESTREAM",
-  "NEWSLETTER",
-  "CONSULTING",
-] as const;
 
 /**
  * The project a bidder is pitching. Only the name is required — description,
@@ -262,84 +248,14 @@ async function ensureCreatorProfile(userId: string) {
   });
 }
 
-/** How a seller is named in the review queue and the admin's email. */
-function sellerName(user: {
-  username: string | null;
-  wallets: Array<{ address: string; isPrimary: boolean }>;
-  socials: Array<{ displayName: string | null; username: string | null }>;
-}) {
-  const social = user.socials.find((s) => s.displayName || s.username);
-  const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
-  return (
-    (user.username ? `@${user.username}` : null) ||
-    social?.displayName ||
-    (social?.username ? `@${social.username}` : null) ||
-    (wallet ? shortWallet(wallet.address) : "A seller")
-  );
-}
-
-/**
- * Loads a listing for an admin decision. Only a listing actually waiting in the
- * queue can be approved or rejected, so a double-click cannot un-reject one.
- */
-async function requireReviewableListing(
-  request: Request,
-  listingId: string,
-  set: { status?: number | string },
-) {
+/** Gates the moderation routes to a SUPERADMIN session. */
+async function requireAdmin(request: Request, set: { status?: number | string }) {
   const user = await getUserFromRequest(request);
-  if (!isSuperadmin(user)) {
+  if (!user || !isSuperadmin(user)) {
     set.status = 403;
-    return { error: "Only an admin can review listings" } as const;
+    return { error: "Only an admin can manage listings" } as const;
   }
-
-  const listing = await prisma.listing.findUnique({
-    where: { id: listingId },
-    include: { creator: { include: creatorInclude } },
-  });
-  if (!listing) {
-    set.status = 404;
-    return { error: "Listing not found" } as const;
-  }
-  if (listing.status !== "PENDING_REVIEW") {
-    set.status = 409;
-    return { error: "This listing is not awaiting review" } as const;
-  }
-  return listing;
-}
-
-/** Emails the seller the outcome of a review, when they can receive email. */
-async function emailReviewOutcome(
-  listing: {
-    id: string;
-    title: string;
-    status: string;
-    reviewNote: string | null;
-    creator: { userId: string };
-  },
-  approved: boolean,
-) {
-  const seller = await prisma.user.findUnique({
-    where: { id: listing.creator.userId },
-    select: { email: true, emailVerifiedAt: true },
-  });
-  if (!seller?.email || !seller.emailVerifiedAt) return;
-
-  const send = approved
-    ? sendListingApproved(seller.email, {
-        title: listing.title,
-        listingId: listing.id,
-        reviewNote: listing.reviewNote,
-        // ACTIVE means it is already live; DRAFT is a pre-sign-on-submit row
-        // that still needs the seller to publish it themselves.
-        live: listing.status === "ACTIVE",
-      })
-    : sendListingRejected(seller.email, {
-        title: listing.title,
-        reviewNote: listing.reviewNote,
-      });
-
-  await send.catch((err) => console.error("[email] listing review failed:", err));
+  return user;
 }
 
 /** Loads a listing only if the session user owns it. */
@@ -377,6 +293,43 @@ export const marketplaceRoutes = new Elysia()
   .get("/token-prices", async ({ set }) => {
     set.headers["cache-control"] = "public, max-age=30";
     return getTokenPrices();
+  })
+  /**
+   * Looks up any Robinhood Chain ERC-20 by address for the create form — what
+   * it is called, its decimals, and an indicative USD price. The form shows
+   * this before a seller prices a listing in a token they pasted.
+   */
+  .get("/tokens/:address", async ({ params, set }) => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(params.address)) {
+      set.status = 400;
+      return { error: "That is not a contract address" };
+    }
+    let token;
+    try {
+      token = await resolveListingToken(params.address);
+    } catch (err) {
+      console.error("[tokens] could not read token on-chain:", err);
+      set.status = 503;
+      return { error: "Could not reach Robinhood Chain. Try again in a moment." };
+    }
+    if (!token) {
+      set.status = 404;
+      return { error: "No ERC-20 token at that address on Robinhood Chain" };
+    }
+    if (imitatesKnownToken(token)) {
+      set.status = 422;
+      return {
+        error: `This token calls itself ${token.symbol} but is not the one the marketplace lists — it can't be used.`,
+      };
+    }
+    set.headers["cache-control"] = "public, max-age=30";
+    return {
+      token: {
+        ...token,
+        known: Boolean(findListingToken(token.address)),
+        priceUsd: await getTokenUsdPrice(token.address),
+      },
+    };
   })
   /**
    * The market's headline figures, denominated in attention rather than
@@ -807,9 +760,9 @@ export const marketplaceRoutes = new Elysia()
   /**
    * Creates a listing. It is already on-chain by the time it gets here —
    * everyone signs the AuctionHouse transaction as part of submitting, and
-   * posts the same id back with the tx fields. An admin's own listing is ACTIVE
-   * on arrival; a seller's waits in PENDING_REVIEW and goes live the moment it
-   * is approved, with nothing further for them to sign.
+   * posts the same id back with the tx fields. Every listing is ACTIVE on
+   * arrival; there is no review step, and an admin removes anything offensive
+   * afterwards from `/admin/listings`.
    */
   .post(
     "/listings",
@@ -819,7 +772,6 @@ export const marketplaceRoutes = new Elysia()
         set.status = 401;
         return { error: "Not authenticated" };
       }
-      const admin = isSuperadmin(user);
 
       if (!(body.txHash && body.chainId && body.contractAddress)) {
         set.status = 400;
@@ -836,11 +788,33 @@ export const marketplaceRoutes = new Elysia()
         return { error: "Price must be above zero, with at most two decimal places" };
       }
       // The seller's choice of token is the listing's for life: every bid and
-      // purchase is paid in it, so it has to be one the contract accepts.
-      const token = findListingToken(body.tokenAddress);
+      // purchase is paid in it. USDG, LNOC or any ERC-20 entered by address —
+      // read from the chain, so the symbol and decimals saved are the token's
+      // own rather than whatever the client sent.
+      let token;
+      try {
+        token = await resolveListingToken(body.tokenAddress);
+      } catch (err) {
+        console.error("[listing] could not read token on-chain:", err);
+        set.status = 503;
+        return { error: "Could not reach Robinhood Chain to read the token. Try again." };
+      }
       if (!token) {
         set.status = 400;
-        return { error: "Price the listing in USDG or LNOC" };
+        return { error: "Price the listing in USDG, LNOC or an ERC-20 token on Robinhood Chain" };
+      }
+      if (imitatesKnownToken(token)) {
+        set.status = 400;
+        return { error: `That token imitates ${token.symbol} and can't be used.` };
+      }
+      const places = priceDecimals(token);
+      if (Math.abs(Math.round(body.price * 10 ** places) - body.price * 10 ** places) > 1e-6) {
+        set.status = 400;
+        return {
+          error: places === 0
+            ? `${token.symbol} has no decimals — use a whole-number price.`
+            : `${token.symbol} only allows ${places} decimal place${places === 1 ? "" : "s"}.`,
+        };
       }
       const posterUrl = body.posterUrl?.trim() || null;
       if (posterUrl && !isOwnPosterUrl(posterUrl, user.id)) {
@@ -855,9 +829,8 @@ export const marketplaceRoutes = new Elysia()
       }
 
       // The chain is the proof the listing exists, not the hash the client
-      // sends. Approval is the only thing left between a seller's row and a
-      // live listing, so a submission that only claims to be on-chain has to
-      // fail here rather than reach an admin looking publishable.
+      // sends. The row goes live the moment it is saved, so a submission that
+      // only claims to be on-chain has to fail here.
       const onchain = await verifyListingOnChain({
         id: body.id,
         price: body.price,
@@ -880,7 +853,8 @@ export const marketplaceRoutes = new Elysia()
           id: body.id,
           title: body.title.trim(),
           description: body.description?.trim() || null,
-          category: body.category,
+          // No category picker any more — new rows take the schema's OTHER,
+          // which every listing surface already renders without a label.
           pricingType: body.pricingType,
           price: body.price,
           currency: token.symbol,
@@ -890,36 +864,17 @@ export const marketplaceRoutes = new Elysia()
           slotsAvailable: body.pricingType === "AUCTION" ? 1 : (body.slotsAvailable ?? 1),
           posterUrl,
           endDate,
-          status: admin ? "ACTIVE" : "PENDING_REVIEW",
+          status: "ACTIVE",
           txHash: body.txHash,
           chainId: body.chainId,
           contractAddress: body.contractAddress,
           tokenAddress: token.address,
           tokenName: token.symbol,
+          tokenDecimals: token.decimals,
           creatorId: creator.id,
         },
         include: { creator: { include: creatorInclude } },
       });
-
-      if (!admin) {
-        const recipients = await superadminRecipients();
-        await Promise.all(
-          recipients.map((to) =>
-            sendListingPendingReview(to, {
-              title: listing.title,
-              seller: sellerName(user),
-              category: listing.category,
-              pricingType: listing.pricingType,
-              price: listing.price,
-              currency: listing.currency,
-              description: listing.description,
-              // The seller's clock is already running, so the queue email says
-              // how long an approval still has to land in.
-              closesAt: listing.endDate,
-            }).catch((err) => console.error("[email] listing-pending failed:", err)),
-          ),
-        );
-      }
 
       return { listing: serializeListing(listing) };
     },
@@ -928,7 +883,6 @@ export const marketplaceRoutes = new Elysia()
         id: t.String({ minLength: 1, maxLength: 80 }),
         title: t.String({ minLength: 2, maxLength: 120 }),
         description: t.Optional(t.String({ maxLength: 2000 })),
-        category: t.Union(CATEGORIES.map((c) => t.Literal(c))),
         pricingType: t.Union([t.Literal("FIXED"), t.Literal("AUCTION")]),
         price: t.Number(),
         currency: t.Optional(t.String({ maxLength: 16 })),
@@ -959,85 +913,68 @@ export const marketplaceRoutes = new Elysia()
       }),
     },
   )
-  /** The review queue — everything waiting on an admin decision, oldest first. */
+  /**
+   * Moderation view — every live seller listing, newest first, with its bid
+   * count so the panel can say up front which ones can still be removed. The
+   * daily auction is the admin's own and has its own lifecycle, so it is left
+   * out.
+   */
   .get("/admin/listings", async ({ request, set }) => {
-    const user = await getUserFromRequest(request);
-    if (!isSuperadmin(user)) {
-      set.status = 403;
-      return { error: "Only an admin can review listings" };
-    }
+    const admin = await requireAdmin(request, set);
+    if ("error" in admin) return admin;
 
     const listings = await prisma.listing.findMany({
-      where: { status: "PENDING_REVIEW" },
-      orderBy: { createdAt: "asc" },
-      include: { creator: { include: creatorInclude } },
+      where: { isDaily: false, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+      include: {
+        creator: { include: creatorInclude },
+        _count: { select: { bids: true } },
+      },
     });
 
-    return { listings: listings.map(serializeListing) };
+    return {
+      listings: listings.map((listing) => ({
+        ...serializeListing(listing),
+        bidCount: listing._count.bids,
+      })),
+    };
   })
   /**
-   * Publishes a listing. The seller signed the AuctionHouse transaction when
-   * they submitted, so approving is all that is left — the row goes ACTIVE and
-   * is buyable immediately, with nothing for the seller to come back and do.
+   * Deletes an offensive listing outright. Refused once anyone has bid: those
+   * bidders have funds escrowed against it on-chain, and the row is what lets
+   * the auction settle and refund them.
    *
-   * A row from before sellers signed at submission has no chain wiring, so it
-   * still lands in DRAFT and waits for the seller's `/activate`.
+   * Only the marketplace row goes — the AuctionHouse has no admin cancel, so
+   * the on-chain entry lapses at its own deadline.
    */
-  .post(
-    "/listings/:id/approve",
-    async ({ params, body, request, set }) => {
-      const listing = await requireReviewableListing(request, params.id, set);
-      if ("error" in listing) return listing;
+  .delete("/admin/listings/:id", async ({ params, request, set }) => {
+    const admin = await requireAdmin(request, set);
+    if ("error" in admin) return admin;
 
-      const signed = Boolean(listing.txHash && listing.chainId && listing.contractAddress);
+    const listing = await prisma.listing.findUnique({
+      where: { id: params.id },
+      select: { isDaily: true },
+    });
+    if (!listing) {
+      set.status = 404;
+      return { error: "Listing not found" };
+    }
+    if (listing.isDaily) {
+      set.status = 409;
+      return { error: "The daily auction cannot be deleted from here" };
+    }
 
-      // Approval is what makes the listing buyable, so check the chain still
-      // agrees it can be: review may have outlasted the seller's own end date,
-      // and a fixed-price listing can be bought straight off the contract.
-      if (signed) {
-        const open = await assertListingStillOpen(listing);
-        if (!open.ok) {
-          set.status = open.status;
-          return { error: open.error };
-        }
-      }
-
-      const updated = await prisma.listing.update({
-        where: { id: params.id },
-        data: {
-          status: signed ? "ACTIVE" : "DRAFT",
-          reviewedAt: new Date(),
-          reviewNote: body?.note?.trim() || null,
-        },
-        include: { creator: { include: creatorInclude } },
-      });
-
-      await emailReviewOutcome(updated, true);
-      return { listing: serializeListing(updated) };
-    },
-    { body: t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 600 })) })) },
-  )
-  .post(
-    "/listings/:id/reject",
-    async ({ params, body, request, set }) => {
-      const listing = await requireReviewableListing(request, params.id, set);
-      if ("error" in listing) return listing;
-
-      const updated = await prisma.listing.update({
-        where: { id: params.id },
-        data: {
-          status: "REJECTED",
-          reviewedAt: new Date(),
-          reviewNote: body?.note?.trim() || null,
-        },
-        include: { creator: { include: creatorInclude } },
-      });
-
-      await emailReviewOutcome(updated, false);
-      return { listing: serializeListing(updated) };
-    },
-    { body: t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 600 })) })) },
-  )
+    // The no-bids condition sits in the delete itself, so a bid recorded
+    // between the panel loading and this request still blocks it.
+    const { count } = await prisma.listing.deleteMany({
+      where: { id: params.id, bids: { none: {} } },
+    });
+    if (count === 0) {
+      set.status = 409;
+      return { error: "This listing has bids, so it cannot be deleted" };
+    }
+    return { ok: true };
+  })
   /**
    * Publishes an approved listing once its AuctionHouse transaction confirms.
    * The seller signs this themselves, so it is owner-gated rather than
