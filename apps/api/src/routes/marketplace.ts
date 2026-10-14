@@ -16,6 +16,7 @@ import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dai
 import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
+import { getRecentSales } from "../lib/profileHistory";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
 import {
   findListingToken,
@@ -613,6 +614,14 @@ export const marketplaceRoutes = new Elysia()
       .slice(0, limit);
 
     return { leaders };
+  })
+  /**
+   * Recently sold — the latest purchases and won auctions with both sides of
+   * each sale, for the home page. Public, so no chat handles are included.
+   */
+  .get("/listings/recent-sales", async ({ query }) => {
+    const limit = Math.min(Math.max(Number(query.limit) || 5, 1), 20);
+    return { sales: await getRecentSales(limit) };
   })
   /** Past Winners — every settled daily auction that put a project on the billboard. */
   .get("/listings/daily/winners", async ({ query }) => {

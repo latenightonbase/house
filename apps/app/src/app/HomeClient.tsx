@@ -12,8 +12,8 @@ import {
   type AuctionState,
   type Spotlight,
 } from "@/lib/dailyAuction";
-import { HOME_LISTING_LIMIT, type HomePageData } from "@/lib/home-data";
-import { fetchListings, type Listing } from "@/lib/marketplace";
+import { HOME_LISTING_LIMIT, HOME_RECENT_SALES_LIMIT, type HomePageData } from "@/lib/home-data";
+import { fetchListings, fetchRecentSales, type Listing, type RecentSale } from "@/lib/marketplace";
 import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysAttention";
 import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
 import { WinnerBenefits } from "@/components/home/WinnerBenefits";
@@ -21,6 +21,7 @@ import { AuctionEmpty } from "@/components/home/AuctionEmpty";
 import { HomeIntro } from "@/components/home/HomeIntro";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { ClosingSoonPanel } from "@/components/home/ClosingSoonPanel";
+import { RecentSalesPanel } from "@/components/home/RecentSalesPanel";
 const BidDialog = dynamic(
   () => import("@/components/home/BidDialog").then((m) => ({ default: m.BidDialog })),
   { ssr: false },
@@ -73,6 +74,7 @@ export default function HomeClient({
   auction: initialAuction,
   spotlight: initialSpotlight,
   listings: initialListings,
+  recentSales: initialRecentSales,
 }: HomePageData) {
   const { status, user } = useSession();
   const openConnect = useOpenConnect();
@@ -81,6 +83,7 @@ export default function HomeClient({
   const [listing, setListing] = useState<Listing | null>(initialListing);
   const [auction, setAuction] = useState<AuctionState | null>(initialAuction);
   const [listings, setListings] = useState<Listing[]>(initialListings);
+  const [recentSales, setRecentSales] = useState<RecentSale[]>(initialRecentSales);
   const [bidOpen, setBidOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   // The listing outlives `checkoutOpen` so the sheet keeps its content while it
@@ -89,16 +92,18 @@ export default function HomeClient({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const [daily, current, market] = await Promise.all([
+    const [daily, current, market, sales] = await Promise.all([
       fetchDailyAuction().catch(() => ({ listing: null, auction: null })),
       fetchSpotlight().catch(() => null),
       fetchListings({ limit: HOME_LISTING_LIMIT }).catch(() => null),
+      fetchRecentSales(HOME_RECENT_SALES_LIMIT).catch(() => null),
     ]);
     setListing(daily.listing);
     setAuction(daily.auction);
     setSpotlight(current);
     /** A failed refresh keeps the last good feed rather than emptying the market. */
     if (market) setListings(market);
+    if (sales) setRecentSales(sales);
   }, []);
 
   useEffect(() => {
@@ -181,6 +186,8 @@ export default function HomeClient({
           <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
         </div>
       </div>
+
+      <RecentSalesPanel sales={recentSales} />
 
       <WinnerBenefits />
 

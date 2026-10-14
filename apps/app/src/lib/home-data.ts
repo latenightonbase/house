@@ -1,11 +1,14 @@
 import { getApiOrigin } from "@/lib/api-origin";
 import type { AuctionState, Spotlight } from "@/lib/dailyAuction";
-import type { Listing } from "@/lib/marketplace";
+import type { Listing, RecentSale } from "@/lib/marketplace";
 
 const REVALIDATE_SECONDS = 20;
 
 /** How much seller inventory the home page ships in its first paint. */
 export const HOME_LISTING_LIMIT = 24;
+
+/** How many sales the home page's recently-sold strip shows. */
+export const HOME_RECENT_SALES_LIMIT = 5;
 
 /** The marketplace page shows the whole book — this is the API's own ceiling. */
 export const MARKETPLACE_LISTING_LIMIT = 100;
@@ -16,6 +19,8 @@ export type HomePageData = {
   spotlight: Spotlight | null;
   /** Seller inventory — the daily auction is filtered out by the API. */
   listings: Listing[];
+  /** Latest purchases and won auctions, with both parties. */
+  recentSales: RecentSale[];
 };
 
 async function getJson<T>(path: string): Promise<T | null> {
@@ -33,10 +38,11 @@ async function getJson<T>(path: string): Promise<T | null> {
 
 /** Public homepage payload — cached briefly so artwork URLs land in the HTML. */
 export async function loadHomePageData(): Promise<HomePageData> {
-  const [daily, spotlightPayload, listingsPayload] = await Promise.all([
+  const [daily, spotlightPayload, listingsPayload, salesPayload] = await Promise.all([
     getJson<{ listing: Listing | null; auction: AuctionState | null }>("/listings/daily"),
     getJson<{ spotlight: Spotlight | null }>("/listings/daily/spotlight"),
     getJson<{ listings: Listing[] }>(`/listings?limit=${HOME_LISTING_LIMIT}`),
+    getJson<{ sales: RecentSale[] }>(`/listings/recent-sales?limit=${HOME_RECENT_SALES_LIMIT}`),
   ]);
 
   return {
@@ -44,6 +50,7 @@ export async function loadHomePageData(): Promise<HomePageData> {
     auction: daily?.auction ?? null,
     spotlight: spotlightPayload?.spotlight ?? null,
     listings: listingsPayload?.listings ?? [],
+    recentSales: salesPayload?.sales ?? [],
   };
 }
 

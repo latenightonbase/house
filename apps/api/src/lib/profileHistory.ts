@@ -306,3 +306,95 @@ export async function resolveUserId(handle: string): Promise<string | null> {
   });
   return byUsername?.id ?? null;
 }
+
+export type RecentSale = {
+  listingId: string;
+  title: string;
+  posterUrl: string | null;
+  pricingType: "FIXED" | "AUCTION";
+  isDaily: boolean;
+  via: "PURCHASE" | "AUCTION_WIN";
+  amount: number;
+  currency: string;
+  /** The listing's token symbol when it was priced in one; `currency` otherwise. */
+  tokenName: string | null;
+  at: string;
+  seller: Omit<PartyIdentity, "userId">;
+  buyer: Omit<PartyIdentity, "userId">;
+};
+
+/** Public feed, so the chat handle comes off — the visible identity stays. */
+function publicParty({ userId: _userId, ...rest }: PartyIdentity) {
+  return rest;
+}
+
+/**
+ * The home page's "recently sold" feed: fixed-price purchases and settled
+ * auctions with a winner, merged and newest first. A multi-slot listing sells
+ * once per slot, so it can appear more than once — each row is a sale, not a
+ * listing. Auctions that closed with no bids settle to CANCELLED without a
+ * winner and are left out.
+ */
+export async function getRecentSales(limit: number): Promise<RecentSale[]> {
+  const sellerInclude = {
+    creator: { include: { user: { include: identityInclude } } },
+  } as const;
+
+  const [purchases, wins] = await Promise.all([
+    prisma.purchase.findMany({
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: {
+        buyer: { include: identityInclude },
+        listing: { include: sellerInclude },
+      },
+    }),
+    prisma.listing.findMany({
+      where: { pricingType: "AUCTION", settledAt: { not: null }, winnerWallet: { not: null } },
+      orderBy: { settledAt: "desc" },
+      take: limit,
+      include: { ...sellerInclude, bids: { orderBy: { amount: "desc" }, take: 1 } },
+    }),
+  ]);
+
+  const winners = await identitiesByWallet(wins.map((l) => l.winnerWallet!));
+
+  const seller = (creator: (typeof wins)[number]["creator"]) => {
+    const identity = toIdentity(creator.user);
+    return publicParty({ ...identity, avatarUrl: identity.avatarUrl ?? creator.avatarUrl });
+  };
+
+  const fromPurchases: RecentSale[] = purchases.map((purchase) => ({
+    listingId: purchase.listingId,
+    title: purchase.listing.title,
+    posterUrl: purchase.listing.posterUrl,
+    pricingType: purchase.listing.pricingType,
+    isDaily: purchase.listing.isDaily,
+    via: "PURCHASE",
+    amount: purchase.amount,
+    currency: purchase.currency,
+    tokenName: purchase.listing.tokenName,
+    at: purchase.createdAt.toISOString(),
+    seller: seller(purchase.listing.creator),
+    buyer: publicParty(toIdentity(purchase.buyer, purchase.buyerWallet)),
+  }));
+
+  const fromWins: RecentSale[] = wins.map((listing) => ({
+    listingId: listing.id,
+    title: listing.title,
+    posterUrl: listing.posterUrl,
+    pricingType: listing.pricingType,
+    isDaily: listing.isDaily,
+    via: "AUCTION_WIN",
+    amount: listing.bids[0]?.amount ?? listing.price,
+    currency: listing.currency,
+    tokenName: listing.tokenName,
+    at: (listing.settledAt ?? listing.updatedAt).toISOString(),
+    seller: seller(listing.creator),
+    buyer: publicParty(
+      winners.get(listing.winnerWallet!.toLowerCase()) ?? toIdentity(null, listing.winnerWallet),
+    ),
+  }));
+
+  return [...fromPurchases, ...fromWins].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+}

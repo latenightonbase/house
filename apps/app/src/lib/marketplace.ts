@@ -287,6 +287,35 @@ export async function fetchListings(
   return data.listings;
 }
 
+/** One side of a sale on the home page's recently-sold feed. */
+export interface SaleParty {
+  wallet: string | null;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+}
+
+/** A purchase or a won auction — one row per sale, newest first. */
+export interface RecentSale {
+  listingId: string;
+  title: string;
+  posterUrl: string | null;
+  pricingType: PricingType;
+  isDaily: boolean;
+  via: "PURCHASE" | "AUCTION_WIN";
+  amount: number;
+  currency: string;
+  tokenName: string | null;
+  at: string;
+  seller: SaleParty;
+  buyer: SaleParty;
+}
+
+export async function fetchRecentSales(limit = 5): Promise<RecentSale[]> {
+  const data = await getJson<{ sales: RecentSale[] }>(`/backend/listings/recent-sales?limit=${limit}`);
+  return data.sales;
+}
+
 export async function fetchListing(id: string): Promise<Listing> {
   const data = await getJson<{ listing: Listing }>(`/backend/listings/${id}`);
   return data.listing;
