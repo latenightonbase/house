@@ -1,6 +1,7 @@
 import {
   createPublicClient,
   createWalletClient,
+  fallback,
   getAddress,
   http,
   type Hex,
@@ -176,8 +177,21 @@ export function feeRecipient(): `0x${string}` | null {
   return getAddress(raw) as `0x${string}`;
 }
 
+const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
+
 export function operatorRpc() {
-  return process.env.ROBINHOOD_RPC_URL || "https://rpc.mainnet.chain.robinhood.com";
+  return process.env.ROBINHOOD_RPC_URL || PUBLIC_RPC;
+}
+
+/**
+ * The configured RPC, then Robinhood's public one. A metered provider that runs
+ * out of capacity answers 429 to everything — listing checks, settlement, token
+ * lookups — so a single endpoint would take the whole chain side down with it.
+ */
+function rpcTransport() {
+  const primary = operatorRpc();
+  if (primary === PUBLIC_RPC) return http(PUBLIC_RPC);
+  return fallback([http(primary, { retryCount: 1 }), http(PUBLIC_RPC)]);
 }
 
 export function operatorAccount() {
@@ -194,7 +208,7 @@ export function operatorAccount() {
 export function publicClient() {
   return createPublicClient({
     chain: robinhood,
-    transport: http(operatorRpc()),
+    transport: rpcTransport(),
   });
 }
 
@@ -204,7 +218,7 @@ export function walletClient() {
   return createWalletClient({
     account,
     chain: robinhood,
-    transport: http(operatorRpc()),
+    transport: rpcTransport(),
   });
 }
 
