@@ -54,7 +54,7 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
       title="Buy and sell"
       titleAccent="attention"
       intro="Every live placement on LNOC in one place — bid on auctions or buy outright from creators with an audience to offer."
-      action={<CreateListingButton size="sm" label="List your attention" />}
+      action={<CreateListingButton size="sm" label="List your item" />}
     >
       <MarketplacePanel
         listings={listings}

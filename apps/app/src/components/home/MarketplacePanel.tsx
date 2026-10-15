@@ -146,7 +146,7 @@ function MarketEmpty() {
         and it shows up here the moment you sign for it.
       </p>
       <div className="mt-4 flex justify-center">
-        <CreateListingButton variant="accent-outline" size="sm" label="List your attention" />
+        <CreateListingButton variant="accent-outline" size="sm" label="List your item" />
       </div>
     </div>
   );
@@ -176,7 +176,7 @@ function ListYoursTile({ className }: { className: string }) {
         variant="accent-outline"
         size="sm"
         className="mt-4"
-        label="List your attention"
+        label="List your item"
       />
     </div>
   );

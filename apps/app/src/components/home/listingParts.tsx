@@ -1,4 +1,4 @@
-import { BadgeCheck, Clock, Gavel } from "lucide-react";
+import { BadgeCheck, Clock, Gavel, Zap } from "lucide-react";
 import { BrandAvatar, PlatformIcon } from "@/components/ui";
 import type { Countdown } from "@/lib/useCountdown";
 import { categoryMeta } from "@/lib/listingCategories";
@@ -112,14 +112,17 @@ export function ActionPill({ listing, className }: { listing: Listing; className
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2.5 text-[11px] font-semibold transition-colors",
+        "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-[filter]",
+        // Same gradient as the daily auction's Place bid, so a listing's buy
+        // button pulls the eye as hard as the marquee does.
         price.soldOut
-          ? "border-line bg-white/[0.03] text-caption"
-          : "border-primary/45 bg-primary/12 text-white group-hover:border-primary/70 group-hover:bg-primary/25",
+          ? "border border-line bg-white/[0.03] text-caption"
+          : "gradient-button text-white group-hover:brightness-110",
         className,
       )}
     >
-      {isAuction && <Gavel className="h-3 w-3" />}
+      {!price.soldOut &&
+        (isAuction ? <Gavel className="h-3.5 w-3.5" /> : <Zap className="h-3.5 w-3.5" />)}
       {price.cta}
     </span>
   );

@@ -505,7 +505,15 @@ export default function NewListingPage() {
 
     if (pendingPersist) {
       try {
-        await persistListing(pendingPersist);
+        // Only the on-chain half of the saved payload is fixed. The poster,
+        // title and description are read fresh, so a poster re-uploaded after
+        // the API refused the first one is the one that gets sent.
+        await persistListing({
+          ...pendingPersist,
+          title,
+          description: description.trim() || undefined,
+          posterUrl: posterUrl ?? undefined,
+        });
       } catch (err) {
         setError(
           err instanceof Error

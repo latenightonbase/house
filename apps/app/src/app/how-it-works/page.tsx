@@ -23,7 +23,7 @@ const STEPS = [
   {
     icon: Trophy,
     title: "Take the billboard",
-    body: "The winning project goes live on the homepage for a full 24 hours, plus a Late Night spotlight on the show.",
+    body: "The winning project goes live on the homepage for a full 24 hours, with promotion across LNOC's social channels.",
   },
   {
     icon: Repeat,

@@ -1,11 +1,9 @@
-import { Mic, Megaphone, MonitorPlay, Clapperboard } from "lucide-react";
+import { Megaphone, MonitorPlay } from "lucide-react";
 import { WINNER_BENEFITS } from "@/lib/constants";
 
 const ICONS = {
-  mic: Mic,
   screen: MonitorPlay,
   megaphone: Megaphone,
-  clips: Clapperboard,
 } as const;
 
 /**
@@ -20,7 +18,7 @@ export function WinnerBenefits() {
       <p className="mb-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-light max-sm:hidden">
         The winner gets
       </p>
-      <ul className="scrollbar-none flex min-w-0 gap-4 overflow-x-auto sm:grid sm:grid-cols-2 sm:gap-x-5 sm:gap-y-2.5 lg:grid-cols-4">
+      <ul className="scrollbar-none flex min-w-0 gap-4 overflow-x-auto sm:grid sm:grid-cols-2 sm:gap-x-5 sm:gap-y-2.5">
         {WINNER_BENEFITS.map((benefit) => {
           const Icon = ICONS[benefit.icon];
           return (

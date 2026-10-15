@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Megaphone, Wallet } from "lucide-react";
+import { ShoppingBag, Tag } from "lucide-react";
 import { HOME_INTRO } from "@/lib/constants";
 
 const ICONS = {
-  buy: Megaphone,
-  monetize: Wallet,
+  buy: ShoppingBag,
+  monetize: Tag,
 } as const;
 
 /**
@@ -18,8 +18,7 @@ export function HomeIntro() {
   return (
     <section className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5 sm:gap-y-4">
       <h1 className="display text-[26px] leading-[1.08] tracking-[-0.03em] text-white sm:text-[clamp(1.75rem,5vw,2.75rem)] sm:uppercase sm:leading-[0.95]">
-        The internet marketplace <br className="sm:hidden" />
-        for <span className="text-primary-bright">attention</span>
+        Onchain <span className="text-primary-bright">eBay</span>
       </h1>
 
       {/* Beside the headline when the row has room for both; under it otherwise. */}

@@ -84,18 +84,16 @@ export const FOOTER_LINKS = [
 
 /** What the winning bidder receives — rendered as the strip under the auction. */
 export const WINNER_BENEFITS = [
-  { icon: "mic", label: "30-Minute Appearance on Late Night" },
   { icon: "screen", label: "24-Hour Homepage Takeover" },
   { icon: "megaphone", label: "Social Promotion Across LNOC Channels" },
-  { icon: "clips", label: "2–3 Short-Form Clips From Appearance" },
 ] as const;
 
 /** The home page's opening pitch — what LNOC is, before any numbers. */
 export const HOME_INTRO = {
-  title: "The internet marketplace for attention",
+  title: "Onchain eBay",
   pillars: [
-    { icon: "buy", label: "Buy attention", href: "/marketplace" },
-    { icon: "monetize", label: "Monetize attention", href: "/listings/new" },
+    { icon: "buy", label: "Buy items", href: "/marketplace" },
+    { icon: "monetize", label: "Sell items", href: "/listings/new" },
   ],
 } as const;
 

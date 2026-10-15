@@ -138,7 +138,7 @@ export function LiveAuctionPanel({
 
       {/* Dropped on phones, where the panel has to clear the fold under the billboard. */}
       <p className="mt-2 text-[12px] leading-relaxed text-caption max-sm:hidden">
-        Win the next 24-hour billboard + Late Night spotlight on the show.
+        Win the next 24-hour homepage takeover + social promotion across LNOC channels.
       </p>
 
       {/* Bid and clock share a line so the panel finishes near the billboard's

@@ -118,7 +118,7 @@ export function ListingCard({
               <span>{price.note}</span>
             </span>
           </span>
-          <ActionPill listing={listing} className="h-8 px-3" />
+          <ActionPill listing={listing} className="h-9 px-3.5" />
         </span>
       </span>
     </>

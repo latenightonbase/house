@@ -831,6 +831,7 @@ export const marketplaceRoutes = new Elysia()
       }
       const posterUrl = body.posterUrl?.trim() || null;
       if (posterUrl && !isOwnPosterUrl(posterUrl, user.id)) {
+        console.warn(`[listing] refused poster for user ${user.id}: ${posterUrl}`);
         set.status = 400;
         return { error: "Upload the poster again — that image link was not accepted" };
       }
