@@ -7,7 +7,8 @@ import { BrandAvatar, Card } from "@/components/ui";
 import { SocialIcon } from "@/components/nav/SocialIcons";
 import { billboardPlaceholder } from "@/lib/brandMark";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
-import type { ListingBidder } from "@/lib/marketplace";
+import type { Listing, ListingBidder } from "@/lib/marketplace";
+import { formatListingAmount } from "@/lib/tokenPrices";
 import { shortAddress, walletFallbackAvatar } from "@/lib/utils";
 
 function href(url: string) {
@@ -28,7 +29,7 @@ function twitterHandle(url: string) {
   return url.startsWith("@") ? url : `@${url.replace(/^https?:\/\//, "")}`;
 }
 
-function BidderCard({ bidder }: { bidder: ListingBidder }) {
+function BidderCard({ listing, bidder }: { listing: Listing; bidder: ListingBidder }) {
   const [artFailed, setArtFailed] = useState(false);
   const project = bidder.project;
   const projectName = project?.name ?? bidder.name;
@@ -71,7 +72,7 @@ function BidderCard({ bidder }: { bidder: ListingBidder }) {
             <div className="text-right shrink-0">
               <p className="panel-label">Bid</p>
               <p className="mt-0.5 text-[18px] font-bold text-primary-bright numeric">
-                ${bidder.amount.toLocaleString()}
+                {formatListingAmount(listing, bidder.amount)}
               </p>
             </div>
           </div>
@@ -141,9 +142,12 @@ function BidderCard({ bidder }: { bidder: ListingBidder }) {
 }
 
 export function AuctionBidders({
+  listing,
   bidders,
   loading,
 }: {
+  /** Bids are in the listing's own token, not dollars. */
+  listing: Listing;
   bidders: ListingBidder[] | null;
   loading?: boolean;
 }) {
@@ -183,7 +187,7 @@ export function AuctionBidders({
       </div>
       <div className="space-y-3">
         {bidders.map((bidder) => (
-          <BidderCard key={bidder.wallet} bidder={bidder} />
+          <BidderCard key={bidder.wallet} listing={listing} bidder={bidder} />
         ))}
       </div>
     </section>

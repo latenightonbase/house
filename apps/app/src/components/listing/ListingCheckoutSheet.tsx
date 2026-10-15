@@ -365,7 +365,7 @@ function SheetBody({
             </button>
             {detailsOpen && (
               <div id={detailsId} className="border-t border-line px-3.5">
-                <BidHistory bidders={bidders} />
+                <BidHistory listing={listing} bidders={bidders} />
               </div>
             )}
           </div>

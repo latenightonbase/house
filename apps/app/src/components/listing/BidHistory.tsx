@@ -2,7 +2,8 @@
 
 import { Trophy } from "lucide-react";
 import { BrandAvatar } from "@/components/ui";
-import type { ListingBidder } from "@/lib/marketplace";
+import type { Listing, ListingBidder } from "@/lib/marketplace";
+import { formatListingAmount } from "@/lib/tokenPrices";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
 
 function timeAgo(iso: string) {
@@ -19,7 +20,13 @@ function timeAgo(iso: string) {
  * page has the full project cards; here a bidder only needs to see who they are
  * up against and by how much.
  */
-export function BidHistory({ bidders }: { bidders: ListingBidder[] | null }) {
+export function BidHistory({
+  listing,
+  bidders,
+}: {
+  listing: Listing;
+  bidders: ListingBidder[] | null;
+}) {
   if (bidders === null) {
     return (
       <div className="space-y-2" aria-busy="true">
@@ -77,7 +84,7 @@ export function BidHistory({ bidders }: { bidders: ListingBidder[] | null }) {
               bidder.leading ? "text-primary-bright" : "text-white",
             )}
           >
-            ${bidder.amount.toLocaleString()}
+            {formatListingAmount(listing, bidder.amount)}
           </p>
         </li>
       ))}

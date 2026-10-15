@@ -7,6 +7,7 @@ import { NavigationProgress } from "@/components/NavigationProgress";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Footer } from "@/components/nav/Footer";
+import { WinAlert } from "@/components/WinAlert";
 import { SITE, SOCIAL_LINKS } from "@/lib/constants";
 
 function siteUrl() {
@@ -93,6 +94,7 @@ export default function RootLayout({
           <MobileNav />
           <main className="min-w-0 lg:pl-[var(--sidebar-width)] max-lg:pt-[var(--mobile-header-offset)]">
             <div className="min-w-0 w-full mx-auto max-w-[1560px] lg:px-8 lg:py-8 max-lg:px-4 max-lg:py-4 max-lg:pb-10">
+              <WinAlert />
               {children}
               <Footer />
             </div>

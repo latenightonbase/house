@@ -15,11 +15,23 @@ import { fetchMyProfileOverview, type ProfileOverview } from "@/lib/profileHisto
 
 type Tab = "sales" | "purchases" | "listings";
 
-const TABS: TabItem<Tab>[] = [
-  { value: "sales", label: "Sold" },
-  { value: "purchases", label: "Bought" },
-  { value: "listings", label: "Listings" },
-];
+/** Counts on the history tabs, so a win under "Bought" is visible from "Sold". */
+function tabsFor(overview: ProfileOverview | null): TabItem<Tab>[] {
+  const counted = (label: string, count: number | undefined) =>
+    count ? (
+      <span className="inline-flex items-center gap-1.5">
+        {label}
+        <span className="numeric text-[11px] font-semibold opacity-60">{count}</span>
+      </span>
+    ) : (
+      label
+    );
+  return [
+    { value: "sales", label: counted("Sold", overview?.sales.length) },
+    { value: "purchases", label: counted("Bought", overview?.purchases.length) },
+    { value: "listings", label: "Listings" },
+  ];
+}
 
 /**
  * The signed-in user's own profile. Everything here is the private view: the
@@ -108,7 +120,7 @@ export default function ProfileClient() {
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <h2 className="panel-label text-primary-light">History</h2>
           <div className="sm:ml-auto">
-            <Tabs items={TABS} value={tab} onChange={setTab} />
+            <Tabs items={tabsFor(overview)} value={tab} onChange={setTab} />
           </div>
         </header>
 

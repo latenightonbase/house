@@ -7,6 +7,7 @@ import { useOpenConnect } from "@/components/connect-intent";
 import { BadgeCheck, CheckCircle2, Clock, Gavel } from "lucide-react";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
+import { AuctionResult } from "@/components/listing/AuctionResult";
 import { CheckoutFields } from "@/components/listing/CheckoutFields";
 import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
@@ -303,7 +304,13 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           <div className="tile min-w-0 px-3 sm:px-3.5 py-3">
             <p className="panel-label mb-1">
-              {isAuction ? (bidders?.[0] ? "Current bid" : "Minimum bid") : "Price"}
+              {isAuction
+                ? listing.status === "SOLD"
+                  ? "Winning bid"
+                  : bidders?.[0]
+                    ? "Current bid"
+                    : "Minimum bid"
+                : "Price"}
             </p>
             <p className="text-[16px] sm:text-[17px] font-bold text-white numeric truncate">
               {formatListingAmount(listing, shownPrice)}
@@ -334,7 +341,14 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
           <p className="text-[13px] text-caption">{listing.placement}</p>
         )}
 
-        {isOwner && awaitingPublish ? (
+        {isAuction && listing.status === "SOLD" && listing.winnerWallet ? (
+          <AuctionResult
+            listing={listing}
+            bidders={bidders}
+            viewerWallets={user?.wallets.map((w) => w.address.toLowerCase()) ?? []}
+            isOwner={isOwner}
+          />
+        ) : isOwner && awaitingPublish ? (
           <div className="space-y-3">
             <Tile className="border-positive/30 bg-positive/10 px-4 py-3 flex gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-positive shrink-0 mt-0.5" />
@@ -444,7 +458,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         )}
       </Card>
 
-      {isAuction ? <AuctionBidders bidders={bidders} loading={bidders === null} /> : null}
+      {isAuction ? <AuctionBidders listing={listing} bidders={bidders} loading={bidders === null} /> : null}
     </div>
   );
 }
