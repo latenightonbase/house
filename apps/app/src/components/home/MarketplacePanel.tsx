@@ -258,7 +258,7 @@ export function MarketplacePanel({
             </span>
           </p>
           <h2 className="mt-2 display text-[clamp(1.25rem,3.4vw,1.75rem)] uppercase text-white">
-            Buy attention <span className="text-primary-bright">direct</span>
+            Latest <span className="text-primary-bright">Listings</span>
           </h2>
           <p className="mt-1 text-[12px] leading-relaxed text-caption max-sm:hidden">
             Placements sold by creators, priced in USDG, LNOC or any token and settled on-chain.

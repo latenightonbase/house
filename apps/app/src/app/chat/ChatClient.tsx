@@ -225,7 +225,7 @@ export default function ChatClient() {
         </p>
       </header>
 
-      <div className="card overflow-hidden grid lg:grid-cols-[320px_1fr] h-[calc(100dvh-13rem)] min-h-[28rem]">
+      <div className="card overflow-hidden grid lg:grid-cols-[320px_1fr] h-[calc(100dvh-13rem-var(--mobile-nav-offset))] lg:h-[calc(100dvh-13rem)] min-h-[28rem]">
         {/* Rail — full width until a thread is chosen on small screens. */}
         <aside
           className={cn(

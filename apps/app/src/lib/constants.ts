@@ -90,7 +90,9 @@ export const WINNER_BENEFITS = [
 
 /** The home page's opening pitch — what LNOC is, before any numbers. */
 export const HOME_INTRO = {
-  title: "Onchain eBay",
+  title: "The Onchain Marketplace for Goods and Services",
+  /** The slice of the title drawn in the accent colour. */
+  highlight: "Onchain Marketplace",
   pillars: [
     { icon: "buy", label: "Buy items", href: "/marketplace" },
     { icon: "monetize", label: "Sell items", href: "/listings/new" },

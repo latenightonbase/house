@@ -92,7 +92,7 @@ export default function RootLayout({
           <NavigationProgress />
           <Sidebar />
           <MobileNav />
-          <main className="min-w-0 lg:pl-[var(--sidebar-width)] max-lg:pt-[var(--mobile-header-offset)]">
+          <main className="min-w-0 lg:pl-[var(--sidebar-width)] max-lg:pt-[var(--mobile-header-offset)] max-lg:pb-[var(--mobile-nav-offset)]">
             <div className="min-w-0 w-full mx-auto max-w-[1560px] lg:px-8 lg:py-8 max-lg:px-4 max-lg:py-4 max-lg:pb-10">
               <WinAlert />
               {children}

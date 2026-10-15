@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ArrowUpRight, Menu, ShieldCheck, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { ArrowUpRight, Ellipsis, Plus, ShieldCheck, UserRound } from "lucide-react";
 import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
-import { CreateListingButton } from "@/components/CreateListingButton";
+import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { isSuperadmin } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { NavIcon } from "./navIcons";
@@ -14,81 +15,123 @@ import { SocialRow } from "./SocialRow";
 import { Wordmark } from "./Wordmark";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { isNavItemActive } from "./Sidebar";
-import { AccountNav } from "./AccountNav";
+import { AccountNav, useUnreadCount } from "./AccountNav";
+
+/** The two sections that earn a tab of their own; the rest of NAV_ITEMS lives under More. */
+const TAB_HREFS = ["/", "/marketplace"];
+const TAB_LABELS: Record<string, string> = { "/": "Auction", "/marketplace": "Market" };
+const CREATE_HREF = "/listings/new";
 
 /**
- * Phone header plus a full-height drawer. The sections do not fit a bottom
- * tab bar at this tracking, so the drawer carries the whole map — the same list
- * the desktop rail shows, in the same order.
+ * Phone header plus a bottom tab bar: two primary sections, a raised Create
+ * button in the middle, Profile, then More — a bottom sheet with the rest of
+ * the site map in the same order the desktop rail shows it.
  */
 export function MobileNav() {
   const pathname = usePathname();
-  const { user } = useSession();
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const { user, status } = useSession();
+  const openConnect = useOpenConnect();
+  const unread = useUnreadCount();
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  // Route changes close the drawer; without this a tap navigates behind it.
-  useEffect(() => setOpen(false), [pathname]);
+  // Route changes close the sheet; without this a tap navigates behind it.
+  useEffect(() => setMoreOpen(false), [pathname]);
 
-  useEffect(() => {
-    if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const tabs = NAV_ITEMS.filter((item) => TAB_HREFS.includes(item.href));
+  const overflow = NAV_ITEMS.filter((item) => !TAB_HREFS.includes(item.href));
+  const signedIn = status === "authenticated";
+
+  const moreActive =
+    overflow.some((item) => !item.external && isNavItemActive(pathname, item.href)) ||
+    isNavItemActive(pathname, "/chat") ||
+    isNavItemActive(pathname, "/admin");
 
   return (
     <>
-      {/* z-50 keeps this above the drawer (z-40) so the close button stays tappable. */}
       <header className="fixed top-0 left-0 right-0 z-50 lg:hidden bg-background/95 backdrop-blur-md border-b border-line pt-[var(--safe-top)]">
         <div className="h-14 flex items-center justify-between gap-2 px-4">
           <Link href="/" aria-label={`${SITE.name} home`} className="min-w-0">
             <Wordmark size="sm" />
           </Link>
-          <div className="flex items-center gap-2 shrink-0">
-            <ConnectWalletButton size="sm" showIcon={false} />
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-label={open ? "Close menu" : "Open menu"}
-              aria-expanded={open}
-              aria-controls="mobile-menu"
-              className={cn(
-                "flex items-center justify-center w-9 h-9 rounded-lg border transition-colors",
-                open
-                  ? "bg-primary/20 border-primary/50 text-white"
-                  : "border-line text-caption",
-              )}
-            >
-              {open ? <X className="w-[18px] h-[18px]" /> : <Menu className="w-[18px] h-[18px]" />}
-            </button>
-          </div>
+          <ConnectWalletButton size="sm" showIcon={false} />
         </div>
       </header>
 
-      {open && (
-        <div
-          id="mobile-menu"
-          className="fixed inset-0 z-40 lg:hidden bg-background/95 backdrop-blur-md pt-[var(--mobile-header-offset)] overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu"
-          // Tapping the empty space beside or below the menu dismisses it.
-          onClick={(e) => e.target === e.currentTarget && setOpen(false)}
-        >
-          <div className="px-4 py-6 space-y-6">
-            <nav className="space-y-1.5">
-              {NAV_ITEMS.map((item) => {
+      <nav
+        aria-label="Primary"
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background/95 backdrop-blur-md border-t border-line pb-[var(--safe-bottom)]"
+      >
+        <div className="h-16 grid grid-cols-5 items-stretch px-1">
+          {tabs.map((item) => (
+            <TabLink
+              key={item.href}
+              href={item.href}
+              label={TAB_LABELS[item.href] ?? item.label}
+              active={isNavItemActive(pathname, item.href)}
+              icon={<NavIcon name={item.icon} className="w-5 h-5" />}
+            />
+          ))}
+
+          <div className="flex items-start justify-center">
+            <button
+              type="button"
+              aria-label="Create listing"
+              aria-current={isNavItemActive(pathname, CREATE_HREF) ? "page" : undefined}
+              onClick={() => (signedIn ? router.push(CREATE_HREF) : openConnect())}
+              className="-mt-5 flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-primary-bright to-secondary text-white ring-4 ring-background shadow-[0_8px_24px_rgba(139,92,246,0.55)] transition-transform active:scale-95"
+            >
+              <Plus className="w-6 h-6" strokeWidth={2.5} aria-hidden="true" />
+            </button>
+          </div>
+
+          {signedIn ? (
+            <TabLink
+              href="/profile"
+              label="Profile"
+              active={isNavItemActive(pathname, "/profile")}
+              icon={<UserRound className="w-5 h-5" aria-hidden="true" />}
+            />
+          ) : (
+            <TabButton
+              label="Profile"
+              onClick={openConnect}
+              icon={<UserRound className="w-5 h-5" aria-hidden="true" />}
+            />
+          )}
+
+          <TabButton
+            label="More"
+            active={moreActive || moreOpen}
+            expanded={moreOpen}
+            onClick={() => setMoreOpen(true)}
+            icon={
+              <span className="relative">
+                <Ellipsis className="w-5 h-5" aria-hidden="true" />
+                {unread > 0 && (
+                  <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-background">
+                    <span className="sr-only">{`${unread} unread messages`}</span>
+                  </span>
+                )}
+              </span>
+            }
+          />
+        </div>
+      </nav>
+
+      <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
+        <DrawerContent className="lg:hidden">
+          <DrawerTitle className="sr-only">More</DrawerTitle>
+          <div className="overflow-y-auto px-4 pt-4 pb-[calc(1.5rem+var(--safe-bottom))] space-y-6">
+            <div className="space-y-1.5">
+              {overflow.map((item) => {
                 const active = !item.external && isNavItemActive(pathname, item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
                     aria-current={active ? "page" : undefined}
+                    onClick={() => setMoreOpen(false)}
                     {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow transition-colors",
@@ -105,46 +148,97 @@ export function MobileNav() {
                   </Link>
                 );
               })}
-            </nav>
 
-            <nav className="space-y-1.5">
-              <AccountNav variant="mobile" />
-            </nav>
+              <AccountNav variant="mobile" unread={unread} omitProfile />
 
-            {isSuperadmin(user) ? (
-              <Link
-                href="/admin/listings"
-                className="flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow border border-transparent text-caption"
-              >
-                <ShieldCheck className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
-                Admin
-              </Link>
-            ) : null}
-
-            <CreateListingButton className="w-full" />
+              {isSuperadmin(user) ? (
+                <Link
+                  href="/admin/listings"
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3.5 rounded-xl eyebrow transition-colors",
+                    isNavItemActive(pathname, "/admin")
+                      ? "bg-primary/20 border border-primary/40 text-white"
+                      : "border border-transparent text-caption",
+                  )}
+                >
+                  <ShieldCheck className="w-[18px] h-[18px] shrink-0" aria-hidden="true" />
+                  Admin
+                </Link>
+              ) : null}
+            </div>
 
             <SocialRow />
 
-            <div className="flex flex-wrap gap-x-5 gap-y-2 pt-2 border-t border-line text-[11px] text-caption">
+            <div className="flex flex-wrap gap-x-5 gap-y-2 pt-4 border-t border-line text-[11px] text-caption">
               {FOOTER_LINKS.map((link) => (
-                <Link key={link.href} href={link.href} className="pt-4 hover:text-white">
+                <Link key={link.href} href={link.href} className="hover:text-white">
                   {link.label}
                 </Link>
               ))}
             </div>
-
-            {/* The X sits at the top of a full-height drawer; this is the reachable one. */}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl border border-line text-caption eyebrow hover:text-white hover:border-primary/50 transition-colors"
-            >
-              <X className="w-4 h-4" aria-hidden="true" />
-              Close menu
-            </button>
           </div>
-        </div>
-      )}
+        </DrawerContent>
+      </Drawer>
     </>
+  );
+}
+
+const tabClass = (active: boolean) =>
+  cn(
+    "flex flex-col items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
+    active ? "text-white" : "text-caption",
+  );
+
+function TabLink({
+  href,
+  label,
+  icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  active: boolean;
+}) {
+  return (
+    <Link href={href} aria-current={active ? "page" : undefined} className={tabClass(active)}>
+      <TabIcon active={active}>{icon}</TabIcon>
+      {label}
+    </Link>
+  );
+}
+
+function TabButton({
+  label,
+  icon,
+  onClick,
+  active = false,
+  expanded,
+}: {
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  expanded?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-expanded={expanded}
+      aria-haspopup={expanded === undefined ? undefined : "dialog"}
+      className={tabClass(active)}
+    >
+      <TabIcon active={active}>{icon}</TabIcon>
+      {label}
+    </button>
+  );
+}
+
+function TabIcon({ active, children }: { active: boolean; children: ReactNode }) {
+  return (
+    <span className={cn("flex items-center justify-center", active && "text-primary-light")}>
+      {children}
+    </span>
   );
 }

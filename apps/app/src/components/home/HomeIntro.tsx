@@ -15,10 +15,13 @@ const ICONS = {
  * screen the chips share the headline's line.
  */
 export function HomeIntro() {
+  const [before, after] = HOME_INTRO.title.split(HOME_INTRO.highlight);
   return (
     <section className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5 sm:gap-y-4">
-      <h1 className="display text-[26px] leading-[1.08] tracking-[-0.03em] text-white sm:text-[clamp(1.75rem,5vw,2.75rem)] sm:uppercase sm:leading-[0.95]">
-        Onchain <span className="text-primary-bright">eBay</span>
+      <h1 className="font-extrabold max-w-[22ch] text-balance text-[24px] leading-[1.12] tracking-[-0.025em] text-white sm:text-[32px] sm:leading-[1.05] lg:max-w-[26ch] lg:text-[clamp(2rem,2.4vw,2.5rem)] lg:uppercase lg:leading-[1]">
+        {before}
+        <span className="text-primary-bright">{HOME_INTRO.highlight}</span>
+        {after}
       </h1>
 
       {/* Beside the headline when the row has room for both; under it otherwise. */}

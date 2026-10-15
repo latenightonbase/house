@@ -9,21 +9,14 @@ import { fetchUnreadCount } from "@/lib/chat";
 import { cn } from "@/lib/utils";
 import { isNavItemActive } from "./Sidebar";
 
-/**
- * The signed-in-only nav rows: the private profile and messages. These sit
- * beside the admin link rather than in NAV_ITEMS because that list is the
- * public site map, rendered for signed-out visitors too.
- *
- * The unread badge polls rather than holding a socket open — the chat page owns
- * the live connection, and a badge does not justify a second one on every page.
- */
-export function AccountNav({ variant = "sidebar" }: { variant?: "sidebar" | "mobile" }) {
+/** Unread chat threads for the signed-in user; 0 when signed out or `enabled` is false. */
+export function useUnreadCount(enabled = true) {
   const { user } = useSession();
   const pathname = usePathname();
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !enabled) {
       setUnread(0);
       return;
     }
@@ -40,12 +33,39 @@ export function AccountNav({ variant = "sidebar" }: { variant?: "sidebar" | "mob
       clearInterval(timer);
     };
     // Re-reads on navigation so opening a thread clears the badge promptly.
-  }, [user, pathname]);
+  }, [user, pathname, enabled]);
+
+  return unread;
+}
+
+/**
+ * The signed-in-only nav rows: the private profile and messages. These sit
+ * beside the admin link rather than in NAV_ITEMS because that list is the
+ * public site map, rendered for signed-out visitors too.
+ *
+ * The unread badge polls rather than holding a socket open — the chat page owns
+ * the live connection, and a badge does not justify a second one on every page.
+ * A parent that already polls (the mobile bar) passes `unread` to skip a second poll,
+ * and `omitProfile` when it shows Profile elsewhere.
+ */
+export function AccountNav({
+  variant = "sidebar",
+  unread: unreadProp,
+  omitProfile = false,
+}: {
+  variant?: "sidebar" | "mobile";
+  unread?: number;
+  omitProfile?: boolean;
+}) {
+  const { user } = useSession();
+  const pathname = usePathname();
+  const polled = useUnreadCount(unreadProp === undefined);
+  const unread = unreadProp ?? polled;
 
   if (!user) return null;
 
   const items = [
-    { href: "/profile", label: "Profile", Icon: UserRound, badge: 0 },
+    ...(omitProfile ? [] : [{ href: "/profile", label: "Profile", Icon: UserRound, badge: 0 }]),
     { href: "/chat", label: "Messages", Icon: MessageSquare, badge: unread },
   ];
 
