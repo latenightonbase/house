@@ -9,6 +9,7 @@ import type { Spotlight } from "@/lib/dailyAuction";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
 import { useCountdown } from "@/lib/useCountdown";
 import { countdownLabel } from "./listingParts";
+import { WinnerBenefits } from "./WinnerBenefits";
 
 /** "AUG 31, 2026" — the billboard's date line. */
 function billboardDate(iso: string | null) {
@@ -112,7 +113,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
     : links[0];
 
   return (
-    <section className="billboard relative flex overflow-hidden rounded-2xl">
+    <section className="billboard relative flex flex-col overflow-hidden rounded-2xl">
       {/* The poster again, blown up and blurred, so the card is lit by the artwork
           itself. Scaled past the edges because a blur of this radius would
           otherwise fade to transparent along them. */}
@@ -132,7 +133,7 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
 
       {/* On a phone the card is a single row — poster beside the name — so the
           intro, the billboard and the live auction's clock all fit one screen. */}
-      <div className="relative flex w-full min-w-0 flex-row items-center gap-3.5 p-3 sm:items-stretch sm:gap-5 sm:p-5">
+      <div className="relative flex w-full min-w-0 flex-1 flex-row items-center gap-3.5 p-3 sm:items-stretch sm:gap-5 sm:p-5">
         {/* The poster stays square at every width — stretching it to the panel's
             height would turn a 1:1 upload into a narrow banner. Uploads are not
             always 1:1 either, so the artwork is contained rather than cropped and
@@ -261,26 +262,49 @@ export function TodaysAttention({ spotlight }: { spotlight: Spotlight }) {
           </div>
         </div>
       </div>
+
+      <WinnerBenefits />
     </section>
   );
 }
 
-/** Shown before the first auction settles, so the page never renders headless. */
+/**
+ * Shown before the first auction settles, so the page never renders headless.
+ * It keeps the spotlight's own shape — a square frame beside the copy — with the
+ * frame left empty for the winner, so the billboard reads as a space on offer
+ * rather than a placeholder message floating in a box.
+ */
 export function TodaysAttentionEmpty() {
   return (
-    <section className="billboard relative flex min-h-[11rem] flex-col items-center justify-center overflow-hidden rounded-2xl px-5 py-6 text-center sm:min-h-[15rem] sm:px-10 sm:py-9">
+    <section className="billboard relative flex flex-col overflow-hidden rounded-2xl">
       <div aria-hidden="true" className="billboard-sheen pointer-events-none absolute inset-0" />
-      <p className="relative inline-flex items-center gap-2 rounded-full border border-gold/45 bg-background/70 px-3.5 py-1.5 eyebrow text-gold-light">
-        <Crown className="w-[15px] h-[15px]" aria-hidden="true" />
-        Today&apos;s Attention
-      </p>
-      <h2 className="relative mt-4 display text-[clamp(1.6rem,4.5vw,2.5rem)] uppercase text-white">
-        The billboard is <span className="text-primary-bright">open</span>
-      </h2>
-      <p className="relative mt-3 max-w-md text-[14px] leading-relaxed text-caption">
-        No auction has settled yet. Win the live auction beside this and your project takes the
-        space for a full 24 hours.
-      </p>
+
+      <div className="relative flex w-full min-w-0 flex-1 flex-row items-center gap-3.5 p-3 sm:gap-5 sm:p-5">
+        <div className="flex aspect-square w-[7.75rem] shrink-0 flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-gold/40 bg-gold/[0.03] text-center sm:w-[13rem] sm:rounded-xl lg:w-[15rem]">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gold/40 bg-gold/10 sm:h-11 sm:w-11">
+            <Crown className="h-4 w-4 text-gold-light sm:h-5 sm:w-5" aria-hidden="true" />
+          </span>
+          <span className="px-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-gold-light/80 sm:text-[10px]">
+            Your project here
+          </span>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <p className="inline-flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-gold-light sm:text-[10px]">
+            <Crown className="h-3 w-3 text-gold" aria-hidden="true" />
+            Today&apos;s Attention
+          </p>
+          <h2 className="mt-1.5 display text-[1.5rem] uppercase text-white sm:mt-2 sm:text-[clamp(1.75rem,3vw,2.5rem)]">
+            The billboard is <span className="text-primary-bright">open</span>
+          </h2>
+          <p className="mt-2 max-w-md text-[12px] leading-relaxed text-caption sm:mt-3 sm:text-[13px]">
+            No auction has settled yet. Win the live auction and your project takes this space for a
+            full 24 hours.
+          </p>
+        </div>
+      </div>
+
+      <WinnerBenefits />
     </section>
   );
 }

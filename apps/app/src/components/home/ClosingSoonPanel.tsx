@@ -1,7 +1,7 @@
 "use client";
 
+import Link from "next/link";
 import { Flame, Sparkles } from "lucide-react";
-import { CreateListingButton } from "@/components/CreateListingButton";
 import { PosterThumb } from "@/components/listing/ListingPoster";
 import { BrandAvatar } from "@/components/ui";
 import type { Listing } from "@/lib/marketplace";
@@ -9,7 +9,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 
-/** Five keeps the rail short enough to stay in view beside the market. */
+/** Five keeps the rail level with the market's single row of cards. */
 const MAX_ROWS = 5;
 
 function Row({
@@ -83,9 +83,11 @@ function Row({
 }
 
 /**
- * The urgency rail beside the market. It shows whatever is actually about
- * to close; with nothing on a clock it falls back to what landed most recently,
- * so a new seller's listing is surfaced on its first day either way.
+ * The urgency half of the rail beside the market. It shows whatever is actually
+ * about to close; with nothing on a clock it falls back to what landed most
+ * recently, so a new seller's listing is surfaced on its first day either way.
+ * The supply-side ask lives in the market itself, as the tile that fills a
+ * short row.
  */
 export function ClosingSoonPanel({
   listings,
@@ -109,7 +111,7 @@ export function ClosingSoonPanel({
   ).slice(0, MAX_ROWS);
 
   return (
-    <section className="card flex min-w-0 flex-col p-4 sm:p-5">
+    <section className="card min-w-0 p-4 sm:p-5">
       <header className="flex items-center gap-2">
         {live ? (
           <Flame className="h-[15px] w-[15px] shrink-0 text-warning" aria-hidden="true" />
@@ -118,41 +120,29 @@ export function ClosingSoonPanel({
         )}
         <h2 className="panel-label text-primary-light">{live ? "Closing soon" : "Just listed"}</h2>
         {rows.length > 0 && (
-          <a
-            href="#marketplace"
+          <Link
+            href="/marketplace"
             className="ml-auto shrink-0 text-[11px] font-medium text-caption transition-colors hover:text-white"
           >
             View all <span aria-hidden="true">→</span>
-          </a>
+          </Link>
         )}
       </header>
 
       {rows.length === 0 ? (
-        <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-dashed border-line px-4 py-8 text-center">
+        <div className="mt-3 flex items-center justify-center rounded-xl border border-dashed border-line px-4 py-6 text-center">
           <p className="max-w-[16rem] text-[12px] leading-relaxed text-caption">
             Seller listings show up here as soon as the first one goes live.
           </p>
         </div>
       ) : (
-        <div className="-mx-1 mt-2 flex flex-1 flex-col divide-y divide-line/70">
+        <div className="-mx-1 mt-2 flex flex-col divide-y divide-line/70">
           {rows.map((listing) => (
             <Row key={listing.id} listing={listing} live={live} onCheckout={onCheckout} />
           ))}
         </div>
       )}
 
-      {/* The supply-side ask, on the same screen as the demand-side one. */}
-      <div className="mt-auto border-t border-line pt-3.5">
-        <CreateListingButton
-          variant="accent-outline"
-          size="sm"
-          className="w-full"
-          label="List your attention"
-        />
-        <p className="mt-2 text-center text-[11px] leading-relaxed text-caption">
-          Sell a placement of your own — new listings appear here.
-        </p>
-      </div>
     </section>
   );
 }

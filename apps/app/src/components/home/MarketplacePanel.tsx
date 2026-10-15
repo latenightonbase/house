@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, Store } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Plus, Store } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { Select, Tabs, type TabItem } from "@/components/ui";
 import { categoryLabel } from "@/lib/listingCategories";
@@ -19,8 +20,53 @@ const SORTS: { value: Sort; label: string }[] = [
   { value: "price-desc", label: "Price: high to low" },
 ];
 
-/** Cards shown before "show all" — a couple of rows, not the whole book. */
-const INITIAL_ROWS = 4;
+/**
+ * Grid columns by container width: 1, then 2 at `@lg`, 3 at `@4xl`, 4 at `@6xl`.
+ * Every responsive class below is keyed to these four, so they are spelled out
+ * literally for Tailwind to find.
+ */
+const COLUMN_COUNTS = [1, 2, 3, 4] as const;
+
+/**
+ * In preview the grid shows a single row at every width: the first two cards
+ * always (one column stacks two), the third from three columns, the fourth
+ * from four. Anything past that is behind "View all".
+ */
+const PREVIEW_CARD_CLASS = ["contents", "contents", "hidden @4xl:contents", "hidden @6xl:contents"];
+const PREVIEW_LIMIT = PREVIEW_CARD_CLASS.length;
+
+/** The invitation tile's footprint per column count, by how many cells it fills. */
+const FILLER_SPAN: Record<number, Record<number, string>> = {
+  2: { 0: "@lg:hidden", 1: "@lg:flex @lg:col-span-1" },
+  3: { 0: "@4xl:hidden", 1: "@4xl:flex @4xl:col-span-1", 2: "@4xl:flex @4xl:col-span-2" },
+  4: {
+    0: "@6xl:hidden",
+    1: "@6xl:flex @6xl:col-span-1",
+    2: "@6xl:flex @6xl:col-span-2",
+    3: "@6xl:flex @6xl:col-span-3",
+  },
+};
+
+/** How many cards land on screen at a given column count. */
+function cardsAt(columns: number, count: number, preview: boolean) {
+  if (!preview) return count;
+  return Math.min(count, Math.max(columns, 2));
+}
+
+/**
+ * Classes that size the invitation tile to exactly the empty cells of the last
+ * row at each column count, and hide it where the row is already full. On a
+ * single column there is no gap to fill, so it never shows there.
+ */
+function fillerClass(count: number, preview: boolean) {
+  return [
+    "hidden",
+    ...COLUMN_COUNTS.slice(1).map((columns) => {
+      const remainder = cardsAt(columns, count, preview) % columns;
+      return FILLER_SPAN[columns][remainder === 0 ? 0 : columns - remainder];
+    }),
+  ].join(" ");
+}
 
 /** The number a row leads with, so sorting by price sorts by what is shown. */
 function shownPrice(listing: Listing) {
@@ -107,6 +153,36 @@ function MarketEmpty() {
 }
 
 /**
+ * The seller-side ask, sized to the gap a short last row leaves — so a thin
+ * market reads as a market with room in it rather than a grid with holes.
+ */
+function ListYoursTile({ className }: { className: string }) {
+  return (
+    <div
+      className={cn(
+        "tile min-h-[14rem] flex-col items-center justify-center border-dashed px-5 py-8 text-center",
+        className,
+      )}
+    >
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-primary/30 bg-primary/10">
+        <Plus className="h-[18px] w-[18px] text-primary-light" aria-hidden="true" />
+      </span>
+      <p className="mt-3.5 text-[14px] font-semibold text-white">Your placement here</p>
+      <p className="mx-auto mt-1.5 max-w-[16rem] text-[12px] leading-relaxed text-caption">
+        Have an audience? List a placement, priced in USDG, LNOC or any token and paid out to your
+        wallet.
+      </p>
+      <CreateListingButton
+        variant="accent-outline"
+        size="sm"
+        className="mt-4"
+        label="List your attention"
+      />
+    </div>
+  );
+}
+
+/**
  * The market as a grid of poster-led cards. Sellers pitch with their artwork
  * and write-up, so both get real room rather than a thumbnail and one
  * truncated line. The grid sizes itself to the panel (container queries), so
@@ -116,17 +192,20 @@ function MarketEmpty() {
 export function MarketplacePanel({
   listings,
   onCheckout,
-  initialRows = INITIAL_ROWS,
+  previewHref,
 }: {
   listings: Listing[];
   onCheckout: (listing: Listing) => void;
-  /** Rows before "show more"; the marketplace page passes Infinity to list them all. */
-  initialRows?: number;
+  /**
+   * Shows a single row of cards and links here for the rest — the home page's
+   * preview. Without it the panel lists the whole book.
+   */
+  previewHref?: string;
 }) {
   const [kind, setKind] = useState<Kind>("all");
   const [category, setCategory] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
-  const [expanded, setExpanded] = useState(false);
+  const preview = Boolean(previewHref);
 
   const auctionCount = listings.filter((l) => l.pricingType === "AUCTION").length;
   const fixedCount = listings.length - auctionCount;
@@ -164,8 +243,7 @@ export function MarketplacePanel({
     return sortListings(filtered, sort);
   }, [listings, kind, category, sort]);
 
-  const shown = expanded ? visible : visible.slice(0, initialRows);
-  const hidden = visible.length - shown.length;
+  const shown = preview ? visible.slice(0, PREVIEW_LIMIT) : visible;
 
   return (
     <section id="marketplace" className="card flex min-w-0 flex-col p-4 scroll-mt-24 sm:p-5">
@@ -212,10 +290,14 @@ export function MarketplacePanel({
               </Select>
             </label>
           ) : null}
-          {/* An empty market carries its own invitation below, so the header
-              does not repeat it. */}
-          {kinds.length === 0 && listings.length === 1 ? (
-            <CreateListingButton variant="accent-outline" size="sm" label="List your attention" />
+          {previewHref && listings.length > 2 ? (
+            <Link
+              href={previewHref}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 text-[12px] font-semibold text-primary-light transition-colors hover:text-white"
+            >
+              View all {listings.length}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           ) : null}
         </div>
       </header>
@@ -261,49 +343,15 @@ export function MarketplacePanel({
               </button>
             </div>
           ) : (
-            <div className="@container mt-4 flex min-w-0 flex-1 flex-col">
+            <div className="@container mt-4 min-w-0">
               <div className="grid min-w-0 grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 sm:gap-4">
                 {shown.map((listing, index) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    onCheckout={onCheckout}
-                    priority={index < 3}
-                  />
-                ))}
-              </div>
-
-              {/* A thin market leaves the grid's first row unfinished, so the
-                  seller-side ask follows it. */}
-              {shown.length < 2 && hidden === 0 && (
-                <div className="mt-auto pt-4">
-                  <div className="tile flex flex-col items-start gap-3 border-dashed px-4 py-4 sm:flex-row sm:items-center">
-                    <p className="text-[12px] leading-relaxed text-caption">
-                      Have an audience? List a placement of your own — priced in USDG, LNOC or any token,
-                      paid out to your wallet.
-                    </p>
-                    <CreateListingButton
-                      variant="accent-outline"
-                      size="sm"
-                      className="shrink-0 sm:ml-auto"
-                      label="List your attention"
-                    />
+                  <div key={listing.id} className={preview ? PREVIEW_CARD_CLASS[index] : "contents"}>
+                    <ListingCard listing={listing} onCheckout={onCheckout} priority={index < 3} />
                   </div>
-                </div>
-              )}
-
-              {hidden > 0 && (
-                <div className="mt-4 flex justify-center border-t border-line pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(true)}
-                    className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-caption transition-colors hover:text-white"
-                  >
-                    Show {hidden} more {hidden === 1 ? "listing" : "listings"}
-                    <ArrowDown className="h-[14px] w-[14px]" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
+                ))}
+                <ListYoursTile className={fillerClass(shown.length, preview)} />
+              </div>
             </div>
           )}
         </>

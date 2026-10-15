@@ -16,7 +16,6 @@ import { HOME_LISTING_LIMIT, HOME_RECENT_SALES_LIMIT, type HomePageData } from "
 import { fetchListings, fetchRecentSales, type Listing, type RecentSale } from "@/lib/marketplace";
 import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysAttention";
 import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
-import { WinnerBenefits } from "@/components/home/WinnerBenefits";
 import { AuctionEmpty } from "@/components/home/AuctionEmpty";
 import { HomeIntro } from "@/components/home/HomeIntro";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
@@ -64,10 +63,11 @@ function AuthRequiredBanner() {
 }
 
 /**
- * The home page is a board, not a scroll. The intro says what LNOC is, the billboard and
- * the show's own auction share the top row, and the open market takes a row of the
- * same height beneath — the market carries as much weight as the daily winner, so a
- * seller's listing is on screen the day it goes live.
+ * The home page is a board, not a scroll, laid on one column rule: two thirds
+ * and one third, every row. The billboard (with what the winner gets) sits
+ * beside the auction that decides it; the market's front row sits beside a
+ * rail of what is about to sell and what just did. Each cell is built to end
+ * near its neighbour's height, so nothing on the page is padding.
  */
 export default function HomeClient({
   listing: initialListing,
@@ -161,7 +161,6 @@ export default function HomeClient({
 
       <HomeIntro />
 
-      {/* Yesterday's winner and today's auction, side by side at equal height. */}
       <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
 
@@ -175,21 +174,18 @@ export default function HomeClient({
         ) : (
           <AuctionEmpty />
         )}
-
       </div>
 
-      {/* The market on the same column rule, but free to run as tall as its
-          cards need; the closing-soon rail stays in view beside it. */}
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <MarketplacePanel listings={listings} onCheckout={handleCheckout} />
-        <div className="xl:sticky xl:top-24">
+        <MarketplacePanel listings={listings} onCheckout={handleCheckout} previewHref="/marketplace" />
+        {/* Under the market until there is a third column to hold it. Kept
+            stacked even then: side by side, a short closing-soon list left a
+            hole beside the sales ledger. */}
+        <div className="grid grid-cols-1 items-start gap-4 xl:sticky xl:top-24">
           <ClosingSoonPanel listings={listings} onCheckout={handleCheckout} />
+          <RecentSalesPanel sales={recentSales} />
         </div>
       </div>
-
-      <RecentSalesPanel sales={recentSales} />
-
-      <WinnerBenefits />
 
       {listing && bidOpen ? (
         <BidDialog

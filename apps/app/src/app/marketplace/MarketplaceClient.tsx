@@ -58,7 +58,6 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
     >
       <MarketplacePanel
         listings={listings}
-        initialRows={Number.POSITIVE_INFINITY}
         onCheckout={(next) => {
           setCheckoutListing(next);
           setCheckoutOpen(true);

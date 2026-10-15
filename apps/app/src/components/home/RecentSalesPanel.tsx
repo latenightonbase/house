@@ -1,80 +1,89 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowDown, Gavel, ImageIcon, ShoppingBag } from "lucide-react";
+import { ArrowRight, Gavel, ImageIcon, ShoppingBag } from "lucide-react";
 import { PosterThumb } from "@/components/listing/ListingPoster";
 import { Avatar } from "@/components/ui";
 import type { RecentSale, SaleParty } from "@/lib/marketplace";
 import { formatTokenAmount } from "@/lib/tokenPrices";
 
-/** "Just now", "12m ago", "3h ago", "2d ago" — sales are recent by definition. */
+/**
+ * "now", "12m", "3h", "2d" — kept to a few characters so the two names beside
+ * it get the width. The row's icon and title say what kind of sale it was.
+ */
 function soldAgo(iso: string) {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return "now";
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }
 
 function Party({ party, role }: { party: SaleParty; role: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-1.5" title={`${role}: ${party.name}`}>
       <Avatar
         src={party.avatarUrl}
         alt=""
         fallbackSeed={party.wallet ?? party.name}
-        fallback={party.name.slice(0, 2).toUpperCase()}
-        size={24}
+        fallback={party.name.slice(0, 1).toUpperCase()}
+        size={18}
       />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-medium leading-tight text-white">{party.name}</p>
-        <p className="text-[10px] uppercase tracking-[0.1em] text-caption">{role}</p>
-      </div>
-    </div>
+      <span className="sr-only">{role}:</span>
+      <span className="truncate text-white/85">{party.name}</span>
+    </span>
   );
 }
 
-function SaleTile({ sale }: { sale: RecentSale }) {
+/**
+ * One sale on one line pair: what sold and for how much, then who sold it to
+ * whom. Shaped like the closing-soon rows above it, so the rail reads as one
+ * ledger — what is about to sell, then what just did.
+ */
+function SaleRow({ sale }: { sale: RecentSale }) {
   const won = sale.via === "AUCTION_WIN";
-  const kind = won ? (sale.isDaily ? "Daily auction" : "Auction") : "Bought";
   const Icon = won ? Gavel : ShoppingBag;
+  const kind = won ? (sale.isDaily ? "Daily auction" : "Auction") : "Bought";
 
   return (
     <Link
       href={`/listings/${sale.listingId}`}
-      className="group flex min-w-0 flex-col gap-3 rounded-xl border border-line bg-surface-2 p-3.5 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+      className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
     >
-      <div className="flex items-start gap-3">
-        <PosterThumb
-          src={sale.posterUrl}
-          alt=""
-          size={40}
-          placeholder={<ImageIcon className="h-4 w-4 opacity-60" />}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary-bright">
+      <PosterThumb
+        src={sale.posterUrl}
+        alt=""
+        size={38}
+        placeholder={<ImageIcon className="h-4 w-4 opacity-60" />}
+      />
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground transition-colors group-hover:text-primary-bright">
             {sale.title}
           </p>
-          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-caption">
-            <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
-            {/* Server and client can land either side of a minute boundary. */}
-            <span className="truncate" suppressHydrationWarning>
-              {kind} · {soldAgo(sale.at)}
-            </span>
+          <p className="numeric shrink-0 whitespace-nowrap text-[13px] font-bold text-white">
+            {formatTokenAmount(sale.amount, sale.tokenName || sale.currency)}
           </p>
         </div>
-      </div>
 
-      <p className="numeric text-[15px] font-bold leading-tight text-white">
-        {formatTokenAmount(sale.amount, sale.tokenName || sale.currency)}
-      </p>
-
-      {/* Who sold it, then who got it — the direction the money didn't go. */}
-      <div className="mt-auto space-y-1.5 border-t border-line pt-3">
-        <Party party={sale.seller} role="Creator" />
-        <ArrowDown className="ml-[7px] h-2.5 w-2.5 text-caption" aria-hidden="true" />
-        <Party party={sale.buyer} role={won ? "Winner" : "Buyer"} />
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px]">
+          <Party party={sale.seller} role="Creator" />
+          <ArrowRight className="h-3 w-3 shrink-0 text-caption" aria-hidden="true" />
+          <Party party={sale.buyer} role={won ? "Winner" : "Buyer"} />
+          {/* Server and client can land either side of a minute boundary. */}
+          <span
+            className="numeric ml-auto flex shrink-0 items-center gap-1 pl-1 text-caption"
+            title={`${kind}, ${new Date(sale.at).toLocaleString()}`}
+            suppressHydrationWarning
+          >
+            <Icon className="h-3 w-3" aria-hidden="true" />
+            <span className="sr-only">{kind},</span>
+            {soldAgo(sale.at)}
+            <span className="sr-only"> ago</span>
+          </span>
+        </div>
       </div>
     </Link>
   );
@@ -89,15 +98,15 @@ export function RecentSalesPanel({ sales }: { sales: RecentSale[] }) {
   if (sales.length === 0) return null;
 
   return (
-    <section className="card p-4 sm:p-5">
+    <section className="card min-w-0 p-4 sm:p-5">
       <header className="flex items-center gap-2">
-        <ShoppingBag className="h-[15px] w-[15px] shrink-0 text-primary-light" aria-hidden="true" />
+        <ShoppingBag className="h-[15px] w-[15px] shrink-0 text-positive" aria-hidden="true" />
         <h2 className="panel-label text-primary-light">Recently sold</h2>
       </header>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="-mx-1 mt-2 flex flex-col divide-y divide-line/70">
         {sales.map((sale) => (
-          <SaleTile key={`${sale.via}:${sale.listingId}:${sale.at}`} sale={sale} />
+          <SaleRow key={`${sale.via}:${sale.listingId}:${sale.at}`} sale={sale} />
         ))}
       </div>
     </section>

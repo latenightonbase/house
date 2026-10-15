@@ -11,17 +11,19 @@ const ICONS = {
  * What LNOC is, in one glance, above everything else. A first-time visitor
  * lands on a billboard and an auction; without this they have no idea what
  * either is for. Kept to a headline and a row of chips so that on a phone the
- * billboard and the live auction still make it above the fold.
+ * billboard and the live auction still make it above the fold; on a wide
+ * screen the chips share the headline's line.
  */
 export function HomeIntro() {
   return (
-    <section>
+    <section className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3.5 sm:gap-y-4">
       <h1 className="display text-[26px] leading-[1.08] tracking-[-0.03em] text-white sm:text-[clamp(1.75rem,5vw,2.75rem)] sm:uppercase sm:leading-[0.95]">
         The internet marketplace <br className="sm:hidden" />
         for <span className="text-primary-bright">attention</span>
       </h1>
 
-      <ul className="mt-3.5 flex flex-wrap gap-2 sm:mt-5">
+      {/* Beside the headline when the row has room for both; under it otherwise. */}
+      <ul className="flex flex-wrap gap-2">
         {HOME_INTRO.pillars.map((pillar) => {
           const Icon = ICONS[pillar.icon];
           return (

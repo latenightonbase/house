@@ -208,8 +208,9 @@ export function LiveAuctionPanel({
           {ended ? "Auction closed" : "Place bid"}
         </button>
         <div className="mt-2.5 flex items-center justify-between gap-3">
+          {/* With no leader the tile above already quotes the opening price. */}
           <p className="text-[11px] text-caption">
-            Reserve {formatListingAmount(listing, reserve)}
+            {leader ? `Reserve ${formatListingAmount(listing, reserve)}` : null}
           </p>
           <Link
             href={`/listings/${listing.id}`}
