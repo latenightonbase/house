@@ -25,7 +25,7 @@ export interface SocialLink {
 
 /** Bottom-left of the sidebar. Order here is the order rendered. */
 export const SOCIAL_LINKS: SocialLink[] = [
-  { id: "x", label: "X", handle: "@latenightonchain", href: "https://x.com/latenightonchain" },
+  { id: "x", label: "X", handle: "@latenightonchain", href: "https://x.com/lntvhq" },
   // {
   //   id: "youtube",
   //   label: "YouTube",
