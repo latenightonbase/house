@@ -119,9 +119,9 @@ export const auctionHouseAbi = [
  * The USD-denominated contract that preceded per-listing tokens. Listings
  * created on it stay there until they close, so settlement still has to read
  * and end them — but its `getAuctionMeta` returns a different struct, and
- * decoding one with the other's ABI throws. That mismatch is what froze the
- * daily auction once before, so the ABI is chosen by the listing's recorded
- * contract (see `abiForHouse`), never assumed.
+ * decoding one with the other's ABI throws. That mismatch once froze
+ * settlement, so the ABI is chosen by the listing's recorded contract (see
+ * `abiForHouse`), never assumed.
  */
 export const legacyAuctionHouseAbi = [
   endAuctionAbi,
@@ -152,26 +152,13 @@ export const legacyAuctionHouseAbi = [
   },
 ] as const;
 
-export const erc20Abi = [
-  {
-    type: "function",
-    name: "transfer",
-    stateMutability: "nonpayable",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-  },
-] as const;
-
 export function auctionHouseAddress() {
   const raw = process.env.AUCTION_HOUSE_ADDRESS?.trim();
   if (raw && /^0x[a-fA-F0-9]{40}$/.test(raw)) return raw as `0x${string}`;
   return FALLBACK_HOUSE;
 }
 
-/** Wallet that receives protocol fees and daily-auction winning-bid proceeds. */
+/** Wallet the AuctionHouse pays protocol fees to (see `chain:set-fee-recipient`). */
 export function feeRecipient(): `0x${string}` | null {
   const raw = process.env.FEE_RECIPIENT?.trim();
   if (!raw || !/^0x[a-fA-F0-9]{40}$/.test(raw)) return null;

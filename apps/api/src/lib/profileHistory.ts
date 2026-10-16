@@ -49,7 +49,6 @@ export type SaleRecord = {
   category: string;
   pricingType: "FIXED" | "AUCTION";
   status: string;
-  isDaily: boolean;
   price: number;
   currency: string;
   endDate: string | null;
@@ -66,7 +65,6 @@ export type PurchaseRecord = {
   posterUrl: string | null;
   category: string;
   pricingType: "FIXED" | "AUCTION";
-  isDaily: boolean;
   /** How it was acquired, which is what the UI labels it with. */
   via: "PURCHASE" | "AUCTION_WIN";
   amount: number;
@@ -136,6 +134,7 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
   const listings = await prisma.listing.findMany({
     where: {
       creator: { userId },
+      isDaily: false,
       OR: [{ status: "SOLD" }, { settledAt: { not: null } }, { purchases: { some: {} } }],
     },
     orderBy: [{ settledAt: "desc" }, { createdAt: "desc" }],
@@ -185,7 +184,6 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
         category: listing.category,
         pricingType: listing.pricingType,
         status: listing.status,
-        isDaily: listing.isDaily,
         price: listing.price,
         currency: listing.currency,
         endDate: listing.endDate?.toISOString() ?? null,
@@ -217,7 +215,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
 
   const [purchases, wins] = await Promise.all([
     prisma.purchase.findMany({
-      where: { buyerUserId: userId },
+      where: { buyerUserId: userId, listing: { isDaily: false } },
       orderBy: { createdAt: "desc" },
       include: { listing: { include: sellerInclude } },
     }),
@@ -225,6 +223,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
       ? prisma.listing.findMany({
           where: {
             pricingType: "AUCTION",
+            isDaily: false,
             winnerWallet: { in: addresses },
             settledAt: { not: null },
           },
@@ -240,7 +239,6 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
     posterUrl: purchase.listing.posterUrl,
     category: purchase.listing.category,
     pricingType: purchase.listing.pricingType,
-    isDaily: purchase.listing.isDaily,
     via: "PURCHASE",
     amount: purchase.amount,
     currency: purchase.currency,
@@ -255,7 +253,6 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
     posterUrl: listing.posterUrl,
     category: listing.category,
     pricingType: listing.pricingType,
-    isDaily: listing.isDaily,
     via: "AUCTION_WIN",
     amount: listing.bids[0]?.amount ?? listing.price,
     currency: listing.currency,
@@ -312,7 +309,6 @@ export type RecentSale = {
   title: string;
   posterUrl: string | null;
   pricingType: "FIXED" | "AUCTION";
-  isDaily: boolean;
   via: "PURCHASE" | "AUCTION_WIN";
   amount: number;
   currency: string;
@@ -342,6 +338,7 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
 
   const [purchases, wins] = await Promise.all([
     prisma.purchase.findMany({
+      where: { listing: { isDaily: false } },
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
@@ -350,7 +347,12 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
       },
     }),
     prisma.listing.findMany({
-      where: { pricingType: "AUCTION", settledAt: { not: null }, winnerWallet: { not: null } },
+      where: {
+        pricingType: "AUCTION",
+        isDaily: false,
+        settledAt: { not: null },
+        winnerWallet: { not: null },
+      },
       orderBy: { settledAt: "desc" },
       take: limit,
       include: { ...sellerInclude, bids: { orderBy: { amount: "desc" }, take: 1 } },
@@ -369,7 +371,6 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
     title: purchase.listing.title,
     posterUrl: purchase.listing.posterUrl,
     pricingType: purchase.listing.pricingType,
-    isDaily: purchase.listing.isDaily,
     via: "PURCHASE",
     amount: purchase.amount,
     currency: purchase.currency,
@@ -384,7 +385,6 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
     title: listing.title,
     posterUrl: listing.posterUrl,
     pricingType: listing.pricingType,
-    isDaily: listing.isDaily,
     via: "AUCTION_WIN",
     amount: listing.bids[0]?.amount ?? listing.price,
     currency: listing.currency,

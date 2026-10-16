@@ -3,18 +3,20 @@ import { PageShell, Section, Placeholder } from "@/components/PageShell";
 import { SocialRow } from "@/components/nav/SocialRow";
 import { SITE } from "@/lib/constants";
 
+const INTRO = `${SITE.name} is a marketplace where anyone can list goods and services, and every sale settles on-chain.`;
+
 export const metadata: Metadata = {
   title: `About — ${SITE.shortName}`,
-  description: SITE.strapline,
+  description: INTRO,
 };
 
 export default function AboutPage() {
   return (
     <PageShell
       eyebrow={`About ${SITE.shortName}`}
-      title="The world's first market"
-      titleAccent="for internet attention"
-      intro={`${SITE.name} runs one auction a day for one thing — the undivided attention of the room. ${SITE.keywords}`}
+      title="The onchain marketplace"
+      titleAccent="for goods and services"
+      intro={INTRO}
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <Section title="The show">
@@ -25,7 +27,7 @@ export default function AboutPage() {
 
         <Section title="The market">
           <Placeholder>
-            Why attention is auctioned rather than sold at a rate card goes here.
+            Why goods and services belong on-chain goes here.
           </Placeholder>
         </Section>
       </div>

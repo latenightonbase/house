@@ -366,7 +366,9 @@ model Listing {
   tokenDecimals   Int?
   txHash          String?
 
-  /// One rotating 24h auction owned by SUPERADMIN. Cron settles and clones it.
+  /// Legacy: marks rows from the retired daily billboard auction (removed
+  /// 2026-10-16). Kept as a record; every public read and profile filters
+  /// these out, and nothing creates new ones.
   isDaily      Boolean   @default(false)
   winnerWallet String?
   settledAt    DateTime?
@@ -384,7 +386,7 @@ model Listing {
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   bids          ListingBid[]
-  /// Project pitches submitted with bids on this daily auction.
+  /// Legacy: project pitches from the retired daily auction.
   projects      DailyProject[]
   purchases     Purchase[]
   conversations Conversation[]
@@ -414,12 +416,9 @@ model ListingBid {
   @@index([createdAt])
 }
 
-/// The pitch a bidder attaches to a daily-auction bid: the project that goes
-/// live on the billboard for 24h if they win. One row per (auction, wallet) —
-/// a bidder fills this in once per day's auction and every later re-bid reuses
-/// it, so being outbid never costs them the form again. Redis fronts this table
-/// as a read-through cache keyed by the same pair; Postgres stays the source of
-/// truth and the historical record behind Past Winners.
+/// Legacy: the project pitch a bidder attached to a bid on the retired daily
+/// billboard auction (removed 2026-10-16). One row per (auction, wallet). Kept
+/// as a historical record only — nothing reads or writes it any more.
 model DailyProject {
   id           String  @id @default(cuid())
   /// Lowercased — matches ListingBid.bidderWallet and Listing.winnerWallet.

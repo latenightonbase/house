@@ -217,7 +217,6 @@ export function serializeListing(listing: ListingWithCreator) {
     // of a token it does not know.
     tokenDecimals: listing.tokenAddress ? listingToken(listing).decimals : undefined,
     txHash: listing.txHash ?? undefined,
-    isDaily: listing.isDaily,
     winnerWallet: listing.winnerWallet ?? undefined,
     settledAt: listing.settledAt?.toISOString(),
     reviewedAt: listing.reviewedAt?.toISOString(),

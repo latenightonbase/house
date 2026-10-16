@@ -44,9 +44,7 @@ export function PurchaseHistory({
             href={`/listings/${purchase.listingId}`}
             title={purchase.title}
             posterUrl={purchase.posterUrl}
-            meta={`${purchase.via === "AUCTION_WIN" ? "Auction won" : "Bought"}${
-              purchase.isDaily ? " · Daily auction" : ""
-            } · ${formatDate(purchase.at)}`}
+            meta={`${purchase.via === "AUCTION_WIN" ? "Auction won" : "Bought"} · ${formatDate(purchase.at)}`}
             amount={formatAmount(purchase.amount, purchase.currency)}
           >
             <PartyRow

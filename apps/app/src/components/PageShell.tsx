@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The masthead every non-home page opens with, so the eyebrow-over-display
- * rhythm of the billboard carries through the rest of the site.
+ * The masthead every non-home page opens with: an eyebrow over a display
+ * headline, so the pages share one rhythm.
  */
 export function PageShell({
   eyebrow,

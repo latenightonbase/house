@@ -5,26 +5,12 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
-import {
-  fetchDailyAuction,
-  fetchSpotlight,
-  isAuctionLeader,
-  type AuctionState,
-  type Spotlight,
-} from "@/lib/dailyAuction";
 import { HOME_LISTING_LIMIT, HOME_RECENT_SALES_LIMIT, type HomePageData } from "@/lib/home-data";
 import { fetchListings, fetchRecentSales, type Listing, type RecentSale } from "@/lib/marketplace";
-import { TodaysAttention, TodaysAttentionEmpty } from "@/components/home/TodaysAttention";
-import { LiveAuctionPanel } from "@/components/home/LiveAuctionPanel";
-import { AuctionEmpty } from "@/components/home/AuctionEmpty";
 import { HomeIntro } from "@/components/home/HomeIntro";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { ClosingSoonPanel } from "@/components/home/ClosingSoonPanel";
 import { RecentSalesPanel } from "@/components/home/RecentSalesPanel";
-const BidDialog = dynamic(
-  () => import("@/components/home/BidDialog").then((m) => ({ default: m.BidDialog })),
-  { ssr: false },
-);
 const ListingCheckoutSheet = dynamic(
   () =>
     import("@/components/listing/ListingCheckoutSheet").then((m) => ({
@@ -32,12 +18,8 @@ const ListingCheckoutSheet = dynamic(
     })),
   { ssr: false },
 );
-const EditListingDialog = dynamic(
-  () => import("@/components/home/EditListingDialog").then((m) => ({ default: m.EditListingDialog })),
-  { ssr: false },
-);
 
-/** Poll cadence for the live bid state — fast enough to feel live, cheap enough to leave on. */
+/** Poll cadence for the market feeds — fast enough to feel live, cheap enough to leave on. */
 const REFRESH_MS = 20_000;
 
 function AuthRequiredBanner() {
@@ -64,43 +46,25 @@ function AuthRequiredBanner() {
 
 /**
  * The home page is a board, not a scroll, laid on one column rule: two thirds
- * and one third, every row. The billboard (with what the winner gets) sits
- * beside the auction that decides it; the market's front row sits beside a
- * rail of what is about to sell and what just did. Each cell is built to end
- * near its neighbour's height, so nothing on the page is padding.
+ * and one third. The market's front row sits beside a rail of what is about to
+ * sell and what just did.
  */
 export default function HomeClient({
-  listing: initialListing,
-  auction: initialAuction,
-  spotlight: initialSpotlight,
   listings: initialListings,
   recentSales: initialRecentSales,
 }: HomePageData) {
-  const { status, user } = useSession();
-  const openConnect = useOpenConnect();
-
-  const [spotlight, setSpotlight] = useState<Spotlight | null>(initialSpotlight);
-  const [listing, setListing] = useState<Listing | null>(initialListing);
-  const [auction, setAuction] = useState<AuctionState | null>(initialAuction);
   const [listings, setListings] = useState<Listing[]>(initialListings);
   const [recentSales, setRecentSales] = useState<RecentSale[]>(initialRecentSales);
-  const [bidOpen, setBidOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   // The listing outlives `checkoutOpen` so the sheet keeps its content while it
   // animates closed.
   const [checkoutListing, setCheckoutListing] = useState<Listing | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const load = useCallback(async () => {
-    const [daily, current, market, sales] = await Promise.all([
-      fetchDailyAuction().catch(() => ({ listing: null, auction: null })),
-      fetchSpotlight().catch(() => null),
+    const [market, sales] = await Promise.all([
       fetchListings({ limit: HOME_LISTING_LIMIT }).catch(() => null),
       fetchRecentSales(HOME_RECENT_SALES_LIMIT).catch(() => null),
     ]);
-    setListing(daily.listing);
-    setAuction(daily.auction);
-    setSpotlight(current);
     /** A failed refresh keeps the last good feed rather than emptying the market. */
     if (market) setListings(market);
     if (sales) setRecentSales(sales);
@@ -130,28 +94,10 @@ export default function HomeClient({
     };
   }, [load]);
 
-  function handlePlaceBid() {
-    if (status !== "authenticated") {
-      openConnect();
-      return;
-    }
-    setBidOpen(true);
-  }
-
-  function handleEditListing() {
-    if (status !== "authenticated") {
-      openConnect();
-      return;
-    }
-    setEditOpen(true);
-  }
-
   function handleCheckout(next: Listing) {
     setCheckoutListing(next);
     setCheckoutOpen(true);
   }
-
-  const canEditListing = isAuctionLeader(user, auction?.leader?.wallet);
 
   return (
     <div className="w-full space-y-4 pb-4">
@@ -160,21 +106,6 @@ export default function HomeClient({
       </Suspense>
 
       <HomeIntro />
-
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        {spotlight ? <TodaysAttention spotlight={spotlight} /> : <TodaysAttentionEmpty />}
-
-        {listing ? (
-          <LiveAuctionPanel
-            listing={listing}
-            auction={auction}
-            onPlaceBid={handlePlaceBid}
-            onEditListing={canEditListing ? handleEditListing : undefined}
-          />
-        ) : (
-          <AuctionEmpty />
-        )}
-      </div>
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <MarketplacePanel listings={listings} onCheckout={handleCheckout} previewHref="/marketplace" />
@@ -187,35 +118,12 @@ export default function HomeClient({
         </div>
       </div>
 
-      {listing && bidOpen ? (
-        <BidDialog
-          listing={listing}
-          auction={auction}
-          open={bidOpen}
-          onClose={() => setBidOpen(false)}
-          onBidPlaced={(next) => {
-            setAuction(next);
-            void load();
-          }}
-        />
-      ) : null}
       {checkoutListing ? (
         <ListingCheckoutSheet
           listing={checkoutListing}
           open={checkoutOpen}
           onOpenChange={setCheckoutOpen}
           onSettled={() => void load()}
-        />
-      ) : null}
-      {listing && editOpen ? (
-        <EditListingDialog
-          listing={listing}
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          onSaved={(next) => {
-            if (next) setAuction(next);
-            void load();
-          }}
         />
       ) : null}
     </div>

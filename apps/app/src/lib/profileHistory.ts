@@ -34,7 +34,6 @@ export type SaleRecord = {
   category: string;
   pricingType: PricingType;
   status: string;
-  isDaily: boolean;
   price: number;
   currency: string;
   endDate: string | null;
@@ -50,7 +49,6 @@ export type PurchaseRecord = {
   posterUrl: string | null;
   category: string;
   pricingType: PricingType;
-  isDaily: boolean;
   via: "PURCHASE" | "AUCTION_WIN";
   amount: number;
   currency: string;
@@ -138,8 +136,7 @@ export function formatDate(iso: string) {
   });
 }
 
-/** How a sale reads in a list: "Auction" vs "Direct sale", plus the daily tag. */
+/** How a sale reads in a list: "Auction" vs "Direct sale". */
 export function saleKindLabel(sale: SaleRecord) {
-  if (sale.isDaily) return "Daily auction";
   return sale.pricingType === "AUCTION" ? "Auction" : "Direct sale";
 }

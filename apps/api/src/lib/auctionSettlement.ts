@@ -11,16 +11,15 @@ import {
 const ZERO = "0x0000000000000000000000000000000000000000";
 
 /**
- * Settlement for ordinary seller auctions — every AUCTION listing that is not
- * the rotating daily one. Until this existed only `isDaily` rows ever recorded
- * a winner, so a seller's own auction could expire with bids on it and leave
- * `winnerWallet` null forever; profile history had nothing to read.
+ * Settlement for every AUCTION listing once its clock runs out.
  *
  * On-chain is the authority when the listing was published to the AuctionHouse
  * (`contractAddress` + `txHash` set). A marketplace-only listing has no chain
- * wiring, so the highest stored bid decides it. Unlike the daily auction this
- * never forwards proceeds to the fee recipient: the contract pays the seller,
- * and the seller here is the listing's own creator, not LNOC.
+ * wiring, so the highest stored bid decides it. Proceeds are never forwarded
+ * anywhere: the contract pays the seller, who is the listing's own creator.
+ *
+ * Leftover rows from the retired daily auction are swept here too, so the last
+ * one opened before it was switched off still closes on-chain at its deadline.
  */
 
 export type SettleOne =
@@ -45,7 +44,6 @@ type ExpiredAuction = {
 /** Auctions whose clock has run out but which have never been settled. */
 function expiredAuctionWhere(now: Date) {
   return {
-    isDaily: false,
     pricingType: "AUCTION" as const,
     status: "ACTIVE" as const,
     settledAt: null,
@@ -153,9 +151,8 @@ export async function settleAuction(listing: ExpiredAuction, now = new Date()): 
 }
 
 /**
- * Sweeps every expired ordinary auction. Runs alongside the daily-auction cron
- * on the same minute ticker; one listing failing (a reverted tx, a dead RPC)
- * leaves the rest to settle rather than aborting the batch.
+ * Sweeps every expired auction. One listing failing (a reverted tx, a dead
+ * RPC) leaves the rest to settle rather than aborting the batch.
  */
 export async function settleExpiredAuctions(now = new Date()): Promise<SettleSweep> {
   const expired = await prisma.listing.findMany({
@@ -176,4 +173,26 @@ export async function settleExpiredAuctions(now = new Date()): Promise<SettleSwe
     settled.push(await settleAuction(listing, now));
   }
   return { checked: expired.length, settled };
+}
+
+let sweeping = false;
+
+/**
+ * Runs the settlement sweep every minute. A sweep still in flight (slow RPC,
+ * several endAuction txs) is not overlapped by the next tick.
+ */
+export function startAuctionSettlementTicker() {
+  const tick = async () => {
+    if (sweeping) return;
+    sweeping = true;
+    try {
+      await settleExpiredAuctions();
+    } catch (err) {
+      console.error("[auction-settle] ticker error:", err);
+    } finally {
+      sweeping = false;
+    }
+  };
+  void tick();
+  return setInterval(() => void tick(), 60_000);
 }

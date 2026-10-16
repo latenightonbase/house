@@ -9,15 +9,15 @@ export const metadata: Metadata = {
 const SECTIONS = [
   {
     title: "What we collect",
-    body: "Wallet addresses, session cookies, any email you verify, and the project details you submit with a bid.",
+    body: "Wallet addresses, session cookies, any email you verify, the listings you create and the messages you send.",
   },
   {
     title: "Why we collect it",
-    body: "To run auctions, settle them on-chain, notify you when you win or get outbid, and publish the winning project on the billboard.",
+    body: "To run the marketplace, settle sales on-chain, and notify you when you win, get outbid or buy something.",
   },
   {
     title: "What is public",
-    body: "Bids and settlements are on-chain and public by design. A winning project's details are published on the homepage for its 24-hour run and kept in Past Winners afterwards.",
+    body: "Bids, purchases and settlements are on-chain and public by design. Your listings, and the sales you make or win, show under your public profile name.",
   },
   { title: "Retention and deletion", body: null },
   { title: "Third parties and processors", body: null },

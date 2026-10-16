@@ -44,7 +44,7 @@ function Party({ party, role }: { party: SaleParty; role: string }) {
 function SaleRow({ sale }: { sale: RecentSale }) {
   const won = sale.via === "AUCTION_WIN";
   const Icon = won ? Gavel : ShoppingBag;
-  const kind = won ? (sale.isDaily ? "Daily auction" : "Auction") : "Bought";
+  const kind = won ? "Auction" : "Bought";
 
   return (
     <Link

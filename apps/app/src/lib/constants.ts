@@ -50,7 +50,7 @@ export interface NavItem {
   href: string;
   label: string;
   /** Icon key resolved in `components/nav/navIcons.tsx`. */
-  icon: "auction" | "market" | "vaults" | "how" | "winners" | "leaderboard" | "about";
+  icon: "home" | "market" | "vaults" | "how" | "about";
   /** Hidden from the top bar when false — the sidebar still lists it. */
   inTopNav?: boolean;
   /** Off-site destination: opens in a new tab and is never marked active. */
@@ -62,7 +62,7 @@ export const PANTHEON_VAULTS_URL =
   "https://launch.pantheonvaults.com/vaults/0x076277c3d6b57b4aad34c592cd2f138e9316a991";
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Live Auction", icon: "auction", inTopNav: true },
+  { href: "/", label: "Home", icon: "home", inTopNav: true },
   { href: "/marketplace", label: "Media Marketplace", icon: "market", inTopNav: true },
   {
     href: PANTHEON_VAULTS_URL,
@@ -72,20 +72,12 @@ export const NAV_ITEMS: NavItem[] = [
     external: true,
   },
   { href: "/how-it-works", label: "How It Works", icon: "how", inTopNav: true },
-  { href: "/past-winners", label: "Past Winners", icon: "winners", inTopNav: true },
-  { href: "/leaderboard", label: "Leaderboard", icon: "leaderboard", inTopNav: true },
   { href: "/about", label: "About LNOC", icon: "about", inTopNav: true },
 ];
 
 export const FOOTER_LINKS = [
   { href: "/terms", label: "Terms of Service" },
   { href: "/privacy", label: "Privacy Policy" },
-] as const;
-
-/** What the winning bidder receives — rendered as the strip under the auction. */
-export const WINNER_BENEFITS = [
-  { icon: "screen", label: "24-Hour Homepage Takeover" },
-  { icon: "megaphone", label: "Social Promotion Across LNOC Channels" },
 ] as const;
 
 /** The home page's opening pitch — what LNOC is, before any numbers. */

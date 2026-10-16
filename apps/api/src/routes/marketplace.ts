@@ -12,8 +12,6 @@ import {
   serializeEarner,
   serializeListing,
 } from "../lib/marketplace";
-import { getDailyProject, getWinningProject, saveDailyProject } from "../lib/dailyProject";
-import { buildShowcase } from "../lib/dailyAuction";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
 import { getRecentSales } from "../lib/profileHistory";
@@ -37,20 +35,6 @@ function validPrice(price: number) {
     Math.abs(Math.round(price * 100) - price * 100) < 1e-6
   );
 }
-
-/**
- * The project a bidder is pitching. Only the name is required — description,
- * artwork and socials are optional, matching what the billboard can render
- * without them.
- */
-const dailyProjectBody = t.Object({
-  name: t.String({ minLength: 1, maxLength: 80 }),
-  description: t.Optional(t.Union([t.String({ maxLength: 600 }), t.Null()])),
-  imageUrl: t.Optional(t.Union([t.String({ maxLength: 600 }), t.Null()])),
-  websiteUrl: t.Optional(t.Union([t.String({ maxLength: 300 }), t.Null()])),
-  twitterUrl: t.Optional(t.Union([t.String({ maxLength: 300 }), t.Null()])),
-  youtubeUrl: t.Optional(t.Union([t.String({ maxLength: 300 }), t.Null()])),
-});
 
 /**
  * Live inventory: published, still has slots, and not past its end date.
@@ -98,46 +82,6 @@ function bidderIdentity(
   };
 }
 
-/** The bid shape the daily-auction UI reads: leader, tally, and current price. */
-async function dailyAuctionState(listingId: string, reservePrice: number) {
-  const [bids, bidderRows] = await Promise.all([
-    prisma.listingBid.findMany({
-      where: { listingId },
-      orderBy: { amount: "desc" },
-      take: 1,
-      include: {
-        bidderUser: { include: { socials: true, wallets: true } },
-      },
-    }),
-    prisma.listingBid.groupBy({ by: ["bidderWallet"], where: { listingId }, _count: true }),
-  ]);
-
-  const top = bids[0] ?? null;
-  const bidCount = bidderRows.reduce((sum, row) => sum + row._count, 0);
-  const leaderProject = top ? await getDailyProject(listingId, top.bidderWallet) : null;
-  const bidder = top ? bidderIdentity(top.bidderWallet, top.bidderUser) : null;
-
-  return {
-    currentBid: top?.amount ?? reservePrice,
-    reservePrice,
-    bidCount,
-    bidderCount: bidderRows.length,
-    leader: top && bidder
-      ? {
-          wallet: top.bidderWallet,
-          /** Prefers the pitched project name — that is what the leaderboard shows. */
-          name: leaderProject?.name || bidder.name,
-          avatarUrl: leaderProject?.imageUrl ?? bidder.avatarUrl,
-          amount: top.amount,
-          project: leaderProject
-            ? { name: leaderProject.name, avatarUrl: leaderProject.imageUrl }
-            : null,
-          bidder,
-        }
-      : null,
-  };
-}
-
 type BidderUser = {
   username: string | null;
   avatarUrl: string | null;
@@ -148,23 +92,13 @@ type BidderUser = {
   }>;
 };
 
-/**
- * Everyone who has bid on a listing, one row per wallet, highest bid first.
- * Project pitch is joined when the bidder submitted one for this auction.
- */
+/** Everyone who has bid on a listing, one row per wallet, highest bid first. */
 async function listingBidders(listingId: string) {
-  const [bids, projects] = await Promise.all([
-    prisma.listingBid.findMany({
-      where: { listingId },
-      orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
-      include: { bidderUser: { include: { socials: true } } },
-    }),
-    prisma.dailyProject.findMany({ where: { listingId } }),
-  ]);
-
-  const projectByWallet = new Map(
-    projects.map((project) => [project.bidderWallet.toLowerCase(), project]),
-  );
+  const bids = await prisma.listingBid.findMany({
+    where: { listingId },
+    orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+    include: { bidderUser: { include: { socials: true } } },
+  });
 
   const byWallet = new Map<
     string,
@@ -194,7 +128,6 @@ async function listingBidders(listingId: string) {
 
   return rows.map((row) => {
     const identity = bidderIdentity(row.wallet, row.user);
-    const project = projectByWallet.get(row.wallet);
     return {
       wallet: row.wallet,
       name: identity.name,
@@ -203,16 +136,6 @@ async function listingBidders(listingId: string) {
       bidCount: row.bidCount,
       lastBidAt: row.lastBidAt.toISOString(),
       leading: row.wallet === leaderWallet,
-      project: project
-        ? {
-            name: project.name,
-            description: project.description,
-            imageUrl: project.imageUrl,
-            websiteUrl: project.websiteUrl,
-            twitterUrl: project.twitterUrl,
-            youtubeUrl: project.youtubeUrl,
-          }
-        : null,
     };
   });
 }
@@ -425,10 +348,9 @@ export const marketplaceRoutes = new Elysia()
     };
   })
   /**
-   * Seller inventory. The rotating daily auction is excluded on purpose — it has
-   * `/listings/daily` and the home page's own hero, and leaving it in the feed
-   * would show the same lot twice. Each row carries its live bid state so an
-   * auction card can say what it actually stands at rather than its reserve.
+   * Seller inventory. Rows from the retired daily auction stay hidden (see
+   * `Listing.isDaily`). Each row carries its live bid state so an auction card
+   * can say what it actually stands at rather than its reserve.
    */
   .get("/listings", async ({ query }) => {
     const limit = query.limit ? Number(query.limit) : 30;
@@ -468,196 +390,12 @@ export const marketplaceRoutes = new Elysia()
     };
   })
   /**
-   * Tomorrow's auction — the one live daily listing, with the live bid state
-   * the home page's countdown panel renders.
-   */
-  .get("/listings/daily", async () => {
-    const listing = await prisma.listing.findFirst({
-      where: {
-        isDaily: true,
-        status: "ACTIVE",
-        OR: [{ endDate: null }, { endDate: { gt: new Date() } }],
-      },
-      orderBy: { endDate: "asc" },
-      include: { creator: { include: creatorInclude } },
-    });
-    if (!listing) return { listing: null, auction: null };
-    return {
-      listing: serializeListing(listing),
-      auction: await dailyAuctionState(listing.id, listing.price),
-    };
-  })
-  /**
-   * Today's Attention — the winning pitch from the auction that closed most
-   * recently, on the billboard for its 24 hours. Falls back to nothing while a
-   * settled auction has no pitch attached (an auction created before pitches
-   * existed, or one that closed with no bids).
-   */
-  .get("/listings/daily/spotlight", async () => {
-    const since = new Date(Date.now() - 24 * 3_600_000);
-    const listing = await prisma.listing.findFirst({
-      where: { isDaily: true, settledAt: { not: null, gte: since }, winnerWallet: { not: null } },
-      orderBy: { settledAt: "desc" },
-      include: { bids: { orderBy: { amount: "desc" }, take: 1 } },
-    });
-    if (!listing) return { spotlight: null };
-
-    const project = await getWinningProject(listing.id, listing.winnerWallet);
-    return {
-      spotlight: buildShowcase(listing, project, listing.bids[0]?.amount ?? listing.price),
-    };
-  })
-  /**
-   * Public attention-market history. Clearing prices come from the highest
-   * recorded bid, falling back to the listing price for legacy settled rows.
-   */
-  .get("/listings/daily/analytics", async () => {
-    const [listings, bidders] = await Promise.all([
-      prisma.listing.findMany({
-        where: { isDaily: true, settledAt: { not: null }, winnerWallet: { not: null } },
-        orderBy: { settledAt: "asc" },
-        select: {
-          id: true,
-          price: true,
-          settledAt: true,
-          bids: {
-            orderBy: { amount: "desc" },
-            take: 1,
-            select: { amount: true },
-          },
-        },
-      }),
-      prisma.listingBid.findMany({
-        where: { listing: { isDaily: true } },
-        distinct: ["bidderWallet"],
-        select: { bidderWallet: true },
-      }),
-    ]);
-
-    const history = listings.map((listing) => ({
-      listingId: listing.id,
-      settledAt: listing.settledAt!.toISOString(),
-      clearingPrice: listing.bids[0]?.amount ?? listing.price,
-    }));
-    const totalVolume = history.reduce((sum, auction) => sum + auction.clearingPrice, 0);
-
-    return {
-      metrics: {
-        totalVolume,
-        auctionsSettled: history.length,
-        uniqueBidders: new Set(bidders.map((bidder) => bidder.bidderWallet.toLowerCase())).size,
-        averageClearingPrice: history.length ? totalVolume / history.length : 0,
-      },
-      history,
-    };
-  })
-  /**
-   * Leaderboard — bidders ranked by total committed across every daily auction,
-   * with their wins. Built from bid rows rather than a running tally so it stays
-   * correct without a counter to keep in sync.
-   */
-  .get("/listings/daily/leaderboard", async ({ query }) => {
-    const limit = Math.min(Number(query.limit) || 25, 100);
-
-    const dailyIds = (
-      await prisma.listing.findMany({ where: { isDaily: true }, select: { id: true } })
-    ).map((l) => l.id);
-    if (dailyIds.length === 0) return { leaders: [] };
-
-    const [grouped, wins, projects] = await Promise.all([
-      prisma.listingBid.groupBy({
-        by: ["bidderWallet"],
-        where: { listingId: { in: dailyIds } },
-        _sum: { amount: true },
-        _max: { amount: true },
-        _count: { _all: true },
-      }),
-      prisma.listing.findMany({
-        where: { isDaily: true, winnerWallet: { not: null } },
-        select: { winnerWallet: true },
-      }),
-      prisma.dailyProject.findMany({
-        where: { listingId: { in: dailyIds } },
-        orderBy: { updatedAt: "desc" },
-        select: { bidderWallet: true, name: true, imageUrl: true },
-      }),
-    ]);
-
-    const winCounts = new Map<string, number>();
-    for (const row of wins) {
-      const wallet = row.winnerWallet!.toLowerCase();
-      winCounts.set(wallet, (winCounts.get(wallet) ?? 0) + 1);
-    }
-    // Newest pitch per wallet wins — `projects` is already sorted by recency.
-    const latestProject = new Map<string, { name: string; imageUrl: string | null }>();
-    for (const p of projects) {
-      if (!latestProject.has(p.bidderWallet)) {
-        latestProject.set(p.bidderWallet, { name: p.name, imageUrl: p.imageUrl });
-      }
-    }
-
-    const leaders = grouped
-      .map((row) => {
-        const wallet = row.bidderWallet.toLowerCase();
-        const project = latestProject.get(wallet);
-        return {
-          wallet,
-          name: project?.name ?? `${wallet.slice(0, 6)}\u2026${wallet.slice(-4)}`,
-          imageUrl: project?.imageUrl ?? null,
-          totalBid: row._sum.amount ?? 0,
-          highestBid: row._max.amount ?? 0,
-          bidCount: row._count._all,
-          wins: winCounts.get(wallet) ?? 0,
-        };
-      })
-      .sort((a, b) => b.wins - a.wins || b.totalBid - a.totalBid)
-      .slice(0, limit);
-
-    return { leaders };
-  })
-  /**
    * Recently sold — the latest purchases and won auctions with both sides of
    * each sale, for the home page. Public, so no chat handles are included.
    */
   .get("/listings/recent-sales", async ({ query }) => {
     const limit = Math.min(Math.max(Number(query.limit) || 5, 1), 20);
     return { sales: await getRecentSales(limit) };
-  })
-  /** Past Winners — every settled daily auction that put a project on the billboard. */
-  .get("/listings/daily/winners", async ({ query }) => {
-    const limit = Math.min(Number(query.limit) || 24, 100);
-    const listings = await prisma.listing.findMany({
-      where: { isDaily: true, settledAt: { not: null }, winnerWallet: { not: null } },
-      orderBy: { settledAt: "desc" },
-      take: limit,
-      include: {
-        bids: { orderBy: { amount: "desc" }, take: 1 },
-        projects: true,
-      },
-    });
-
-    const winners = listings
-      .map((listing) => {
-        const project = listing.projects.find(
-          (p) => p.bidderWallet === listing.winnerWallet?.toLowerCase(),
-        );
-        if (!project) return null;
-        return {
-          listingId: listing.id,
-          name: project.name,
-          description: project.description,
-          imageUrl: project.imageUrl,
-          websiteUrl: project.websiteUrl,
-          twitterUrl: project.twitterUrl,
-          youtubeUrl: project.youtubeUrl,
-          winnerWallet: listing.winnerWallet,
-          winningBid: listing.bids[0]?.amount ?? listing.price,
-          settledAt: listing.settledAt?.toISOString() ?? null,
-        };
-      })
-      .filter((w): w is NonNullable<typeof w> => w !== null);
-
-    return { winners };
   })
   /**
    * The seller's own listings, in every state — this is the only place a
@@ -672,7 +410,7 @@ export const marketplaceRoutes = new Elysia()
     }
 
     const listings = await prisma.listing.findMany({
-      where: { creator: { userId: user.id } },
+      where: { creator: { userId: user.id }, isDaily: false },
       orderBy: { createdAt: "desc" },
       include: { creator: { include: creatorInclude } },
     });
@@ -680,58 +418,8 @@ export const marketplaceRoutes = new Elysia()
     return { listings: listings.map(serializeListing) };
   })
   /**
-   * The signed-in bidder's saved pitch for one auction. Returning it lets the
-   * bid dialog prefill, so re-bidding after being outbid never re-asks.
-   */
-  .get("/listings/:id/project", async ({ params, request, set }) => {
-    const user = await getUserFromRequest(request);
-    if (!user) {
-      set.status = 401;
-      return { error: "Not authenticated" };
-    }
-    const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
-    if (!wallet) return { project: null };
-    return { project: await getDailyProject(params.id, wallet.address) };
-  })
-  /** Saves the pitch ahead of (or alongside) a bid. */
-  .put(
-    "/listings/:id/project",
-    async ({ params, body, request, set }) => {
-      const user = await getUserFromRequest(request);
-      if (!user) {
-        set.status = 401;
-        return { error: "Not authenticated" };
-      }
-      const wallet = user.wallets.find((w) => w.isPrimary) ?? user.wallets[0];
-      if (!wallet) {
-        set.status = 400;
-        return { error: "No wallet on this account" };
-      }
-
-      const listing = await prisma.listing.findUnique({ where: { id: params.id } });
-      if (!listing) {
-        set.status = 404;
-        return { error: "Listing not found" };
-      }
-      const closed =
-        listing.status !== "ACTIVE" ||
-        (listing.endDate !== null && listing.endDate.getTime() <= Date.now());
-      if (closed) {
-        set.status = 400;
-        return { error: "This auction is closed" };
-      }
-
-      const project = await saveDailyProject(params.id, wallet.address, user.id, body);
-      const auction = listing.isDaily
-        ? await dailyAuctionState(listing.id, listing.price)
-        : undefined;
-      return { project, auction };
-    },
-    { body: dailyProjectBody },
-  )
-  /**
-   * Public bidder roll for an auction listing — each person who has bid, their
-   * highest amount, and the project pitch they submitted for this listing.
+   * Public bidder roll for an auction listing — each person who has bid and
+   * their highest amount.
    */
   .get("/listings/:id/bidders", async ({ params, set }) => {
     const listing = await prisma.listing.findUnique({
@@ -929,9 +617,7 @@ export const marketplaceRoutes = new Elysia()
   )
   /**
    * Moderation view — every live seller listing, newest first, with its bid
-   * count so the panel can say up front which ones can still be removed. The
-   * daily auction is the admin's own and has its own lifecycle, so it is left
-   * out.
+   * count so the panel can say up front which ones can still be removed.
    */
   .get("/admin/listings", async ({ request, set }) => {
     const admin = await requireAdmin(request, set);
@@ -967,15 +653,11 @@ export const marketplaceRoutes = new Elysia()
 
     const listing = await prisma.listing.findUnique({
       where: { id: params.id },
-      select: { isDaily: true },
+      select: { id: true },
     });
     if (!listing) {
       set.status = 404;
       return { error: "Listing not found" };
-    }
-    if (listing.isDaily) {
-      set.status = 409;
-      return { error: "The daily auction cannot be deleted from here" };
     }
 
     // The no-bids condition sits in the delete itself, so a bid recorded
@@ -1160,7 +842,9 @@ export const marketplaceRoutes = new Elysia()
         set.status = 404;
         return { error: "Listing not found" };
       }
-      if (listing.pricingType !== "AUCTION" || listing.status !== "ACTIVE") {
+      // A leftover daily-auction row is closed to new bids: the billboard it
+      // sold no longer exists, so it just runs out and settles.
+      if (listing.pricingType !== "AUCTION" || listing.status !== "ACTIVE" || listing.isDaily) {
         set.status = 400;
         return { error: "This listing is not open for bids" };
       }
@@ -1177,24 +861,6 @@ export const marketplaceRoutes = new Elysia()
       if (!wallet) {
         set.status = 400;
         return { error: "No wallet on this account" };
-      }
-
-      /**
-       * A daily-auction bid carries the project pitch. It is saved before the
-       * bid row so a winner always has something to put on the billboard; when
-       * the dialog sends nothing, the pitch stored on an earlier bid stands,
-       * which is what makes re-bidding after an outbid a one-field action.
-       */
-      if (listing.isDaily) {
-        if (body.project) {
-          await saveDailyProject(listing.id, wallet.address, user.id, body.project);
-        } else {
-          const existing = await getDailyProject(listing.id, wallet.address);
-          if (!existing) {
-            set.status = 400;
-            return { error: "Add your project details before bidding on the daily auction" };
-          }
-        }
       }
 
       const previous = listing.bids[0] ?? null;
@@ -1232,14 +898,12 @@ export const marketplaceRoutes = new Elysia()
         ok: true,
         bidId: bid.id,
         listing: serializeListing(listing),
-        auction: await dailyAuctionState(listing.id, listing.price),
       };
     },
     {
       body: t.Object({
         amount: t.Number(),
         txHash: t.String(),
-        project: t.Optional(dailyProjectBody),
       }),
     },
   )

@@ -8,11 +8,9 @@ const ICONS = {
 } as const;
 
 /**
- * What LNOC is, in one glance, above everything else. A first-time visitor
- * lands on a billboard and an auction; without this they have no idea what
- * either is for. Kept to a headline and a row of chips so that on a phone the
- * billboard and the live auction still make it above the fold; on a wide
- * screen the chips share the headline's line.
+ * What LNOC is, in one glance, above everything else. Kept to a headline and
+ * a row of chips so that on a phone the first listings still make it above
+ * the fold; on a wide screen the chips share the headline's line.
  */
 export function HomeIntro() {
   const [before, after] = HOME_INTRO.title.split(HOME_INTRO.highlight);

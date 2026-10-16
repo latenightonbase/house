@@ -3,7 +3,7 @@ import { PageShell, Section, Placeholder } from "@/components/PageShell";
 
 export const metadata: Metadata = {
   title: "Terms of Service — LNOC",
-  description: "The terms governing bidding and billboard placement on LNOC.",
+  description: "The terms governing listing, buying and bidding on LNOC.",
 };
 
 /** The clause headings the drafted terms will fill. */
@@ -11,7 +11,7 @@ const CLAUSES = [
   "Acceptance of terms",
   "Eligibility and accounts",
   "Bidding, escrow and settlement",
-  "Billboard placement and content standards",
+  "Listings and content standards",
   "Refunds and cancelled auctions",
   "Intellectual property",
   "Disclaimers and limitation of liability",
@@ -24,7 +24,7 @@ export default function TermsPage() {
       eyebrow="Legal"
       title="Terms of"
       titleAccent="service"
-      intro="These terms govern bidding on LNOC auctions and the placement that a winning bid buys."
+      intro="These terms govern listing, buying and bidding on LNOC."
     >
       <Section>
         <Placeholder>

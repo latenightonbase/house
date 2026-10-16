@@ -7,7 +7,7 @@ import { cronRoutes } from "./routes/cron";
 import { uploadRoutes } from "./routes/uploads";
 import { chatRoutes } from "./routes/chat";
 import { profileRoutes } from "./routes/profile";
-import { startDailyAuctionTicker } from "./lib/dailyAuction";
+import { startAuctionSettlementTicker } from "./lib/auctionSettlement";
 import { websocket } from "elysia/ws";
 import { getAllowedOrigins } from "./lib/origins";
 
@@ -55,7 +55,7 @@ const server = Bun.serve({
 
 app.server = server;
 
-startDailyAuctionTicker();
+startAuctionSettlementTicker();
 
 console.log(`House API listening on http://localhost:${PORT}`);
 

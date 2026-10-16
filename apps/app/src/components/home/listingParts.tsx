@@ -113,8 +113,8 @@ export function ActionPill({ listing, className }: { listing: Listing; className
       aria-hidden="true"
       className={cn(
         "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] transition-[filter]",
-        // Same gradient as the daily auction's Place bid, so a listing's buy
-        // button pulls the eye as hard as the marquee does.
+        // Same gradient as the primary actions, so a listing's buy
+        // button pulls the eye.
         price.soldOut
           ? "border border-line bg-white/[0.03] text-caption"
           : "gradient-button text-white group-hover:brightness-110",

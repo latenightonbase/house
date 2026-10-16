@@ -1,34 +1,34 @@
 import type { Metadata } from "next";
-import { Gavel, Crown, Trophy, Repeat } from "lucide-react";
+import { Gavel, MessageSquare, ShieldCheck, Tag } from "lucide-react";
 import { PageShell, Section, Placeholder } from "@/components/PageShell";
-import { WINNER_BENEFITS } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "How It Works — LNOC",
-  description: "One 24-hour auction a day. The winner takes the billboard and the spotlight.",
+  description:
+    "List goods and services at a fixed price or at auction, and settle every sale on-chain.",
 };
 
-/** The four beats of the daily cycle, in the order a bidder lives them. */
+/** The four beats of a sale, in the order buyer and seller live them. */
 const STEPS = [
   {
+    icon: Tag,
+    title: "List it",
+    body: "Add a title, a photo and a price — fixed, or an auction with a reserve. Price it in USDG, LNOC or any token on Robinhood Chain. You sign one transaction and the listing is live.",
+  },
+  {
     icon: Gavel,
-    title: "Bid with your project",
-    body: "Every auction runs for 24 hours. You enter your project name, description, artwork and links once when you place your first bid — get outbid and re-bidding takes one field.",
+    title: "Buy or bid",
+    body: "Buy a fixed-price listing outright, or bid on an auction. Bids are escrowed on-chain, and if you are outbid your funds are returned automatically.",
   },
   {
-    icon: Crown,
-    title: "Hold the lead",
-    body: "Bids are escrowed on-chain. The highest bid when the clock hits zero wins; every other bid is returned automatically.",
+    icon: ShieldCheck,
+    title: "Settle on-chain",
+    body: "A fixed-price sale settles the moment you buy. When an auction's clock runs out, the contract pays the seller and records the highest bidder as the winner.",
   },
   {
-    icon: Trophy,
-    title: "Take the billboard",
-    body: "The winning project goes live on the homepage for a full 24 hours, with promotion across LNOC's social channels.",
-  },
-  {
-    icon: Repeat,
-    title: "The next auction opens",
-    body: "The moment one auction settles, a fresh 24-hour auction opens for the following day's slot. The market never closes.",
+    icon: MessageSquare,
+    title: "Arrange delivery",
+    body: "Buyer and seller message each other on LNOC to hand over the goods or deliver the service.",
   },
 ];
 
@@ -36,9 +36,9 @@ export default function HowItWorksPage() {
   return (
     <PageShell
       eyebrow="How it works"
-      title="One auction."
-      titleAccent="Every day."
-      intro="LNOC sells a single unit of inventory: 24 hours of undivided attention. One auction runs at a time, it settles on the hour it was opened, and the winner is live before the next one starts."
+      title="Buy and sell"
+      titleAccent="onchain."
+      intro="LNOC is a marketplace for goods and services where every sale settles on Robinhood Chain. List anything at a fixed price or put it up for auction — payment runs through the AuctionHouse contract from bid to payout."
     >
       <div className="grid gap-4 sm:grid-cols-2">
         {STEPS.map((step, index) => (
@@ -57,22 +57,9 @@ export default function HowItWorksPage() {
         ))}
       </div>
 
-      <Section
-        title="What the winner gets"
-        description="Every winning bid buys the same package."
-      >
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {WINNER_BENEFITS.map((benefit) => (
-            <li key={benefit.label} className="tile px-4 py-3.5 text-[13px] text-white/90">
-              {benefit.label}
-            </li>
-          ))}
-        </ul>
-      </Section>
-
       <Section title="Rules & fine print">
         <Placeholder>
-          Bid increments, reserve pricing, settlement timing and content policy go here.
+          Listing limits, bid increments, auction timing and content policy go here.
         </Placeholder>
       </Section>
     </PageShell>
