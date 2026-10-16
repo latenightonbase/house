@@ -27,13 +27,8 @@ const SORTS: { value: Sort; label: string }[] = [
  */
 const COLUMN_COUNTS = [1, 2, 3, 4] as const;
 
-/**
- * In preview the grid shows a single row at every width: the first two cards
- * always (one column stacks two), the third from three columns, the fourth
- * from four. Anything past that is behind "View all".
- */
-const PREVIEW_CARD_CLASS = ["contents", "contents", "hidden @4xl:contents", "hidden @6xl:contents"];
-const PREVIEW_LIMIT = PREVIEW_CARD_CLASS.length;
+/** In preview the grid shows four cards at every width; the rest is behind "View all". */
+const PREVIEW_LIMIT = 4;
 
 /** The invitation tile's footprint per column count, by how many cells it fills. */
 const FILLER_SPAN: Record<number, Record<number, string>> = {
@@ -48,9 +43,8 @@ const FILLER_SPAN: Record<number, Record<number, string>> = {
 };
 
 /** How many cards land on screen at a given column count. */
-function cardsAt(columns: number, count: number, preview: boolean) {
-  if (!preview) return count;
-  return Math.min(count, Math.max(columns, 2));
+function cardsAt(count: number, preview: boolean) {
+  return preview ? Math.min(count, PREVIEW_LIMIT) : count;
 }
 
 /**
@@ -62,7 +56,7 @@ function fillerClass(count: number, preview: boolean) {
   return [
     "hidden",
     ...COLUMN_COUNTS.slice(1).map((columns) => {
-      const remainder = cardsAt(columns, count, preview) % columns;
+      const remainder = cardsAt(count, preview) % columns;
       return FILLER_SPAN[columns][remainder === 0 ? 0 : columns - remainder];
     }),
   ].join(" ");
@@ -290,7 +284,7 @@ export function MarketplacePanel({
               </Select>
             </label>
           ) : null}
-          {previewHref && listings.length > 2 ? (
+          {previewHref && listings.length > PREVIEW_LIMIT ? (
             <Link
               href={previewHref}
               className="inline-flex h-9 shrink-0 items-center gap-1.5 text-[12px] font-semibold text-primary-light transition-colors hover:text-white"
@@ -346,9 +340,12 @@ export function MarketplacePanel({
             <div className="@container mt-4 min-w-0">
               <div className="grid min-w-0 grid-cols-1 gap-3 @lg:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 sm:gap-4">
                 {shown.map((listing, index) => (
-                  <div key={listing.id} className={preview ? PREVIEW_CARD_CLASS[index] : "contents"}>
-                    <ListingCard listing={listing} onCheckout={onCheckout} priority={index < 3} />
-                  </div>
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    onCheckout={onCheckout}
+                    priority={index < 3}
+                  />
                 ))}
                 <ListYoursTile className={fillerClass(shown.length, preview)} />
               </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ListingPoster } from "@/components/listing/ListingPoster";
 import {
   ActionPill,
@@ -13,23 +15,40 @@ import {
 } from "@/components/home/listingParts";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
-import { cn } from "@/lib/utils";
+import { clipText, cn, listingFallbackArt } from "@/lib/utils";
+
+/** Card descriptions are a teaser; the full write-up is in checkout. */
+const DESCRIPTION_MAX = 50;
 
 /**
  * A listing without artwork still gets the full-size box, so a grid of mixed
- * listings keeps its rhythm — filled with its category glyph over the violet
- * wash the panels use, rather than an empty grey hole.
+ * listings keeps its rhythm: a low-contrast identicon generated from the
+ * listing. If that fails to load, a faint category glyph stands in.
  */
 function PosterPlaceholder({ listing }: { listing: Listing }) {
   const CategoryIcon = categoryMeta(listing.category).icon;
+  const src = listingFallbackArt(listing.id);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [src]);
+
   return (
     <span
-      className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(139,92,246,0.22),transparent_65%)] bg-surface-2"
+      className="relative flex h-full w-full items-center justify-center bg-[#131117]"
       aria-hidden="true"
     >
-      <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10">
-        <CategoryIcon className="h-6 w-6 text-primary-light" />
-      </span>
+      {!failed && (
+        <Image
+          src={src}
+          alt=""
+          fill
+          unoptimized
+          sizes="(min-width: 1280px) 320px, (min-width: 640px) 50vw, 100vw"
+          onError={() => setFailed(true)}
+          className="object-cover"
+        />
+      )}
+      {failed && <CategoryIcon className="h-7 w-7 text-white/20" strokeWidth={1.5} />}
     </span>
   );
 }
@@ -93,9 +112,9 @@ export function ListingCard({
           <span className="mt-1.5 line-clamp-2 block text-[15px] font-semibold leading-snug text-foreground">
             {listing.title}
           </span>
-          {listing.description && (
-            <span className="mt-1.5 line-clamp-3 block whitespace-pre-line text-[12.5px] leading-relaxed text-caption">
-              {listing.description}
+          {listing.description?.trim() && (
+            <span className="mt-1.5 block text-[12.5px] leading-relaxed text-caption">
+              {clipText(listing.description, DESCRIPTION_MAX)}
             </span>
           )}
         </span>

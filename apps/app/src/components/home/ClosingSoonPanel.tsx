@@ -9,7 +9,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { cn, walletFallbackAvatar } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 
-/** Five keeps the rail level with the market's single row of cards. */
+/** Five rows: enough to fill the rail beside the market preview without a scroll. */
 const MAX_ROWS = 5;
 
 function Row({
