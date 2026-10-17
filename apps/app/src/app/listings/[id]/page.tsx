@@ -294,10 +294,9 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
                 <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" />
               )}
             </p>
-            <p className="text-[12px] text-caption truncate">
-              {listing.creator.reach} reach
-              {listing.category !== "OTHER" ? ` · ${meta.label}` : ""}
-            </p>
+            {listing.category !== "OTHER" && (
+              <p className="text-[12px] text-caption truncate">{meta.label}</p>
+            )}
           </div>
         </div>
 

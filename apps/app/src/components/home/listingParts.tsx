@@ -140,20 +140,12 @@ export function KindBadge({ listing }: { listing: Listing }) {
   return <span className="badge badge-neutral shrink-0 whitespace-nowrap">Buy now</span>;
 }
 
-/** A seller with no linked socials reports zero followers — that line is dropped. */
-function hasReach(listing: Listing) {
-  const reach = listing.creator.reach?.trim();
-  return Boolean(reach) && reach !== "0";
-}
-
 export function Seller({
   listing,
   size = 24,
-  showReach = true,
 }: {
   listing: Listing;
   size?: number;
-  showReach?: boolean;
 }) {
   return (
     <span className="flex min-w-0 items-center gap-2">

@@ -120,7 +120,7 @@ export function ListingCard({
         </span>
 
         <span className="flex min-w-0 items-center justify-between gap-3">
-          <Seller listing={listing} size={22} showReach={false} />
+          <Seller listing={listing} size={22} />
           <EndLabel listing={listing} className="shrink-0" />
         </span>
 

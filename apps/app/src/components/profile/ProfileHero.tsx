@@ -176,7 +176,6 @@ export function ProfileHero({
             ) : (
               <Chip>No wallet linked</Chip>
             )}
-            {profile.reach > 0 && <Chip>{formatCount(profile.reach)} reach</Chip>}
             {socials.map((social) => (
               <Chip key={social.platform}>
                 <span className="capitalize">{social.platform.toLowerCase()}</span>
