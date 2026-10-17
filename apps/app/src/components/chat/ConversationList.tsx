@@ -50,7 +50,7 @@ export function ConversationList({
               aria-current={active ? "true" : undefined}
               className={cn(
                 "w-full text-left px-3.5 py-3 flex items-center gap-3 transition-colors",
-                active ? "bg-primary/15" : "hover:bg-white/[0.03]",
+                active ? "bg-primary/15" : "hover:bg-white/[0.03] active:bg-white/[0.05]",
               )}
             >
               <span className="relative shrink-0">

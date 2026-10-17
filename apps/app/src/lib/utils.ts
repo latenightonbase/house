@@ -21,7 +21,7 @@ export function walletFallbackAvatar(seed?: string | null) {
 export function listingFallbackArt(seed: string) {
   // The colour list's commas must stay literal — Dicebear answers 400 when they
   // arrive percent-encoded, which URLSearchParams always does.
-  return `https://api.dicebear.com/9.x/identicon/svg?seed=${encodeURIComponent(seed)}&backgroundColor=131117&rowColor=2a2733,263036,302c27&scale=60`;
+  return `https://api.dicebear.com/10.x/glass/svg?seed=${encodeURIComponent(seed)}&backgroundColor=131117&rowColor=2a2733,263036,302c27&scale=60`;
 }
 
 /** Shortens to at most `max` characters, on a word break when one is near the end. */

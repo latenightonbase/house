@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Paperclip, Send, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import {
   CHAT_ACCEPT,
   formatFileSize,
@@ -25,11 +26,13 @@ export function Composer({
   disabled,
   onSend,
   onTyping,
+  className,
 }: {
   conversationId: string;
   disabled?: boolean;
   onSend: (input: { body: string | null; attachment: UploadedAttachment | null }) => Promise<void>;
   onTyping?: () => void;
+  className?: string;
 }) {
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<UploadedAttachment | null>(null);
@@ -80,7 +83,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-line p-3 space-y-2">
+    <div className={cn("shrink-0 border-t border-line p-2.5 lg:p-3 space-y-2 max-lg:bg-background/95", className)}>
       {attachment && (
         <div className="flex items-center gap-2.5 rounded-lg border border-line bg-surface-2 px-3 py-2">
           <FileText className="w-4 h-4 shrink-0 text-primary-light" aria-hidden="true" />
@@ -117,7 +120,7 @@ export function Composer({
           disabled={disabled || uploading}
           aria-label="Attach an image or PDF"
           title="Attach an image or PDF (max 5MB)"
-          className="shrink-0 h-10 w-10 rounded-lg border border-line bg-surface-2 flex items-center justify-center text-caption hover:text-white hover:border-line-strong transition-colors disabled:opacity-50"
+          className="shrink-0 h-11 w-11 lg:h-10 lg:w-10 rounded-lg border border-line bg-surface-2 flex items-center justify-center text-caption hover:text-white hover:border-line-strong transition-colors disabled:opacity-50"
         >
           <Paperclip className="w-4 h-4" />
         </button>
@@ -136,9 +139,10 @@ export function Composer({
             }
           }}
           rows={1}
+          enterKeyHint="send"
           disabled={disabled}
           placeholder={uploading ? "Uploading attachment…" : "Write a message…"}
-          className="flex-1 max-h-32 resize-none rounded-lg bg-surface-2 border border-line px-3 py-2.5 text-base sm:text-sm text-foreground placeholder:text-caption outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:opacity-50"
+          className="flex-1 min-w-0 max-h-32 field-sizing-content resize-none rounded-lg bg-surface-2 border border-line px-3 py-2.5 text-base sm:text-sm text-foreground placeholder:text-caption outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 disabled:opacity-50"
         />
 
         <Button
@@ -146,7 +150,7 @@ export function Composer({
           onClick={() => void submit()}
           disabled={!canSend || disabled}
           aria-label="Send message"
-          className="shrink-0"
+          className="shrink-0 max-lg:h-11"
         >
           <Send className="w-4 h-4" />
         </Button>

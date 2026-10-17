@@ -94,6 +94,15 @@ body {
   }
 }
 
+/* An open chat thread is a fixed layer on phones; the page behind it stays put. */
+@media (max-width: 1023px) {
+  html.chat-thread-open,
+  html.chat-thread-open body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 input[type="datetime-local"] {
   max-width: 100%;
 }
