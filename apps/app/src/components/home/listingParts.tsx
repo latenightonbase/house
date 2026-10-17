@@ -162,11 +162,6 @@ export function Seller({
             <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
           )}
         </span>
-        {showReach && hasReach(listing) && (
-          <span className="block truncate text-[10px] text-caption">
-            {listing.creator.reach} reach
-          </span>
-        )}
       </span>
     </span>
   );
