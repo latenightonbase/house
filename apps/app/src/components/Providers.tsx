@@ -9,6 +9,7 @@ import { lightConfig } from "@/lib/wagmi-light";
 import { ConnectIntentProvider } from "@/components/connect-intent";
 import { SessionProvider } from "@/components/SessionProvider";
 import { SetupUsernameDialog } from "@/components/SetupUsernameDialog";
+import { ChatNotificationsProvider } from "@/components/chat/ChatNotifications";
 
 type WalletTree = ComponentType<{ children: ReactNode }>;
 
@@ -59,13 +60,15 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
-        <ConnectIntentProvider>
-          {WalletTree ? (
-            <WalletTree>{body}</WalletTree>
-          ) : (
-            <WagmiProvider config={lightConfig}>{body}</WagmiProvider>
-          )}
-        </ConnectIntentProvider>
+        <ChatNotificationsProvider>
+          <ConnectIntentProvider>
+            {WalletTree ? (
+              <WalletTree>{body}</WalletTree>
+            ) : (
+              <WagmiProvider config={lightConfig}>{body}</WagmiProvider>
+            )}
+          </ConnectIntentProvider>
+        </ChatNotificationsProvider>
       </SessionProvider>
     </QueryClientProvider>
   );

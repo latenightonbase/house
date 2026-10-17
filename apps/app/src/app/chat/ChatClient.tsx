@@ -9,6 +9,7 @@ import { ConversationList } from "@/components/chat/ConversationList";
 import { MessageBubble } from "@/components/chat/MessageBubble";
 import { Composer } from "@/components/chat/Composer";
 import { useSession } from "@/components/SessionProvider";
+import { useChatNotifications } from "@/components/chat/ChatNotifications";
 import { useChatSocket } from "@/lib/useChatSocket";
 import { cn } from "@/lib/utils";
 import {
@@ -39,6 +40,8 @@ export default function ChatClient() {
   const router = useRouter();
   const params = useSearchParams();
   const requestedId = params.get("c");
+  // The nav badge stands its own socket down on this page, so it is told here.
+  const { refresh: refreshUnread } = useChatNotifications();
 
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(requestedId);
@@ -96,13 +99,15 @@ export default function ChatClient() {
         if (message.senderId === user?.id) {
           setPending((current) => current.filter((m) => m.body !== message.body));
         } else {
-          void markConversationRead(conversationId).catch(() => {});
+          void markConversationRead(conversationId).then(refreshUnread, () => {});
         }
+      } else if (message.senderId !== user?.id) {
+        refreshUnread();
       }
 
       bumpConversation(conversationId, message, isActive);
     },
-    [bumpConversation, user?.id],
+    [bumpConversation, user?.id, refreshUnread],
   );
 
   const handleNewConversation = useCallback((conversation: Conversation) => {
@@ -150,7 +155,7 @@ export default function ChatClient() {
       .then((data) => {
         if (!active) return;
         setMessages(data.messages);
-        void markConversationRead(activeId).catch(() => {});
+        void markConversationRead(activeId).then(refreshUnread, () => {});
         setConversations((current) =>
           current?.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c)) ?? current,
         );
@@ -163,7 +168,7 @@ export default function ChatClient() {
     return () => {
       active = false;
     };
-  }, [activeId]);
+  }, [activeId, refreshUnread]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

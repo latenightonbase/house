@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{heading}}</title>
+</head>
+<body style="margin:0;padding:0;background:#070a12;font-family:Inter,Helvetica,Arial,sans-serif;color:#e8edf7;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070a12;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0d1220;border:1px solid #1c2438;border-radius:16px;">
+          <tr>
+            <td style="padding:28px 32px 8px;letter-spacing:0.2em;font-size:13px;font-weight:800;color:#ffffff;">LNOC</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 32px 0;font-size:24px;font-weight:700;color:#ffffff;">{{heading}}</td>
+          </tr>
+          <tr>
+            <td style="padding:16px 32px 8px;font-size:15px;line-height:1.6;color:#9aa4b8;">
+              <strong style="color:#e8edf7;">{{counterpartName}}</strong> {{verb}} <strong style="color:#e8edf7;">{{title}}</strong> for <strong style="color:#e8edf7;">{{amount}}</strong>. Proceeds settle to your wallet through the AuctionHouse.
+            </td>
+          </tr>
+          {{#chatUrl}}<tr>
+            <td style="padding:0 32px 8px;font-size:15px;line-height:1.6;color:#9aa4b8;">
+              We’ve opened a chat between you and <strong style="color:#e8edf7;">{{counterpartName}}</strong> in your LNOC inbox — reply there to arrange delivery.
+            </td>
+          </tr>{{/chatUrl}}
+          <tr>
+            <td style="padding:8px 32px 32px;">
+              {{#chatUrl}}<a href="{{chatUrl}}" style="display:inline-block;background:#5b6cff;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 18px;border-radius:10px;margin:0 8px 8px 0;">Message the buyer</a>{{/chatUrl}}<a href="{{listingUrl}}" style="display:inline-block;background:transparent;color:#c9d1e3;text-decoration:none;font-weight:600;font-size:14px;padding:11px 17px;border-radius:10px;border:1px solid #2a3450;margin:0 0 8px 0;">View listing</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

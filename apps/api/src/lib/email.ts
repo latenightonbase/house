@@ -17,12 +17,22 @@ function loadTemplate(name: string) {
   return html;
 }
 
+/** Titles and display names are user-chosen, so every value is escaped. */
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function render(name: string, vars: Record<string, string>) {
   let html = loadTemplate(name);
   html = html.replace(/\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g, (_, key, inner) =>
     vars[key] ? inner : "",
   );
-  return html.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+  return html.replace(/\{\{(\w+)\}\}/g, (_, key) => escapeHtml(vars[key] ?? ""));
 }
 
 function client() {
@@ -41,6 +51,10 @@ export function appOrigin() {
 
 export function listingUrl(id: string) {
   return `${appOrigin()}/listings/${id}`;
+}
+
+export function chatUrl(conversationId: string) {
+  return `${appOrigin()}/chat?c=${encodeURIComponent(conversationId)}`;
 }
 
 async function send(to: string, subject: string, name: string, vars: Record<string, string>) {
@@ -90,24 +104,54 @@ export function sendOutbid(
   });
 }
 
+/**
+ * The other side of a sale and the thread already opened with them. `chatUrl`
+ * is null when the thread could not be written; the email then goes out
+ * without the chat button rather than not at all.
+ */
+type Counterpart = { counterpartName: string; chatUrl: string | null };
+
 export function sendAuctionWon(
   to: string,
-  input: Priced & { title: string; listingId: string; amount: number },
+  input: Priced & Counterpart & { title: string; listingId: string; amount: number },
 ) {
   return send(to, `You won ${input.title}`, "auction-won.html", {
     title: input.title,
     amount: formatTokenAmount(input.amount, input.currency),
     listingUrl: listingUrl(input.listingId),
+    counterpartName: input.counterpartName,
+    chatUrl: input.chatUrl ?? "",
   });
 }
 
 export function sendListingPurchased(
   to: string,
-  input: Priced & { title: string; listingId: string; amount: number },
+  input: Priced & Counterpart & { title: string; listingId: string; amount: number },
 ) {
   return send(to, `Purchase confirmed: ${input.title}`, "listing-purchased.html", {
     title: input.title,
     amount: formatTokenAmount(input.amount, input.currency),
     listingUrl: listingUrl(input.listingId),
+    counterpartName: input.counterpartName,
+    chatUrl: input.chatUrl ?? "",
+  });
+}
+
+/** To the seller, for either kind of sale. */
+export function sendListingSold(
+  to: string,
+  input: Priced &
+    Counterpart & { title: string; listingId: string; amount: number; via: "purchase" | "auction" },
+) {
+  const won = input.via === "auction";
+  const subject = won ? `Your auction for ${input.title} has a winner` : `You sold ${input.title}`;
+  return send(to, subject, "listing-sold.html", {
+    heading: won ? "Your auction has a winner" : "You made a sale",
+    verb: won ? "won your auction for" : "bought",
+    title: input.title,
+    amount: formatTokenAmount(input.amount, input.currency),
+    listingUrl: listingUrl(input.listingId),
+    counterpartName: input.counterpartName,
+    chatUrl: input.chatUrl ?? "",
   });
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, Ellipsis, Plus, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowUpRight, Ellipsis, MessageSquare, Plus, ShieldCheck } from "lucide-react";
 import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
 import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
@@ -15,24 +15,27 @@ import { SocialRow } from "./SocialRow";
 import { Wordmark } from "./Wordmark";
 import { ConnectWalletButton } from "./ConnectWalletButton";
 import { isNavItemActive } from "./Sidebar";
-import { AccountNav, useUnreadCount } from "./AccountNav";
+import { AccountNav } from "./AccountNav";
+import { UnreadBadge, useChatNotifications } from "@/components/chat/ChatNotifications";
 
 /** The two sections that earn a tab of their own; the rest of NAV_ITEMS lives under More. */
 const TAB_HREFS = ["/", "/marketplace"];
 const TAB_LABELS: Record<string, string> = { "/": "Home", "/marketplace": "Market" };
 const CREATE_HREF = "/listings/new";
+const CHAT_HREF = "/chat";
 
 /**
  * Phone header plus a bottom tab bar: two primary sections, a raised Create
- * button in the middle, Profile, then More — a bottom sheet with the rest of
- * the site map in the same order the desktop rail shows it.
+ * button in the middle, Chat (always present, carrying the live unread
+ * count), then More — a bottom sheet with Profile and the rest of the site map
+ * in the same order the desktop rail shows it.
  */
 export function MobileNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, status } = useSession();
   const openConnect = useOpenConnect();
-  const unread = useUnreadCount();
+  const { unread } = useChatNotifications();
   const [moreOpen, setMoreOpen] = useState(false);
 
   // Route changes close the sheet; without this a tap navigates behind it.
@@ -44,8 +47,15 @@ export function MobileNav() {
 
   const moreActive =
     overflow.some((item) => !item.external && isNavItemActive(pathname, item.href)) ||
-    isNavItemActive(pathname, "/chat") ||
+    isNavItemActive(pathname, "/profile") ||
     isNavItemActive(pathname, "/admin");
+
+  const chatIcon = (
+    <span className="relative flex">
+      <MessageSquare className="w-5 h-5" aria-hidden="true" />
+      <UnreadBadge count={unread} />
+    </span>
+  );
 
   return (
     <>
@@ -87,17 +97,13 @@ export function MobileNav() {
 
           {signedIn ? (
             <TabLink
-              href="/profile"
-              label="Profile"
-              active={isNavItemActive(pathname, "/profile")}
-              icon={<UserRound className="w-5 h-5" aria-hidden="true" />}
+              href={CHAT_HREF}
+              label="Chat"
+              active={isNavItemActive(pathname, CHAT_HREF)}
+              icon={chatIcon}
             />
           ) : (
-            <TabButton
-              label="Profile"
-              onClick={openConnect}
-              icon={<UserRound className="w-5 h-5" aria-hidden="true" />}
-            />
+            <TabButton label="Chat" onClick={openConnect} icon={chatIcon} />
           )}
 
           <TabButton
@@ -105,16 +111,7 @@ export function MobileNav() {
             active={moreActive || moreOpen}
             expanded={moreOpen}
             onClick={() => setMoreOpen(true)}
-            icon={
-              <span className="relative">
-                <Ellipsis className="w-5 h-5" aria-hidden="true" />
-                {unread > 0 && (
-                  <span className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-background">
-                    <span className="sr-only">{`${unread} unread messages`}</span>
-                  </span>
-                )}
-              </span>
-            }
+            icon={<Ellipsis className="w-5 h-5" aria-hidden="true" />}
           />
         </div>
       </nav>
@@ -149,7 +146,7 @@ export function MobileNav() {
                 );
               })}
 
-              <AccountNav variant="mobile" unread={unread} omitProfile />
+              <AccountNav variant="mobile" omitMessages />
 
               {isSuperadmin(user) ? (
                 <Link

@@ -254,8 +254,28 @@ input[type="datetime-local"] {
   }
 }
 
+/* The unread count on the Messages nav item — pops when a new message lands. */
+.unread-badge-pop {
+  animation: unread-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes unread-pop {
+  0% {
+    transform: scale(0.4);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .live-dot {
+  .live-dot,
+  .unread-badge-pop {
     animation: none;
   }
 }

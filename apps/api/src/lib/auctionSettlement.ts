@@ -1,5 +1,5 @@
 import { prisma } from "../db";
-import { sendAuctionWon } from "./email";
+import { introduceBuyerAndSeller } from "./chat/dealThread";
 import {
   endAuctionOn,
   operatorAccount,
@@ -38,6 +38,7 @@ type ExpiredAuction = {
   currency: string;
   contractAddress: string | null;
   txHash: string | null;
+  creator: { userId: string };
   bids: Array<{ bidderWallet: string; amount: number }>;
 };
 
@@ -82,27 +83,26 @@ async function onChainOutcome(
   return { winner: meta.highestBidder.toLowerCase(), amount: meta.highestBidAmount };
 }
 
-async function emailWinner(
-  listing: { id: string; title: string; currency: string },
-  wallet: string,
-  amount: number,
-) {
-  const user = await prisma.user.findFirst({
-    where: {
-      email: { not: null },
-      emailVerifiedAt: { not: null },
-      wallets: { some: { address: wallet.toLowerCase() } },
-    },
-    select: { email: true },
+/**
+ * Puts the winner and the seller in touch: a thread with an opening message
+ * from each, plus an email to both. The winner is found by wallet — bids need
+ * a session, so in practice every winning wallet belongs to an account.
+ */
+async function introduceWinner(listing: ExpiredAuction, wallet: string, amount: number) {
+  const winner = await prisma.user.findFirst({
+    where: { wallets: { some: { address: wallet.toLowerCase() } } },
+    select: { id: true },
   });
-  if (!user?.email) return;
-  await sendAuctionWon(user.email, {
-    title: listing.title,
-    listingId: listing.id,
+  if (!winner) {
+    console.warn(`[auction-settle] ${listing.id} winner ${wallet} has no account to contact`);
+    return;
+  }
+  await introduceBuyerAndSeller({
+    via: "auction",
+    listing: { id: listing.id, title: listing.title, currency: listing.currency },
+    sellerId: listing.creator.userId,
+    buyerId: winner.id,
     amount,
-    currency: listing.currency,
-  }).catch((err) => {
-    console.error("[auction-settle] auction-won email failed:", err);
   });
 }
 
@@ -142,7 +142,7 @@ export async function settleAuction(listing: ExpiredAuction, now = new Date()): 
     },
   });
 
-  if (hasWinner) await emailWinner(listing, winner, amount);
+  if (hasWinner) await introduceWinner(listing, winner, amount);
 
   console.log(
     `[auction-settle] settled ${listing.id} winner=${hasWinner ? winner : "none"}`,
@@ -164,6 +164,7 @@ export async function settleExpiredAuctions(now = new Date()): Promise<SettleSwe
       currency: true,
       contractAddress: true,
       txHash: true,
+      creator: { select: { userId: true } },
       bids: { orderBy: { amount: "desc" }, take: 1, select: { bidderWallet: true, amount: true } },
     },
   });

@@ -21,9 +21,14 @@
               You booked <strong style="color:#e8edf7;">{{title}}</strong> for <strong style="color:#e8edf7;">{{amount}}</strong>. Settlement ran through the AuctionHouse. Keep this email as your receipt.
             </td>
           </tr>
+          {{#chatUrl}}<tr>
+            <td style="padding:0 32px 8px;font-size:15px;line-height:1.6;color:#9aa4b8;">
+              We’ve opened a chat between you and <strong style="color:#e8edf7;">{{counterpartName}}</strong> in your LNOC inbox — message the seller there to arrange delivery.
+            </td>
+          </tr>{{/chatUrl}}
           <tr>
             <td style="padding:8px 32px 32px;">
-              <a href="{{listingUrl}}" style="display:inline-block;background:#5b6cff;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 18px;border-radius:10px;">View listing</a>
+              {{#chatUrl}}<a href="{{chatUrl}}" style="display:inline-block;background:#5b6cff;color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 18px;border-radius:10px;margin:0 8px 8px 0;">Message the seller</a>{{/chatUrl}}<a href="{{listingUrl}}" style="display:inline-block;background:transparent;color:#c9d1e3;text-decoration:none;font-weight:600;font-size:14px;padding:11px 17px;border-radius:10px;border:1px solid #2a3450;margin:0 0 8px 0;">View listing</a>
             </td>
           </tr>
         </table>

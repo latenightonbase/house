@@ -2,7 +2,8 @@ import { Elysia, t } from "elysia";
 import { prisma } from "../db";
 import { getUserFromRequest } from "../lib/session";
 import { isSuperadmin } from "../lib/roles";
-import { sendListingPurchased, sendOutbid } from "../lib/email";
+import { sendOutbid } from "../lib/email";
+import { introduceBuyerAndSeller } from "../lib/chat/dealThread";
 import {
   serializeActivation,
   serializeAuction,
@@ -803,14 +804,14 @@ export const marketplaceRoutes = new Elysia()
         },
       });
 
-      if (user.email && user.emailVerifiedAt) {
-        await sendListingPurchased(user.email, {
-          title: listing.title,
-          listingId: listing.id,
-          amount: listing.price,
-          currency: listing.currency,
-        }).catch((err) => console.error("[email] listing-purchased failed:", err));
-      }
+      // Opens the buyer–seller thread and sends the receipt and sale emails.
+      await introduceBuyerAndSeller({
+        via: "purchase",
+        listing: { id: listing.id, title: listing.title, currency: listing.currency },
+        sellerId: listing.creator.userId,
+        buyerId: user.id,
+        amount: listing.price,
+      });
 
       return { listing: serializeListing(updated), txHash: body.txHash ?? null };
     },
