@@ -2,20 +2,24 @@ import { getDefaultConfig, type WalletList } from "@rainbow-me/rainbowkit";
 import * as rainbowWallets from "@rainbow-me/rainbowkit/wallets";
 import { base, baseSepolia } from "wagmi/chains";
 import { robinhood } from "@/lib/chains";
-import { allWalletsWallet } from "@/lib/all-wallets";
+import { allWalletsWallet, phantomWallet, rabbyWallet } from "@/lib/wallet-list";
 
 type WalletFn = WalletList[number]["wallets"][number];
 
 // Order matters: the connect modal lists these first, then "All Wallets".
 const featuredWallets = [
   rainbowWallets.coinbaseWallet,
-  rainbowWallets.phantomWallet,
-  rainbowWallets.rabbyWallet,
+  phantomWallet,
+  rabbyWallet,
   rainbowWallets.trustWallet,
   rainbowWallets.metaMaskWallet,
 ] as WalletFn[];
 
-const featuredRefs = new Set(featuredWallets);
+const featuredRefs = new Set([
+  ...featuredWallets,
+  rainbowWallets.phantomWallet,
+  rainbowWallets.rabbyWallet,
+] as WalletFn[]);
 
 // Hidden by `WalletListToggle` until the viewer picks "All Wallets".
 const otherWallets = Object.values(rainbowWallets).filter(

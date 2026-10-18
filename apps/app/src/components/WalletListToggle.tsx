@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 
-import { ALL_WALLETS_ID, FEATURED_WALLET_IDS } from "@/lib/all-wallets";
+import { ALL_WALLETS_ID, FEATURED_WALLET_IDS } from "@/lib/wallet-list";
 
 /** Where RainbowKit keeps the wallets it pins to the top as "Recent". */
 const RECENT_WALLETS_KEY = "rk-recent";
