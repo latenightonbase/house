@@ -1,5 +1,5 @@
 import { getApiOrigin } from "@/lib/api-origin";
-import type { Listing, RecentSale } from "@/lib/marketplace";
+import { isListingLive, type Listing, type RecentSale } from "@/lib/marketplace";
 
 const REVALIDATE_SECONDS = 20;
 
@@ -40,7 +40,9 @@ export async function loadHomePageData(): Promise<HomePageData> {
   ]);
 
   return {
-    listings: listingsPayload?.listings ?? [],
+    // The fetch cache serves its last copy when the API is unreachable, so it can
+    // hold listings that have ended since.
+    listings: (listingsPayload?.listings ?? []).filter((listing) => isListingLive(listing)),
     recentSales: salesPayload?.sales ?? [],
   };
 }
@@ -50,5 +52,5 @@ export async function loadMarketplaceListings(): Promise<Listing[]> {
   const payload = await getJson<{ listings: Listing[] }>(
     `/listings?limit=${MARKETPLACE_LISTING_LIMIT}`,
   );
-  return payload?.listings ?? [];
+  return (payload?.listings ?? []).filter((listing) => isListingLive(listing));
 }

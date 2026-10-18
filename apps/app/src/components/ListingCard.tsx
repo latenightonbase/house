@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { ListingPoster } from "@/components/listing/ListingPoster";
+import { ListingFallbackArt, ListingPoster } from "@/components/listing/ListingPoster";
 import {
   ActionPill,
   EndLabel,
@@ -15,7 +13,7 @@ import {
 } from "@/components/home/listingParts";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
-import { clipText, cn, listingFallbackArt } from "@/lib/utils";
+import { clipText, cn } from "@/lib/utils";
 
 /** Card descriptions are a teaser; the full write-up is in checkout. */
 const DESCRIPTION_MAX = 50;
@@ -27,29 +25,12 @@ const DESCRIPTION_MAX = 50;
  */
 function PosterPlaceholder({ listing }: { listing: Listing }) {
   const CategoryIcon = categoryMeta(listing.category).icon;
-  const src = listingFallbackArt(listing.id);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => setFailed(false), [src]);
-
   return (
-    <span
-      className="relative flex h-full w-full items-center justify-center bg-[#131117]"
-      aria-hidden="true"
-    >
-      {!failed && (
-        <Image
-          src={src}
-          alt=""
-          fill
-          unoptimized
-          sizes="(min-width: 1280px) 320px, (min-width: 640px) 50vw, 100vw"
-          onError={() => setFailed(true)}
-          className="object-cover"
-        />
-      )}
-      {failed && <CategoryIcon className="h-7 w-7 text-white/20" strokeWidth={1.5} />}
-    </span>
+    <ListingFallbackArt
+      seed={listing.id}
+      sizes="(min-width: 1280px) 320px, (min-width: 640px) 50vw, 100vw"
+      fallback={<CategoryIcon className="h-7 w-7 text-white/20" strokeWidth={1.5} />}
+    />
   );
 }
 

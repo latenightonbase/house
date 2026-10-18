@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import { isUnoptimizedSrc } from "@/lib/imageSrc";
-import { cn } from "@/lib/utils";
+import { cn, listingFallbackArt } from "@/lib/utils";
 
 /** The same bounds the uploader crops to, so a measured ratio never exceeds them. */
 const MIN_ASPECT = 9 / 16;
@@ -97,33 +97,82 @@ export function ListingPoster({
 }
 
 /**
+ * Stand-in artwork for a listing without a poster: a low-contrast identicon
+ * generated from the listing's id, so the same listing looks the same in every
+ * list. If it fails to load, `fallback` is shown instead. Fills its parent.
+ */
+export function ListingFallbackArt({
+  seed,
+  sizes,
+  fallback = null,
+}: {
+  seed: string;
+  sizes: string;
+  fallback?: ReactNode;
+}) {
+  const src = listingFallbackArt(seed);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => setFailed(false), [src]);
+
+  return (
+    <span
+      className="relative flex h-full w-full items-center justify-center bg-[#131117]"
+      aria-hidden="true"
+    >
+      {!failed && (
+        <Image
+          src={src}
+          alt=""
+          fill
+          unoptimized
+          sizes={sizes}
+          onError={() => setFailed(true)}
+          className="object-cover"
+        />
+      )}
+      {failed && fallback}
+    </span>
+  );
+}
+
+/**
  * The small square a row leads with. A listing without a poster gets its
- * `placeholder` in the same box, so titles stay aligned down a mixed list.
+ * `placeholder` in the same box, so titles stay aligned down a mixed list —
+ * or, given `fallbackSeed` (the listing's id), the same generated artwork its
+ * card shows, with `placeholder` kept for when that fails too.
  */
 export function PosterThumb({
   src,
   alt,
   size = 40,
   placeholder,
+  fallbackSeed,
   className,
 }: {
   src?: string | null;
   alt: string;
   size?: number;
   placeholder: ReactNode;
+  fallbackSeed?: string;
   className?: string;
 }) {
   const box = cn(
     "shrink-0 overflow-hidden rounded-lg border border-line-strong",
     className,
   );
-  const empty = (
+  const glyph = (
     <span
       className="flex h-full w-full items-center justify-center bg-surface-2 text-caption"
       aria-hidden="true"
     >
       {placeholder}
     </span>
+  );
+  const empty = fallbackSeed ? (
+    <ListingFallbackArt seed={fallbackSeed} sizes={`${size * 2}px`} fallback={glyph} />
+  ) : (
+    glyph
   );
 
   return (

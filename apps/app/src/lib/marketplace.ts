@@ -169,6 +169,19 @@ export interface Listing {
 }
 
 /**
+ * Still on sale: the same test the API's live feed applies. The feed is only
+ * as fresh as its last fetch — a cached page or a failed refresh keeps rows
+ * that have since ended — so anything showing live inventory re-checks it.
+ */
+export function isListingLive(listing: Listing, now = Date.now()) {
+  return (
+    listing.status === "ACTIVE" &&
+    listing.slotsAvailable > 0 &&
+    (!listing.endDate || new Date(listing.endDate).getTime() > now)
+  );
+}
+
+/**
  * What the create form sends. The AuctionHouse transaction is signed as part of
  * submitting, so the tx fields are always filled in — the API verifies them
  * against the contract before it saves the row, and the listing is live on
@@ -283,7 +296,7 @@ export async function fetchListings(
   if (params.pricingType) qs.set("pricingType", params.pricingType);
   if (params.limit) qs.set("limit", String(params.limit));
   const data = await getJson<{ listings: Listing[] }>(`/backend/listings?${qs.toString()}`);
-  return data.listings;
+  return data.listings.filter((listing) => isListingLive(listing));
 }
 
 /** One side of a sale on the home page's recently-sold feed. */

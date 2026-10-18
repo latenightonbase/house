@@ -6,7 +6,13 @@ import { useSearchParams } from "next/navigation";
 import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
 import { HOME_LISTING_LIMIT, HOME_RECENT_SALES_LIMIT, type HomePageData } from "@/lib/home-data";
-import { fetchListings, fetchRecentSales, type Listing, type RecentSale } from "@/lib/marketplace";
+import {
+  fetchListings,
+  fetchRecentSales,
+  isListingLive,
+  type Listing,
+  type RecentSale,
+} from "@/lib/marketplace";
 import { HomeIntro } from "@/components/home/HomeIntro";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { ClosingSoonPanel } from "@/components/home/ClosingSoonPanel";
@@ -65,8 +71,11 @@ export default function HomeClient({
       fetchListings({ limit: HOME_LISTING_LIMIT }).catch(() => null),
       fetchRecentSales(HOME_RECENT_SALES_LIMIT).catch(() => null),
     ]);
-    /** A failed refresh keeps the last good feed rather than emptying the market. */
-    if (market) setListings(market);
+    /**
+     * A failed refresh keeps the last good feed rather than emptying the market,
+     * less whatever has ended since it was fetched.
+     */
+    setListings((current) => market ?? current.filter((listing) => isListingLive(listing)));
     if (sales) setRecentSales(sales);
   }, []);
 

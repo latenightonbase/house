@@ -20,6 +20,7 @@ import {
   useSetConnectWalletChrome,
 } from "@/components/connect-intent";
 import { ConnectedWalletButton } from "@/components/nav/ConnectedWalletButton";
+import { WalletListToggle } from "@/components/WalletListToggle";
 
 function BindConnectModal() {
   const { openConnectModal } = useConnectModal();
@@ -94,6 +95,7 @@ function RainbowKitAuthBridge({ children }: { children: ReactNode }) {
       >
         <BindConnectModal />
         <BindWalletChrome />
+        <WalletListToggle />
         {children}
       </RainbowKitProvider>
     </RainbowKitAuthenticationProvider>

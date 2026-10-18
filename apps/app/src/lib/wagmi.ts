@@ -2,22 +2,24 @@ import { getDefaultConfig, type WalletList } from "@rainbow-me/rainbowkit";
 import * as rainbowWallets from "@rainbow-me/rainbowkit/wallets";
 import { base, baseSepolia } from "wagmi/chains";
 import { robinhood } from "@/lib/chains";
+import { allWalletsWallet } from "@/lib/all-wallets";
 
 type WalletFn = WalletList[number]["wallets"][number];
 
-const popularWallets = [
-  rainbowWallets.metaMaskWallet,
+// Order matters: the connect modal lists these first, then "All Wallets".
+const featuredWallets = [
   rainbowWallets.coinbaseWallet,
-  rainbowWallets.trustWallet,
-  rainbowWallets.rainbowWallet,
   rainbowWallets.phantomWallet,
-  rainbowWallets.base,
+  rainbowWallets.rabbyWallet,
+  rainbowWallets.trustWallet,
+  rainbowWallets.metaMaskWallet,
 ] as WalletFn[];
 
-const popularRefs = new Set(popularWallets);
+const featuredRefs = new Set(featuredWallets);
 
-const moreWallets = Object.values(rainbowWallets).filter(
-  (wallet) => typeof wallet === "function" && !popularRefs.has(wallet as WalletFn),
+// Hidden by `WalletListToggle` until the viewer picks "All Wallets".
+const otherWallets = Object.values(rainbowWallets).filter(
+  (wallet) => typeof wallet === "function" && !featuredRefs.has(wallet as WalletFn),
 ) as WalletFn[];
 
 export const config = getDefaultConfig({
@@ -27,7 +29,7 @@ export const config = getDefaultConfig({
   ssr: true,
   multiInjectedProviderDiscovery: false,
   wallets: [
-    { groupName: "Popular", wallets: popularWallets },
-    { groupName: "More", wallets: moreWallets },
+    { groupName: "Popular", wallets: [...featuredWallets, allWalletsWallet] },
+    { groupName: "More", wallets: otherWallets },
   ],
 });

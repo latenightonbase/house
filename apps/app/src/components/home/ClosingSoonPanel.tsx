@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { Flame, Sparkles } from "lucide-react";
 import { PosterThumb } from "@/components/listing/ListingPoster";
-import { BrandAvatar } from "@/components/ui";
+import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
 import { useCountdown } from "@/lib/useCountdown";
-import { cn, walletFallbackAvatar } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 
 /** Five rows: enough to fill the rail beside the market preview without a scroll. */
@@ -24,6 +24,7 @@ function Row({
   const countdown = useCountdown(live ? listing.endDate : null);
   const price = priceLine(listing);
   const urgent = endsSoon(listing.endDate);
+  const CategoryIcon = categoryMeta(listing.category).icon;
 
   return (
     <button
@@ -32,23 +33,14 @@ function Row({
       aria-haspopup="dialog"
       className="group flex w-full items-center text-left gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
     >
-      {/* The poster when there is one; the seller's face otherwise. */}
-      {listing.posterUrl ? (
-        <PosterThumb
-          src={listing.posterUrl}
-          alt={`Poster for ${listing.title}`}
-          size={38}
-          placeholder={null}
-        />
-      ) : (
-        <BrandAvatar
-          src={listing.creator.avatarUrl || walletFallbackAvatar(listing.creator.wallet)}
-          alt={listing.creator.displayName}
-          fallbackSeed={listing.creator.wallet}
-          shape="square"
-          size={38}
-        />
-      )}
+      {/* The poster when there is one; the same generated artwork as its card otherwise. */}
+      <PosterThumb
+        src={listing.posterUrl}
+        alt={`Poster for ${listing.title}`}
+        size={38}
+        placeholder={<CategoryIcon className="h-4 w-4 opacity-60" />}
+        fallbackSeed={listing.id}
+      />
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold text-foreground">{listing.title}</p>

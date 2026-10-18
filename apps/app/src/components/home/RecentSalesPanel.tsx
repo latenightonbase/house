@@ -56,6 +56,7 @@ function SaleRow({ sale }: { sale: RecentSale }) {
         alt=""
         size={38}
         placeholder={<ImageIcon className="h-4 w-4 opacity-60" />}
+        fallbackSeed={sale.listingId}
       />
 
       <div className="min-w-0 flex-1">

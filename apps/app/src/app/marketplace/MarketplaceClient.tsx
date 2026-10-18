@@ -6,7 +6,7 @@ import { PageShell } from "@/components/PageShell";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { MARKETPLACE_LISTING_LIMIT } from "@/lib/home-data";
-import { fetchListings, type Listing } from "@/lib/marketplace";
+import { fetchListings, isListingLive, type Listing } from "@/lib/marketplace";
 
 const ListingCheckoutSheet = dynamic(
   () =>
@@ -29,8 +29,11 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
 
   const load = useCallback(async () => {
     const market = await fetchListings({ limit: MARKETPLACE_LISTING_LIMIT }).catch(() => null);
-    /** A failed refresh keeps the last good feed rather than emptying the market. */
-    if (market) setListings(market);
+    /**
+     * A failed refresh keeps the last good feed rather than emptying the market,
+     * less whatever has ended since it was fetched.
+     */
+    setListings((current) => market ?? current.filter((listing) => isListingLive(listing)));
   }, []);
 
   useEffect(() => {
