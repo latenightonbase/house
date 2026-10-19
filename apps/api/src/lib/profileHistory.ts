@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { auctionDealKey, purchaseDealKey } from "./reviews";
+import { fillRatings, type Rating } from "./ratings";
 
 /**
  * Profile history: what a user sold and who won it, and what they bought or won
@@ -33,6 +34,8 @@ export type PartyIdentity = {
   name: string;
   username: string | null;
   avatarUrl: string | null;
+  /** Their overall review rating; null until someone has reviewed them. */
+  rating: Rating | null;
 };
 
 export type SaleCounterparty = PartyIdentity & {
@@ -104,6 +107,8 @@ export function toIdentity(
       (wallet ? shortWallet(wallet) : "Unknown"),
     username: user?.username ?? social?.username ?? null,
     avatarUrl: user?.avatarUrl ?? social?.avatarUrl ?? null,
+    // Filled per page by `fillRatings`, so a list is one query, not one each.
+    rating: null,
   };
 }
 
@@ -157,7 +162,7 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
     .map((l) => l.winnerWallet!);
   const winners = await identitiesByWallet(winnerWallets);
 
-  return listings
+  const sales = listings
     .map((listing) => {
       const counterparties: SaleCounterparty[] = [];
 
@@ -201,6 +206,9 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
       };
     })
     .filter((sale) => sale.counterparties.length > 0);
+
+  await fillRatings(sales.flatMap((sale) => sale.counterparties));
+  return sales;
 }
 
 /**
@@ -270,7 +278,9 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
     seller: toIdentity(listing.creator.user),
   }));
 
-  return [...fromPurchases, ...fromWins].sort((a, b) => b.at.localeCompare(a.at));
+  const all = [...fromPurchases, ...fromWins].sort((a, b) => b.at.localeCompare(a.at));
+  await fillRatings(all.map((purchase) => purchase.seller));
+  return all;
 }
 
 /** The public identity header both profile pages open with. */
@@ -372,10 +382,14 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
 
   const seller = (creator: (typeof wins)[number]["creator"]) => {
     const identity = toIdentity(creator.user);
-    return publicParty({ ...identity, avatarUrl: identity.avatarUrl ?? creator.avatarUrl });
+    return { ...identity, avatarUrl: identity.avatarUrl ?? creator.avatarUrl };
   };
 
-  const fromPurchases: RecentSale[] = purchases.map((purchase) => ({
+  // Built with chat handles on so ratings can be looked up by account, then
+  // stripped below before anything leaves.
+  type Draft = Omit<RecentSale, "seller" | "buyer"> & { seller: PartyIdentity; buyer: PartyIdentity };
+
+  const fromPurchases: Draft[] = purchases.map((purchase) => ({
     listingId: purchase.listingId,
     title: purchase.listing.title,
     posterUrl: purchase.listing.posterUrl,
@@ -386,10 +400,10 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
     tokenName: purchase.listing.tokenName,
     at: purchase.createdAt.toISOString(),
     seller: seller(purchase.listing.creator),
-    buyer: publicParty(toIdentity(purchase.buyer, purchase.buyerWallet)),
+    buyer: toIdentity(purchase.buyer, purchase.buyerWallet),
   }));
 
-  const fromWins: RecentSale[] = wins.map((listing) => ({
+  const fromWins: Draft[] = wins.map((listing) => ({
     listingId: listing.id,
     title: listing.title,
     posterUrl: listing.posterUrl,
@@ -400,10 +414,16 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
     tokenName: listing.tokenName,
     at: (listing.settledAt ?? listing.updatedAt).toISOString(),
     seller: seller(listing.creator),
-    buyer: publicParty(
-      winners.get(listing.winnerWallet!.toLowerCase()) ?? toIdentity(null, listing.winnerWallet),
-    ),
+    buyer: winners.get(listing.winnerWallet!.toLowerCase()) ?? toIdentity(null, listing.winnerWallet),
   }));
 
-  return [...fromPurchases, ...fromWins].sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);
+  const recent = [...fromPurchases, ...fromWins]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, limit);
+  await fillRatings(recent.flatMap((sale) => [sale.seller, sale.buyer]));
+  return recent.map((sale) => ({
+    ...sale,
+    seller: publicParty(sale.seller),
+    buyer: publicParty(sale.buyer),
+  }));
 }

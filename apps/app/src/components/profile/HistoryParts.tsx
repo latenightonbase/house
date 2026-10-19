@@ -6,6 +6,7 @@ import { ImageIcon } from "lucide-react";
 import { PosterThumb } from "@/components/listing/ListingPoster";
 import { Avatar } from "@/components/ui";
 import { formatAmount, formatDate, type PartyIdentity } from "@/lib/profileHistory";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /** The empty and loading states both lists share, so they cannot drift apart. */
 export function HistorySkeleton() {
@@ -100,8 +101,10 @@ export function PartyRow({
       ? `${formatAmount(party.amount, party.currency)} · ${formatDate(party.at)}`
       : "");
 
+  // Wraps on a phone: the buttons drop to their own line rather than squeezing
+  // the name and its rating out of the row.
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <Avatar
         src={party.avatarUrl}
         alt={party.name}
@@ -109,22 +112,23 @@ export function PartyRow({
         fallback={party.name.slice(0, 2).toUpperCase()}
         size={30}
       />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-medium text-white">
+      <div className="min-w-[9rem] flex-1">
+        <p className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-white">
           {party.username ? (
             <Link
               href={`/user/${party.username}`}
-              className="transition-colors hover:text-primary-bright"
+              className="truncate transition-colors hover:text-primary-bright"
             >
               {party.name}
             </Link>
           ) : (
-            party.name
+            <span className="truncate">{party.name}</span>
           )}
+          <RatingBadge rating={party.rating} />
         </p>
         {line && <p className="truncate text-[11px] text-caption">{line}</p>}
       </div>
-      {action}
+      {action && <div className="ml-auto shrink-0">{action}</div>}
     </div>
   );
 }

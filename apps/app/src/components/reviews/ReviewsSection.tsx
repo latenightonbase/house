@@ -12,6 +12,7 @@ import {
   type ReviewRole,
   type ReviewSummary,
 } from "@/lib/profileHistory";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 function counted(label: string, count: number) {
   return count ? (
@@ -71,7 +72,9 @@ function ReviewCard({ review }: { review: PublicReview }) {
                 reviewer.name
               )}
             </p>
-            <StarRating value={review.rating} size={12} />
+            {/* The reviewer's own standing — the stars they gave sit on their
+                own line below, so the two are not read as one rating. */}
+            <RatingBadge rating={reviewer.rating} size="xs" />
           </div>
           <p className="mt-0.5 truncate text-[11px] text-caption">
             {review.listingId ? (
@@ -86,8 +89,9 @@ function ReviewCard({ review }: { review: PublicReview }) {
             )}{" "}
             · {formatDate(review.createdAt)}
           </p>
+          <StarRating value={review.rating} size={13} className="mt-2" />
           {review.comment && (
-            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-white/85">
+            <p className="mt-1.5 whitespace-pre-wrap break-words text-[13px] leading-relaxed text-white/85">
               {review.comment}
             </p>
           )}

@@ -5,6 +5,7 @@ import { BrandAvatar } from "@/components/ui";
 import type { Listing, ListingBidder } from "@/lib/marketplace";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 function timeAgo(iso: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -57,6 +58,7 @@ export function BidHistory({
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-white">
               <span className="truncate">{bidder.name}</span>
+              <RatingBadge rating={bidder.rating} />
               {bidder.leading && (
                 <span className="badge badge-warning shrink-0">
                   <Trophy className="mr-1 h-2.5 w-2.5" aria-hidden="true" />

@@ -11,6 +11,7 @@ import type {
   Wallet,
 } from "@prisma/client";
 import { listingToken } from "./tokens";
+import { ratingsByUser, type Rating } from "./ratings";
 
 const PLATFORM_MAP: Record<string, string> = {
   YOUTUBE: "youtube",
@@ -195,7 +196,11 @@ type ListingWithCreator = Listing & {
   creator: CreatorProfile & { user: ProfileUser };
 };
 
-export function serializeListing(listing: ListingWithCreator) {
+/**
+ * Every listing carries its seller's rating, so callers pass the ratings for
+ * the page — see `serializeListings`, which looks them up in one query.
+ */
+export function serializeListing(listing: ListingWithCreator, ratings: Map<string, Rating>) {
   return {
     id: listing.id,
     title: listing.title,
@@ -234,9 +239,8 @@ export function serializeListing(listing: ListingWithCreator) {
       verified: listing.creator.verified,
       /** Where `/user/:handle` finds them — their username, else their id. */
       handle: listing.creator.user.username ?? listing.creator.user.id,
-      /** As a seller only — what buyers said, which is what a listing is judged on. */
-      averageRating: listing.creator.averageRating ?? undefined,
-      totalReviews: listing.creator.totalReviews ?? 0,
+      /** Their overall review rating — the same number their profile shows. */
+      rating: ratings.get(listing.creator.userId) ?? null,
       reach: compact(
         listing.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),
       ),
@@ -291,4 +295,15 @@ export function serializeCreatorToken(token: TokenWithCreator) {
       ),
     },
   };
+}
+
+/** Serializes a page of listings with their sellers' ratings in one lookup. */
+export async function serializeListings<T extends ListingWithCreator>(listings: T[]) {
+  const ratings = await ratingsByUser(listings.map((listing) => listing.creator.userId));
+  return listings.map((listing) => ({ listing, out: serializeListing(listing, ratings) }));
+}
+
+export async function serializeOneListing(listing: ListingWithCreator) {
+  const [{ out }] = await serializeListings([listing]);
+  return out;
 }

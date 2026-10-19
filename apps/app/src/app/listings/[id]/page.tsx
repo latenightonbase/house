@@ -307,30 +307,30 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
                 </span>
               )}
             </p>
-            {listing.creator.averageRating != null && (listing.creator.totalReviews ?? 0) > 0 ? (
+            {listing.creator.rating ? (
               <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-caption">
-                <StarRating value={listing.creator.averageRating} size={12} />
+                <StarRating value={listing.creator.rating.average} size={12} />
                 <span className="numeric text-white">
-                  {listing.creator.averageRating.toFixed(1)}
+                  {listing.creator.rating.average.toFixed(1)}
                 </span>
                 {listing.creator.handle ? (
                   <Link
                     href={`/user/${listing.creator.handle}#reviews`}
                     className="numeric underline-offset-2 transition-colors hover:text-white hover:underline"
                   >
-                    {listing.creator.totalReviews}{" "}
-                    {listing.creator.totalReviews === 1 ? "review" : "reviews"}
+                    {listing.creator.rating.count}{" "}
+                    {listing.creator.rating.count === 1 ? "review" : "reviews"}
                   </Link>
                 ) : (
                   <span className="numeric">
-                    {listing.creator.totalReviews}{" "}
-                    {listing.creator.totalReviews === 1 ? "review" : "reviews"}
+                    {listing.creator.rating.count}{" "}
+                    {listing.creator.rating.count === 1 ? "review" : "reviews"}
                   </span>
                 )}
               </p>
             ) : (
               <p className="text-[12px] text-caption truncate">
-                {listing.category !== "OTHER" ? `${meta.label} · ` : ""}No seller reviews yet
+                {listing.category !== "OTHER" ? `${meta.label} · ` : ""}No reviews yet
               </p>
             )}
           </div>

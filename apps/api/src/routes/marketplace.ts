@@ -11,11 +11,13 @@ import {
   serializeCampaign,
   serializeCreatorToken,
   serializeEarner,
-  serializeListing,
+  serializeListings,
+  serializeOneListing,
 } from "../lib/marketplace";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
 import { getRecentSales, toIdentity } from "../lib/profileHistory";
+import { fillRatings, ratingsByWallet } from "../lib/ratings";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
 import {
   findListingToken,
@@ -126,6 +128,7 @@ async function listingBidders(listingId: string) {
 
   const rows = [...byWallet.values()].sort((a, b) => b.amount - a.amount || b.lastBidAt.getTime() - a.lastBidAt.getTime());
   const leaderWallet = rows[0]?.wallet;
+  const ratings = await ratingsByWallet(rows.map((row) => row.wallet));
 
   return rows.map((row) => {
     const identity = bidderIdentity(row.wallet, row.user);
@@ -133,6 +136,7 @@ async function listingBidders(listingId: string) {
       wallet: row.wallet,
       name: identity.name,
       avatarUrl: identity.avatarUrl,
+      rating: ratings.get(row.wallet) ?? null,
       amount: row.amount,
       bidCount: row.bidCount,
       lastBidAt: row.lastBidAt.toISOString(),
@@ -344,7 +348,7 @@ export const marketplaceRoutes = new Elysia()
 
     return {
       creator: serializeEarner(profile),
-      listings: listings.map(serializeListing),
+      listings: (await serializeListings(listings)).map(({ out }) => out),
       token: token ? serializeCreatorToken(token) : null,
     };
   })
@@ -385,8 +389,8 @@ export const marketplaceRoutes = new Elysia()
     });
 
     return {
-      listings: listings.map((listing) => ({
-        ...serializeListing(listing),
+      listings: (await serializeListings(listings)).map(({ listing, out }) => ({
+        ...out,
         bidCount: listing._count.bids,
         highestBid: listing.bids[0]?.amount,
       })),
@@ -418,7 +422,7 @@ export const marketplaceRoutes = new Elysia()
       include: { creator: { include: creatorInclude } },
     });
 
-    return { listings: listings.map(serializeListing) };
+    return { listings: (await serializeListings(listings)).map(({ out }) => out) };
   })
   /**
    * Public bidder roll for an auction listing — each person who has bid and
@@ -457,7 +461,7 @@ export const marketplaceRoutes = new Elysia()
       }
     }
 
-    return { listing: serializeListing(listing) };
+    return { listing: await serializeOneListing(listing) };
   })
   /**
    * Creates a listing. It is already on-chain by the time it gets here —
@@ -582,7 +586,7 @@ export const marketplaceRoutes = new Elysia()
         include: { creator: { include: creatorInclude } },
       });
 
-      return { listing: serializeListing(listing) };
+      return { listing: await serializeOneListing(listing) };
     },
     {
       body: t.Object({
@@ -638,8 +642,8 @@ export const marketplaceRoutes = new Elysia()
     });
 
     return {
-      listings: listings.map((listing) => ({
-        ...serializeListing(listing),
+      listings: (await serializeListings(listings)).map(({ listing, out }) => ({
+        ...out,
         bidCount: listing._count.bids,
       })),
     };
@@ -707,9 +711,10 @@ export const marketplaceRoutes = new Elysia()
       },
     });
 
+    const identities = await fillRatings(users.map((user) => toIdentity(user)));
     return {
-      users: users.map((user) => {
-        const identity = toIdentity(user);
+      users: users.map((user, index) => {
+        const identity = identities[index];
         return {
           id: user.id,
           name: identity.name,
@@ -718,6 +723,7 @@ export const marketplaceRoutes = new Elysia()
           wallet: identity.wallet,
           role: user.role,
           verified: user.creatorProfile?.verified ?? false,
+          rating: identity.rating,
           listingCount: user.creatorProfile?._count.listings ?? 0,
           createdAt: user.createdAt.toISOString(),
         };
@@ -786,7 +792,7 @@ export const marketplaceRoutes = new Elysia()
         include: { creator: { include: creatorInclude } },
       });
 
-      return { listing: serializeListing(updated) };
+      return { listing: await serializeOneListing(updated) };
     },
     {
       body: t.Object({
@@ -892,7 +898,7 @@ export const marketplaceRoutes = new Elysia()
         amount: listing.price,
       });
 
-      return { listing: serializeListing(updated), txHash: body.txHash ?? null };
+      return { listing: await serializeOneListing(updated), txHash: body.txHash ?? null };
     },
     {
       // Optional: the chain proves the sale, so a purchase whose session died
@@ -977,7 +983,7 @@ export const marketplaceRoutes = new Elysia()
       return {
         ok: true,
         bidId: bid.id,
-        listing: serializeListing(listing),
+        listing: await serializeOneListing(listing),
       };
     },
     {

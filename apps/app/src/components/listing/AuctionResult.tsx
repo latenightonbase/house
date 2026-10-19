@@ -8,6 +8,7 @@ import type { Listing, ListingBidder } from "@/lib/marketplace";
 import { fetchMyProfileOverview } from "@/lib/profileHistory";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { shortAddress } from "@/lib/utils";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /**
  * The outcome of a settled auction, in place of the bid form. The two people
@@ -61,8 +62,11 @@ export function AuctionResult({
     <Tile className="flex flex-col gap-3 border-warning/35 bg-warning/[0.07] px-4 py-3.5 sm:flex-row sm:items-center">
       <Trophy className="hidden h-5 w-5 shrink-0 text-warning sm:block" aria-hidden="true" />
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-[14px] font-semibold text-white">
-          {winnerName} won this auction{amount}
+        <p className="flex flex-wrap items-center gap-x-1.5 text-[14px] font-semibold text-white">
+          <span>
+            {winnerName} won this auction{amount}
+          </span>
+          {!isWinner && <RatingBadge rating={winningBid?.rating} />}
         </p>
         <p className="text-[12px] leading-relaxed text-caption">
           {isWinner

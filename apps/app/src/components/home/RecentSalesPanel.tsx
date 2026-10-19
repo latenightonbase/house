@@ -6,6 +6,7 @@ import { PosterThumb } from "@/components/listing/ListingPoster";
 import { Avatar } from "@/components/ui";
 import type { RecentSale, SaleParty } from "@/lib/marketplace";
 import { formatTokenAmount } from "@/lib/tokenPrices";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /**
  * "now", "12m", "3h", "2d" — kept to a few characters so the two names beside
@@ -32,6 +33,7 @@ function Party({ party, role }: { party: SaleParty; role: string }) {
       />
       <span className="sr-only">{role}:</span>
       <span className="truncate text-white/85">{party.name}</span>
+      <RatingBadge rating={party.rating} size="xs" />
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReviewRole } from "@prisma/client";
 import { prisma } from "../db";
 import { toIdentity, type PartyIdentity } from "./profileHistory";
+import { fillRatings } from "./ratings";
 
 /**
  * Reviews between the two sides of a completed deal. Only the people who
@@ -74,23 +75,6 @@ async function resolveDeal(dealKey: string): Promise<Deal | null> {
   return null;
 }
 
-/** Keeps the seller's denormalised rating — what listing cards show — in step. */
-async function refreshSellerRating(userId: string) {
-  const stats = await prisma.review.aggregate({
-    where: { revieweeId: userId, revieweeRole: "SELLER" },
-    _avg: { rating: true },
-    _count: { _all: true },
-  });
-  await prisma.creatorProfile.updateMany({
-    where: { userId },
-    data: {
-      averageRating:
-        stats._avg.rating == null ? null : Math.round(stats._avg.rating * 100) / 100,
-      totalReviews: stats._count._all,
-    },
-  });
-}
-
 export type ReviewResult =
   | { ok: true; review: { rating: number; comment: string | null; revieweeRole: ReviewRole } }
   | { ok: false; status: number; error: string };
@@ -146,8 +130,6 @@ export async function submitReview(
     update: { rating: input.rating, comment },
   });
 
-  if (revieweeRole === "SELLER") await refreshSellerRating(revieweeId);
-
   return {
     ok: true,
     review: { rating: review.rating, comment: review.comment, revieweeRole },
@@ -159,6 +141,8 @@ export type RatingSummary = { average: number | null; count: number };
 export type ReviewSummary = {
   asSeller: RatingSummary;
   asBuyer: RatingSummary;
+  /** Both roles together, from the raw ratings — what the badge beside their name shows. */
+  overall: RatingSummary;
 };
 
 export async function getReviewSummary(userId: string): Promise<ReviewSummary> {
@@ -175,7 +159,13 @@ export async function getReviewSummary(userId: string): Promise<ReviewSummary> {
       count: group?._count._all ?? 0,
     };
   };
-  return { asSeller: pick("SELLER"), asBuyer: pick("BUYER") };
+  const count = groups.reduce((sum, g) => sum + g._count._all, 0);
+  const total = groups.reduce((sum, g) => sum + (g._avg.rating ?? 0) * g._count._all, 0);
+  return {
+    asSeller: pick("SELLER"),
+    asBuyer: pick("BUYER"),
+    overall: { average: count ? Math.round((total / count) * 10) / 10 : null, count },
+  };
 }
 
 export type PublicReview = {
@@ -208,9 +198,10 @@ export async function getReviewsFor(userId: string): Promise<PublicReview[]> {
     },
   });
 
-  return reviews.map((review) => {
+  const reviewers = await fillRatings(reviews.map((review) => toIdentity(review.reviewer)));
+  return reviews.map((review, index) => {
     // Public, so the reviewer's chat handle comes off like everywhere else.
-    const { userId: _userId, ...reviewer } = toIdentity(review.reviewer);
+    const { userId: _userId, ...reviewer } = reviewers[index];
     return {
       id: review.id,
       rating: review.rating,

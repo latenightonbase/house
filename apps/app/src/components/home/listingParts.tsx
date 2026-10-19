@@ -1,10 +1,11 @@
-import { BadgeCheck, Clock, Gavel, Package, Sparkles, Star, Zap } from "lucide-react";
+import { BadgeCheck, Clock, Gavel, Package, Sparkles, Zap } from "lucide-react";
 import { BrandAvatar, PlatformIcon } from "@/components/ui";
 import type { Countdown } from "@/lib/useCountdown";
 import { categoryMeta } from "@/lib/listingCategories";
 import type { Listing } from "@/lib/marketplace";
 import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { cn, relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /** An amount in the listing's own token — "1,500 USDG", "4.2M LNOC". */
 export function money(listing: Listing, amount: number) {
@@ -165,15 +166,7 @@ export function Seller({
           {listing.creator.verified && (
             <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-label="Verified" />
           )}
-          {listing.creator.averageRating != null && (listing.creator.totalReviews ?? 0) > 0 && (
-            <span
-              className="numeric ml-0.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] font-normal text-caption"
-              aria-label={`Rated ${listing.creator.averageRating.toFixed(1)} out of 5 by ${listing.creator.totalReviews} buyers`}
-            >
-              <Star className="h-2.5 w-2.5 fill-warning text-warning" aria-hidden="true" />
-              {listing.creator.averageRating.toFixed(1)}
-            </span>
-          )}
+          <RatingBadge rating={listing.creator.rating} className="ml-0.5" />
         </span>
       </span>
     </span>

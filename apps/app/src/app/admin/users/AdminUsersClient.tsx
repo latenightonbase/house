@@ -9,6 +9,7 @@ import { fetchAdminUsers, setUserVerified, type AdminUser } from "@/lib/marketpl
 import { shortAddress } from "@/lib/utils";
 import { formatDate } from "@/lib/profileHistory";
 import { AdminTabs } from "../AdminTabs";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /** Long enough that typing a handle is one request, not one per key. */
 const SEARCH_DEBOUNCE_MS = 250;
@@ -155,6 +156,7 @@ export default function AdminUsersClient() {
                             aria-label="Verified"
                           />
                         )}
+                        <RatingBadge rating={user.rating} />
                         {user.role === "SUPERADMIN" && <Badge variant="neutral">Admin</Badge>}
                       </p>
                       <p className="mt-0.5 truncate text-[12px] text-caption">

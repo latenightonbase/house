@@ -6,6 +6,8 @@
  * rather than a broken thread.
  */
 
+import type { Rating } from "@/lib/ratings";
+
 export type MessageKind = "TEXT" | "IMAGE" | "FILE";
 
 export type ChatAttachment = {
@@ -29,6 +31,8 @@ export type ChatMessage = {
 
 export type ChatCounterparty = {
   userId: string | null;
+  /** Their overall review rating, or null if nobody has reviewed them yet. */
+  rating?: Rating | null;
   wallet: string | null;
   name: string;
   username: string | null;

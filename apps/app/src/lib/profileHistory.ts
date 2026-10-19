@@ -9,6 +9,8 @@
  * with a stranger from someone else's profile page.
  */
 
+import type { Rating } from "@/lib/ratings";
+
 export type PricingType = "FIXED" | "AUCTION";
 
 export type PartyIdentity = {
@@ -18,6 +20,8 @@ export type PartyIdentity = {
   name: string;
   username: string | null;
   avatarUrl: string | null;
+  /** Their overall review rating, or null if nobody has reviewed them yet. */
+  rating?: Rating | null;
 };
 
 /** The review the signed-in user left for a deal — private view only. */
@@ -89,7 +93,12 @@ export type ProfileHeader = {
 export type RatingSummary = { average: number | null; count: number };
 
 /** Ratings split by the side of the deal the person was on. */
-export type ReviewSummary = { asSeller: RatingSummary; asBuyer: RatingSummary };
+export type ReviewSummary = {
+  asSeller: RatingSummary;
+  asBuyer: RatingSummary;
+  /** Both roles together, from the raw ratings — matches the badge beside their name. */
+  overall?: RatingSummary;
+};
 
 export type ReviewRole = "SELLER" | "BUYER";
 
@@ -130,6 +139,7 @@ export async function submitReview(input: {
 
 /** Both roles together — what a profile is summed up by at a glance. */
 export function overallRating(summary: ReviewSummary): RatingSummary {
+  if (summary.overall) return summary.overall;
   const count = summary.asSeller.count + summary.asBuyer.count;
   if (count === 0) return { average: null, count: 0 };
   const total =

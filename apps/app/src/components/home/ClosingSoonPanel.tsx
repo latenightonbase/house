@@ -8,6 +8,7 @@ import type { Listing } from "@/lib/marketplace";
 import { useCountdown } from "@/lib/useCountdown";
 import { cn } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /** Five rows: enough to fill the rail beside the market preview without a scroll. */
 const MAX_ROWS = 5;
@@ -46,7 +47,10 @@ function Row({
         <p className="truncate text-[13px] font-semibold text-foreground">{listing.title}</p>
         {/* Seller only — the price caption above already says auction or not, and
             a placement label here would only fight the title for the width. */}
-        <p className="mt-0.5 truncate text-[11px] text-caption">{listing.creator.displayName}</p>
+        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-caption">
+          <span className="truncate">{listing.creator.displayName}</span>
+          <RatingBadge rating={listing.creator.rating} size="xs" />
+        </p>
       </div>
 
       <div className="shrink-0 text-right">

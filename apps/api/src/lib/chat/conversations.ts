@@ -4,6 +4,7 @@ import { toIdentity, type PartyIdentity } from "../profileHistory";
 import { generatePresignedDownload } from "../s3/presign";
 import { isChatImage } from "../s3/fileValidation";
 import { isOnline } from "./hub";
+import { fillRatings } from "../ratings";
 
 /**
  * A DM is one thread per pair of people, for all time. `pairKey` is the two
@@ -131,7 +132,7 @@ export async function serializeConversation(
 ): Promise<SerializedConversation> {
   const other = conversation.participants.find((p) => p.userId !== viewerId);
   const mine = conversation.participants.find((p) => p.userId === viewerId);
-  const identity = toIdentity(other?.user ?? null);
+  const [identity] = await fillRatings([toIdentity(other?.user ?? null)]);
 
   // Anything the other side sent after our last read. A thread never read at
   // all counts every incoming message.

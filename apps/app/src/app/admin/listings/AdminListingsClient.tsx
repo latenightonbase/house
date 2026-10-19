@@ -10,6 +10,7 @@ import { deleteListingAsAdmin, fetchAdminListings, type Listing } from "@/lib/ma
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { AdminTabs } from "../AdminTabs";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /**
  * Moderation for live listings. Anyone can list without review, so this is
@@ -159,6 +160,7 @@ export default function AdminListingsClient() {
                       size={16}
                     />
                     <span className="truncate">{listing.creator.displayName}</span>
+                    <RatingBadge rating={listing.creator.rating} size="xs" />
                   </div>
                   <p className="mt-1 text-[12px] text-caption">
                     {formatListingAmount(listing, listing.price)}

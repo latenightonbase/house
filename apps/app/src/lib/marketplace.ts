@@ -1,5 +1,6 @@
 import type { Platform } from "@/components/ui/PlatformIcons";
 import type { ListingCategory } from "@/lib/listingCategories";
+import type { Rating } from "@/lib/ratings";
 
 export type { Platform };
 
@@ -113,9 +114,8 @@ export interface ListingCreator {
   verified: boolean;
   /** Where `/user/:handle` finds the seller. Absent on the create-form preview. */
   handle?: string;
-  /** What buyers rated them as a seller. */
-  averageRating?: number;
-  totalReviews?: number;
+  /** Their overall review rating — null until somebody has reviewed them. */
+  rating?: Rating | null;
   reach: string;
 }
 
@@ -315,6 +315,7 @@ export interface SaleParty {
   name: string;
   username: string | null;
   avatarUrl: string | null;
+  rating?: Rating | null;
 }
 
 /** A purchase or a won auction — one row per sale, newest first. */
@@ -348,6 +349,8 @@ export interface ListingBidder {
   wallet: string;
   name: string;
   avatarUrl?: string | null;
+  /** The bidder's overall review rating, when their wallet belongs to an account. */
+  rating?: Rating | null;
   amount: number;
   bidCount: number;
   lastBidAt: string;
@@ -425,6 +428,7 @@ export interface AdminUser {
   wallet: string | null;
   role: "USER" | "SUPERADMIN";
   verified: boolean;
+  rating: Rating | null;
   listingCount: number;
   createdAt: string;
 }

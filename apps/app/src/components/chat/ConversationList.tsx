@@ -3,6 +3,7 @@
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { formatMessageTime, type Conversation } from "@/lib/chat";
+import { RatingBadge } from "@/components/reviews/RatingBadge";
 
 /** Left rail: every thread, newest first, with unread counts and presence. */
 export function ConversationList({
@@ -73,6 +74,7 @@ export function ConversationList({
                   <span className="text-[13px] font-semibold text-white truncate">
                     {counterparty.name}
                   </span>
+                  <RatingBadge rating={counterparty.rating} size="xs" className="self-center" />
                   {conversation.lastMessageAt && (
                     <span className="ml-auto shrink-0 text-[10px] text-caption">
                       {formatMessageTime(conversation.lastMessageAt)}
