@@ -210,3 +210,24 @@ export function formatDate(iso: string) {
 export function saleKindLabel(sale: SaleRecord) {
   return sale.pricingType === "AUCTION" ? "Auction" : "Direct sale";
 }
+
+/** One of the signed-in user's deals on a listing — see `useListingDeals`. */
+export type ListingDeal = {
+  dealKey: string;
+  /** The viewer's side of the deal. */
+  side: "BUYER" | "SELLER";
+  /** The other party, with the `userId` the contact button needs. */
+  counterparty: PartyIdentity;
+  amount: number;
+  currency: string;
+  at: string;
+  myReview: OwnReview | null;
+};
+
+/** The signed-in user's own deals on one listing: what they bought, or who bought it. */
+export async function fetchListingDeals(listingId: string): Promise<ListingDeal[]> {
+  const data = await getJson<{ deals: ListingDeal[] }>(
+    `/backend/profile/deals/${encodeURIComponent(listingId)}`,
+  );
+  return data.deals;
+}

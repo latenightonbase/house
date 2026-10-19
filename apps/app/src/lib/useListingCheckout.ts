@@ -97,6 +97,8 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
   const [step, setStep] = useState<CheckoutStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const [pendingPersist, setPendingPersist] = useState<string | null>(null);
+  /** Set once a purchase is recorded — the success screen offers "Rate the seller". */
+  const [purchaseDealKey, setPurchaseDealKey] = useState<string | null>(null);
 
   // The seller picked the token when they listed; the buyer pays in it.
   const token = listingToken(listing ?? {});
@@ -120,7 +122,8 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
 
   async function persistPurchase(txHash: string | null, current: Listing) {
     setStep("publishing");
-    const updated = await bookListing(current.id, txHash);
+    const { listing: updated, dealKey } = await bookListing(current.id, txHash);
+    setPurchaseDealKey(dealKey);
     setPendingPersist(null);
     options.onPurchased?.(updated);
     setStep("done");
@@ -131,6 +134,7 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
     setStep("idle");
     setError(null);
     setPendingPersist(null);
+    setPurchaseDealKey(null);
     setBidAmount(initialBid != null ? String(initialBid) : "");
   }
 
@@ -323,6 +327,7 @@ export function useListingCheckout(listing: Listing | null, options: Options = {
     busy,
     error,
     pendingPersist,
+    purchaseDealKey,
     checkout,
     reset,
   };

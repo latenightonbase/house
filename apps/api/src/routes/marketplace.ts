@@ -18,6 +18,7 @@ import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
 import { getRecentSales, toIdentity } from "../lib/profileHistory";
 import { fillRatings, ratingsByUser } from "../lib/ratings";
+import { purchaseDealKey } from "../lib/reviews";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
 import {
   findListingToken,
@@ -965,7 +966,7 @@ export const marketplaceRoutes = new Elysia()
       // Booking is the creator's display feed and stores a rendered name. The
       // Purchase row is the identity-bearing record: it is what lets the buyer
       // find this in their own history and message the seller about it.
-      await prisma.purchase.create({
+      const purchase = await prisma.purchase.create({
         data: {
           listingId: listing.id,
           buyerUserId: user.id,
@@ -985,7 +986,12 @@ export const marketplaceRoutes = new Elysia()
         amount: listing.price,
       });
 
-      return { listing: await serializeOneListing(updated), txHash: body.txHash ?? null };
+      return {
+        listing: await serializeOneListing(updated),
+        txHash: body.txHash ?? null,
+        // Lets checkout offer "Rate the seller" straight away.
+        dealKey: purchaseDealKey(purchase.id),
+      };
     },
     {
       // Optional: the chain proves the sale, so a purchase whose session died

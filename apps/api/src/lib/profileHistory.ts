@@ -434,3 +434,73 @@ export async function getRecentSales(limit: number): Promise<RecentSale[]> {
     buyer: publicParty(sale.buyer),
   }));
 }
+
+export type ListingDeal = {
+  dealKey: string;
+  /** The viewer's side of this deal. */
+  side: "BUYER" | "SELLER";
+  /** The other party — carries `userId`, since this is the viewer's own deal. */
+  counterparty: PartyIdentity;
+  amount: number;
+  currency: string;
+  at: string;
+};
+
+/**
+ * The signed-in user's own deals on one listing — what they bought or won
+ * from it, or, if it is theirs, who bought or won it. The listing page uses
+ * this to put "Rate" and "Message" right where the sale happened, without
+ * loading the user's whole history.
+ */
+export async function getListingDeals(userId: string, listingId: string): Promise<ListingDeal[]> {
+  const listing = await prisma.listing.findUnique({
+    where: { id: listingId },
+    include: {
+      creator: { include: { user: { include: identityInclude } } },
+      purchases: { orderBy: { createdAt: "desc" }, include: { buyer: { include: identityInclude } } },
+      bids: { orderBy: { amount: "desc" }, take: 1 },
+    },
+  });
+  if (!listing || listing.isDaily) return [];
+
+  const isSeller = listing.creator.userId === userId;
+  const deals: ListingDeal[] = [];
+
+  for (const purchase of listing.purchases) {
+    if (!isSeller && purchase.buyerUserId !== userId) continue;
+    deals.push({
+      dealKey: purchaseDealKey(purchase.id),
+      side: isSeller ? "SELLER" : "BUYER",
+      counterparty: isSeller
+        ? toIdentity(purchase.buyer, purchase.buyerWallet)
+        : toIdentity(listing.creator.user),
+      amount: purchase.amount,
+      currency: purchase.currency,
+      at: purchase.createdAt.toISOString(),
+    });
+  }
+
+  if (listing.pricingType === "AUCTION" && listing.settledAt && listing.winnerWallet) {
+    const winner = listing.winnerWallet.toLowerCase();
+    const viewerWon = isSeller
+      ? false
+      : Boolean(
+          await prisma.wallet.findFirst({ where: { userId, address: winner }, select: { id: true } }),
+        );
+    if (isSeller || viewerWon) {
+      deals.push({
+        dealKey: auctionDealKey(listing.id),
+        side: isSeller ? "SELLER" : "BUYER",
+        counterparty: isSeller
+          ? ((await identitiesByWallet([winner])).get(winner) ?? toIdentity(null, winner))
+          : toIdentity(listing.creator.user),
+        amount: listing.bids[0]?.amount ?? listing.price,
+        currency: listing.currency,
+        at: listing.settledAt.toISOString(),
+      });
+    }
+  }
+
+  await fillRatings(deals.map((deal) => deal.counterparty));
+  return deals;
+}

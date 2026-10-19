@@ -28,10 +28,10 @@ type Option =
   | { kind: "all"; key: string; href: string; total: number };
 
 /**
- * The site-wide search. On a desktop it is a bar pinned to the top of every
- * page; on a phone the header's search button opens it. Focusing it blurs the
- * page behind and drops the results beneath the box: people by username, and
- * live listings by title, write-up or seller.
+ * The site-wide search. It starts as a small button — pinned to the top right
+ * of every desktop page, and in the header on a phone — and opens into a bar
+ * centred over the blurred page, with the results beneath it: people by
+ * username, and live listings by title, write-up or seller.
  *
  * It is a combobox — the caret stays in the box while the arrow keys move
  * through the results — and opens from anywhere with ⌘K, Ctrl+K or "/".
@@ -48,6 +48,12 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(0);
+  // "⌘K" on Apple devices, "Ctrl K" elsewhere — read after mount, since the
+  // server cannot know.
+  const [shortcut, setShortcut] = useState("⌘K");
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/.test(navigator.userAgent)) setShortcut("Ctrl K");
+  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -187,23 +193,48 @@ export function GlobalSearch() {
 
   return (
     <>
-      {open && (
-        <div
-          aria-hidden="true"
-          onClick={close}
-          className="fixed inset-0 z-[60] bg-background/55 backdrop-blur-md animate-in fade-in-0 duration-150"
-        />
-      )}
+      {/* Desktop: a small button pinned to the top right of the page. Phones
+          open search from the button in their header instead. */}
+      <div className="pointer-events-none sticky top-0 z-40 hidden justify-end px-8 pt-4 lg:flex">
+        <button
+          type="button"
+          onClick={show}
+          aria-label="Search listings and people"
+          aria-keyshortcuts="Meta+K Control+K /"
+          tabIndex={open ? -1 : 0}
+          className={cn(
+            "pointer-events-auto flex h-10 items-center gap-2 rounded-xl border border-line bg-surface-2/90 px-3 text-caption shadow-lg shadow-black/30 backdrop-blur-md",
+            "transition-[opacity,scale,color,border-color] duration-200 ease-out hover:border-line-strong hover:text-white",
+            open ? "scale-90 opacity-0" : "scale-100 opacity-100",
+          )}
+        >
+          <Search className="h-4 w-4" aria-hidden="true" />
+          <kbd className="rounded-md border border-line px-1.5 py-0.5 font-sans text-[10px]">
+            {shortcut}
+          </kbd>
+        </button>
+      </div>
 
       <div
+        aria-hidden="true"
+        onClick={close}
         className={cn(
-          // Desktop: a bar pinned across the top of the content column.
-          "lg:sticky lg:top-0 lg:block lg:border-b lg:border-line lg:bg-background/80 lg:px-8 lg:py-3 lg:backdrop-blur-md",
-          // Phone: a sheet over the header, invisible and inert until opened —
-          // kept rendered so the header's button can focus it within the tap.
-          "max-lg:fixed max-lg:inset-x-0 max-lg:top-0 max-lg:px-3 max-lg:pb-3 max-lg:pt-[calc(var(--safe-top)+0.625rem)] max-lg:transition-[opacity,translate] max-lg:duration-150",
-          !open && "max-lg:pointer-events-none max-lg:-translate-y-2 max-lg:opacity-0",
-          open ? "z-[70] lg:border-transparent lg:bg-transparent" : "z-40",
+          "fixed inset-0 z-[60] bg-background/55 transition-[opacity,backdrop-filter,visibility] duration-200 ease-out",
+          open ? "visible opacity-100 backdrop-blur-md" : "invisible opacity-0 backdrop-blur-none",
+        )}
+      />
+
+      {/* The bar itself, centred over the page. It is never `display: none`,
+          only faded out and inert, so `show` can focus it inside the tap that
+          opened it — a phone raises its keyboard only for focus given then. */}
+      <div
+        aria-hidden={!open}
+        className={cn(
+          "fixed inset-x-0 top-0 z-[70] px-3 pt-[calc(var(--safe-top)+0.625rem)] sm:px-6 lg:pt-20",
+          "transition-[opacity,translate,scale] duration-200 ease-out",
+          open
+            ? "translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none -translate-y-3 scale-[0.98] opacity-0",
         )}
       >
         <div className="relative mx-auto flex max-w-2xl items-center gap-2">
@@ -218,6 +249,7 @@ export function GlobalSearch() {
               inputMode="search"
               enterKeyHint="search"
               role="combobox"
+              tabIndex={open ? 0 : -1}
               aria-label="Search listings and people"
               aria-expanded={showPanel}
               aria-controls={listId}
@@ -230,18 +262,14 @@ export function GlobalSearch() {
               placeholder="Search listings and people"
               autoComplete="off"
               spellCheck={false}
-              className={cn(
-                "h-11 w-full rounded-xl border bg-surface-2 pl-10 pr-20 text-base text-foreground outline-none transition-colors placeholder:text-caption sm:text-sm",
-                open
-                  ? "border-primary/60 ring-2 ring-primary/25 shadow-2xl shadow-black/50"
-                  : "border-line hover:border-line-strong",
-              )}
+              className="h-12 w-full rounded-xl border border-primary/60 bg-surface-2 pl-10 pr-12 text-base text-foreground shadow-2xl shadow-black/50 outline-none ring-2 ring-primary/25 placeholder:text-caption sm:text-sm"
             />
             <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
               {loading && <Loader2 className="h-4 w-4 animate-spin text-caption" aria-hidden="true" />}
-              {query ? (
+              {query && (
                 <button
                   type="button"
+                  tabIndex={open ? 0 : -1}
                   onClick={() => {
                     setQuery("");
                     inputRef.current?.focus();
@@ -251,74 +279,64 @@ export function GlobalSearch() {
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
-              ) : (
-                <kbd className="hidden rounded-md border border-line px-1.5 py-0.5 font-sans text-[10px] text-caption lg:inline">
-                  ⌘K
-                </kbd>
               )}
             </span>
           </div>
-          {open && (
-            <button
-              type="button"
-              onClick={close}
-              className="shrink-0 px-1 text-[13px] font-medium text-caption transition-colors hover:text-white lg:hidden"
-            >
-              Cancel
-            </button>
-          )}
+          <button
+            type="button"
+            tabIndex={open ? 0 : -1}
+            onClick={close}
+            className="shrink-0 px-1 text-[13px] font-medium text-caption transition-colors hover:text-white lg:hidden"
+          >
+            Cancel
+          </button>
 
-          {open && (
-            <div
-              className={cn(
-                "absolute inset-x-0 top-full mt-2 overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-2xl shadow-black/60",
-                "max-h-[min(70dvh,34rem)] overflow-y-auto overscroll-contain",
-              )}
-            >
-              {!q ? (
-                <p className="px-4 py-5 text-[13px] leading-relaxed text-caption">
-                  Find listings by title, write-up or seller, and people by username.
-                </p>
-              ) : failed ? (
-                <p className="px-4 py-5 text-[13px] text-negative">Search is unavailable right now.</p>
-              ) : options.length === 0 ? (
-                <p className="px-4 py-5 text-[13px] text-caption">
-                  {loading ? "Searching…" : <>Nothing matches “{q}”.</>}
-                </p>
-              ) : (
-                <ul id={listId} role="listbox" aria-label="Search results" className="py-1.5">
-                  {profiles.length > 0 && <GroupLabel>People</GroupLabel>}
-                  {profiles.map((option) => {
-                    const index = options.indexOf(option);
-                    return (
-                      <ResultRow
-                        key={option.key}
-                        id={optionId(index)}
-                        option={option}
-                        active={index === active}
-                        onHover={() => setActive(index)}
-                        onPick={close}
-                      />
-                    );
-                  })}
-                  {listings.length > 0 && <GroupLabel>Listings</GroupLabel>}
-                  {listings.map((option) => {
-                    const index = options.indexOf(option);
-                    return (
-                      <ResultRow
-                        key={option.key}
-                        id={optionId(index)}
-                        option={option}
-                        active={index === active}
-                        onHover={() => setActive(index)}
-                        onPick={close}
-                      />
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          )}
+          {/* Stays mounted while closed so it fades out with the bar rather
+              than vanishing first. */}
+          <div className="absolute inset-x-0 top-full mt-2 max-h-[min(70dvh,34rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line-strong bg-surface shadow-2xl shadow-black/60">
+            {!q ? (
+              <p className="px-4 py-5 text-[13px] leading-relaxed text-caption">
+                Find listings by title, write-up or seller, and people by username.
+              </p>
+            ) : failed ? (
+              <p className="px-4 py-5 text-[13px] text-negative">Search is unavailable right now.</p>
+            ) : options.length === 0 ? (
+              <p className="px-4 py-5 text-[13px] text-caption">
+                {loading ? "Searching…" : <>Nothing matches “{q}”.</>}
+              </p>
+            ) : (
+              <ul id={listId} role="listbox" aria-label="Search results" className="py-1.5">
+                {profiles.length > 0 && <GroupLabel>People</GroupLabel>}
+                {profiles.map((option) => {
+                  const index = options.indexOf(option);
+                  return (
+                    <ResultRow
+                      key={option.key}
+                      id={optionId(index)}
+                      option={option}
+                      active={index === active}
+                      onHover={() => setActive(index)}
+                      onPick={close}
+                    />
+                  );
+                })}
+                {listings.length > 0 && <GroupLabel>Listings</GroupLabel>}
+                {listings.map((option) => {
+                  const index = options.indexOf(option);
+                  return (
+                    <ResultRow
+                      key={option.key}
+                      id={optionId(index)}
+                      option={option}
+                      active={index === active}
+                      onHover={() => setActive(index)}
+                      onPick={close}
+                    />
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </>

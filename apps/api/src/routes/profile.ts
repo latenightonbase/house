@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { getUserFromRequest } from "../lib/session";
 import {
+  getListingDeals,
   getProfileHeader,
   getPurchaseHistory,
   getSalesHistory,
@@ -79,6 +80,25 @@ export const profileRoutes = new Elysia()
     }
     const { purchases } = await withOwnReviews(user.id, [], await getPurchaseHistory(user.id));
     return { purchases };
+  })
+  /**
+   * The signed-in user's deals on one listing, each with the review they
+   * already left — the listing page's "Rate" and "Message" buttons.
+   */
+  .get("/profile/deals/:listingId", async ({ params, request, set }) => {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+    const deals = await getListingDeals(user.id, params.listingId);
+    const mine = await getOwnReviews(
+      user.id,
+      deals.map((deal) => deal.dealKey),
+    );
+    return {
+      deals: deals.map((deal) => ({ ...deal, myReview: mine.get(deal.dealKey) ?? null })),
+    };
   })
   .get("/profile/overview", async ({ request, set }) => {
     const user = await getUserFromRequest(request);

@@ -8,6 +8,7 @@ import { ContactButton } from "@/components/profile/ContactButton";
 import { useSession } from "@/components/SessionProvider";
 import { formatAmount, fetchMyProfileOverview, type PurchaseRecord } from "@/lib/profileHistory";
 import { UserLink } from "@/components/UserLink";
+import { ReviewButton } from "@/components/reviews/ReviewButton";
 
 /** Older wins than this are history, not news. */
 const RECENT_MS = 14 * 24 * 60 * 60 * 1000;
@@ -101,10 +102,22 @@ export function WinAlert() {
           </span>
         </p>
         {win.seller.userId && (
-          // Messaging counts as seen, but the banner stays put until the chat
-          // page takes over, so a failed open can still show its error.
-          <div onClickCapture={() => writeDismissed([...readDismissed(), win.listingId])} className="shrink-0">
-            <ContactButton userId={win.seller.userId} listingId={win.listingId} label="Message creator" />
+          <div className="flex shrink-0 flex-wrap items-start gap-2">
+            {/* The other prompt a win needs: rating the seller. Saving one
+                leaves the banner up — the winner may still need to message. */}
+            <ReviewButton
+              dealKey={win.dealKey}
+              name={win.seller.name}
+              role="SELLER"
+              listingTitle={win.title}
+              existing={win.myReview}
+              label="Rate seller"
+            />
+            {/* Messaging counts as seen, but the banner stays put until the chat
+                page takes over, so a failed open can still show its error. */}
+            <div onClickCapture={() => writeDismissed([...readDismissed(), win.listingId])}>
+              <ContactButton userId={win.seller.userId} listingId={win.listingId} label="Message creator" />
+            </div>
           </div>
         )}
       </div>

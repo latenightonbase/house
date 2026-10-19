@@ -10,6 +10,8 @@ import { StarRating } from "@/components/reviews/Stars";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
 import { AuctionResult } from "@/components/listing/AuctionResult";
+import { ListingDeals } from "@/components/listing/ListingDeals";
+import { useListingDeals } from "@/lib/useListingDeals";
 import { CheckoutFields } from "@/components/listing/CheckoutFields";
 import { ListingPoster } from "@/components/listing/ListingPoster";
 import { PageHeader } from "@/components/PageHeader";
@@ -40,6 +42,7 @@ import {
 } from "@/lib/useListingCheckout";
 import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
+import { RatePrompt } from "@/components/reviews/RatePrompt";
 
 type PublishStep = "idle" | "switching" | "signing" | "confirming" | "publishing";
 
@@ -116,6 +119,21 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
   const unavailable = Boolean(
     listing && (listing.status !== "ACTIVE" || soldOut || ended),
   );
+
+  // Re-read whenever a sale could have landed, so a purchase made on this page
+  // turns straight into "You bought this — Rate the seller".
+  const { deals, reload: reloadDeals } = useListingDeals(
+    listing?.id,
+    status === "authenticated",
+    `${listing?.status}:${listing?.slotsAvailable}:${listing?.settledAt}`,
+  );
+  /** A rating changes the seller's badge at the top as well as the deal row. */
+  const onReviewed = () => {
+    reloadDeals();
+    void fetchListing(id)
+      .then(setListing)
+      .catch(() => {});
+  };
 
   const chainSupported = chainId === chainForListing;
   const publishing = publishStep !== "idle";
@@ -239,6 +257,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
               </p>
             </div>
           </div>
+          {!isAuction && <RatePrompt listing={listing} dealKey={checkout.purchaseDealKey} />}
           {isAuction && !user?.emailVerifiedAt ? (
             <EmailVerifyPrompt className="pt-2" />
           ) : null}
@@ -382,6 +401,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             bidders={bidders}
             viewerWallets={user?.wallets.map((w) => w.address.toLowerCase()) ?? []}
             isOwner={isOwner}
+            deals={deals}
+            onReviewed={onReviewed}
           />
         ) : isOwner && awaitingPublish ? (
           <div className="space-y-3">
@@ -491,6 +512,8 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             </Button>
           </div>
         )}
+
+        {!isAuction && <ListingDeals listing={listing} deals={deals} onReviewed={onReviewed} />}
       </Card>
 
       {isAuction ? <AuctionBidders listing={listing} bidders={bidders} loading={bidders === null} /> : null}

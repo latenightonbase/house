@@ -488,12 +488,16 @@ export async function cancelListing(id: string): Promise<void> {
  * re-reads the sale from the contract, so `txHash` is a reference rather than
  * the proof — a purchase recovered after the fact can be recorded without one.
  */
-export async function bookListing(id: string, txHash?: string | null): Promise<Listing> {
-  const data = await postJson<{ listing: Listing }>(
+/** Records a fixed-price purchase. `dealKey` names the sale, for rating the seller. */
+export async function bookListing(
+  id: string,
+  txHash?: string | null,
+): Promise<{ listing: Listing; dealKey: string | null }> {
+  const data = await postJson<{ listing: Listing; dealKey?: string }>(
     `/backend/listings/${id}/book`,
     txHash ? { txHash } : {},
   );
-  return data.listing;
+  return { listing: data.listing, dealKey: data.dealKey ?? null };
 }
 
 export async function fetchCampaigns(limit = 30): Promise<Campaign[]> {

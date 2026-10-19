@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Star } from "lucide-react";
-import { Button, TextArea } from "@/components/ui";
+import { Button, TextArea, type ButtonSize, type ButtonVariant } from "@/components/ui";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +19,13 @@ import {
 } from "@/lib/profileHistory";
 
 /**
- * "Rate" on a row of the user's own history — the buyer rating a seller, or a
- * seller rating their buyer. Once rated it shows the stars given and reopens
- * the same dialog to edit them; the API keeps one review per side per deal.
+ * "Rate" for one deal — the buyer rating a seller, or a seller rating their
+ * buyer. Once rated it shows the stars given and reopens the same dialog to
+ * edit them; the API keeps one review per side per deal.
+ *
+ * Compact by default (a star and "Rate", the word dropped on a phone) for
+ * history rows; with `label` it is a prompt that always spells itself out —
+ * "Rate the seller" after a purchase, say.
  */
 export function ReviewButton({
   dealKey,
@@ -32,6 +36,9 @@ export function ReviewButton({
   existing,
   onSaved,
   className,
+  label,
+  size = "sm",
+  variant = "accent-outline",
 }: {
   dealKey: string;
   name: string;
@@ -40,6 +47,9 @@ export function ReviewButton({
   existing: OwnReview | null | undefined;
   onSaved?: (review: OwnReview) => void;
   className?: string;
+  label?: string;
+  size?: ButtonSize;
+  variant?: ButtonVariant;
 }) {
   const [review, setReview] = useState<OwnReview | null>(existing ?? null);
   const [open, setOpen] = useState(false);
@@ -82,8 +92,8 @@ export function ReviewButton({
   return (
     <>
       <Button
-        variant="accent-outline"
-        size="sm"
+        variant={review ? "accent-outline" : variant}
+        size={size}
         onClick={() => openDialog(true)}
         className={className}
         aria-label={review ? `Edit your ${review.rating}-star review of ${name}` : `Rate ${name}`}
@@ -95,7 +105,15 @@ export function ReviewButton({
         {/* On a phone the star alone says it — the row also holds a name and
             the Message button. */}
         {review ? (
-          <span className="numeric">{review.rating}</span>
+          label ? (
+            <span>
+              You rated <span className="numeric">{review.rating}</span>
+            </span>
+          ) : (
+            <span className="numeric">{review.rating}</span>
+          )
+        ) : label ? (
+          <span>{label}</span>
         ) : (
           <span className="max-sm:sr-only">Rate</span>
         )}

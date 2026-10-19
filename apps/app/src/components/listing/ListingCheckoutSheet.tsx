@@ -40,6 +40,7 @@ import { cn, relativeEndLabel } from "@/lib/utils";
 import { BidHistory } from "./BidHistory";
 import { ListingPoster } from "./ListingPoster";
 import { CheckoutFields } from "./CheckoutFields";
+import { RatePrompt } from "@/components/reviews/RatePrompt";
 
 /** Long enough that clamping it saves real height in a sheet. */
 const LONG_DESCRIPTION = 180;
@@ -250,6 +251,9 @@ function SheetBody({
               ? `Your ${money(listing, checkout.bidNumber)} bid on ${listing.title} is on-chain. If you are outbid, it is returned to you.`
               : `${listing.title} is booked. Settlement ran through the AuctionHouse, and the seller has been notified.`}
           </Description>
+          {!isAuction && (
+            <RatePrompt listing={listing} dealKey={checkout.purchaseDealKey} className="mt-6" />
+          )}
           {isAuction && !user?.emailVerifiedAt ? (
             <EmailVerifyPrompt className="mt-6 border-t border-line pt-6 text-left" onSkip={onClose} />
           ) : (
