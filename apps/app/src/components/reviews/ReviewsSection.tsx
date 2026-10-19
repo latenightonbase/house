@@ -13,6 +13,7 @@ import {
   type ReviewSummary,
 } from "@/lib/profileHistory";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 function counted(label: string, count: number) {
   return count ? (
@@ -61,16 +62,7 @@ function ReviewCard({ review }: { review: PublicReview }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="min-w-0 truncate text-[12px] font-semibold text-white">
-              {reviewer.username ? (
-                <Link
-                  href={`/user/${reviewer.username}`}
-                  className="transition-colors hover:text-primary-bright"
-                >
-                  {reviewer.name}
-                </Link>
-              ) : (
-                reviewer.name
-              )}
+              <UserLink handle={reviewer.handle}>{reviewer.name}</UserLink>
             </p>
             {/* The reviewer's own standing — the stars they gave sit on their
                 own line below, so the two are not read as one rating. */}

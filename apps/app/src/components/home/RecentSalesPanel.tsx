@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui";
 import type { RecentSale, SaleParty } from "@/lib/marketplace";
 import { formatTokenAmount } from "@/lib/tokenPrices";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /**
  * "now", "12m", "3h", "2d" — kept to a few characters so the two names beside
@@ -32,7 +33,9 @@ function Party({ party, role }: { party: SaleParty; role: string }) {
         size={18}
       />
       <span className="sr-only">{role}:</span>
-      <span className="truncate text-white/85">{party.name}</span>
+      <UserLink handle={party.handle} raised className="truncate text-white/85">
+        {party.name}
+      </UserLink>
       <RatingBadge rating={party.rating} size="xs" />
     </span>
   );
@@ -48,11 +51,15 @@ function SaleRow({ sale }: { sale: RecentSale }) {
   const Icon = won ? Gavel : ShoppingBag;
   const kind = won ? "Auction" : "Bought";
 
+  // The row links to the listing through a link laid over it, so the two
+  // names can sit on top as links to their profiles — see `ListingCard`.
   return (
-    <Link
-      href={`/listings/${sale.listingId}`}
-      className="group flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-    >
+    <div className="group relative flex w-full items-center gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] has-[>a:focus-visible]:border-primary/60">
+      <Link
+        href={`/listings/${sale.listingId}`}
+        aria-label={sale.title}
+        className="absolute inset-0 z-[1] rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+      />
       <PosterThumb
         src={sale.posterUrl}
         alt=""
@@ -88,7 +95,7 @@ function SaleRow({ sale }: { sale: RecentSale }) {
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

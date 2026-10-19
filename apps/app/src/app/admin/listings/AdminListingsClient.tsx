@@ -11,6 +11,7 @@ import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { AdminTabs } from "../AdminTabs";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /**
  * Moderation for live listings. Anyone can list without review, so this is
@@ -159,7 +160,9 @@ export default function AdminListingsClient() {
                       fallbackSeed={listing.creator.wallet}
                       size={16}
                     />
-                    <span className="truncate">{listing.creator.displayName}</span>
+                    <UserLink handle={listing.creator.handle} className="truncate">
+                      {listing.creator.displayName}
+                    </UserLink>
                     <RatingBadge rating={listing.creator.rating} size="xs" />
                   </div>
                   <p className="mt-1 text-[12px] text-caption">

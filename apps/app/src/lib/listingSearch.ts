@@ -8,8 +8,8 @@ import type { Listing, ListingKind, PricingType } from "@/lib/marketplace";
  * single search.
  *
  * It runs over the book the page already holds rather than calling the API —
- * the marketplace ships every live listing on first paint, so filtering it in
- * place answers on each keystroke.
+ * the marketplace ships every live listing on first paint. The words arrive
+ * from the site-wide search (`/search` on the API), whose "See all" links here.
  */
 export type MarketSearch = {
   q: string;
@@ -36,6 +36,7 @@ function haystack(listing: Listing) {
     listing.category !== "OTHER" ? categoryLabel(listing.category) : null,
     listing.creator.displayName,
     listing.creator.username,
+    listing.creator.handle,
     listing.tokenName ?? listing.currency,
   ]
     .filter(Boolean)

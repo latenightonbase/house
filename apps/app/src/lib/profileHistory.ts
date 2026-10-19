@@ -19,6 +19,8 @@ export type PartyIdentity = {
   wallet: string | null;
   name: string;
   username: string | null;
+  /** Opens their public profile; null for a wallet that never signed in. */
+  handle?: string | null;
   avatarUrl: string | null;
   /** Their overall review rating, or null if nobody has reviewed them yet. */
   rating?: Rating | null;

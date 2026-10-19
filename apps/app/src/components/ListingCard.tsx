@@ -43,9 +43,11 @@ function PosterPlaceholder({ listing }: { listing: Listing }) {
  * something. Price and the call to action sit on the card's floor so
  * they line up across a row of cards.
  *
- * With `onCheckout` the whole card is the button that opens checkout (the pill
- * is only its label, so nothing interactive nests); without it — the seller's
- * own preview — it is inert.
+ * With `onCheckout` the whole card opens checkout: a transparent button laid
+ * over it, rather than a button wrapping it, so the seller's name can sit on
+ * top as its own link to their profile (a link can't nest inside a button).
+ * The pill is only a label. Without `onCheckout` — the seller's own preview —
+ * the card is inert.
  */
 export function ListingCard({
   listing,
@@ -132,18 +134,21 @@ export function ListingCard({
   if (!interactive) return <div className={shell}>{body}</div>;
 
   return (
-    <button
-      type="button"
-      onClick={() => onCheckout?.(listing)}
-      aria-label={`${price.cta}: ${listing.title}, ${money(listing, price.amount)}`}
-      aria-haspopup="dialog"
+    <div
       className={cn(
         shell,
-        "hover:border-line-strong hover:bg-white/[0.02]",
-        "focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45",
+        "relative hover:border-line-strong hover:bg-white/[0.02]",
+        "has-[>button:focus-visible]:border-primary/60",
       )}
     >
+      <button
+        type="button"
+        onClick={() => onCheckout?.(listing)}
+        aria-label={`${price.cta}: ${listing.title}, ${money(listing, price.amount)}`}
+        aria-haspopup="dialog"
+        className="absolute inset-0 z-[1] cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/45"
+      />
       {body}
-    </button>
+    </div>
   );
 }

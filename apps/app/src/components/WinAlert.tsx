@@ -7,6 +7,7 @@ import { Trophy, X } from "lucide-react";
 import { ContactButton } from "@/components/profile/ContactButton";
 import { useSession } from "@/components/SessionProvider";
 import { formatAmount, fetchMyProfileOverview, type PurchaseRecord } from "@/lib/profileHistory";
+import { UserLink } from "@/components/UserLink";
 
 /** Older wins than this are history, not news. */
 const RECENT_MS = 14 * 24 * 60 * 60 * 1000;
@@ -91,7 +92,13 @@ export function WinAlert() {
             {win.title}
           </Link>{" "}
           for <span className="numeric">{formatAmount(win.amount, win.currency)}</span>.{" "}
-          <span className="text-caption">Message {win.seller.name} to arrange it.</span>
+          <span className="text-caption">
+            Message{" "}
+            <UserLink handle={win.seller.handle} className="text-white/85">
+              {win.seller.name}
+            </UserLink>{" "}
+            to arrange it.
+          </span>
         </p>
         {win.seller.userId && (
           // Messaging counts as seen, but the banner stays put until the chat

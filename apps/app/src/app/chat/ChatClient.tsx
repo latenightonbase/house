@@ -24,6 +24,7 @@ import {
   type UploadedAttachment,
 } from "@/lib/chat";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 const TYPING_TIMEOUT_MS = 4000;
 /** Matches Tailwind's `lg` — where the rail and thread sit side by side. */
@@ -335,16 +336,9 @@ export default function ChatClient() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="flex min-w-0 items-center gap-1.5 text-[14px] lg:text-[13px] font-semibold text-white">
-                    {activeConversation.counterparty.username ? (
-                      <Link
-                        href={`/user/${activeConversation.counterparty.username}`}
-                        className="truncate hover:text-primary-bright transition-colors"
-                      >
-                        {activeConversation.counterparty.name}
-                      </Link>
-                    ) : (
-                      <span className="truncate">{activeConversation.counterparty.name}</span>
-                    )}
+                    <UserLink handle={activeConversation.counterparty.handle} className="truncate">
+                      {activeConversation.counterparty.name}
+                    </UserLink>
                     <RatingBadge rating={activeConversation.counterparty.rating} />
                   </p>
                   <p className={cn("text-[11px] truncate", typing ? "text-primary-light" : "text-caption")}>

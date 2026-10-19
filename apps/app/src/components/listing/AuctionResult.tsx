@@ -9,6 +9,7 @@ import { fetchMyProfileOverview } from "@/lib/profileHistory";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { shortAddress } from "@/lib/utils";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /**
  * The outcome of a settled auction, in place of the bid form. The two people
@@ -55,7 +56,13 @@ export function AuctionResult({
     };
   }, [isWinner, isOwner, listing.id, winnerWallet]);
 
-  const winnerName = isWinner ? "You" : (winningBid?.name ?? shortAddress(winnerWallet));
+  const winnerName = isWinner ? (
+    "You"
+  ) : (
+    <UserLink handle={winningBid?.handle} className="underline-offset-2">
+      {winningBid?.name ?? shortAddress(winnerWallet)}
+    </UserLink>
+  );
   const amount = winningBid ? ` for ${formatListingAmount(listing, winningBid.amount)}` : "";
 
   return (
@@ -70,7 +77,13 @@ export function AuctionResult({
         </p>
         <p className="text-[12px] leading-relaxed text-caption">
           {isWinner
-            ? `Message ${listing.creator.displayName} to arrange what you won.`
+            ? <>
+                Message{" "}
+                <UserLink handle={listing.creator.handle} className="text-white">
+                  {listing.creator.displayName}
+                </UserLink>{" "}
+                to arrange what you won.
+              </>
             : isOwner
               ? "Message the winner to arrange delivery."
               : "Bidding has closed."}

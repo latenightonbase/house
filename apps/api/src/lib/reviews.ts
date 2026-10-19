@@ -1,7 +1,7 @@
 import type { ReviewRole } from "@prisma/client";
 import { prisma } from "../db";
 import { toIdentity, type PartyIdentity } from "./profileHistory";
-import { fillRatings } from "./ratings";
+import { fillRatings, invalidateRatings } from "./ratings";
 
 /**
  * Reviews between the two sides of a completed deal. Only the people who
@@ -129,6 +129,8 @@ export async function submitReview(
     },
     update: { rating: input.rating, comment },
   });
+  // The badge beside their name everywhere reads from the rating cache.
+  await invalidateRatings([revieweeId]);
 
   return {
     ok: true,

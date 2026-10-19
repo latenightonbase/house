@@ -33,6 +33,8 @@ export type ChatCounterparty = {
   userId: string | null;
   /** Their overall review rating, or null if nobody has reviewed them yet. */
   rating?: Rating | null;
+  /** Opens their public profile. */
+  handle?: string | null;
   wallet: string | null;
   name: string;
   username: string | null;

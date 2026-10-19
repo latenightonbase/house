@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Gavel, Package, Plus, Search, Sparkles, Store, Tag, X } from "lucide-react";
+import { ArrowRight, Gavel, Package, Plus, Sparkles, Store, Tag, X } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
-import { Select, TextInput } from "@/components/ui";
+import { Select } from "@/components/ui";
 import { categoryLabel } from "@/lib/listingCategories";
 import {
   EMPTY_SEARCH,
   isEmptySearch,
   matchesSearch,
-  searchFromParams,
   searchToParams,
   type MarketSearch,
 } from "@/lib/listingSearch";
@@ -191,7 +190,8 @@ export function MarketplacePanel({
   listings,
   onCheckout,
   previewHref,
-  syncUrl = false,
+  search: controlledSearch,
+  onSearchChange,
 }: {
   listings: Listing[];
   onCheckout: (listing: Listing) => void;
@@ -201,37 +201,22 @@ export function MarketplacePanel({
    */
   previewHref?: string;
   /**
-   * Reads the search from the address bar and writes it back, so a search on
-   * the marketplace page is a link someone can share. Off on the home preview,
-   * whose "View all" carries the search over instead.
+   * The search, when the page owns it — the marketplace keeps it in the
+   * address bar so a search is a link someone can share, and so the site-wide
+   * search's "See all" lands here already filtered. Without it (the home
+   * preview) the panel keeps its own.
    */
-  syncUrl?: boolean;
+  search?: MarketSearch;
+  onSearchChange?: (search: MarketSearch) => void;
 }) {
-  const [search, setSearch] = useState<MarketSearch>(EMPTY_SEARCH);
+  const [localSearch, setLocalSearch] = useState<MarketSearch>(EMPTY_SEARCH);
+  const search = controlledSearch ?? localSearch;
+  const setSearch = onSearchChange ?? setLocalSearch;
   const [category, setCategory] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
   const preview = Boolean(previewHref);
 
-  // Read after mount rather than through `useSearchParams`, which would opt the
-  // statically rendered marketplace page out of its server-rendered first paint.
-  // Nothing is written back until it has been read, or the first write would
-  // wipe the query before it was ever applied.
-  const [urlRead, setUrlRead] = useState(false);
-  useEffect(() => {
-    if (!syncUrl) return;
-    setSearch(searchFromParams(new URLSearchParams(window.location.search)));
-    setUrlRead(true);
-  }, [syncUrl]);
-
-  useEffect(() => {
-    if (!syncUrl || !urlRead) return;
-    const next = `${window.location.pathname}${searchToParams(search)}${window.location.hash}`;
-    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-      window.history.replaceState(window.history.state, "", next);
-    }
-  }, [syncUrl, urlRead, search]);
-
-  const patch = (next: Partial<MarketSearch>) => setSearch((current) => ({ ...current, ...next }));
+  const patch = (next: Partial<MarketSearch>) => setSearch({ ...search, ...next });
 
   /**
    * Counts on each type chip, taken with the other filters applied — so the
@@ -341,35 +326,24 @@ export function MarketplacePanel({
       ) : (
         <>
           <div role="search" className="mt-3 space-y-2.5 border-t border-line pt-3">
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-caption"
-                aria-hidden="true"
-              />
-              {/* Plain text rather than type="search", whose built-in clear
-                  button would sit beside this one. */}
-              <TextInput
-                type="text"
-                inputMode="search"
-                aria-label="Search listings"
-                value={search.q}
-                onChange={(event) => patch({ q: event.target.value })}
-                placeholder="Search listings or sellers"
-                autoComplete="off"
-                enterKeyHint="search"
-                className="h-10 pl-9 pr-9"
-              />
-              {search.q && (
+            {/* Text search lives in the site-wide bar; its "See all" lands here
+                with the words in the address bar, shown as a removable chip. */}
+            {search.q.trim() && (
+              <p className="flex min-w-0 items-center gap-2 text-[12px] text-caption">
+                <span className="min-w-0 truncate">
+                  Results for <span className="font-semibold text-white">“{search.q.trim()}”</span>
+                </span>
                 <button
                   type="button"
                   onClick={() => patch({ q: "" })}
                   aria-label="Clear search"
-                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-caption transition-colors hover:text-white"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-line px-2 py-0.5 text-[11px] transition-colors hover:border-line-strong hover:text-white"
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  <X className="h-3 w-3" aria-hidden="true" />
+                  Clear
                 </button>
-              )}
-            </div>
+              </p>
+            )}
 
             <div
               role="group"

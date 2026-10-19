@@ -9,6 +9,7 @@ import { useCountdown } from "@/lib/useCountdown";
 import { cn } from "@/lib/utils";
 import { countdownLabel, endsSoon, money, priceLine, UsdNote } from "./listingParts";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /** Five rows: enough to fill the rail beside the market preview without a scroll. */
 const MAX_ROWS = 5;
@@ -27,13 +28,17 @@ function Row({
   const urgent = endsSoon(listing.endDate);
   const CategoryIcon = categoryMeta(listing.category).icon;
 
+  // The row opens checkout through a button laid over it, so the seller's name
+  // can sit on top as a link to their profile — see `ListingCard`.
   return (
-    <button
-      type="button"
-      onClick={() => onCheckout(listing)}
-      aria-haspopup="dialog"
-      className="group flex w-full items-center text-left gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] focus-visible:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
-    >
+    <div className="group relative flex w-full items-center text-left gap-3 rounded-xl border border-transparent px-2.5 py-3 transition-colors hover:border-line-strong hover:bg-white/[0.03] has-[>button:focus-visible]:border-primary/60">
+      <button
+        type="button"
+        onClick={() => onCheckout(listing)}
+        aria-haspopup="dialog"
+        aria-label={`${price.cta}: ${listing.title}, ${money(listing, price.amount)}`}
+        className="absolute inset-0 z-[1] cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45"
+      />
       {/* The poster when there is one; the same generated artwork as its card otherwise. */}
       <PosterThumb
         src={listing.posterUrl}
@@ -48,7 +53,9 @@ function Row({
         {/* Seller only — the price caption above already says auction or not, and
             a placement label here would only fight the title for the width. */}
         <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-caption">
-          <span className="truncate">{listing.creator.displayName}</span>
+          <UserLink handle={listing.creator.handle} raised className="truncate">
+            {listing.creator.displayName}
+          </UserLink>
           <RatingBadge rating={listing.creator.rating} size="xs" />
         </p>
       </div>
@@ -74,7 +81,7 @@ function Row({
           <p className="mt-0.5 text-[11px] text-caption">{price.note}</p>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 

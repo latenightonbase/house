@@ -6,6 +6,7 @@ import type { Listing } from "@/lib/marketplace";
 import { formatListingAmount, useUsdHint } from "@/lib/tokenPrices";
 import { cn, relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /** An amount in the listing's own token — "1,500 USDG", "4.2M LNOC". */
 export function money(listing: Listing, amount: number) {
@@ -162,7 +163,9 @@ export function Seller({
       />
       <span className="min-w-0">
         <span className="flex items-center gap-1 truncate text-[12px] font-medium text-white">
-          <span className="truncate">{listing.creator.displayName}</span>
+          <UserLink handle={listing.creator.handle} raised className="truncate">
+            {listing.creator.displayName}
+          </UserLink>
           {listing.creator.verified && (
             <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-label="Verified" />
           )}

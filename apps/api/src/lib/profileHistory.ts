@@ -33,6 +33,12 @@ export type PartyIdentity = {
   wallet: string | null;
   name: string;
   username: string | null;
+  /**
+   * What `/user/:handle` resolves them by — their username, else their account
+   * id. Null for a wallet that never signed in, which has no profile to visit.
+   * Not `username`, which can fall back to a social handle the route can't find.
+   */
+  handle: string | null;
   avatarUrl: string | null;
   /** Their overall review rating; null until someone has reviewed them. */
   rating: Rating | null;
@@ -106,6 +112,7 @@ export function toIdentity(
       (social?.username ? `@${social.username}` : null) ||
       (wallet ? shortWallet(wallet) : "Unknown"),
     username: user?.username ?? social?.username ?? null,
+    handle: user ? (user.username ?? user.id) : null,
     avatarUrl: user?.avatarUrl ?? social?.avatarUrl ?? null,
     // Filled per page by `fillRatings`, so a list is one query, not one each.
     rating: null,

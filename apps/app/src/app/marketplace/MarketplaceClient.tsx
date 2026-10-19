@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState, type ComponentProps } from "react";
 import dynamic from "next/dynamic";
+import { usePathname, useSearchParams } from "next/navigation";
 import { PageShell } from "@/components/PageShell";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { MarketplacePanel } from "@/components/home/MarketplacePanel";
 import { MARKETPLACE_LISTING_LIMIT } from "@/lib/home-data";
 import { fetchListings, isListingLive, type Listing } from "@/lib/marketplace";
+import { searchFromParams, searchToParams, type MarketSearch } from "@/lib/listingSearch";
 
 const ListingCheckoutSheet = dynamic(
   () =>
@@ -15,6 +17,24 @@ const ListingCheckoutSheet = dynamic(
     })),
   { ssr: false },
 );
+
+type PanelProps = Omit<ComponentProps<typeof MarketplacePanel>, "search" | "onSearchChange">;
+
+/**
+ * The panel with its search kept in the address bar. Changes are written with
+ * `history.replaceState`, which Next folds back into `useSearchParams`, so a
+ * filter change does not re-run the page or add a history entry.
+ */
+function UrlSearchPanel(props: PanelProps) {
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const search = useMemo(() => searchFromParams(new URLSearchParams(params.toString())), [params]);
+  const onSearchChange = useCallback(
+    (next: MarketSearch) => window.history.replaceState(null, "", `${pathname}${searchToParams(next)}`),
+    [pathname],
+  );
+  return <MarketplacePanel {...props} search={search} onSearchChange={onSearchChange} />;
+}
 
 /** Same cadence as the home page, so a sold listing leaves both at once. */
 const REFRESH_MS = 20_000;
@@ -51,6 +71,14 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
     };
   }, [load]);
 
+  const panelProps: PanelProps = {
+    listings,
+    onCheckout: (next) => {
+      setCheckoutListing(next);
+      setCheckoutOpen(true);
+    },
+  };
+
   return (
     <PageShell
       eyebrow="Media marketplace"
@@ -59,14 +87,11 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
       intro="Every live placement on LNOC in one place — bid on auctions or buy outright from creators with an audience to offer."
       action={<CreateListingButton size="sm" label="List your item" />}
     >
-      <MarketplacePanel
-        listings={listings}
-        syncUrl
-        onCheckout={(next) => {
-          setCheckoutListing(next);
-          setCheckoutOpen(true);
-        }}
-      />
+      {/* Reading the address bar opts out of static rendering, so the first
+          paint is the unfiltered panel and the search applies once hydrated. */}
+      <Suspense fallback={<MarketplacePanel {...panelProps} />}>
+        <UrlSearchPanel {...panelProps} />
+      </Suspense>
 
       {checkoutListing ? (
         <ListingCheckoutSheet

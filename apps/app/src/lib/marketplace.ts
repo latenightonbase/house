@@ -314,6 +314,8 @@ export interface SaleParty {
   wallet: string | null;
   name: string;
   username: string | null;
+  /** Opens their public profile; null for a wallet that never signed in. */
+  handle?: string | null;
   avatarUrl: string | null;
   rating?: Rating | null;
 }
@@ -349,6 +351,8 @@ export interface ListingBidder {
   wallet: string;
   name: string;
   avatarUrl?: string | null;
+  /** Opens the bidder's public profile, when their wallet belongs to an account. */
+  handle?: string | null;
   /** The bidder's overall review rating, when their wallet belongs to an account. */
   rating?: Rating | null;
   amount: number;

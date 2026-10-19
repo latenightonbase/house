@@ -3,13 +3,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpRight, Ellipsis, MessageSquare, Plus, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Ellipsis, MessageSquare, Plus, Search, ShieldCheck } from "lucide-react";
 import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
 import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { isSuperadmin } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { openSearch } from "@/lib/search";
 import { NavIcon } from "./navIcons";
 import { SocialRow } from "./SocialRow";
 import { Wordmark } from "./Wordmark";
@@ -64,7 +65,17 @@ export function MobileNav() {
           <Link href="/" aria-label={`${SITE.name} home`} className="min-w-0">
             <Wordmark size="sm" />
           </Link>
-          <ConnectWalletButton size="sm" showIcon={false} />
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Search listings and people"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-caption transition-colors hover:text-white"
+            >
+              <Search className="h-[17px] w-[17px]" aria-hidden="true" />
+            </button>
+            <ConnectWalletButton size="sm" showIcon={false} />
+          </div>
         </div>
       </header>
 

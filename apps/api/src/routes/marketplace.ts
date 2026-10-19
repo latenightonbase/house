@@ -17,7 +17,7 @@ import {
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
 import { getRecentSales, toIdentity } from "../lib/profileHistory";
-import { fillRatings, ratingsByWallet } from "../lib/ratings";
+import { fillRatings, ratingsByUser } from "../lib/ratings";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
 import {
   findListingToken,
@@ -128,15 +128,25 @@ async function listingBidders(listingId: string) {
 
   const rows = [...byWallet.values()].sort((a, b) => b.amount - a.amount || b.lastBidAt.getTime() - a.lastBidAt.getTime());
   const leaderWallet = rows[0]?.wallet;
-  const ratings = await ratingsByWallet(rows.map((row) => row.wallet));
+
+  // Whoever owns each wallet now — a bid placed before the wallet was linked
+  // still leads to the bidder's profile and carries their rating.
+  const owners = await prisma.wallet.findMany({
+    where: { address: { in: rows.map((row) => row.wallet) } },
+    select: { address: true, user: { select: { id: true, username: true } } },
+  });
+  const ownerByWallet = new Map(owners.map((o) => [o.address.toLowerCase(), o.user]));
+  const ratings = await ratingsByUser(owners.map((o) => o.user.id));
 
   return rows.map((row) => {
     const identity = bidderIdentity(row.wallet, row.user);
+    const owner = ownerByWallet.get(row.wallet);
     return {
       wallet: row.wallet,
       name: identity.name,
       avatarUrl: identity.avatarUrl,
-      rating: ratings.get(row.wallet) ?? null,
+      handle: owner ? (owner.username ?? owner.id) : null,
+      rating: owner ? (ratings.get(owner.id) ?? null) : null,
       amount: row.amount,
       bidCount: row.bidCount,
       lastBidAt: row.lastBidAt.toISOString(),
@@ -403,6 +413,83 @@ export const marketplaceRoutes = new Elysia()
   .get("/listings/recent-sales", async ({ query }) => {
     const limit = Math.min(Math.max(Number(query.limit) || 5, 1), 20);
     return { sales: await getRecentSales(limit) };
+  })
+  /**
+   * The site-wide search box. One query, two kinds of answer: live listings
+   * whose title, write-up or seller matches, and public profiles by username.
+   * Every word has to match somewhere, so "bob podcast" finds Bob's podcast
+   * listing rather than everything Bob sells plus every podcast.
+   */
+  .get("/search", async ({ query }) => {
+    const raw = typeof query.q === "string" ? query.q.trim().slice(0, 80) : "";
+    const words = raw.toLowerCase().split(/\s+/).map((w) => w.replace(/^@/, "")).filter(Boolean);
+    if (words.length === 0) return { listings: [], profiles: [], totalListings: 0 };
+
+    const insensitive = "insensitive" as const;
+    const listingWhere = {
+      ...liveListingWhere(),
+      isDaily: false,
+      AND: words.map((word) => ({
+        OR: [
+          { title: { contains: word, mode: insensitive } },
+          { description: { contains: word, mode: insensitive } },
+          { creator: { displayName: { contains: word, mode: insensitive } } },
+          { creator: { user: { username: { contains: word, mode: insensitive } } } },
+        ],
+      })),
+    };
+    const handle = words.join("");
+
+    const [listings, totalListings, users] = await Promise.all([
+      prisma.listing.findMany({
+        where: listingWhere,
+        orderBy: { createdAt: "desc" },
+        take: 6,
+        include: {
+          creator: { include: creatorInclude },
+          bids: { orderBy: { amount: "desc" }, take: 1, select: { amount: true } },
+          _count: { select: { bids: true } },
+        },
+      }),
+      prisma.listing.count({ where: listingWhere }),
+      // Usernames have no spaces, so the words are joined for this half.
+      prisma.user.findMany({
+        where: { username: { contains: handle, mode: insensitive } },
+        take: 20,
+        include: {
+          socials: { orderBy: { platform: "asc" } },
+          wallets: { orderBy: { createdAt: "asc" } },
+          creatorProfile: { select: { verified: true, avatarUrl: true } },
+        },
+      }),
+    ]);
+
+    // Closest names first: exact, then starts-with, then shortest.
+    const closeness = (username: string) =>
+      username === handle ? 0 : username.startsWith(handle) ? 1 : 2;
+    const ranked = users
+      .filter((user) => user.username)
+      .sort(
+        (a, b) =>
+          closeness(a.username!) - closeness(b.username!) ||
+          a.username!.length - b.username!.length,
+      )
+      .slice(0, 5);
+    const profiles = await fillRatings(ranked.map((user) => toIdentity(user)));
+
+    return {
+      listings: (await serializeListings(listings)).map(({ listing, out }) => ({
+        ...out,
+        bidCount: listing._count.bids,
+        highestBid: listing.bids[0]?.amount,
+      })),
+      totalListings,
+      profiles: profiles.map(({ userId: _userId, ...identity }, index) => ({
+        ...identity,
+        avatarUrl: identity.avatarUrl ?? ranked[index].creatorProfile?.avatarUrl ?? null,
+        verified: ranked[index].creatorProfile?.verified ?? false,
+      })),
+    };
   })
   /**
    * The seller's own listings, in every state — this is the only place a

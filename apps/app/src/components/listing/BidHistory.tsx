@@ -6,6 +6,7 @@ import type { Listing, ListingBidder } from "@/lib/marketplace";
 import { formatListingAmount } from "@/lib/tokenPrices";
 import { cn, shortAddress, walletFallbackAvatar } from "@/lib/utils";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 function timeAgo(iso: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -57,7 +58,9 @@ export function BidHistory({
           />
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-white">
-              <span className="truncate">{bidder.name}</span>
+              <UserLink handle={bidder.handle} className="truncate">
+                {bidder.name}
+              </UserLink>
               <RatingBadge rating={bidder.rating} />
               {bidder.leading && (
                 <span className="badge badge-warning shrink-0">

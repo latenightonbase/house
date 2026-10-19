@@ -7,6 +7,7 @@ import { PosterThumb } from "@/components/listing/ListingPoster";
 import { Avatar } from "@/components/ui";
 import { formatAmount, formatDate, type PartyIdentity } from "@/lib/profileHistory";
 import { RatingBadge } from "@/components/reviews/RatingBadge";
+import { UserLink } from "@/components/UserLink";
 
 /** The empty and loading states both lists share, so they cannot drift apart. */
 export function HistorySkeleton() {
@@ -114,16 +115,9 @@ export function PartyRow({
       />
       <div className="min-w-[9rem] flex-1">
         <p className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-white">
-          {party.username ? (
-            <Link
-              href={`/user/${party.username}`}
-              className="truncate transition-colors hover:text-primary-bright"
-            >
-              {party.name}
-            </Link>
-          ) : (
-            <span className="truncate">{party.name}</span>
-          )}
+          <UserLink handle={party.handle} className="truncate">
+            {party.name}
+          </UserLink>
           <RatingBadge rating={party.rating} />
         </p>
         {line && <p className="truncate text-[11px] text-caption">{line}</p>}
