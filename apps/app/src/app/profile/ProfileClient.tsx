@@ -11,6 +11,7 @@ import { ProfileHero, ProfileHeroSkeleton } from "@/components/profile/ProfileHe
 import { ProfileStats } from "@/components/profile/ProfileStats";
 import { SalesHistory } from "@/components/profile/SalesHistory";
 import { PurchaseHistory } from "@/components/profile/PurchaseHistory";
+import { ReviewsSection } from "@/components/reviews/ReviewsSection";
 import { fetchMyProfileOverview, type ProfileOverview } from "@/lib/profileHistory";
 
 type Tab = "sales" | "purchases" | "listings";
@@ -126,18 +127,32 @@ export default function ProfileClient() {
 
         <div className="mt-4">
           {tab === "sales" && (
-            <SalesHistory sales={overview?.sales ?? null} loading={loading} isOwnProfile />
+            <SalesHistory
+              sales={overview?.sales ?? null}
+              loading={loading}
+              isOwnProfile
+              onReviewed={load}
+            />
           )}
           {tab === "purchases" && (
             <PurchaseHistory
               purchases={overview?.purchases ?? null}
               loading={loading}
               isOwnProfile
+              onReviewed={load}
             />
           )}
           {tab === "listings" && <MyListings bare />}
         </div>
       </section>
+
+      {overview?.profile && (
+        <ReviewsSection
+          summary={overview.profile.rating}
+          reviews={overview.reviews}
+          isOwnProfile
+        />
+      )}
 
       {/* The overview is built server-side (the name shown is derived there), so
           a save re-reads it rather than patching the page locally. */}

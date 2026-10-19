@@ -30,6 +30,8 @@ function primaryWallet(user: { wallets: Wallet[] }) {
 }
 
 type ProfileUser = {
+  id: string;
+  username: string | null;
   avatarUrl: string | null;
   wallets: Wallet[];
   socials: SocialAccount[];
@@ -199,6 +201,7 @@ export function serializeListing(listing: ListingWithCreator) {
     title: listing.title,
     description: listing.description ?? undefined,
     category: listing.category,
+    kind: listing.kind,
     pricingType: listing.pricingType,
     placement: listing.placement ?? undefined,
     platform: listing.platform ? PLATFORM_MAP[listing.platform] : undefined,
@@ -229,6 +232,11 @@ export function serializeListing(listing: ListingWithCreator) {
       username: listing.creator.username ?? undefined,
       avatarUrl: resolvedAvatar(listing.creator),
       verified: listing.creator.verified,
+      /** Where `/user/:handle` finds them — their username, else their id. */
+      handle: listing.creator.user.username ?? listing.creator.user.id,
+      /** As a seller only — what buyers said, which is what a listing is judged on. */
+      averageRating: listing.creator.averageRating ?? undefined,
+      totalReviews: listing.creator.totalReviews ?? 0,
       reach: compact(
         listing.creator.user.socials.reduce((sum, s) => sum + (s.followerCount ?? 0), 0),
       ),

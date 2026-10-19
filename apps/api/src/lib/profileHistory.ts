@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { auctionDealKey, purchaseDealKey } from "./reviews";
 
 /**
  * Profile history: what a user sold and who won it, and what they bought or won
@@ -35,6 +36,8 @@ export type PartyIdentity = {
 };
 
 export type SaleCounterparty = PartyIdentity & {
+  /** Names this sale for a review — see `lib/reviews.ts`. */
+  dealKey: string;
   /** What they actually paid — the winning bid, or the fixed price at purchase. */
   amount: number;
   currency: string;
@@ -67,6 +70,8 @@ export type PurchaseRecord = {
   pricingType: "FIXED" | "AUCTION";
   /** How it was acquired, which is what the UI labels it with. */
   via: "PURCHASE" | "AUCTION_WIN";
+  /** Names this sale for a review — see `lib/reviews.ts`. */
+  dealKey: string;
   amount: number;
   currency: string;
   txHash: string | null;
@@ -160,6 +165,7 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
         const identity = winners.get(listing.winnerWallet.toLowerCase());
         counterparties.push({
           ...(identity ?? toIdentity(null, listing.winnerWallet)),
+          dealKey: auctionDealKey(listing.id),
           amount: listing.bids[0]?.amount ?? listing.price,
           currency: listing.currency,
           txHash: listing.bids[0]?.txHash ?? null,
@@ -170,6 +176,7 @@ export async function getSalesHistory(userId: string): Promise<SaleRecord[]> {
       for (const purchase of listing.purchases) {
         counterparties.push({
           ...toIdentity(purchase.buyer, purchase.buyerWallet),
+          dealKey: purchaseDealKey(purchase.id),
           amount: purchase.amount,
           currency: purchase.currency,
           txHash: purchase.txHash,
@@ -240,6 +247,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
     category: purchase.listing.category,
     pricingType: purchase.listing.pricingType,
     via: "PURCHASE",
+    dealKey: purchaseDealKey(purchase.id),
     amount: purchase.amount,
     currency: purchase.currency,
     txHash: purchase.txHash,
@@ -254,6 +262,7 @@ export async function getPurchaseHistory(userId: string): Promise<PurchaseRecord
     category: listing.category,
     pricingType: listing.pricingType,
     via: "AUCTION_WIN",
+    dealKey: auctionDealKey(listing.id),
     amount: listing.bids[0]?.amount ?? listing.price,
     currency: listing.currency,
     txHash: listing.bids[0]?.txHash ?? null,

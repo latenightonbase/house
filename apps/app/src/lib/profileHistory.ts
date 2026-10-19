@@ -20,7 +20,14 @@ export type PartyIdentity = {
   avatarUrl: string | null;
 };
 
+/** The review the signed-in user left for a deal — private view only. */
+export type OwnReview = { rating: number; comment: string | null };
+
 export type SaleCounterparty = PartyIdentity & {
+  /** Names this sale when reviewing it. */
+  dealKey: string;
+  /** Present on the private view: null until the user rates this buyer. */
+  myReview?: OwnReview | null;
   amount: number;
   currency: string;
   txHash: string | null;
@@ -50,6 +57,10 @@ export type PurchaseRecord = {
   category: string;
   pricingType: PricingType;
   via: "PURCHASE" | "AUCTION_WIN";
+  /** Names this sale when reviewing it. */
+  dealKey: string;
+  /** Present on the private view: null until the user rates this seller. */
+  myReview?: OwnReview | null;
   amount: number;
   currency: string;
   txHash: string | null;
@@ -66,6 +77,7 @@ export type ProfileHeader = {
   createdAt: string;
   verified: boolean;
   reach: number;
+  rating: ReviewSummary;
   socials: Array<{
     platform: string;
     username: string | null;
@@ -74,11 +86,57 @@ export type ProfileHeader = {
   }>;
 };
 
+export type RatingSummary = { average: number | null; count: number };
+
+/** Ratings split by the side of the deal the person was on. */
+export type ReviewSummary = { asSeller: RatingSummary; asBuyer: RatingSummary };
+
+export type ReviewRole = "SELLER" | "BUYER";
+
+export type PublicReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  /** The side of the deal the profile's owner was on. */
+  revieweeRole: ReviewRole;
+  listingId: string | null;
+  listingTitle: string;
+  createdAt: string;
+  reviewer: PartyIdentity;
+};
+
 export type ProfileOverview = {
   profile: ProfileHeader | null;
   sales: SaleRecord[];
   purchases: PurchaseRecord[];
+  reviews: PublicReview[];
 };
+
+export const MAX_REVIEW_COMMENT = 500;
+
+/** Rates the other side of a deal, or edits the rating already given. */
+export async function submitReview(input: {
+  dealKey: string;
+  rating: number;
+  comment?: string | null;
+}): Promise<OwnReview> {
+  const data = await getJson<{ review: OwnReview }>("/backend/reviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return data.review;
+}
+
+/** Both roles together — what a profile is summed up by at a glance. */
+export function overallRating(summary: ReviewSummary): RatingSummary {
+  const count = summary.asSeller.count + summary.asBuyer.count;
+  if (count === 0) return { average: null, count: 0 };
+  const total =
+    (summary.asSeller.average ?? 0) * summary.asSeller.count +
+    (summary.asBuyer.average ?? 0) * summary.asBuyer.count;
+  return { average: Math.round((total / count) * 10) / 10, count };
+}
 
 async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { credentials: "include", cache: "no-store", ...init });

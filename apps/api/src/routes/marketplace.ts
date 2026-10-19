@@ -15,7 +15,7 @@ import {
 } from "../lib/marketplace";
 import { verifyFixedPriceSale } from "../lib/listingSale";
 import { verifyListingOnChain } from "../lib/listingChain";
-import { getRecentSales } from "../lib/profileHistory";
+import { getRecentSales, toIdentity } from "../lib/profileHistory";
 import { isOwnPosterUrl } from "../lib/s3/s3Client";
 import {
   findListingToken,
@@ -178,7 +178,7 @@ async function requireAdmin(request: Request, set: { status?: number | string })
   const user = await getUserFromRequest(request);
   if (!user || !isSuperadmin(user)) {
     set.status = 403;
-    return { error: "Only an admin can manage listings" } as const;
+    return { error: "Only an admin can do that" } as const;
   }
   return user;
 }
@@ -358,6 +358,7 @@ export const marketplaceRoutes = new Elysia()
     const platform = typeof query.platform === "string" ? query.platform : undefined;
     const category = typeof query.category === "string" ? query.category : undefined;
     const pricingType = typeof query.pricingType === "string" ? query.pricingType : undefined;
+    const kind = typeof query.kind === "string" ? query.kind : undefined;
 
     const listings = await prisma.listing.findMany({
       where: {
@@ -372,6 +373,7 @@ export const marketplaceRoutes = new Elysia()
         ...(pricingType && pricingType !== "all"
           ? { pricingType: pricingType.toUpperCase() as never }
           : {}),
+        ...(kind && kind !== "all" ? { kind: kind.toUpperCase() as never } : {}),
       },
       orderBy: { createdAt: "desc" },
       take: limit,
@@ -558,6 +560,7 @@ export const marketplaceRoutes = new Elysia()
           description: body.description?.trim() || null,
           // No category picker any more — new rows take the schema's OTHER,
           // which every listing surface already renders without a label.
+          kind: body.kind ?? "SERVICE",
           pricingType: body.pricingType,
           price: body.price,
           currency: token.symbol,
@@ -586,6 +589,7 @@ export const marketplaceRoutes = new Elysia()
         id: t.String({ minLength: 1, maxLength: 80 }),
         title: t.String({ minLength: 2, maxLength: 120 }),
         description: t.Optional(t.String({ maxLength: 2000 })),
+        kind: t.Optional(t.Union([t.Literal("SERVICE"), t.Literal("GOOD")])),
         pricingType: t.Union([t.Literal("FIXED"), t.Literal("AUCTION")]),
         price: t.Number(),
         currency: t.Optional(t.String({ maxLength: 16 })),
@@ -672,6 +676,81 @@ export const marketplaceRoutes = new Elysia()
     }
     return { ok: true };
   })
+  /**
+   * Finds accounts for the verification panel — by username, linked social
+   * handle or wallet. With no query it lists the verified accounts, so the
+   * panel opens on who already has the check.
+   */
+  .get("/admin/users", async ({ query, request, set }) => {
+    const admin = await requireAdmin(request, set);
+    if ("error" in admin) return admin;
+
+    const q = typeof query.q === "string" ? query.q.trim().toLowerCase().replace(/^@/, "") : "";
+    const users = await prisma.user.findMany({
+      where: q
+        ? {
+            OR: [
+              { username: { contains: q, mode: "insensitive" } },
+              { wallets: { some: { address: { contains: q } } } },
+              { socials: { some: { username: { contains: q, mode: "insensitive" } } } },
+              { socials: { some: { displayName: { contains: q, mode: "insensitive" } } } },
+              { creatorProfile: { displayName: { contains: q, mode: "insensitive" } } },
+            ],
+          }
+        : { creatorProfile: { verified: true } },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+      include: {
+        socials: { orderBy: { platform: "asc" } },
+        wallets: { orderBy: { createdAt: "asc" } },
+        creatorProfile: { include: { _count: { select: { listings: true } } } },
+      },
+    });
+
+    return {
+      users: users.map((user) => {
+        const identity = toIdentity(user);
+        return {
+          id: user.id,
+          name: identity.name,
+          username: identity.username,
+          avatarUrl: identity.avatarUrl ?? user.creatorProfile?.avatarUrl ?? null,
+          wallet: identity.wallet,
+          role: user.role,
+          verified: user.creatorProfile?.verified ?? false,
+          listingCount: user.creatorProfile?._count.listings ?? 0,
+          createdAt: user.createdAt.toISOString(),
+        };
+      }),
+    };
+  })
+  /**
+   * Grants or removes the blue check. It is a manual vouch — the admin knows
+   * the seller — not something earned, so nothing else ever sets it. The check
+   * lives on the public CreatorProfile, which is made here if the account has
+   * not listed anything yet.
+   */
+  .patch(
+    "/admin/users/:id/verified",
+    async ({ params, body, request, set }) => {
+      const admin = await requireAdmin(request, set);
+      if ("error" in admin) return admin;
+
+      const user = await prisma.user.findUnique({ where: { id: params.id }, select: { id: true } });
+      if (!user) {
+        set.status = 404;
+        return { error: "User not found" };
+      }
+
+      const profile = await ensureCreatorProfile(user.id);
+      const updated = await prisma.creatorProfile.update({
+        where: { id: profile.id },
+        data: { verified: body.verified },
+      });
+      return { id: user.id, verified: updated.verified };
+    },
+    { body: t.Object({ verified: t.Boolean() }) },
+  )
   /**
    * Publishes an approved listing once its AuctionHouse transaction confirms.
    * The seller signs this themselves, so it is owner-gated rather than

@@ -1,16 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus, Store } from "lucide-react";
+import { ArrowRight, Gavel, Package, Plus, Search, Sparkles, Store, Tag, X } from "lucide-react";
 import { CreateListingButton } from "@/components/CreateListingButton";
-import { Select, Tabs, type TabItem } from "@/components/ui";
+import { Select, TextInput } from "@/components/ui";
 import { categoryLabel } from "@/lib/listingCategories";
-import type { Listing, PricingType } from "@/lib/marketplace";
+import {
+  EMPTY_SEARCH,
+  isEmptySearch,
+  matchesSearch,
+  searchFromParams,
+  searchToParams,
+  type MarketSearch,
+} from "@/lib/listingSearch";
+import type { Listing } from "@/lib/marketplace";
 import { cn } from "@/lib/utils";
 import { ListingCard } from "@/components/ListingCard";
 
-type Kind = "all" | PricingType;
 type Sort = "newest" | "ending" | "price-asc" | "price-desc";
 
 const SORTS: { value: Sort; label: string }[] = [
@@ -92,23 +99,18 @@ function sortListings(listings: Listing[], sort: Sort) {
   }
 }
 
-function TabLabel({ label, count }: { label: string; count: number }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      {label}
-      <span className="numeric text-[11px] font-semibold opacity-60">{count}</span>
-    </span>
-  );
-}
-
 function CategoryChip({
   active,
   children,
   onClick,
+  count,
+  icon,
 }: {
   active: boolean;
   children: React.ReactNode;
   onClick: () => void;
+  count?: number;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -116,13 +118,15 @@ function CategoryChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "shrink-0 rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors",
         active
           ? "border-primary/60 bg-primary/20 text-white"
           : "border-line bg-surface-2 text-caption hover:border-line-strong hover:text-white",
       )}
     >
+      {icon}
       {children}
+      {count != null && <span className="numeric opacity-60">{count}</span>}
     </button>
   );
 }
@@ -187,6 +191,7 @@ export function MarketplacePanel({
   listings,
   onCheckout,
   previewHref,
+  syncUrl = false,
 }: {
   listings: Listing[];
   onCheckout: (listing: Listing) => void;
@@ -195,24 +200,57 @@ export function MarketplacePanel({
    * preview. Without it the panel lists the whole book.
    */
   previewHref?: string;
+  /**
+   * Reads the search from the address bar and writes it back, so a search on
+   * the marketplace page is a link someone can share. Off on the home preview,
+   * whose "View all" carries the search over instead.
+   */
+  syncUrl?: boolean;
 }) {
-  const [kind, setKind] = useState<Kind>("all");
+  const [search, setSearch] = useState<MarketSearch>(EMPTY_SEARCH);
   const [category, setCategory] = useState<string>("all");
   const [sort, setSort] = useState<Sort>("newest");
   const preview = Boolean(previewHref);
 
-  const auctionCount = listings.filter((l) => l.pricingType === "AUCTION").length;
-  const fixedCount = listings.length - auctionCount;
+  // Read after mount rather than through `useSearchParams`, which would opt the
+  // statically rendered marketplace page out of its server-rendered first paint.
+  // Nothing is written back until it has been read, or the first write would
+  // wipe the query before it was ever applied.
+  const [urlRead, setUrlRead] = useState(false);
+  useEffect(() => {
+    if (!syncUrl) return;
+    setSearch(searchFromParams(new URLSearchParams(window.location.search)));
+    setUrlRead(true);
+  }, [syncUrl]);
 
-  /** Only worth offering when both kinds are on sale — one kind needs no filter. */
-  const kinds: TabItem<Kind>[] =
-    auctionCount > 0 && fixedCount > 0
-      ? [
-          { value: "all", label: <TabLabel label="All" count={listings.length} /> },
-          { value: "AUCTION", label: <TabLabel label="Auctions" count={auctionCount} /> },
-          { value: "FIXED", label: <TabLabel label="Buy now" count={fixedCount} /> },
-        ]
-      : [];
+  useEffect(() => {
+    if (!syncUrl || !urlRead) return;
+    const next = `${window.location.pathname}${searchToParams(search)}${window.location.hash}`;
+    if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+      window.history.replaceState(window.history.state, "", next);
+    }
+  }, [syncUrl, urlRead, search]);
+
+  const patch = (next: Partial<MarketSearch>) => setSearch((current) => ({ ...current, ...next }));
+
+  /**
+   * Counts on each type chip, taken with the other filters applied — so the
+   * number on "Auction" is how many results pressing it would leave.
+   */
+  const typeCounts = useMemo(() => {
+    const count = (next: Partial<MarketSearch>) =>
+      listings.filter(
+        (l) =>
+          matchesSearch(l, { ...search, ...next }) &&
+          (category === "all" || l.category === category),
+      ).length;
+    return {
+      SERVICE: count({ kind: "SERVICE" }),
+      GOOD: count({ kind: "GOOD" }),
+      FIXED: count({ pricing: "FIXED" }),
+      AUCTION: count({ pricing: "AUCTION" }),
+    };
+  }, [listings, search, category]);
 
   /**
    * Only categories with inventory — an empty filter is a dead end. "Other" is
@@ -231,13 +269,15 @@ export function MarketplacePanel({
   const visible = useMemo(() => {
     const filtered = listings.filter(
       (listing) =>
-        (kind === "all" || listing.pricingType === kind) &&
+        matchesSearch(listing, search) &&
         (category === "all" || listing.category === category),
     );
     return sortListings(filtered, sort);
-  }, [listings, kind, category, sort]);
+  }, [listings, search, category, sort]);
 
   const shown = preview ? visible.slice(0, PREVIEW_LIMIT) : visible;
+  const filtering = !isEmptySearch(search) || category !== "all";
+  const viewAllHref = previewHref ? `${previewHref}${searchToParams(search)}` : undefined;
 
   return (
     <section id="marketplace" className="card flex min-w-0 flex-col p-4 scroll-mt-24 sm:p-5">
@@ -248,6 +288,7 @@ export function MarketplacePanel({
             Marketplace
             <span className="text-line-strong" aria-hidden="true">•</span>
             <span className="numeric text-caption">
+              {filtering ? `${visible.length} of ` : ""}
               {listings.length} live {listings.length === 1 ? "listing" : "listings"}
             </span>
           </p>
@@ -262,9 +303,6 @@ export function MarketplacePanel({
         {/* Shrinkable and wrapping: on a phone the controls take their own lines
             rather than pushing the panel past the viewport. */}
         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2.5 sm:ml-auto sm:justify-end">
-          {kinds.length > 0 ? (
-            <Tabs items={kinds} value={kind} onChange={setKind} />
-          ) : null}
           {/* The sort control takes its own wrapped line on a phone, where the
               tabs already fill one; its caption goes with it, because the
               selected option ("Newest first") says what the control is. */}
@@ -284,12 +322,12 @@ export function MarketplacePanel({
               </Select>
             </label>
           ) : null}
-          {previewHref && listings.length > PREVIEW_LIMIT ? (
+          {viewAllHref && visible.length > PREVIEW_LIMIT ? (
             <Link
-              href={previewHref}
+              href={viewAllHref}
               className="inline-flex h-9 shrink-0 items-center gap-1.5 text-[12px] font-semibold text-primary-light transition-colors hover:text-white"
             >
-              View all {listings.length}
+              View all {visible.length}
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           ) : null}
@@ -302,8 +340,86 @@ export function MarketplacePanel({
         </div>
       ) : (
         <>
+          <div role="search" className="mt-3 space-y-2.5 border-t border-line pt-3">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-caption"
+                aria-hidden="true"
+              />
+              {/* Plain text rather than type="search", whose built-in clear
+                  button would sit beside this one. */}
+              <TextInput
+                type="text"
+                inputMode="search"
+                aria-label="Search listings"
+                value={search.q}
+                onChange={(event) => patch({ q: event.target.value })}
+                placeholder="Search listings or sellers"
+                autoComplete="off"
+                enterKeyHint="search"
+                className="h-10 pl-9 pr-9"
+              />
+              {search.q && (
+                <button
+                  type="button"
+                  onClick={() => patch({ q: "" })}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-caption transition-colors hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              )}
+            </div>
+
+            <div
+              role="group"
+              aria-label="Filter by type"
+              className="flex min-w-0 flex-wrap items-center gap-2"
+            >
+              <CategoryChip
+                active={!search.kind && !search.pricing}
+                onClick={() => patch({ kind: null, pricing: null })}
+              >
+                All types
+              </CategoryChip>
+              <CategoryChip
+                active={search.kind === "SERVICE"}
+                onClick={() => patch({ kind: search.kind === "SERVICE" ? null : "SERVICE" })}
+                icon={<Sparkles className="h-3 w-3" aria-hidden="true" />}
+                count={typeCounts.SERVICE}
+              >
+                Services
+              </CategoryChip>
+              <CategoryChip
+                active={search.kind === "GOOD"}
+                onClick={() => patch({ kind: search.kind === "GOOD" ? null : "GOOD" })}
+                icon={<Package className="h-3 w-3" aria-hidden="true" />}
+                count={typeCounts.GOOD}
+              >
+                Goods
+              </CategoryChip>
+              <span className="h-4 w-px shrink-0 bg-line max-sm:hidden" aria-hidden="true" />
+              <CategoryChip
+                active={search.pricing === "FIXED"}
+                onClick={() => patch({ pricing: search.pricing === "FIXED" ? null : "FIXED" })}
+                icon={<Tag className="h-3 w-3" aria-hidden="true" />}
+                count={typeCounts.FIXED}
+              >
+                Flat fee
+              </CategoryChip>
+              <CategoryChip
+                active={search.pricing === "AUCTION"}
+                onClick={() => patch({ pricing: search.pricing === "AUCTION" ? null : "AUCTION" })}
+                icon={<Gavel className="h-3 w-3" aria-hidden="true" />}
+                count={typeCounts.AUCTION}
+              >
+                Auction
+              </CategoryChip>
+            </div>
+          </div>
+
           {categories.length > 1 && (
-            <div className="scrollbar-none -mx-1 mt-3 flex min-w-0 gap-2 overflow-x-auto border-t border-line px-1 pt-3">
+            <div className="scrollbar-none -mx-1 mt-2.5 flex min-w-0 gap-2 overflow-x-auto px-1">
               <CategoryChip active={category === "all"} onClick={() => setCategory("all")}>
                 All categories
               </CategoryChip>
@@ -321,14 +437,16 @@ export function MarketplacePanel({
 
           {visible.length === 0 ? (
             <div className="tile mt-4 border-dashed px-5 py-9 text-center">
-              <p className="text-[13px] font-semibold text-white">Nothing matches that filter</p>
+              <p className="text-[13px] font-semibold text-white">
+                {search.q.trim() ? `Nothing matches “${search.q.trim()}”` : "Nothing matches that filter"}
+              </p>
               <p className="mx-auto mt-1.5 max-w-xs text-[12px] leading-relaxed text-caption">
                 There is live inventory, just not in this slice of the market.
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  setKind("all");
+                  setSearch(EMPTY_SEARCH);
                   setCategory("all");
                 }}
                 className="btn-outline-accent mt-4 h-9 px-4 text-[12px]"

@@ -1,6 +1,7 @@
 "use client";
 
 import { ContactButton } from "@/components/profile/ContactButton";
+import { ReviewButton } from "@/components/reviews/ReviewButton";
 import {
   HistoryEmpty,
   HistoryRow,
@@ -20,10 +21,13 @@ export function SalesHistory({
   loading,
   /** Changes the empty state — "You have not…" versus "They have not…". */
   isOwnProfile = false,
+  onReviewed,
 }: {
   sales: SaleRecord[] | null;
   loading?: boolean;
   isOwnProfile?: boolean;
+  /** Called after a buyer is rated, so the page can refresh its review totals. */
+  onReviewed?: () => void;
 }) {
   if (loading) return <HistorySkeleton />;
 
@@ -58,12 +62,21 @@ export function SalesHistory({
                     party={party}
                     action={
                       party.userId ? (
-                        <ContactButton
-                          userId={party.userId}
-                          listingId={sale.listingId}
-                          label="Message"
-                          className="shrink-0"
-                        />
+                        <div className="flex shrink-0 items-start gap-2">
+                          <ReviewButton
+                            dealKey={party.dealKey}
+                            name={party.name}
+                            role="BUYER"
+                            listingTitle={sale.title}
+                            existing={party.myReview}
+                            onSaved={onReviewed}
+                          />
+                          <ContactButton
+                            userId={party.userId}
+                            listingId={sale.listingId}
+                            label="Message"
+                          />
+                        </div>
                       ) : isOwnProfile ? (
                         <span className="shrink-0 text-[11px] text-caption">No account</span>
                       ) : null

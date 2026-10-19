@@ -61,6 +61,7 @@ export function MarketplaceClient({ initialListings }: { initialListings: Listin
     >
       <MarketplacePanel
         listings={listings}
+        syncUrl
         onCheckout={(next) => {
           setCheckoutListing(next);
           setCheckoutOpen(true);

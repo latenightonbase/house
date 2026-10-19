@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, CalendarDays, Camera, Check, Copy } from "lucide-react";
+import { BadgeCheck, CalendarDays, Camera, Check, Copy, Star } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { formatCount } from "@/lib/api";
 import { shortAddress, walletFallbackAvatar } from "@/lib/utils";
-import { formatDate, type ProfileHeader } from "@/lib/profileHistory";
+import { formatDate, overallRating, type ProfileHeader } from "@/lib/profileHistory";
 
 const AVATAR_SIZE = 104;
 
@@ -94,6 +94,7 @@ export function ProfileHero({
   const handle =
     profile.username && profile.name !== `@${profile.username}` ? `@${profile.username}` : null;
   const seed = profile.wallet ?? profile.name;
+  const rating = overallRating(profile.rating);
 
   const avatar = (
     <Avatar
@@ -148,10 +149,9 @@ export function ProfileHero({
               {profile.name}
             </h1>
             {profile.verified && (
-              <BadgeCheck
-                className="h-5 w-5 shrink-0 text-primary-bright"
-                aria-label="Verified"
-              />
+              <span title="Verified by LNOC" className="shrink-0">
+                <BadgeCheck className="h-5 w-5 text-primary-bright" aria-label="Verified" />
+              </span>
             )}
           </div>
 
@@ -171,6 +171,20 @@ export function ProfileHero({
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            {rating.average != null && (
+              <a
+                href="#reviews"
+                className="tile inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] text-caption transition-colors hover:border-line-strong hover:text-white"
+              >
+                <Star className="h-3 w-3 fill-warning text-warning" aria-hidden="true" />
+                <span className="numeric font-semibold text-white">
+                  {rating.average.toFixed(1)}
+                </span>
+                <span className="numeric">
+                  · {rating.count} {rating.count === 1 ? "review" : "reviews"}
+                </span>
+              </a>
+            )}
             {profile.wallet ? (
               <WalletChip wallet={profile.wallet} />
             ) : (

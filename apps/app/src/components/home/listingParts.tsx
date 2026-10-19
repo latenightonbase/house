@@ -1,4 +1,4 @@
-import { BadgeCheck, Clock, Gavel, Zap } from "lucide-react";
+import { BadgeCheck, Clock, Gavel, Package, Sparkles, Star, Zap } from "lucide-react";
 import { BrandAvatar, PlatformIcon } from "@/components/ui";
 import type { Countdown } from "@/lib/useCountdown";
 import { categoryMeta } from "@/lib/listingCategories";
@@ -82,9 +82,13 @@ export function priceLine(listing: Listing) {
  */
 export function TypeRow({ listing, className }: { listing: Listing; className?: string }) {
   const meta = categoryMeta(listing.category);
-  const CategoryIcon = meta.icon;
-  const label = listing.placement ?? (listing.category !== "OTHER" ? meta.label : null);
-  if (!label && !listing.platform) return null;
+  const good = listing.kind === "GOOD";
+  // Newer listings have no category, so the service/good split is what's left
+  // to say what kind of thing it is.
+  const CategoryIcon = listing.category === "OTHER" ? (good ? Package : Sparkles) : meta.icon;
+  const label =
+    listing.placement ??
+    (listing.category !== "OTHER" ? meta.label : good ? "Physical good" : "Service");
   return (
     <span className={cn("flex min-w-0 items-center gap-1.5 text-caption", className)}>
       {listing.platform ? (
@@ -157,9 +161,18 @@ export function Seller({
       />
       <span className="min-w-0">
         <span className="flex items-center gap-1 truncate text-[12px] font-medium text-white">
-          {listing.creator.displayName}
+          <span className="truncate">{listing.creator.displayName}</span>
           {listing.creator.verified && (
-            <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-hidden="true" />
+            <BadgeCheck className="h-3 w-3 shrink-0 text-primary" aria-label="Verified" />
+          )}
+          {listing.creator.averageRating != null && (listing.creator.totalReviews ?? 0) > 0 && (
+            <span
+              className="numeric ml-0.5 inline-flex shrink-0 items-center gap-0.5 text-[11px] font-normal text-caption"
+              aria-label={`Rated ${listing.creator.averageRating.toFixed(1)} out of 5 by ${listing.creator.totalReviews} buyers`}
+            >
+              <Star className="h-2.5 w-2.5 fill-warning text-warning" aria-hidden="true" />
+              {listing.creator.averageRating.toFixed(1)}
+            </span>
           )}
         </span>
       </span>

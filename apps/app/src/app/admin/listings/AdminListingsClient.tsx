@@ -9,6 +9,7 @@ import { Badge, BrandAvatar, Button, Card, Panel, TextInput, Tile } from "@/comp
 import { deleteListingAsAdmin, fetchAdminListings, type Listing } from "@/lib/marketplace";
 import { relativeEndLabel, walletFallbackAvatar } from "@/lib/utils";
 import { formatListingAmount } from "@/lib/tokenPrices";
+import { AdminTabs } from "../AdminTabs";
 
 /**
  * Moderation for live listings. Anyone can list without review, so this is
@@ -78,7 +79,10 @@ export default function AdminListingsClient() {
         title="Admin · Listings"
         subtitle="Every live listing on the marketplace. Delete anything offensive — a listing can only be deleted while nobody has bid on it."
         action={
-          listings ? <Badge variant="neutral">{listings.length} live</Badge> : undefined
+          <div className="flex items-center gap-2">
+            {listings ? <Badge variant="neutral">{listings.length} live</Badge> : null}
+            <AdminTabs />
+          </div>
         }
       />
 

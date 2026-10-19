@@ -7,6 +7,7 @@ import { ProfileHero, ProfileHeroSkeleton } from "@/components/profile/ProfileHe
 import { ProfileStats } from "@/components/profile/ProfileStats";
 import { SalesHistory } from "@/components/profile/SalesHistory";
 import { PurchaseHistory } from "@/components/profile/PurchaseHistory";
+import { ReviewsSection } from "@/components/reviews/ReviewsSection";
 import { ContactButton } from "@/components/profile/ContactButton";
 import { useSession } from "@/components/SessionProvider";
 import { fetchUserProfile, type ProfileOverview } from "@/lib/profileHistory";
@@ -53,6 +54,14 @@ export default function UserProfileClient({ handle }: { handle: string }) {
       active = false;
     };
   }, [handle]);
+
+  // The page renders after its fetch, so a `#reviews` link (from a listing's
+  // seller rating) arrives before there is anything to scroll to.
+  useEffect(() => {
+    if (state === "ready" && window.location.hash === "#reviews") {
+      document.getElementById("reviews")?.scrollIntoView({ block: "start" });
+    }
+  }, [state]);
 
   if (state === "missing") {
     return (
@@ -113,6 +122,8 @@ export default function UserProfileClient({ handle }: { handle: string }) {
           )}
         </div>
       </section>
+
+      {profile && <ReviewsSection summary={profile.rating} reviews={overview?.reviews ?? []} />}
     </div>
   );
 }

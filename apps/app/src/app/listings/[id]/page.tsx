@@ -4,7 +4,9 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useOpenConnect } from "@/components/connect-intent";
+import Link from "next/link";
 import { BadgeCheck, CheckCircle2, Clock, Gavel } from "lucide-react";
+import { StarRating } from "@/components/reviews/Stars";
 import { EmailVerifyPrompt } from "@/components/EmailVerifyPrompt";
 import { AuctionBidders } from "@/components/listing/AuctionBidders";
 import { AuctionResult } from "@/components/listing/AuctionResult";
@@ -288,14 +290,48 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             size={48}
           />
           <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-white truncate flex items-center gap-1">
-              {listing.creator.displayName}
+            <p className="text-[14px] font-semibold text-white flex items-center gap-1 min-w-0">
+              {listing.creator.handle ? (
+                <Link
+                  href={`/user/${listing.creator.handle}`}
+                  className="truncate transition-colors hover:text-primary-bright"
+                >
+                  {listing.creator.displayName}
+                </Link>
+              ) : (
+                <span className="truncate">{listing.creator.displayName}</span>
+              )}
               {listing.creator.verified && (
-                <BadgeCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span title="Verified by LNOC" className="shrink-0">
+                  <BadgeCheck className="w-3.5 h-3.5 text-primary" aria-label="Verified" />
+                </span>
               )}
             </p>
-            {listing.category !== "OTHER" && (
-              <p className="text-[12px] text-caption truncate">{meta.label}</p>
+            {listing.creator.averageRating != null && (listing.creator.totalReviews ?? 0) > 0 ? (
+              <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-caption">
+                <StarRating value={listing.creator.averageRating} size={12} />
+                <span className="numeric text-white">
+                  {listing.creator.averageRating.toFixed(1)}
+                </span>
+                {listing.creator.handle ? (
+                  <Link
+                    href={`/user/${listing.creator.handle}#reviews`}
+                    className="numeric underline-offset-2 transition-colors hover:text-white hover:underline"
+                  >
+                    {listing.creator.totalReviews}{" "}
+                    {listing.creator.totalReviews === 1 ? "review" : "reviews"}
+                  </Link>
+                ) : (
+                  <span className="numeric">
+                    {listing.creator.totalReviews}{" "}
+                    {listing.creator.totalReviews === 1 ? "review" : "reviews"}
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="text-[12px] text-caption truncate">
+                {listing.category !== "OTHER" ? `${meta.label} · ` : ""}No seller reviews yet
+              </p>
             )}
           </div>
         </div>

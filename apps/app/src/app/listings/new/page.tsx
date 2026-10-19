@@ -18,6 +18,8 @@ import {
   Gavel,
   Info,
   Loader2,
+  Package,
+  Sparkles,
   Tag,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -41,6 +43,7 @@ import { formatCount } from "@/lib/api";
 import {
   createListing,
   type Listing,
+  type ListingKind,
   type NewListingInput,
   type PricingType,
 } from "@/lib/marketplace";
@@ -128,6 +131,7 @@ const LISTING_CHAIN_ID = robinhood.id;
 type ListingDraft = {
   title: string;
   description: string;
+  kind: ListingKind;
   pricingType: PricingType;
   /** The named token picked — USDG or LNOC. Ignored while `customToken` is set. */
   tokenAddress: string;
@@ -143,6 +147,7 @@ function defaultDraft(): ListingDraft {
   return {
     title: "",
     description: "",
+    kind: "SERVICE",
     pricingType: "FIXED",
     tokenAddress: USDG.address,
     customToken: "",
@@ -165,6 +170,7 @@ function loadDraft(userId: string): ListingDraft | null {
     return {
       title: typeof parsed.title === "string" ? parsed.title : base.title,
       description: typeof parsed.description === "string" ? parsed.description : base.description,
+      kind: parsed.kind === "GOOD" ? "GOOD" : "SERVICE",
       pricingType: parsed.pricingType === "AUCTION" ? "AUCTION" : "FIXED",
       tokenAddress: findPaymentToken(LISTING_CHAIN_ID, parsed.tokenAddress).address,
       customToken: typeof parsed.customToken === "string" ? parsed.customToken : base.customToken,
@@ -204,6 +210,7 @@ export default function NewListingPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [kind, setKind] = useState<ListingKind>("SERVICE");
   const [pricingType, setPricingType] = useState<PricingType>("FIXED");
   const [tokenAddress, setTokenAddress] = useState<string>(USDG.address);
   const [customToken, setCustomToken] = useState("");
@@ -224,6 +231,7 @@ export default function NewListingPage() {
   const applyDraft = (draft: ListingDraft) => {
     setTitle(draft.title);
     setDescription(draft.description);
+    setKind(draft.kind);
     setPricingType(draft.pricingType);
     setTokenAddress(draft.tokenAddress);
     setCustomToken(draft.customToken);
@@ -305,6 +313,7 @@ export default function NewListingPage() {
     saveDraft(user.id, {
       title,
       description,
+      kind,
       pricingType,
       tokenAddress,
       customToken,
@@ -317,6 +326,7 @@ export default function NewListingPage() {
     hydratedFor,
     title,
     description,
+    kind,
     pricingType,
     tokenAddress,
     customToken,
@@ -397,6 +407,7 @@ export default function NewListingPage() {
     title: title.trim() || "Your listing name",
     description: description.trim() || undefined,
     category: "OTHER",
+    kind,
     pricingType,
     price: Number.isFinite(priceNumber) && priceNumber > 0 ? priceNumber : 0,
     currency: token.symbol,
@@ -412,6 +423,7 @@ export default function NewListingPage() {
   };
 
   const previewRows = [
+    { label: "Type", value: kind === "GOOD" ? "Physical good" : "Service" },
     {
       label: "Sells as",
       value: pricingType === "AUCTION" ? "Auction — open to bids" : "Flat price",
@@ -456,6 +468,7 @@ export default function NewListingPage() {
       id: listingId,
       title,
       description: description.trim() || undefined,
+      kind,
       pricingType,
       price: priceNumber,
       currency: token.symbol,
@@ -696,6 +709,30 @@ export default function NewListingPage() {
         <div className="space-y-4 min-w-0">
           <Panel className="space-y-5">
             <PanelHeader label="What you are selling" />
+
+            <div className="space-y-1.5">
+              <p id="listing-kind" className="panel-label">
+                Type
+              </p>
+              <div role="group" aria-labelledby="listing-kind" className="grid grid-cols-2 gap-2">
+                <PricingOption
+                  active={kind === "SERVICE"}
+                  onClick={() => setKind("SERVICE")}
+                  disabled={busy}
+                  icon={<Sparkles className="w-4 h-4" />}
+                  title="Service"
+                  body="Something you do — a post, a shoutout, a call."
+                />
+                <PricingOption
+                  active={kind === "GOOD"}
+                  onClick={() => setKind("GOOD")}
+                  disabled={busy}
+                  icon={<Package className="w-4 h-4" />}
+                  title="Physical good"
+                  body="Something you ship or hand over."
+                />
+              </div>
+            </div>
 
             <Field
               label="Name"
@@ -985,6 +1022,7 @@ function PricingOption({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       className={cn(
         "rounded-lg border p-3.5 text-left transition-colors disabled:opacity-50",
         active

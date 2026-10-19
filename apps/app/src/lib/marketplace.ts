@@ -111,10 +111,17 @@ export interface ListingCreator {
   username?: string;
   avatarUrl?: string;
   verified: boolean;
+  /** Where `/user/:handle` finds the seller. Absent on the create-form preview. */
+  handle?: string;
+  /** What buyers rated them as a seller. */
+  averageRating?: number;
+  totalReviews?: number;
   reach: string;
 }
 
 export type PricingType = "FIXED" | "AUCTION";
+/** Work the seller does, or a thing they hand over. */
+export type ListingKind = "SERVICE" | "GOOD";
 export type ListingStatus =
   | "PENDING_REVIEW"
   | "REJECTED"
@@ -134,6 +141,8 @@ export interface Listing {
   title: string;
   description?: string;
   category: ListingCategory;
+  /** Absent on rows from an API that predates it — read as SERVICE. */
+  kind?: ListingKind;
   pricingType: PricingType;
   price: number;
   currency: string;
@@ -194,6 +203,7 @@ export interface NewListingInput {
   description?: string;
   /** No longer asked for — the API stores its default. */
   category?: ListingCategory;
+  kind: ListingKind;
   pricingType: PricingType;
   price: number;
   currency?: string;
@@ -404,6 +414,39 @@ export async function deleteListingAsAdmin(id: string): Promise<void> {
     const data = await res.json().catch(() => ({}));
     throw new Error((data as { error?: string }).error || "Could not delete the listing.");
   }
+}
+
+/** An account as the verification panel lists it. */
+export interface AdminUser {
+  id: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  wallet: string | null;
+  role: "USER" | "SUPERADMIN";
+  verified: boolean;
+  listingCount: number;
+  createdAt: string;
+}
+
+/** Accounts matching a username, social handle or wallet; the verified ones with no query. */
+export async function fetchAdminUsers(query: string): Promise<AdminUser[]> {
+  const qs = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  const data = await getJson<{ users: AdminUser[] }>(`/backend/admin/users${qs}`);
+  return data.users;
+}
+
+/** Grants or removes an account's blue check. */
+export async function setUserVerified(id: string, verified: boolean): Promise<boolean> {
+  const res = await fetch(`/backend/admin/users/${id}/verified`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ verified }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; verified?: boolean };
+  if (!res.ok) throw new Error(data.error || "Could not update verification.");
+  return Boolean(data.verified);
 }
 
 /**
