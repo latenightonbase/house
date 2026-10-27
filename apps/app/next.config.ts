@@ -25,14 +25,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "assets.coingecko.com" },
     ],
   },
-  // Pages of the retired daily auction; old links land on the marketplace.
-  async redirects() {
-    return ["/past-winners", "/leaderboard", "/attention-economy"].map((source) => ({
-      source,
-      destination: "/marketplace",
-      permanent: true,
-    }));
-  },
 };
 
 export default nextConfig;

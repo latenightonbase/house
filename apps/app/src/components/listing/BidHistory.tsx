@@ -18,8 +18,9 @@ function timeAgo(iso: string) {
 }
 
 /**
- * The bids so far: who a bidder is up against and by how much. Compact enough
- * for the checkout sheet; the listing page wraps the same list in a card.
+ * The bids so far, compact enough to sit inside a checkout sheet. The listing
+ * page has the full project cards; here a bidder only needs to see who they are
+ * up against and by how much.
  */
 export function BidHistory({
   listing,
@@ -59,9 +60,10 @@ export function BidHistory({
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-white">
               <UserLink handle={bidder.handle} className="truncate">
-                {bidder.name}
+                {bidder.project?.name ?? bidder.name}
               </UserLink>
               <RatingBadge rating={bidder.rating} />
+
               {bidder.leading && (
                 <span className="badge badge-warning shrink-0">
                   <Trophy className="mr-1 h-2.5 w-2.5" aria-hidden="true" />
@@ -69,8 +71,11 @@ export function BidHistory({
                 </span>
               )}
             </p>
+            {/* The title line already carries the bidder's name when there is no
+                project, so the meta line only repeats it under a project. */}
             <p className="truncate text-[11px] text-caption">
               {[
+                bidder.project?.name ? bidder.name : null,
                 shortAddress(bidder.wallet),
                 bidder.bidCount > 1 ? `${bidder.bidCount} bids` : null,
                 timeAgo(bidder.lastBidAt),

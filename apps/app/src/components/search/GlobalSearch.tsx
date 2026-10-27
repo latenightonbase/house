@@ -28,9 +28,8 @@ type Option =
   | { kind: "all"; key: string; href: string; total: number };
 
 /**
- * The site-wide search. It starts as a small button — pinned to the top right
- * of every desktop page, and in the header on a phone — and opens into a bar
- * centred over the blurred page, with the results beneath it: people by
+ * The site-wide search. It opens from the field in the desktop sidebar, or the
+ * button in the header on a phone, into a bar centred over the blurred page, with the results beneath it: people by
  * username, and live listings by title, write-up or seller.
  *
  * It is a combobox — the caret stays in the box while the arrow keys move
@@ -48,12 +47,6 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(0);
-  // "⌘K" on Apple devices, "Ctrl K" elsewhere — read after mount, since the
-  // server cannot know.
-  const [shortcut, setShortcut] = useState("⌘K");
-  useEffect(() => {
-    if (!/Mac|iPhone|iPad/.test(navigator.userAgent)) setShortcut("Ctrl K");
-  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -193,28 +186,6 @@ export function GlobalSearch() {
 
   return (
     <>
-      {/* Desktop: a small button pinned to the top right of the page. Phones
-          open search from the button in their header instead. */}
-      <div className="pointer-events-none sticky top-0 z-40 hidden justify-end px-8 pt-4 lg:flex">
-        <button
-          type="button"
-          onClick={show}
-          aria-label="Search listings and people"
-          aria-keyshortcuts="Meta+K Control+K /"
-          tabIndex={open ? -1 : 0}
-          className={cn(
-            "pointer-events-auto flex h-10 items-center gap-2 rounded-xl border border-line bg-surface-2/90 px-3 text-caption shadow-lg shadow-black/30 backdrop-blur-md",
-            "transition-[opacity,scale,color,border-color] duration-200 ease-out hover:border-line-strong hover:text-white",
-            open ? "scale-90 opacity-0" : "scale-100 opacity-100",
-          )}
-        >
-          <Search className="h-4 w-4" aria-hidden="true" />
-          <kbd className="rounded-md border border-line px-1.5 py-0.5 font-sans text-[10px]">
-            {shortcut}
-          </kbd>
-        </button>
-      </div>
-
       <div
         aria-hidden="true"
         onClick={close}

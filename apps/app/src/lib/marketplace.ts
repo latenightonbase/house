@@ -161,6 +161,7 @@ export interface Listing {
   /** Sent with every token address — how many decimals that token's units have. */
   tokenDecimals?: number;
   txHash?: string;
+  isDaily?: boolean;
   winnerWallet?: string;
   settledAt?: string;
   /** Set once an admin has approved or rejected a seller's submission. */
@@ -326,6 +327,7 @@ export interface RecentSale {
   title: string;
   posterUrl: string | null;
   pricingType: PricingType;
+  isDaily: boolean;
   via: "PURCHASE" | "AUCTION_WIN";
   amount: number;
   currency: string;
@@ -346,7 +348,16 @@ export async function fetchListing(id: string): Promise<Listing> {
 }
 
 /** The pitch a bidder attached to this listing, if they submitted one. */
-/** One person who has bid on a listing, with their highest amount. */
+export interface ListingBidderProject {
+  name: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  websiteUrl?: string | null;
+  twitterUrl?: string | null;
+  youtubeUrl?: string | null;
+}
+
+/** One person who has bid on a listing — highest amount plus their project. */
 export interface ListingBidder {
   wallet: string;
   name: string;
@@ -359,11 +370,17 @@ export interface ListingBidder {
   bidCount: number;
   lastBidAt: string;
   leading: boolean;
+  project: ListingBidderProject | null;
 }
 
 export async function fetchListingBidders(id: string): Promise<ListingBidder[]> {
   const data = await getJson<{ bidders: ListingBidder[] }>(`/backend/listings/${id}/bidders`);
   return data.bidders;
+}
+
+export async function fetchDailyListing(): Promise<Listing | null> {
+  const data = await getJson<{ listing: Listing | null }>("/backend/listings/daily");
+  return data.listing;
 }
 
 /** Persists an on-chain bid so outbid emails can fire. */

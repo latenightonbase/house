@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Search, ShieldCheck } from "lucide-react";
 import { NAV_ITEMS, SITE } from "@/lib/constants";
 import { CreateListingButton } from "@/components/CreateListingButton";
 import { useSession } from "@/components/SessionProvider";
 import { isSuperadmin } from "@/lib/api";
+import { openSearch } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import { NavIcon } from "./navIcons";
 import { SocialRow } from "./SocialRow";
@@ -18,7 +20,7 @@ export function isNavItemActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-/** Desktop rail: wordmark, tagline, the site sections, wallet, then socials. */
+/** Desktop rail: wordmark, tagline, search, the site sections, wallet, then socials. */
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useSession();
@@ -32,6 +34,10 @@ export function Sidebar() {
         <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-caption leading-snug text-nowrap">
           {SITE.tagline}
         </p>
+      </div>
+
+      <div className="px-4 pb-4 shrink-0">
+        <SidebarSearch />
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-none px-4 space-y-1">
@@ -86,5 +92,31 @@ export function Sidebar() {
         <SocialRow className="pt-1" />
       </div>
     </aside>
+  );
+}
+
+/** Looks like a search field, but opens the site-wide search over the page. */
+function SidebarSearch() {
+  // "⌘K" on Apple devices, "Ctrl K" elsewhere — read after mount, since the
+  // server cannot know.
+  const [shortcut, setShortcut] = useState("⌘K");
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/.test(navigator.userAgent)) setShortcut("Ctrl K");
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={openSearch}
+      aria-label="Search listings and people"
+      aria-keyshortcuts="Meta+K Control+K /"
+      className="flex h-10 w-full items-center gap-2.5 rounded-xl border border-line bg-surface-2/60 px-3.5 text-caption transition-colors hover:border-line-strong hover:text-white"
+    >
+      <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span className="flex-1 truncate text-left text-[13px]">Search</span>
+      <kbd className="shrink-0 rounded-md border border-line px-1.5 py-0.5 font-sans text-[10px]">
+        {shortcut}
+      </kbd>
+    </button>
   );
 }

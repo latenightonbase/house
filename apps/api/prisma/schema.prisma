@@ -48,6 +48,7 @@ model User {
   messagesSent    Message[]
   reviewsWritten  Review[]                  @relation("ReviewsWritten")
   reviewsReceived Review[]                  @relation("ReviewsReceived")
+  callBookings    CallBooking[]
 }
 
 model EmailOtp {
@@ -377,9 +378,7 @@ model Listing {
   tokenDecimals   Int?
   txHash          String?
 
-  /// Legacy: marks rows from the retired daily billboard auction (removed
-  /// 2026-10-16). Kept as a record; every public read and profile filters
-  /// these out, and nothing creates new ones.
+  /// One rotating 24h auction owned by SUPERADMIN. Cron settles and clones it.
   isDaily      Boolean   @default(false)
   winnerWallet String?
   settledAt    DateTime?
@@ -397,7 +396,7 @@ model Listing {
   creator   CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   bids          ListingBid[]
-  /// Legacy: project pitches from the retired daily auction.
+  /// Project pitches submitted with bids on this daily auction.
   projects      DailyProject[]
   purchases     Purchase[]
   conversations Conversation[]
@@ -429,9 +428,12 @@ model ListingBid {
   @@index([createdAt])
 }
 
-/// Legacy: the project pitch a bidder attached to a bid on the retired daily
-/// billboard auction (removed 2026-10-16). One row per (auction, wallet). Kept
-/// as a historical record only — nothing reads or writes it any more.
+/// The pitch a bidder attaches to a daily-auction bid: the project that goes
+/// live on the billboard for 24h if they win. One row per (auction, wallet) —
+/// a bidder fills this in once per day's auction and every later re-bid reuses
+/// it, so being outbid never costs them the form again. Redis fronts this table
+/// as a read-through cache keyed by the same pair; Postgres stays the source of
+/// truth and the historical record behind Past Winners.
 model DailyProject {
   id           String  @id @default(cuid())
   /// Lowercased — matches ListingBid.bidderWallet and Listing.winnerWallet.
@@ -639,4 +641,54 @@ model Review {
   @@unique([dealKey, reviewerId])
   @@index([revieweeId, createdAt])
   @@index([listingId])
+}
+
+enum CallBookingStatus {
+  /// Ordered at a fixed token amount; no transfer verified yet.
+  AWAITING_PAYMENT
+  /// Payment verified on-chain; the caller still has to pick a time.
+  PAID
+  /// A Calendly event is booked against this payment.
+  SCHEDULED
+}
+
+/// A paid call with Bill. The caller transfers a fixed amount of USDG or LNOC
+/// straight to the house wallet; the API verifies the Transfer log, then hands
+/// out a single-use Calendly link so each payment books exactly one call.
+///
+/// A cancelled call drops back to PAID with no link — the payment still stands,
+/// and the next visit issues a fresh single-use link to rebook with.
+model CallBooking {
+  id            String            @id @default(cuid())
+  status        CallBookingStatus @default(AWAITING_PAYMENT)
+  tokenAddress  String
+  tokenSymbol   String
+  tokenDecimals Int
+  /// The price in the token's base units, fixed when the order was made.
+  amountRaw     String
+  /// Lowercased wallet the payment came from, once verified.
+  payerWallet   String?
+  /// Lowercased wallet that was paid.
+  recipient     String
+  txHash        String?           @unique
+  paidAt        DateTime?
+
+  /// Single-use Calendly booking URL issued after payment.
+  schedulingUrl      String?
+  calendlyEventUri   String?
+  calendlyInviteeUri String?   @unique
+  startTime          DateTime?
+  endTime            DateTime?
+  cancelUrl          String?
+  rescheduleUrl      String?
+  scheduledAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
 }

@@ -21,7 +21,7 @@ import { UnreadBadge, useChatNotifications } from "@/components/chat/ChatNotific
 
 /** The two sections that earn a tab of their own; the rest of NAV_ITEMS lives under More. */
 const TAB_HREFS = ["/", "/marketplace"];
-const TAB_LABELS: Record<string, string> = { "/": "Home", "/marketplace": "Market" };
+const TAB_LABELS: Record<string, string> = { "/": "Auction", "/marketplace": "Market" };
 const CREATE_HREF = "/listings/new";
 const CHAT_HREF = "/chat";
 

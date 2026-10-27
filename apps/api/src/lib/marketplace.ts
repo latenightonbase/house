@@ -225,6 +225,7 @@ export function serializeListing(listing: ListingWithCreator, ratings: Map<strin
     // of a token it does not know.
     tokenDecimals: listing.tokenAddress ? listingToken(listing).decimals : undefined,
     txHash: listing.txHash ?? undefined,
+    isDaily: listing.isDaily,
     winnerWallet: listing.winnerWallet ?? undefined,
     settledAt: listing.settledAt?.toISOString(),
     reviewedAt: listing.reviewedAt?.toISOString(),

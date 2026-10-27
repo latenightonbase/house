@@ -1,4 +1,13 @@
-import { House, Info, Landmark, Store, type LucideIcon } from "lucide-react";
+import {
+  Crown,
+  Info,
+  Landmark,
+  Phone,
+  Store,
+  Trophy,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import type { NavItem } from "@/lib/constants";
 
 /** The circled "LN" monogram that sits beside About — not a Lucide glyph. */
@@ -23,10 +32,13 @@ function AboutMark({ className }: { className?: string }) {
 }
 
 const ICONS: Record<NavItem["icon"], LucideIcon | typeof AboutMark> = {
-  home: House,
+  auction: Zap,
   market: Store,
   vaults: Landmark,
+  call: Phone,
   how: Info,
+  winners: Trophy,
+  leaderboard: Crown,
   about: AboutMark,
 };
 

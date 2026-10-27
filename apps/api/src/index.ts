@@ -7,7 +7,8 @@ import { cronRoutes } from "./routes/cron";
 import { uploadRoutes } from "./routes/uploads";
 import { chatRoutes } from "./routes/chat";
 import { profileRoutes } from "./routes/profile";
-import { startAuctionSettlementTicker } from "./lib/auctionSettlement";
+import { callRoutes } from "./routes/calls";
+import { startDailyAuctionTicker } from "./lib/dailyAuction";
 import { websocket } from "elysia/ws";
 import { getAllowedOrigins } from "./lib/origins";
 
@@ -39,7 +40,8 @@ const app = new Elysia()
   .use(cronRoutes)
   .use(uploadRoutes)
   .use(profileRoutes)
-  .use(chatRoutes);
+  .use(chatRoutes)
+  .use(callRoutes);
 
 /**
  * `websocket` and the `app.server` assignment are both required for `.ws()` to
@@ -55,7 +57,13 @@ const server = Bun.serve({
 
 app.server = server;
 
-startAuctionSettlementTicker();
+// Local runs share the hosted DB and operator key, so a dev API must not open
+// or settle real auctions: `DISABLE_TICKERS=1` serves requests without the ticker.
+if (process.env.DISABLE_TICKERS === "1") {
+  console.log("DISABLE_TICKERS=1 — daily auction / settlement ticker not started");
+} else {
+  startDailyAuctionTicker();
+}
 
 console.log(`House API listening on http://localhost:${PORT}`);
 

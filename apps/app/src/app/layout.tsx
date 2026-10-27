@@ -6,6 +6,7 @@ import { Background } from "@/components/Background";
 import { NavigationProgress } from "@/components/NavigationProgress";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
+import { BookCallButton } from "@/components/nav/BookCallButton";
 import { Footer } from "@/components/nav/Footer";
 import { WinAlert } from "@/components/WinAlert";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
@@ -101,6 +102,7 @@ export default function RootLayout({
               <Footer />
             </div>
           </main>
+          <BookCallButton />
           <Background />
         </Providers>
       </body>

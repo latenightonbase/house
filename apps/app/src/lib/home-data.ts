@@ -1,4 +1,5 @@
 import { getApiOrigin } from "@/lib/api-origin";
+import type { AuctionState, Spotlight } from "@/lib/dailyAuction";
 import { isListingLive, type Listing, type RecentSale } from "@/lib/marketplace";
 
 const REVALIDATE_SECONDS = 20;
@@ -13,7 +14,10 @@ export const HOME_RECENT_SALES_LIMIT = 5;
 export const MARKETPLACE_LISTING_LIMIT = 100;
 
 export type HomePageData = {
-  /** Live seller inventory. */
+  listing: Listing | null;
+  auction: AuctionState | null;
+  spotlight: Spotlight | null;
+  /** Seller inventory — the daily auction is filtered out by the API. */
   listings: Listing[];
   /** Latest purchases and won auctions, with both parties. */
   recentSales: RecentSale[];
@@ -34,12 +38,17 @@ async function getJson<T>(path: string): Promise<T | null> {
 
 /** Public homepage payload — cached briefly so artwork URLs land in the HTML. */
 export async function loadHomePageData(): Promise<HomePageData> {
-  const [listingsPayload, salesPayload] = await Promise.all([
+  const [daily, spotlightPayload, listingsPayload, salesPayload] = await Promise.all([
+    getJson<{ listing: Listing | null; auction: AuctionState | null }>("/listings/daily"),
+    getJson<{ spotlight: Spotlight | null }>("/listings/daily/spotlight"),
     getJson<{ listings: Listing[] }>(`/listings?limit=${HOME_LISTING_LIMIT}`),
     getJson<{ sales: RecentSale[] }>(`/listings/recent-sales?limit=${HOME_RECENT_SALES_LIMIT}`),
   ]);
 
   return {
+    listing: daily?.listing ?? null,
+    auction: daily?.auction ?? null,
+    spotlight: spotlightPayload?.spotlight ?? null,
     // The fetch cache serves its last copy when the API is unreachable, so it can
     // hold listings that have ended since.
     listings: (listingsPayload?.listings ?? []).filter((listing) => isListingLive(listing)),

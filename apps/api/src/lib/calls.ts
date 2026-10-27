@@ -1,0 +1,340 @@
+import { decodeEventLog, erc20Abi, formatUnits, getAddress, parseUnits, type Hash } from "viem";
+import type { CallBooking } from "@prisma/client";
+import { prisma } from "../db";
+import { publicClient } from "./operator";
+import { LNOC, USDG, findListingToken, type ListingToken } from "./tokens";
+import {
+  calendlyConfigured,
+  createSingleUseLink,
+  getInvitee,
+  getScheduledEvent,
+  type CalendlyInvitee,
+} from "./calendly";
+
+/**
+ * Paid calls with Bill: pay a fixed amount of USDG or LNOC to the house
+ * wallet, then book a 30-minute slot on his Calendly.
+ *
+ * Money moves as a plain ERC-20 `transfer` — no contract of ours is involved —
+ * so the proof of payment is the Transfer log itself: right token, from one of
+ * the caller's linked wallets, to the configured recipient, for at least the
+ * ordered amount, in a block mined after the order. Each tx hash pays for one
+ * booking only.
+ */
+
+export const CALL_MINUTES = 30;
+
+/** Transfers mined this long before the order still count — clocks drift. */
+const ORDER_CLOCK_SLACK_S = 5 * 60;
+
+export type CallPrice = { token: ListingToken; amount: string };
+
+function priceFor(token: ListingToken): string | null {
+  const raw =
+    token.address === USDG.address
+      ? process.env.CALL_PRICE_USDG
+      : token.address === LNOC.address
+        ? process.env.CALL_PRICE_LNOC
+        : undefined;
+  const value = raw?.trim();
+  if (!value || !/^\d+(\.\d+)?$/.test(value) || Number(value) <= 0) return null;
+  return value;
+}
+
+/** The tokens a call can be paid in, each with its price in whole tokens. Unset prices are left out. */
+export function callPrices(): CallPrice[] {
+  return [USDG, LNOC].flatMap((token) => {
+    const amount = priceFor(token);
+    return amount ? [{ token, amount }] : [];
+  });
+}
+
+export function callRecipient(): `0x${string}` | null {
+  const raw = process.env.CALL_PAYMENT_RECIPIENT?.trim();
+  if (!raw || !/^0x[a-fA-F0-9]{40}$/.test(raw)) return null;
+  return getAddress(raw);
+}
+
+/** Why calls can't be sold right now, or null when they can. */
+export function callsUnavailableReason(): string | null {
+  if (!callRecipient()) return "CALL_PAYMENT_RECIPIENT is not set";
+  if (callPrices().length === 0) return "Neither CALL_PRICE_USDG nor CALL_PRICE_LNOC is set";
+  if (!calendlyConfigured()) return "CALENDLY_TOKEN is not set";
+  return null;
+}
+
+export function publicCallBooking(booking: CallBooking) {
+  return {
+    id: booking.id,
+    status: booking.status,
+    token: {
+      address: booking.tokenAddress,
+      symbol: booking.tokenSymbol,
+      decimals: booking.tokenDecimals,
+    },
+    amountRaw: booking.amountRaw,
+    amount: formatUnits(BigInt(booking.amountRaw), booking.tokenDecimals),
+    recipient: booking.recipient,
+    txHash: booking.txHash,
+    paidAt: booking.paidAt,
+    schedulingUrl: booking.status === "PAID" ? booking.schedulingUrl : null,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    cancelUrl: booking.status === "SCHEDULED" ? booking.cancelUrl : null,
+    rescheduleUrl: booking.status === "SCHEDULED" ? booking.rescheduleUrl : null,
+    createdAt: booking.createdAt,
+  };
+}
+
+export class CallError extends Error {
+  constructor(
+    message: string,
+    readonly status = 400,
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * An order at today's price. An unpaid order for the same token and amount is
+ * reused, so a caller who backs out and comes back does not pile up rows.
+ */
+export async function orderCall(userId: string, tokenAddress: string) {
+  const unavailable = callsUnavailableReason();
+  if (unavailable) throw new CallError("Calls aren't open for booking yet.", 503);
+
+  const token = findListingToken(tokenAddress);
+  const price = token && callPrices().find((p) => p.token.address === token.address);
+  if (!token || !price) throw new CallError("Pay with USDG or LNOC.");
+
+  const amountRaw = parseUnits(price.amount, token.decimals).toString();
+  const recipient = callRecipient()!.toLowerCase();
+
+  const existing = await prisma.callBooking.findFirst({
+    where: {
+      userId,
+      status: "AWAITING_PAYMENT",
+      tokenAddress: token.address,
+      amountRaw,
+      recipient,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) return existing;
+
+  return prisma.callBooking.create({
+    data: {
+      userId,
+      tokenAddress: token.address,
+      tokenSymbol: token.symbol,
+      tokenDecimals: token.decimals,
+      amountRaw,
+      recipient,
+    },
+  });
+}
+
+/** How long the API waits for a just-sent transfer to be mined. */
+const RECEIPT_TIMEOUT_MS = 90_000;
+
+/**
+ * Verifies the transfer that pays for `bookingId` and marks it PAID. Safe to
+ * call again with the same hash — a booking already paid by it just returns.
+ */
+export async function confirmCallPayment(userId: string, bookingId: string, txHash: string) {
+  if (!/^0x[a-fA-F0-9]{64}$/.test(txHash)) throw new CallError("That isn't a transaction hash.");
+  const hash = txHash.toLowerCase() as Hash;
+
+  const booking = await prisma.callBooking.findFirst({ where: { id: bookingId, userId } });
+  if (!booking) throw new CallError("Booking not found.", 404);
+  if (booking.status !== "AWAITING_PAYMENT") {
+    if (booking.txHash === hash) return booking;
+    throw new CallError("This booking is already paid.", 409);
+  }
+
+  const claimed = await prisma.callBooking.findUnique({ where: { txHash: hash } });
+  if (claimed) throw new CallError("That transaction already paid for a call.", 409);
+
+  const wallets = await prisma.wallet.findMany({ where: { userId }, select: { address: true } });
+  const mine = new Set(wallets.map((w) => w.address.toLowerCase()));
+
+  const client = publicClient();
+  let receipt;
+  try {
+    receipt = await client.waitForTransactionReceipt({ hash, timeout: RECEIPT_TIMEOUT_MS });
+  } catch {
+    throw new CallError(
+      "The payment hasn't confirmed yet. Give it a minute, then try again.",
+      504,
+    );
+  }
+  if (receipt.status !== "success") throw new CallError("That transaction reverted.");
+
+  const want = BigInt(booking.amountRaw);
+  const token = booking.tokenAddress.toLowerCase();
+  let payer: string | null = null;
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== token) continue;
+    try {
+      const decoded = decodeEventLog({ abi: erc20Abi, data: log.data, topics: log.topics });
+      if (decoded.eventName !== "Transfer") continue;
+      const { from, to, value } = decoded.args;
+      if (
+        to.toLowerCase() === booking.recipient &&
+        mine.has(from.toLowerCase()) &&
+        value >= want
+      ) {
+        payer = from.toLowerCase();
+        break;
+      }
+    } catch {
+      // Not a Transfer this ABI can decode.
+    }
+  }
+  if (!payer) {
+    throw new CallError(
+      `That transaction doesn't send ${formatUnits(want, booking.tokenDecimals)} ${booking.tokenSymbol} from your wallet to the house wallet.`,
+    );
+  }
+
+  const block = await client.getBlock({ blockNumber: receipt.blockNumber });
+  const orderedAt = Math.floor(booking.createdAt.getTime() / 1000);
+  if (Number(block.timestamp) < orderedAt - ORDER_CLOCK_SLACK_S) {
+    throw new CallError("That transfer was made before this booking was started.");
+  }
+
+  // `txHash` is unique, so a hash raced onto two bookings fails here.
+  try {
+    return await prisma.callBooking.update({
+      where: { id: booking.id, status: "AWAITING_PAYMENT" },
+      data: { status: "PAID", txHash: hash, payerWallet: payer, paidAt: new Date() },
+    });
+  } catch {
+    throw new CallError("That transaction already paid for a call.", 409);
+  }
+}
+
+/**
+ * Gives a PAID booking a single-use Calendly link if it has none — after
+ * payment, or after a cancelled call freed the payment up again.
+ */
+export async function ensureSchedulingLink(booking: CallBooking): Promise<CallBooking> {
+  if (booking.status !== "PAID" || booking.schedulingUrl) return booking;
+  const url = await createSingleUseLink();
+  // Only fill an empty slot — two tabs racing here must not swap links under each other.
+  const { count } = await prisma.callBooking.updateMany({
+    where: { id: booking.id, status: "PAID", schedulingUrl: null },
+    data: { schedulingUrl: url },
+  });
+  if (count === 0) return prisma.callBooking.findUniqueOrThrow({ where: { id: booking.id } });
+  return { ...booking, schedulingUrl: url };
+}
+
+/** Records a Calendly invitee against a booking: the call is on the calendar. */
+async function recordInvitee(bookingId: string, invitee: CalendlyInvitee) {
+  const event = await getScheduledEvent(invitee.event);
+  return prisma.callBooking.update({
+    where: { id: bookingId },
+    data: {
+      status: "SCHEDULED",
+      calendlyEventUri: invitee.event,
+      calendlyInviteeUri: invitee.uri,
+      startTime: new Date(event.start_time),
+      endTime: new Date(event.end_time),
+      cancelUrl: invitee.cancel_url,
+      rescheduleUrl: invitee.reschedule_url,
+      scheduledAt: new Date(),
+    },
+  });
+}
+
+/**
+ * The booking an invitee belongs to. The embed tags every booking with the
+ * booking id as `utm_content`; a rescheduled invitee is also found through
+ * the invitee it replaced.
+ */
+async function bookingForInvitee(invitee: CalendlyInvitee) {
+  const tagged = invitee.tracking?.utm_content;
+  if (tagged) {
+    const booking = await prisma.callBooking.findUnique({ where: { id: tagged } });
+    if (booking && booking.status !== "AWAITING_PAYMENT") return booking;
+  }
+  if (invitee.old_invitee) {
+    return prisma.callBooking.findUnique({ where: { calendlyInviteeUri: invitee.old_invitee } });
+  }
+  return null;
+}
+
+/**
+ * The embed reports a booking straight away; this reads the invitee back from
+ * Calendly rather than taking the browser's word for it, and only accepts one
+ * tagged with this booking.
+ */
+export async function confirmScheduled(userId: string, bookingId: string, inviteeUri: string) {
+  const booking = await prisma.callBooking.findFirst({ where: { id: bookingId, userId } });
+  if (!booking) throw new CallError("Booking not found.", 404);
+  if (booking.status === "SCHEDULED" && booking.calendlyInviteeUri === inviteeUri) return booking;
+  if (booking.status !== "PAID") throw new CallError("This booking isn't waiting for a time.", 409);
+
+  let invitee: CalendlyInvitee;
+  try {
+    invitee = await getInvitee(inviteeUri);
+  } catch {
+    throw new CallError("Couldn't find that booking on Calendly.");
+  }
+  if (invitee.tracking?.utm_content !== booking.id || invitee.status !== "active") {
+    throw new CallError("That Calendly booking isn't for this call.");
+  }
+  return recordInvitee(booking.id, invitee);
+}
+
+/** Applies an `invitee.created` or `invitee.canceled` webhook. Unknown invitees are ignored. */
+export async function applyInviteeWebhook(
+  event: string,
+  invitee: CalendlyInvitee,
+): Promise<"applied" | "ignored"> {
+  if (event === "invitee.created") {
+    const booking = await bookingForInvitee(invitee);
+    if (!booking) return "ignored";
+    if (booking.calendlyInviteeUri === invitee.uri) return "applied";
+    await recordInvitee(booking.id, invitee);
+    return "applied";
+  }
+
+  if (event === "invitee.canceled") {
+    // A reschedule cancels the old invitee and creates a new one; the
+    // `invitee.created` for the new one moves the booking over.
+    if (invitee.rescheduled) return "ignored";
+    const booking = await prisma.callBooking.findUnique({
+      where: { calendlyInviteeUri: invitee.uri },
+    });
+    if (!booking) return "ignored";
+    // The payment still stands. The single-use link was spent on the call
+    // that was just cancelled, so it is cleared and the next visit gets a new one.
+    await prisma.callBooking.update({
+      where: { id: booking.id },
+      data: {
+        status: "PAID",
+        schedulingUrl: null,
+        calendlyEventUri: null,
+        calendlyInviteeUri: null,
+        startTime: null,
+        endTime: null,
+        cancelUrl: null,
+        rescheduleUrl: null,
+        scheduledAt: null,
+      },
+    });
+    return "applied";
+  }
+
+  return "ignored";
+}
+
+export function listCallBookings(userId: string) {
+  return prisma.callBooking.findMany({
+    where: { userId, status: { not: "AWAITING_PAYMENT" } },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+}

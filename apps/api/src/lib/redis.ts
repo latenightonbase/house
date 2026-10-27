@@ -38,3 +38,34 @@ export function getRedis(): Redis | null {
   }
   return client;
 }
+
+export async function cacheGet<T>(key: string): Promise<T | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  try {
+    const raw = await redis.get(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function cacheSet(key: string, value: unknown, ttlSeconds: number) {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  } catch {
+    /* cache writes are best-effort */
+  }
+}
+
+export async function cacheDel(key: string) {
+  const redis = getRedis();
+  if (!redis) return;
+  try {
+    await redis.del(key);
+  } catch {
+    /* best-effort */
+  }
+}

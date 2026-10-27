@@ -49,7 +49,7 @@ function Party({ party, role }: { party: SaleParty; role: string }) {
 function SaleRow({ sale }: { sale: RecentSale }) {
   const won = sale.via === "AUCTION_WIN";
   const Icon = won ? Gavel : ShoppingBag;
-  const kind = won ? "Auction" : "Bought";
+  const kind = won ? (sale.isDaily ? "Daily auction" : "Auction") : "Bought";
 
   // The row links to the listing through a link laid over it, so the two
   // names can sit on top as links to their profiles — see `ListingCard`.

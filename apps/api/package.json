@@ -11,7 +11,9 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "bun run prisma/seed.ts",
-    "chain:set-fee-recipient": "bun src/scripts/setFeeRecipient.ts"
+    "cron:daily-auction": "bun src/scripts/runDailyAuctionCron.ts",
+    "chain:set-fee-recipient": "bun src/scripts/setFeeRecipient.ts",
+    "calls:webhook": "bun src/scripts/calendlyWebhook.ts"
   },
   "prisma": {
     "seed": "bun run prisma/seed.ts"

@@ -6,6 +6,8 @@ const REQUEST_ALLOW = new Set([
   "cookie",
   "content-type",
   "x-cron-secret",
+  // Calendly's webhook signature, for a subscription pointed at the app origin.
+  "calendly-webhook-signature",
 ]);
 
 export const dynamic = "force-dynamic";

@@ -42,6 +42,19 @@
         "--workspace=api"
       ],
       "port": 3003
+    },
+    {
+      "name": "api-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace=api"
+      ],
+      "port": 3003,
+      "env": {
+        "DISABLE_TICKERS": "1"
+      }
     }
   ]
 }
