@@ -6,7 +6,7 @@ import { getServerSession } from "@/lib/server-auth";
 export default async function Page() {
   const session = await getServerSession();
   if (!session) {
-    redirect("/?auth=required");
+    redirect("/marketplace?auth=required");
   }
 
   return (

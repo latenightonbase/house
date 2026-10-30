@@ -11,7 +11,7 @@ type CalendlyWidget = {
     url: string;
     parentElement: HTMLElement;
     prefill?: { name?: string; email?: string };
-    utm?: { utmSource?: string; utmMedium?: string; utmContent?: string };
+    utm?: { utmSource?: string; utmMedium?: string; utmCampaign?: string; utmContent?: string };
   }): void;
 };
 
@@ -61,17 +61,21 @@ function isScheduled(data: unknown): data is ScheduledMessage {
 /**
  * Calendly's inline scheduler for one single-use link. The booking id rides
  * along as `utm_content`, which is how the API ties the Calendly invitee — and
- * any later webhook about it — back to the payment.
+ * any later webhook about it — back to the payment. `campaign` says which way
+ * in the caller came (a plain call, a guest spot, a sponsorship) and shows on
+ * the booking in Calendly.
  */
 export function CalendlyEmbed({
   url,
   bookingId,
+  campaign,
   name,
   email,
   onScheduled,
 }: {
   url: string;
   bookingId: string;
+  campaign: string;
   name?: string | null;
   email?: string | null;
   onScheduled: (inviteeUri: string) => void;
@@ -104,7 +108,7 @@ export function CalendlyEmbed({
             ...(name ? { name } : {}),
             ...(email ? { email } : {}),
           },
-          utm: { utmSource: "lnoc", utmMedium: "paid-call", utmContent: bookingId },
+          utm: { utmSource: "lnoc", utmMedium: "paid-call", utmCampaign: campaign, utmContent: bookingId },
         });
         setState("ready");
       })
@@ -113,7 +117,7 @@ export function CalendlyEmbed({
       cancelled = true;
       parent.replaceChildren();
     };
-  }, [url, bookingId, name, email]);
+  }, [url, bookingId, campaign, name, email]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -128,6 +132,7 @@ export function CalendlyEmbed({
   const direct = new URL(url);
   direct.searchParams.set("utm_source", "lnoc");
   direct.searchParams.set("utm_medium", "paid-call");
+  direct.searchParams.set("utm_campaign", campaign);
   direct.searchParams.set("utm_content", bookingId);
 
   return (

@@ -11,6 +11,7 @@ import { TierButton, TierCard, TierTitle } from "@/components/call/TierCard";
 import { Button, Tile } from "@/components/ui";
 import { LNOC, USDG, type PaymentToken } from "@/lib/contracts/auctionHouse";
 import { robinhood } from "@/lib/chains";
+import { CALL_PURPOSES, type CallPurpose } from "@/lib/constants";
 import {
   confirmCallScheduled,
   fetchCallConfig,
@@ -63,7 +64,8 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
-export default function CallClient() {
+export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose }) {
+  const copy = CALL_PURPOSES[purpose];
   const { status, user } = useSession();
   const openConnect = useOpenConnect();
   const prices = useTokenPrices();
@@ -117,7 +119,7 @@ export default function CallClient() {
 
   async function onPay(price: CallConfig["prices"][number]) {
     setPayingWith(price.token.address);
-    const ready = await payment.pay(price.token);
+    const ready = await payment.pay(price.token, purpose);
     if (!ready) openConnect();
   }
 
@@ -141,10 +143,10 @@ export default function CallClient() {
 
   return (
     <PageShell
-      eyebrow="1:1 with Bill"
-      title="Book a call"
-      titleAccent="with Bill"
-      intro={`A ${minutes}-minute call with Bill from the House. Pay in USDG or LNOC, then pick a time on his calendar.`}
+      eyebrow={copy.eyebrow}
+      title={copy.title}
+      titleAccent={copy.titleAccent}
+      intro={copy.intro(minutes)}
     >
       {justBooked?.startTime && (
         <Tile
@@ -185,6 +187,7 @@ export default function CallClient() {
               <CalendlyEmbed
                 url={awaitingTime.schedulingUrl}
                 bookingId={awaitingTime.id}
+                campaign={awaitingTime.purpose}
                 name={user?.username}
                 email={user?.email}
                 onScheduled={(uri) => void onScheduled(awaitingTime, uri)}
@@ -211,7 +214,7 @@ export default function CallClient() {
         </TierCard>
       ) : !config.available || offers.length === 0 ? (
         <TierCard accent="var(--line-strong)" ink="var(--foreground)" tag="Coming soon">
-          <TierTitle>{minutes}-min call with Bill</TierTitle>
+          <TierTitle>{copy.card(minutes)}</TierTitle>
           <p className="mt-3 text-[14px] text-caption">
             Calls aren&apos;t open for booking right now. Check back soon.
           </p>
@@ -233,7 +236,7 @@ export default function CallClient() {
               return (
                 <TierCard key={token.address} accent={style.accent} ink={style.ink} tag={style.tag}>
                   <div className="flex h-full flex-col">
-                    <TierTitle>{minutes}-min call with Bill</TierTitle>
+                    <TierTitle>{copy.card(minutes)}</TierTitle>
                     <div className="mt-4 flex items-center gap-3">
                       <TokenMark token={token} size={40} className="h-10 w-10" />
                       <p className="display numeric text-[46px] text-white sm:text-[52px]">
@@ -245,8 +248,7 @@ export default function CallClient() {
                       {usd != null && !token.pegged && <> · ≈ {formatUsd(usd)}</>}
                     </p>
                     <p className="mt-4 flex-1 text-[15px] leading-relaxed text-white/75">
-                      Thirty minutes one-on-one with Bill — your project, your pitch, your
-                      questions. {style.note}
+                      {copy.pitch} {style.note}
                     </p>
                     <TierButton
                       className="mt-6"

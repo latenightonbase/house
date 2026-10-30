@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
     const token = request.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/marketplace";
       url.searchParams.set("auth", "required");
       return NextResponse.redirect(url);
     }
@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
     const valid = await isSiweSessionValid(token);
     if (!valid) {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = "/marketplace";
       url.searchParams.set("auth", "required");
       const res = NextResponse.redirect(url);
       res.cookies.set(COOKIE_NAME, "", { path: "/", expires: new Date(0) });

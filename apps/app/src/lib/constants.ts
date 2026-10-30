@@ -61,12 +61,69 @@ export interface NavItem {
 export const PANTHEON_VAULTS_URL =
   "https://launch.pantheonvaults.com/vaults/0x076277c3d6b57b4aad34c592cd2f138e9316a991";
 
-/** Not in NAV_ITEMS: it floats in the corner of every page instead (BookCallButton). */
+/** The plain paid call with Bill. Not in NAV_ITEMS — reached by direct link only. */
 export const CALL_HREF = "/call";
 
+/** The app's own home — the live auction and the market's front row. `/` is the landing page. */
+export const APP_HOME_HREF = "/marketplace";
+
+/** Every live listing, searchable. */
+export const LISTINGS_HREF = "/listings";
+
+export type CallPurpose = "call" | "appear" | "sponsor";
+
+/**
+ * The three ways into a paid call with Bill. Each runs the same pay-then-book
+ * flow; only the copy differs, and the purpose rides along to Calendly so Bill
+ * can tell a guest from a sponsor.
+ */
+export const CALL_PURPOSES: Record<
+  CallPurpose,
+  {
+    href: string;
+    eyebrow: string;
+    title: string;
+    titleAccent: string;
+    intro: (minutes: number) => string;
+    card: (minutes: number) => string;
+    pitch: string;
+  }
+> = {
+  call: {
+    href: CALL_HREF,
+    eyebrow: "1:1 with Bill",
+    title: "Book a call",
+    titleAccent: "with Bill",
+    intro: (minutes) =>
+      `A ${minutes}-minute call with Bill from the House. Pay in USDG or LNOC, then pick a time on his calendar.`,
+    card: (minutes) => `${minutes}-min call with Bill`,
+    pitch: "Thirty minutes one-on-one with Bill — your project, your pitch, your questions.",
+  },
+  appear: {
+    href: "/appear",
+    eyebrow: "Be a guest",
+    title: "Appear on",
+    titleAccent: "a show",
+    intro: (minutes) =>
+      `Come on ${SITE.name} as a guest. Pay in USDG or LNOC, then book a ${minutes}-minute call with Bill to plan your appearance.`,
+    card: (minutes) => `${minutes}-min guest call`,
+    pitch: "Thirty minutes with Bill to plan your spot on the show — who you are, what you're building, what you want to talk about.",
+  },
+  sponsor: {
+    href: "/sponsor",
+    eyebrow: "Sponsorships",
+    title: "Sponsor",
+    titleAccent: "a show",
+    intro: (minutes) =>
+      `Put your brand in front of the ${SITE.name} audience. Pay in USDG or LNOC, then book a ${minutes}-minute call with Bill to shape the sponsorship.`,
+    card: (minutes) => `${minutes}-min sponsor call`,
+    pitch: "Thirty minutes with Bill to plan your sponsorship — which shows, what the read says, where your brand lands.",
+  },
+};
+
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Live Auction", icon: "auction", inTopNav: true },
-  { href: "/marketplace", label: "Media Marketplace", icon: "market", inTopNav: true },
+  { href: APP_HOME_HREF, label: "Live Auction", icon: "auction", inTopNav: true },
+  { href: LISTINGS_HREF, label: "Media Marketplace", icon: "market", inTopNav: true },
   {
     href: PANTHEON_VAULTS_URL,
     label: "Pantheon Vaults",
@@ -97,7 +154,7 @@ export const HOME_INTRO = {
   /** The slice of the title drawn in the accent colour. */
   highlight: "Onchain Marketplace",
   pillars: [
-    { icon: "buy", label: "Buy items", href: "/marketplace" },
+    { icon: "buy", label: "Buy items", href: LISTINGS_HREF },
     { icon: "monetize", label: "Sell items", href: "/listings/new" },
   ],
 } as const;

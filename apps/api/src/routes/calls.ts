@@ -1,8 +1,10 @@
 import { Elysia, t } from "elysia";
 import { getUserFromRequest } from "../lib/session";
+import { isSuperadmin } from "../lib/roles";
 import { verifyWebhookSignature, type CalendlyInvitee } from "../lib/calendly";
 import {
   CALL_MINUTES,
+  CALL_PURPOSES,
   CallError,
   applyInviteeWebhook,
   callPrices,
@@ -11,10 +13,14 @@ import {
   confirmCallPayment,
   confirmScheduled,
   ensureSchedulingLink,
+  listAllCallBookings,
   listCallBookings,
   orderCall,
   publicCallBooking,
+  toCallPurpose,
 } from "../lib/calls";
+
+const purposeSchema = t.Union(CALL_PURPOSES.map((p) => t.Literal(p)));
 
 type Setter = { status?: number | string };
 
@@ -70,13 +76,50 @@ export const callRoutes = new Elysia()
         return { error: "Sign in to book a call." };
       }
       try {
-        const booking = await orderCall(user.id, body.tokenAddress);
+        const booking = await orderCall(user.id, body.tokenAddress, toCallPurpose(body.purpose));
         return { booking: publicCallBooking(booking) };
       } catch (err) {
         return fail(set, err, "Couldn't start the booking.");
       }
     },
-    { body: t.Object({ tokenAddress: t.String({ maxLength: 64 }) }) },
+    {
+      body: t.Object({
+        tokenAddress: t.String({ maxLength: 64 }),
+        purpose: t.Optional(purposeSchema),
+      }),
+    },
+  )
+  /** Every paid call, for the admin panel — who paid, for what, and when they're on. */
+  .get(
+    "/admin/calls",
+    async ({ request, query, set }) => {
+      const user = await getUserFromRequest(request);
+      if (!user || !isSuperadmin(user)) {
+        set.status = 403;
+        return { error: "Only an admin can do that" };
+      }
+      const bookings = await listAllCallBookings(
+        query.purpose ? toCallPurpose(query.purpose) : undefined,
+      );
+      return {
+        bookings: bookings.map((booking) => ({
+          ...publicCallBooking(booking),
+          // The caller's own links are theirs; the admin sees the payment and the slot.
+          schedulingUrl: null,
+          cancelUrl: null,
+          rescheduleUrl: null,
+          payerWallet: booking.payerWallet,
+          user: {
+            id: booking.user.id,
+            username: booking.user.username,
+            email: booking.user.email,
+            avatarUrl: booking.user.avatarUrl,
+            wallet: booking.user.wallets[0]?.address ?? null,
+          },
+        })),
+      };
+    },
+    { query: t.Object({ purpose: t.Optional(purposeSchema) }) },
   )
   .post(
     "/calls/:id/confirm",

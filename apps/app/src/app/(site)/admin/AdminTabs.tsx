@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { href: "/admin/listings", label: "Listings" },
   { href: "/admin/users", label: "Verification" },
+  { href: "/admin/calls", label: "Calls" },
 ];
 
 /** Switches between the admin panels — the nav links only into the first. */

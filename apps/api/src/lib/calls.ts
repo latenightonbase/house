@@ -1,5 +1,5 @@
 import { decodeEventLog, erc20Abi, formatUnits, getAddress, parseUnits, type Hash } from "viem";
-import type { CallBooking } from "@prisma/client";
+import type { CallBooking, CallPurpose } from "@prisma/client";
 import { prisma } from "../db";
 import { publicClient } from "./operator";
 import { LNOC, USDG, findListingToken, type ListingToken } from "./tokens";
@@ -63,10 +63,19 @@ export function callsUnavailableReason(): string | null {
   return null;
 }
 
+/** The purposes as the app names them, in the URL and the request body. */
+export const CALL_PURPOSES = ["call", "appear", "sponsor"] as const;
+export type CallPurposeName = (typeof CALL_PURPOSES)[number];
+
+export function toCallPurpose(name: CallPurposeName | undefined): CallPurpose {
+  return (name ?? "call").toUpperCase() as CallPurpose;
+}
+
 export function publicCallBooking(booking: CallBooking) {
   return {
     id: booking.id,
     status: booking.status,
+    purpose: booking.purpose.toLowerCase() as CallPurposeName,
     token: {
       address: booking.tokenAddress,
       symbol: booking.tokenSymbol,
@@ -96,10 +105,10 @@ export class CallError extends Error {
 }
 
 /**
- * An order at today's price. An unpaid order for the same token and amount is
- * reused, so a caller who backs out and comes back does not pile up rows.
+ * An order at today's price. An unpaid order for the same token, amount and
+ * purpose is reused, so a caller who backs out and comes back does not pile up rows.
  */
-export async function orderCall(userId: string, tokenAddress: string) {
+export async function orderCall(userId: string, tokenAddress: string, purpose: CallPurpose) {
   const unavailable = callsUnavailableReason();
   if (unavailable) throw new CallError("Calls aren't open for booking yet.", 503);
 
@@ -114,6 +123,7 @@ export async function orderCall(userId: string, tokenAddress: string) {
     where: {
       userId,
       status: "AWAITING_PAYMENT",
+      purpose,
       tokenAddress: token.address,
       amountRaw,
       recipient,
@@ -125,6 +135,7 @@ export async function orderCall(userId: string, tokenAddress: string) {
   return prisma.callBooking.create({
     data: {
       userId,
+      purpose,
       tokenAddress: token.address,
       tokenSymbol: token.symbol,
       tokenDecimals: token.decimals,
@@ -336,5 +347,28 @@ export function listCallBookings(userId: string) {
     where: { userId, status: { not: "AWAITING_PAYMENT" } },
     orderBy: { createdAt: "desc" },
     take: 20,
+  });
+}
+
+/**
+ * Every paid call for the admin panel, newest first, with who paid. Unpaid
+ * orders are left out — they are only someone who opened their wallet.
+ */
+export function listAllCallBookings(purpose?: CallPurpose) {
+  return prisma.callBooking.findMany({
+    where: { status: { not: "AWAITING_PAYMENT" }, ...(purpose ? { purpose } : {}) },
+    orderBy: { paidAt: "desc" },
+    take: 200,
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          avatarUrl: true,
+          wallets: { select: { address: true }, orderBy: { createdAt: "asc" }, take: 1 },
+        },
+      },
+    },
   });
 }

@@ -643,6 +643,16 @@ model Review {
   @@index([listingId])
 }
 
+/// Why someone is paying for a call with Bill.
+enum CallPurpose {
+  /// The plain "Book a call" — a one-on-one about anything.
+  CALL
+  /// Wants to come on a show as a guest.
+  APPEAR
+  /// Wants to sponsor a show.
+  SPONSOR
+}
+
 enum CallBookingStatus {
   /// Ordered at a fixed token amount; no transfer verified yet.
   AWAITING_PAYMENT
@@ -661,6 +671,8 @@ enum CallBookingStatus {
 model CallBooking {
   id            String            @id @default(cuid())
   status        CallBookingStatus @default(AWAITING_PAYMENT)
+  /// Which door the caller came through — set when the order is made.
+  purpose       CallPurpose       @default(CALL)
   tokenAddress  String
   tokenSymbol   String
   tokenDecimals Int

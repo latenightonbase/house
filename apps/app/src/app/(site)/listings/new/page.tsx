@@ -648,7 +648,7 @@ export default function NewListingPage() {
           )}
 
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => router.push("/")}>View on Discover</Button>
+            <Button onClick={() => router.push("/marketplace")}>View on Discover</Button>
             <Button
               variant="accent-outline"
               onClick={() => {

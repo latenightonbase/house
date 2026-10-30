@@ -227,7 +227,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
         <p className="text-[14px] font-semibold text-foreground">Listing not found</p>
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/marketplace")}
           className="mt-2 text-[13px] text-primary-light hover:text-white transition-colors"
         >
           ← Back to Discover
@@ -262,7 +262,7 @@ export default function ListingPage({ params }: { params: Promise<{ id: string }
             <EmailVerifyPrompt className="pt-2" />
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => router.push("/")}>Back to Discover</Button>
+            <Button onClick={() => router.push("/marketplace")}>Back to Discover</Button>
           </div>
         </Panel>
       </div>

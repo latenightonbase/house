@@ -150,7 +150,7 @@ export function GlobalSearch() {
       list.push({
         kind: "all",
         key: "all",
-        href: `/marketplace?q=${encodeURIComponent(q)}`,
+        href: `/listings?q=${encodeURIComponent(q)}`,
         total: results.totalListings,
       });
     }

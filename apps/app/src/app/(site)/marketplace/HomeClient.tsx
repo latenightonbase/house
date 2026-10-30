@@ -186,7 +186,7 @@ export default function HomeClient({
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <MarketplacePanel listings={listings} onCheckout={handleCheckout} previewHref="/marketplace" />
+        <MarketplacePanel listings={listings} onCheckout={handleCheckout} previewHref="/listings" />
         {/* Under the market until there is a third column to hold it. Kept
             stacked even then: side by side, a short closing-soon list left a
             hole beside the sales ledger. */}

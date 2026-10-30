@@ -124,7 +124,7 @@ export function ClosingSoonPanel({
         <h2 className="panel-label text-primary-light">{live ? "Closing soon" : "Just listed"}</h2>
         {rows.length > 0 && (
           <Link
-            href="/marketplace"
+            href="/listings"
             className="ml-auto shrink-0 text-[11px] font-medium text-caption transition-colors hover:text-white"
           >
             View all <span aria-hidden="true">→</span>

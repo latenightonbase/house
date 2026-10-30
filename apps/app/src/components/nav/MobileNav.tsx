@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowUpRight, Ellipsis, MessageSquare, Plus, Search, ShieldCheck } from "lucide-react";
-import { FOOTER_LINKS, NAV_ITEMS, SITE } from "@/lib/constants";
+import { APP_HOME_HREF, FOOTER_LINKS, LISTINGS_HREF, NAV_ITEMS, SITE } from "@/lib/constants";
 import { useOpenConnect } from "@/components/connect-intent";
 import { useSession } from "@/components/SessionProvider";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -20,8 +20,8 @@ import { AccountNav } from "./AccountNav";
 import { UnreadBadge, useChatNotifications } from "@/components/chat/ChatNotifications";
 
 /** The two sections that earn a tab of their own; the rest of NAV_ITEMS lives under More. */
-const TAB_HREFS = ["/", "/marketplace"];
-const TAB_LABELS: Record<string, string> = { "/": "Auction", "/marketplace": "Market" };
+const TAB_HREFS = [APP_HOME_HREF, LISTINGS_HREF];
+const TAB_LABELS: Record<string, string> = { [APP_HOME_HREF]: "Auction", [LISTINGS_HREF]: "Market" };
 const CREATE_HREF = "/listings/new";
 const CHAT_HREF = "/chat";
 

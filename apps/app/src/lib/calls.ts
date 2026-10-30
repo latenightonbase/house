@@ -4,6 +4,8 @@
  * API checks the transfer on-chain and hands back a single-use Calendly link.
  */
 
+import type { CallPurpose } from "@/lib/constants";
+
 export type CallToken = { address: `0x${string}`; symbol: string; decimals: number };
 
 export type CallConfig = {
@@ -19,6 +21,8 @@ export type CallBookingStatus = "AWAITING_PAYMENT" | "PAID" | "SCHEDULED";
 export type CallBooking = {
   id: string;
   status: CallBookingStatus;
+  /** Which door the caller came through — a plain call, a guest spot or a sponsorship. */
+  purpose: CallPurpose;
   token: CallToken;
   amountRaw: string;
   amount: string;
@@ -65,8 +69,28 @@ export async function fetchMyCalls() {
   return (await request<{ bookings: CallBooking[] }>("/backend/calls/mine")).bookings;
 }
 
-export async function orderCall(tokenAddress: string) {
-  return (await request<{ booking: CallBooking }>("/backend/calls", { tokenAddress })).booking;
+export async function orderCall(tokenAddress: string, purpose: CallPurpose) {
+  return (
+    await request<{ booking: CallBooking }>("/backend/calls", { tokenAddress, purpose })
+  ).booking;
+}
+
+/** A paid call as the admin panel sees it: the booking plus who paid. */
+export type AdminCallBooking = CallBooking & {
+  payerWallet: string | null;
+  user: {
+    id: string;
+    username: string | null;
+    email: string | null;
+    avatarUrl: string | null;
+    wallet: string | null;
+  };
+};
+
+/** Every paid call, newest first — SUPERADMIN only. */
+export async function fetchAdminCalls(purpose?: CallPurpose) {
+  const qs = purpose ? `?purpose=${purpose}` : "";
+  return (await request<{ bookings: AdminCallBooking[] }>(`/backend/admin/calls${qs}`)).bookings;
 }
 
 export async function confirmCallPayment(id: string, txHash: string) {

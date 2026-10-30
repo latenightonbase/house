@@ -15,6 +15,7 @@ import {
   type CallBooking,
   type CallToken,
 } from "@/lib/calls";
+import type { CallPurpose } from "@/lib/constants";
 import { writeError } from "@/lib/useListingCheckout";
 
 export type CallPaymentStep = "idle" | "switching" | "signing" | "confirming" | "verifying";
@@ -81,7 +82,7 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
   }, [status, verify]);
 
   /** Returns false when a wallet connection or sign-in is needed first. */
-  async function pay(token: CallToken): Promise<boolean> {
+  async function pay(token: CallToken, purpose: CallPurpose): Promise<boolean> {
     if (busy) return true;
     if (status !== "authenticated" || !address) return false;
     setError(null);
@@ -107,7 +108,7 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
       }
       if (!publicClient) throw new Error("Could not reach Robinhood Chain.");
 
-      const booking = await orderCall(token.address);
+      const booking = await orderCall(token.address, purpose);
       bookingId = booking.id;
       const amount = BigInt(booking.amountRaw);
 

@@ -8,7 +8,7 @@ export const metadata = { title: "Profile" };
 export default async function Page() {
   const session = await getServerSession();
   if (!session) {
-    redirect("/?auth=required");
+    redirect("/marketplace?auth=required");
   }
 
   return (

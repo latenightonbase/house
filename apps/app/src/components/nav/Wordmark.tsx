@@ -9,10 +9,11 @@ export function Wordmark({
   size = "lg",
   className,
 }: {
-  size?: "sm" | "lg";
+  size?: "sm" | "lg" | "xl";
   className?: string;
 }) {
   const compact = size === "sm";
+  const hero = size === "xl";
   return (
     <span
       className={cn("flex flex-col items-center leading-none select-none", className)}
@@ -21,7 +22,7 @@ export function Wordmark({
       <span
         className={cn(
           "font-display text-white text-center w-full flex justify-center items-center",
-          compact ? "text-[15px]" : "text-[26px]",
+          compact ? "text-[15px]" : hero ? "text-[44px] sm:text-[64px]" : "text-[26px]",
         )}
         style={{ letterSpacing: compact ? "0.01em" : "0.005em" }}
       >
@@ -30,7 +31,11 @@ export function Wordmark({
       <span
         className={cn(
           "font-display text-primary-bright",
-          compact ? "text-[11px] mt-0.5" : "text-[19px] mt-1",
+          compact
+            ? "text-[11px] mt-0.5"
+            : hero
+              ? "text-[32px] mt-1.5 sm:text-[47px] sm:mt-2"
+              : "text-[19px] mt-1",
         )}
       >
         ONCHAIN
