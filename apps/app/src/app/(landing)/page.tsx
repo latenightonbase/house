@@ -4,7 +4,7 @@ import { Wordmark } from "@/components/nav/Wordmark";
 import { SocialRow } from "@/components/nav/SocialRow";
 import { APP_HOME_HREF, CALL_PURPOSES, COPYRIGHT_YEAR, FOOTER_LINKS, SITE } from "@/lib/constants";
 
-type Door = { href: string; label: string; blurb: string; icon: LucideIcon; primary?: boolean };
+type Door = { href: string; label: string; blurb: string; icon: LucideIcon };
 
 /** The two show doors run the paid-call flow; the third is the app itself. */
 const DOORS: Door[] = [
@@ -13,14 +13,12 @@ const DOORS: Door[] = [
     label: "Appear on a show",
     blurb: "Come on as a guest — book a call with Bill to plan it.",
     icon: Mic,
-    primary: true,
   },
   {
     href: CALL_PURPOSES.sponsor.href,
     label: "Sponsor a show",
     blurb: "Put your brand in front of the audience — book a call to shape it.",
     icon: Megaphone,
-    primary: true,
   },
   {
     href: APP_HOME_HREF,
@@ -48,23 +46,13 @@ export default function LandingPage() {
         </header>
 
         <nav aria-label="Get started" className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-          {DOORS.map(({ href, label, blurb, icon: Icon, primary }) => (
+          {DOORS.map(({ href, label, blurb, icon: Icon }) => (
             <Link
               key={href}
               href={href}
-              className={
-                primary
-                  ? "group gradient-button flex flex-col gap-4 rounded-2xl p-5 text-white transition-transform hover:-translate-y-0.5 sm:p-6"
-                  : "group panel-glow flex flex-col gap-4 p-5 text-white transition-[transform,border-color] hover:-translate-y-0.5 hover:border-primary/60 sm:p-6"
-              }
+              className="group gradient-button flex flex-col gap-4 rounded-2xl p-5 text-white transition-transform hover:-translate-y-0.5 sm:p-6"
             >
-              <span
-                className={
-                  primary
-                    ? "flex h-11 w-11 items-center justify-center rounded-xl bg-white/15"
-                    : "flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary-light"
-                }
-              >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="flex items-center justify-between gap-3">
@@ -74,7 +62,7 @@ export default function LandingPage() {
                   aria-hidden="true"
                 />
               </span>
-              <span className={primary ? "text-[13.5px] leading-relaxed text-white/80" : "text-[13.5px] leading-relaxed text-caption"}>
+              <span className="text-[13.5px] leading-relaxed text-white/80">
                 {blurb}
               </span>
             </Link>

@@ -40,19 +40,26 @@ function fail(set: Setter, err: unknown, fallback: string) {
  */
 export const callRoutes = new Elysia()
   /** What a call costs and where the money goes — public, so the page renders signed out. */
-  .get("/calls/config", () => {
-    const unavailable = callsUnavailableReason();
-    if (unavailable) console.warn(`[calls] booking closed: ${unavailable}`);
-    return {
-      available: unavailable === null,
-      minutes: CALL_MINUTES,
-      recipient: callRecipient(),
-      prices: callPrices().map(({ token, amount }) => ({
-        token: { address: token.address, symbol: token.symbol, decimals: token.decimals },
-        amount,
-      })),
-    };
-  })
+  .get(
+    "/calls/config",
+    async ({ query }) => {
+      const purpose = toCallPurpose(query.purpose);
+      const prices = await callPrices(purpose);
+      const unavailable = callsUnavailableReason(purpose, prices);
+      if (unavailable) console.warn(`[calls] ${purpose} booking closed: ${unavailable}`);
+      return {
+        available: unavailable === null,
+        minutes: CALL_MINUTES,
+        recipient: callRecipient(),
+        prices: prices.map(({ token, amount, usd }) => ({
+          token: { address: token.address, symbol: token.symbol, decimals: token.decimals },
+          amount,
+          usd,
+        })),
+      };
+    },
+    { query: t.Object({ purpose: t.Optional(purposeSchema) }) },
+  )
   .get("/calls/mine", async ({ request, set }) => {
     const user = await getUserFromRequest(request);
     if (!user) {

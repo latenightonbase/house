@@ -3,6 +3,7 @@ import type { CallBooking, CallPurpose } from "@prisma/client";
 import { prisma } from "../db";
 import { publicClient } from "./operator";
 import { LNOC, USDG, findListingToken, type ListingToken } from "./tokens";
+import { getTokenUsdPrice } from "./tokenPrices";
 import {
   calendlyConfigured,
   createSingleUseLink,
@@ -27,7 +28,30 @@ export const CALL_MINUTES = 30;
 /** Transfers mined this long before the order still count — clocks drift. */
 const ORDER_CLOCK_SLACK_S = 5 * 60;
 
-export type CallPrice = { token: ListingToken; amount: string };
+/**
+ * `amount` is in whole tokens. `usd` is set when the price is a dollar figure
+ * converted to the token at today's rate, rather than a fixed token amount.
+ */
+export type CallPrice = { token: ListingToken; amount: string; usd: number | null };
+
+/**
+ * Guest spots and sponsorships are priced in dollars and paid in LNOC. The
+ * token amount is worked out from LNOC's market price when the order is made
+ * and fixed on the booking from then on.
+ */
+const USD_PRICES: Partial<Record<CallPurpose, number>> = { APPEAR: 1, SPONSOR: 2 };
+
+/** Significant figures kept in a converted amount — rounded up, so the house is never short. */
+const CONVERTED_SIG_FIGS = 4;
+
+function tokensForUsd(usd: number, tokenUsd: number, decimals: number): string | null {
+  if (!(tokenUsd > 0)) return null;
+  const exact = usd / tokenUsd;
+  const step = 10 ** (Math.floor(Math.log10(exact)) - CONVERTED_SIG_FIGS + 1);
+  const places = Math.min(Math.max(0, -Math.floor(Math.log10(step))), decimals);
+  const rounded = Math.ceil(exact / step) * step;
+  return rounded.toFixed(places);
+}
 
 function priceFor(token: ListingToken): string | null {
   const raw =
@@ -41,11 +65,21 @@ function priceFor(token: ListingToken): string | null {
   return value;
 }
 
-/** The tokens a call can be paid in, each with its price in whole tokens. Unset prices are left out. */
-export function callPrices(): CallPrice[] {
+/**
+ * The tokens a call can be paid in, each with its price. A plain call uses the
+ * fixed amounts from env; a dollar-priced one is LNOC only, and has no price
+ * while LNOC's market price is unknown.
+ */
+export async function callPrices(purpose: CallPurpose): Promise<CallPrice[]> {
+  const usd = USD_PRICES[purpose];
+  if (usd != null) {
+    const lnocUsd = await getTokenUsdPrice(LNOC.address);
+    const amount = lnocUsd == null ? null : tokensForUsd(usd, lnocUsd, LNOC.decimals);
+    return amount ? [{ token: LNOC, amount, usd }] : [];
+  }
   return [USDG, LNOC].flatMap((token) => {
     const amount = priceFor(token);
-    return amount ? [{ token, amount }] : [];
+    return amount ? [{ token, amount, usd: null }] : [];
   });
 }
 
@@ -55,10 +89,14 @@ export function callRecipient(): `0x${string}` | null {
   return getAddress(raw);
 }
 
-/** Why calls can't be sold right now, or null when they can. */
-export function callsUnavailableReason(): string | null {
+/** Why calls can't be sold right now, or null when they can. `prices` is `callPrices(purpose)`. */
+export function callsUnavailableReason(purpose: CallPurpose, prices: CallPrice[]): string | null {
   if (!callRecipient()) return "CALL_PAYMENT_RECIPIENT is not set";
-  if (callPrices().length === 0) return "Neither CALL_PRICE_USDG nor CALL_PRICE_LNOC is set";
+  if (prices.length === 0) {
+    return USD_PRICES[purpose] != null
+      ? "LNOC has no market price right now"
+      : "Neither CALL_PRICE_USDG nor CALL_PRICE_LNOC is set";
+  }
   if (!calendlyConfigured()) return "CALENDLY_TOKEN is not set";
   return null;
 }
@@ -109,12 +147,15 @@ export class CallError extends Error {
  * purpose is reused, so a caller who backs out and comes back does not pile up rows.
  */
 export async function orderCall(userId: string, tokenAddress: string, purpose: CallPurpose) {
-  const unavailable = callsUnavailableReason();
+  const prices = await callPrices(purpose);
+  const unavailable = callsUnavailableReason(purpose, prices);
   if (unavailable) throw new CallError("Calls aren't open for booking yet.", 503);
 
   const token = findListingToken(tokenAddress);
-  const price = token && callPrices().find((p) => p.token.address === token.address);
-  if (!token || !price) throw new CallError("Pay with USDG or LNOC.");
+  const price = token && prices.find((p) => p.token.address === token.address);
+  if (!token || !price) {
+    throw new CallError(prices.length === 1 ? `Pay with ${prices[0].token.symbol}.` : "Pay with USDG or LNOC.");
+  }
 
   const amountRaw = parseUnits(price.amount, token.decimals).toString();
   const recipient = callRecipient()!.toLowerCase();

@@ -12,8 +12,12 @@ export type CallConfig = {
   available: boolean;
   minutes: number;
   recipient: `0x${string}` | null;
-  /** `amount` is in whole tokens, as a decimal string. */
-  prices: Array<{ token: CallToken; amount: string }>;
+  /**
+   * `amount` is in whole tokens, as a decimal string. `usd` is set when the
+   * price is a dollar figure converted at today's rate — the amount is then a
+   * quote, and the order fixes the exact figure.
+   */
+  prices: Array<{ token: CallToken; amount: string; usd: number | null }>;
 };
 
 export type CallBookingStatus = "AWAITING_PAYMENT" | "PAID" | "SCHEDULED";
@@ -61,8 +65,8 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   return data;
 }
 
-export function fetchCallConfig() {
-  return request<CallConfig>("/backend/calls/config");
+export function fetchCallConfig(purpose: CallPurpose) {
+  return request<CallConfig>(`/backend/calls/config?purpose=${purpose}`);
 }
 
 export async function fetchMyCalls() {

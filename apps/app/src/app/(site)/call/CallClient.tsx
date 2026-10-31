@@ -79,10 +79,10 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
   const [justBooked, setJustBooked] = useState<CallBooking | null>(null);
 
   useEffect(() => {
-    fetchCallConfig()
+    fetchCallConfig(purpose)
       .then(setConfig)
       .catch(() => setConfigError(true));
-  }, []);
+  }, [purpose]);
 
   const loadBookings = useCallback(async () => {
     try {
@@ -221,7 +221,7 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
         </TierCard>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className={offers.length > 1 ? "grid gap-5 md:grid-cols-2" : "max-w-xl"}>
             {offers.map(({ price, token, style }) => {
               const usd = usdValue(prices, token, Number(price.amount));
               // A payment recovered after a reload has no card of its own, so any card retries it.
@@ -240,12 +240,21 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
                     <div className="mt-4 flex items-center gap-3">
                       <TokenMark token={token} size={40} className="h-10 w-10" />
                       <p className="display numeric text-[46px] text-white sm:text-[52px]">
-                        {formatAmount(price.amount)}
+                        {price.usd != null ? `$${price.usd.toLocaleString("en-US")}` : formatAmount(price.amount)}
                       </p>
                     </div>
                     <p className="mt-2 text-[13px] font-medium text-caption">
-                      ${token.symbol} to the house wallet
-                      {usd != null && !token.pegged && <> · ≈ {formatUsd(usd)}</>}
+                      {price.usd != null ? (
+                        <>
+                          Paid in ${token.symbol} · ≈ {formatAmount(price.amount)} {token.symbol} at
+                          today&apos;s price
+                        </>
+                      ) : (
+                        <>
+                          ${token.symbol} to the house wallet
+                          {usd != null && !token.pegged && <> · ≈ {formatUsd(usd)}</>}
+                        </>
+                      )}
                     </p>
                     <p className="mt-4 flex-1 text-[15px] leading-relaxed text-white/75">
                       {copy.pitch} {style.note}

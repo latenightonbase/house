@@ -105,7 +105,7 @@ export const CALL_PURPOSES: Record<
     title: "Appear on",
     titleAccent: "a show",
     intro: (minutes) =>
-      `Come on ${SITE.name} as a guest. Pay in USDG or LNOC, then book a ${minutes}-minute call with Bill to plan your appearance.`,
+      `Come on ${SITE.name} as a guest. Pay in LNOC, then book a ${minutes}-minute call with Bill to plan your appearance.`,
     card: (minutes) => `${minutes}-min guest call`,
     pitch: "Thirty minutes with Bill to plan your spot on the show — who you are, what you're building, what you want to talk about.",
   },
@@ -115,7 +115,7 @@ export const CALL_PURPOSES: Record<
     title: "Sponsor",
     titleAccent: "a show",
     intro: (minutes) =>
-      `Put your brand in front of the ${SITE.name} audience. Pay in USDG or LNOC, then book a ${minutes}-minute call with Bill to shape the sponsorship.`,
+      `Put your brand in front of the ${SITE.name} audience. Pay in LNOC, then book a ${minutes}-minute call with Bill to shape the sponsorship.`,
     card: (minutes) => `${minutes}-min sponsor call`,
     pitch: "Thirty minutes with Bill to plan your sponsorship — which shows, what the read says, where your brand lands.",
   },
