@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatUnits } from "viem";
+import { BaseError, UserRejectedRequestError, formatUnits } from "viem";
 import { useAccount, usePublicClient, useSwitchChain, useWriteContract } from "wagmi";
 import { useSession } from "@/components/SessionProvider";
 import { erc20Abi } from "@/lib/contracts/erc20";
@@ -11,6 +11,7 @@ import {
   confirmCallPayment,
   orderCall,
   readPendingPayment,
+  recoverCallPayments,
   writePendingPayment,
   type CallBooking,
   type CallToken,
@@ -26,6 +27,20 @@ export const CALL_STEP_LABEL: Record<Exclude<CallPaymentStep, "idle">, string> =
   confirming: "Waiting for the payment to confirm…",
   verifying: "Checking the payment…",
 };
+
+/**
+ * After the wallet errors on a send, how long to look for the transfer anyway:
+ * one that was broadcast may still be waiting to be mined.
+ */
+const RECOVERY_ATTEMPTS = 6;
+const RECOVERY_INTERVAL_MS = 5_000;
+
+function rejectedInWallet(err: unknown) {
+  return (
+    err instanceof UserRejectedRequestError ||
+    (err instanceof BaseError && Boolean(err.walk((e) => e instanceof UserRejectedRequestError)))
+  );
+}
 
 /**
  * Paying for a call: order at the current price, transfer the tokens to the
@@ -45,6 +60,8 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
   const [unverified, setUnverified] = useState<{ bookingId: string; txHash: string } | null>(
     null,
   );
+  /** The wallet errored mid-send, so tokens may have left without the page seeing the hash. */
+  const [maybeSent, setMaybeSent] = useState(false);
   const onPaidRef = useRef(onPaid);
   onPaidRef.current = onPaid;
 
@@ -74,6 +91,28 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
     }
   }, []);
 
+  /** Has the API look on-chain for a payment with no hash. True when one was found. */
+  const recover = useCallback(async (attempts = 1) => {
+    setStep("verifying");
+    try {
+      for (let i = 0; i < attempts; i++) {
+        if (i > 0) await new Promise((resolve) => setTimeout(resolve, RECOVERY_INTERVAL_MS));
+        const found = await recoverCallPayments();
+        if (found.length > 0) {
+          setError(null);
+          setMaybeSent(false);
+          found.forEach((booking) => onPaidRef.current(booking));
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    } finally {
+      setStep("idle");
+    }
+  }, []);
+
   // Finish a payment a previous visit sent but never got verified.
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -86,6 +125,12 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
     if (busy) return true;
     if (status !== "authenticated" || !address) return false;
     setError(null);
+
+    // The last send may have gone through despite the error — never charge twice.
+    if (maybeSent) {
+      if (await recover()) return true;
+      setMaybeSent(false);
+    }
 
     if (unverified) {
       await verify(unverified.bookingId, unverified.txHash);
@@ -100,6 +145,7 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
 
     let sentHash: `0x${string}` | null = null;
     let bookingId: string | null = null;
+    let signing = false;
     try {
       if (chainId !== robinhood.id) {
         setStep("switching");
@@ -125,6 +171,7 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
       }
 
       setStep("signing");
+      signing = true;
       sentHash = await writeContractAsync({
         address: token.address,
         abi: erc20Abi,
@@ -148,6 +195,14 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
         // Sent but the wait failed (RPC hiccup) — the API can still check it.
         setUnverified({ bookingId, txHash: sentHash });
         setError("Your payment was sent but hasn't confirmed here yet. Retry to check it.");
+      } else if (signing && bookingId && !rejectedInWallet(err)) {
+        // Some wallets send the transfer and then fail anyway (a retried send
+        // answers "nonce too low"), so look on-chain before calling it failed.
+        if (await recover(RECOVERY_ATTEMPTS)) return true;
+        setMaybeSent(true);
+        setError(
+          `${writeError(err, "Could not send the payment.")} If the tokens left your wallet, check for your payment below.`,
+        );
       } else {
         setError(writeError(err, "Could not send the payment."));
       }
@@ -158,5 +213,14 @@ export function useCallPayment(onPaid: (booking: CallBooking) => void) {
     return true;
   }
 
-  return { pay, step, busy, error, unverified: Boolean(unverified), address };
+  return {
+    pay,
+    recover: () => recover(),
+    step,
+    busy,
+    error,
+    unverified: Boolean(unverified),
+    maybeSent,
+    address,
+  };
 }

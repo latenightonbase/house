@@ -77,6 +77,7 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
   const [payingWith, setPayingWith] = useState<string | null>(null);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [justBooked, setJustBooked] = useState<CallBooking | null>(null);
+  const [recoverMissed, setRecoverMissed] = useState(false);
 
   useEffect(() => {
     fetchCallConfig(purpose)
@@ -119,6 +120,7 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
 
   async function onPay(price: CallConfig["prices"][number]) {
     setPayingWith(price.token.address);
+    setRecoverMissed(false);
     const ready = await payment.pay(price.token, purpose);
     if (!ready) openConnect();
   }
@@ -280,7 +282,29 @@ export default function CallClient({ purpose = "call" }: { purpose?: CallPurpose
               role="alert"
               className="border-negative/30 bg-negative/10 px-4 py-3 text-[13px] text-negative"
             >
-              {payment.error}
+              <p>{payment.error}</p>
+              {payment.maybeSent && (
+                <Button
+                  variant="accent-outline"
+                  size="sm"
+                  className="mt-3"
+                  disabled={payment.busy}
+                  onClick={async () => {
+                    if (!(await payment.recover())) {
+                      setRecoverMissed(true);
+                    }
+                  }}
+                >
+                  {payment.busy && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                  Check for my payment
+                </Button>
+              )}
+              {payment.maybeSent && recoverMissed && !payment.busy && (
+                <p className="mt-2 text-[12px] text-caption">
+                  No payment found yet. If your wallet shows it as pending, wait a minute and check
+                  again.
+                </p>
+              )}
             </Tile>
           )}
 

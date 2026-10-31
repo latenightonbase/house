@@ -97,6 +97,14 @@ export async function fetchAdminCalls(purpose?: CallPurpose) {
   return (await request<{ bookings: AdminCallBooking[] }>(`/backend/admin/calls${qs}`)).bookings;
 }
 
+/**
+ * Asks the API to find a payment the page has no hash for — the wallet sent it
+ * and then reported an error. Returns the bookings it paid, usually none or one.
+ */
+export async function recoverCallPayments() {
+  return (await request<{ bookings: CallBooking[] }>("/backend/calls/recover", {})).bookings;
+}
+
 export async function confirmCallPayment(id: string, txHash: string) {
   return (
     await request<{ booking: CallBooking }>(`/backend/calls/${id}/confirm`, { txHash })

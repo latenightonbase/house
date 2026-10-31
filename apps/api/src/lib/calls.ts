@@ -1,4 +1,12 @@
-import { decodeEventLog, erc20Abi, formatUnits, getAddress, parseUnits, type Hash } from "viem";
+import {
+  decodeEventLog,
+  erc20Abi,
+  formatUnits,
+  getAddress,
+  parseAbiItem,
+  parseUnits,
+  type Hash,
+} from "viem";
 import type { CallBooking, CallPurpose } from "@prisma/client";
 import { prisma } from "../db";
 import { publicClient } from "./operator";
@@ -264,6 +272,108 @@ export async function confirmCallPayment(userId: string, bookingId: string, txHa
   } catch {
     throw new CallError("That transaction already paid for a call.", 409);
   }
+}
+
+/** How far back a payment is looked for without its hash. */
+const RECOVERY_WINDOW_S = 2 * 24 * 60 * 60;
+
+/**
+ * Comfortably above Robinhood Chain's ~10 blocks a second, so the log search
+ * always starts before the order. Two days at this rate is ~2.6M blocks, which
+ * the RPC answers in one call when sender and recipient are each a single value.
+ */
+const MAX_BLOCKS_PER_S = 15;
+
+const transferEvent = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+);
+
+/**
+ * Finds payments for a caller's unpaid orders without being told the tx hash.
+ * Some wallets broadcast the transfer and then report an error anyway ("nonce
+ * too low" from a retried send), so the page never learns the hash and the
+ * money sits in the house wallet against an unpaid order. This looks for
+ * transfers from the caller's wallets to the recipient since their oldest
+ * open order and runs each through `confirmCallPayment`, which makes every
+ * check the hash route does. Returns the bookings it paid.
+ */
+export async function recoverCallPayments(userId: string): Promise<CallBooking[]> {
+  const open = await prisma.callBooking.findMany({
+    where: {
+      userId,
+      status: "AWAITING_PAYMENT",
+      createdAt: { gte: new Date(Date.now() - RECOVERY_WINDOW_S * 1000) },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  if (open.length === 0) return [];
+
+  const wallets = await prisma.wallet.findMany({ where: { userId }, select: { address: true } });
+  if (wallets.length === 0) return [];
+  const from = wallets.map((w) => getAddress(w.address));
+
+  const client = publicClient();
+  const latest = await client.getBlock();
+  const earliest = Math.floor(open[0].createdAt.getTime() / 1000) - ORDER_CLOCK_SLACK_S;
+  const back = BigInt(Math.ceil((Number(latest.timestamp) - earliest) * MAX_BLOCKS_PER_S));
+  const fromBlock = latest.number > back ? latest.number - back : 0n;
+
+  const paid: CallBooking[] = [];
+  const pairs = new Map(open.map((b) => [`${b.tokenAddress}|${b.recipient}`, b]));
+  for (const { tokenAddress, recipient } of pairs.values()) {
+    // One sender per query: the RPC allows a long range only when each topic
+    // has a single value, and caps a multi-value query at 100k blocks.
+    const perWallet = await Promise.all(
+      from.map((wallet) =>
+        client.getLogs({
+          address: tokenAddress as `0x${string}`,
+          event: transferEvent,
+          args: { from: wallet, to: recipient as `0x${string}` },
+          fromBlock,
+          toBlock: latest.number,
+        }),
+      ),
+    );
+    const logs = perWallet
+      .flat()
+      .sort((a, b) =>
+        a.blockNumber === b.blockNumber
+          ? a.logIndex - b.logIndex
+          : a.blockNumber < b.blockNumber
+            ? -1
+            : 1,
+      );
+
+    for (const log of logs) {
+      const hash = log.transactionHash?.toLowerCase();
+      const value = log.args.value;
+      if (!hash || value == null) continue;
+      if (await prisma.callBooking.findUnique({ where: { txHash: hash } })) continue;
+
+      const block = await client.getBlock({ blockNumber: log.blockNumber });
+      const minedAt = Number(block.timestamp);
+      // The newest order this transfer could have been for: same token and
+      // wallet, made before it was mined, and not asking for more than it sent.
+      const booking = open
+        .filter(
+          (b) =>
+            b.tokenAddress === tokenAddress &&
+            b.recipient === recipient &&
+            BigInt(b.amountRaw) <= value &&
+            Math.floor(b.createdAt.getTime() / 1000) - ORDER_CLOCK_SLACK_S <= minedAt,
+        )
+        .at(-1);
+      if (!booking) continue;
+
+      try {
+        paid.push(await confirmCallPayment(userId, booking.id, hash));
+        open.splice(open.indexOf(booking), 1);
+      } catch (err) {
+        console.warn(`[calls] recovery skipped ${hash}:`, err instanceof Error ? err.message : err);
+      }
+    }
+  }
+  return paid;
 }
 
 /**

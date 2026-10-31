@@ -17,6 +17,7 @@ import {
   listCallBookings,
   orderCall,
   publicCallBooking,
+  recoverCallPayments,
   toCallPurpose,
 } from "../lib/calls";
 
@@ -66,6 +67,9 @@ export const callRoutes = new Elysia()
       set.status = 401;
       return { error: "Not authenticated" };
     }
+    // A payment whose hash the page never got — the wallet errored after
+    // sending — is found here, so coming back to the page finishes it.
+    await recoverCallPayments(user.id).catch((err) => console.error("[calls] recovery:", err));
     const bookings = await listCallBookings(user.id);
     // A paid booking whose link is missing (a Calendly hiccup, or a cancelled
     // call) gets one here so the page can go straight to the calendar.
@@ -128,6 +132,29 @@ export const callRoutes = new Elysia()
     },
     { query: t.Object({ purpose: t.Optional(purposeSchema) }) },
   )
+  /** Looks for a sent payment the page has no hash for, and books it. */
+  .post("/calls/recover", async ({ request, set }) => {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      set.status = 401;
+      return { error: "Not authenticated" };
+    }
+    let paid;
+    try {
+      paid = await recoverCallPayments(user.id);
+    } catch (err) {
+      return fail(set, err, "Couldn't check for your payment.");
+    }
+    const bookings = await Promise.all(
+      paid.map((b) =>
+        ensureSchedulingLink(b).catch((err) => {
+          console.error("[calls] scheduling link:", err);
+          return b;
+        }),
+      ),
+    );
+    return { bookings: bookings.map(publicCallBooking) };
+  })
   .post(
     "/calls/:id/confirm",
     async ({ request, params, body, set }) => {
