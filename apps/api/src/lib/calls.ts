@@ -47,7 +47,7 @@ export type CallPrice = { token: ListingToken; amount: string; usd: number | nul
  * token amount is worked out from LNOC's market price when the order is made
  * and fixed on the booking from then on.
  */
-const USD_PRICES: Partial<Record<CallPurpose, number>> = { APPEAR: 1, SPONSOR: 2 };
+const USD_PRICES: Partial<Record<CallPurpose, number>> = { APPEAR: 300, SPONSOR: 2000 };
 
 /** Significant figures kept in a converted amount — rounded up, so the house is never short. */
 const CONVERTED_SIG_FIGS = 4;
